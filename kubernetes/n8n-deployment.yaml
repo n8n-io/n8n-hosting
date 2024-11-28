@@ -62,6 +62,26 @@ spec:
               memory: "250Mi"
             limits:
               memory: "500Mi"
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: 5678
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          readinessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: 5678
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 2
+            timeoutSeconds: 10
           volumeMounts:
             - mountPath: /home/node/.n8n
               name: n8n-claim0
