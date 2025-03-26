@@ -9,7 +9,7 @@ command in the current folder.
 
 **IMPORTANT:** But before you do that change the default users and passwords in the [`.env`](.env) file!
 
-**IMPORTANT:** ## init-data.sh script: (Windows users) Make sure that EOL character is set to LF, instead of CRLF. It is required for the DB init script to work correctly
+**IMPORTANT:** init-data.sh script: (Windows users) Make sure that EOL character is set to LF, instead of CRLF. It is required for the DB init script to work correctly
 
 ```
 docker-compose up -d
