@@ -55,7 +55,6 @@ services:
       - N8N_PATH
       - WEBHOOK_URL=https://${DOMAIN_NAME}${N8N_PATH}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - ${DATA_FOLDER}/.n8n:/home/node/.n8n
     depends_on:
       initContainer:
