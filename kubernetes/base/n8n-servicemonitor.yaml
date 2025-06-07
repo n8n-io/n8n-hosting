@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: n8n-metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/namespace: "prometheus"
+spec:
+  selector:
+    matchLabels:
+      service: n8n
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 15s

@@ -2,20 +2,22 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    service: n8n
-  name: n8n
-  namespace: n8n
+    service: n8n-worker
+  name: n8n-worker
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      service: n8n
+      service: n8n-worker
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
-        service: n8n
+        service: n8n-worker
     spec:
       initContainers:
         - name: volume-permissions
@@ -29,12 +31,12 @@ spec:
             - /bin/sh
           args:
             - -c
-            - sleep 5; n8n start
+            - sleep 5; n8n worker
           env:
             - name: DB_TYPE
               value: postgresdb
             - name: DB_POSTGRESDB_HOST
-              value: postgres-service.n8n.svc.cluster.local
+              value: postgres-service
             - name: DB_POSTGRESDB_PORT
               value: "5432"
             - name: DB_POSTGRESDB_DATABASE
@@ -43,25 +45,41 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
-                  key: POSTGRES_NON_ROOT_USER
+                  key: POSTGRES_USER
             - name: DB_POSTGRESDB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
-                  key: POSTGRES_NON_ROOT_PASSWORD
-            - name: N8N_PROTOCOL
-              value: http
-            - name: N8N_PORT
-              value: "5678"
+                  key: POSTGRES_PASSWORD
+            - name: EXECUTIONS_MODE
+              value: queue
+            - name: QUEUE_BULL_REDIS_HOST
+              value: redis-service
+            - name: QUEUE_HEALTH_CHECK_ACTIVE
+              value: "true"
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-secret
+                  key: N8N_ENCRYPTION_KEY
+            - name: N8N_METRICS
+              value: "true"
+            - name: N8N_METRICS_PORT
+              value: "9100"
+            - name: N8N_METRICS_PREFIX
+              value: "n8n_"
           image: n8nio/n8n
-          name: n8n
+          name: n8n-worker
           ports:
-            - containerPort: 5678
+            - containerPort: 9100
+              name: metrics
           resources:
             requests:
               memory: "250Mi"
+              cpu: "100m"
             limits:
               memory: "500Mi"
+              cpu: "500m"
           volumeMounts:
             - mountPath: /home/node/.n8n
               name: n8n-claim0

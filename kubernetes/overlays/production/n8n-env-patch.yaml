@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+spec:
+  template:
+    spec:
+      containers:
+      - name: n8n
+        env:
+        - name: DB_POSTGRESDB_HOST
+          value: prod-postgres-service
+        - name: QUEUE_BULL_REDIS_HOST
+          value: prod-redis-service.n8n.svc.cluster.local
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n-worker
+spec:
+  template:
+    spec:
+      containers:
+      - name: n8n-worker
+        env:
+        - name: DB_POSTGRESDB_HOST
+          value: prod-postgres-service
+        - name: QUEUE_BULL_REDIS_HOST
+          value: prod-redis-service.n8n.svc.cluster.local

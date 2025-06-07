@@ -1,0 +1,14 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: n8n-worker-scaler
+spec:
+  minReplicaCount: 2  # Production should have higher minimum
+  maxReplicaCount: 20 # Higher capacity for production
+  cooldownPeriod: 600 # Longer cooldown to prevent rapid scaling
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-kube-prometheus-prometheus.prometheus.svc.cluster.local:9090
+      threshold: "3"      # More aggressive scaling for production
+      query: sum(rate(n8n_queue_waiting_jobs[5m]))

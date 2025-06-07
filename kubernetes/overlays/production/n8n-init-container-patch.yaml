@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: volume-permissions
+        securityContext:
+          runAsUser: 0
+          runAsNonRoot: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n-worker
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: volume-permissions
+        securityContext:
+          runAsUser: 0
+          runAsNonRoot: false

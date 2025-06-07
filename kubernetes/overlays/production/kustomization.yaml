@@ -1,0 +1,94 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: prod-
+
+resources:
+  - ../../base
+  - redis-networkpolicy.yaml
+  - postgres-networkpolicy.yaml
+  - redis-secret.yaml
+
+patches:
+  # Strategic merge patches
+  - path: n8n-redis-credentials-patch.yaml
+  - path: ingress-patch.yaml
+  - path: n8n-worker-scaledobject-patch.yaml
+  - path: redis-container-patch.yaml
+  - path: n8n-init-container-patch.yaml
+  - path: n8n-env-patch.yaml
+  
+  # Enhanced resource settings for UI pod
+  - target:
+      kind: Deployment
+      name: n8n
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 1Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 500Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 500m
+      - op: add
+        path: /spec/template/spec/securityContext
+        value:
+          fsGroup: 1000
+          runAsUser: 1000
+          runAsNonRoot: true
+
+  # Worker deployment patch
+  - target:
+      kind: Deployment
+      name: n8n-worker
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 1Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 500Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 300m
+      - op: add
+        path: /spec/template/spec/securityContext
+        value:
+          fsGroup: 1000
+          runAsUser: 1000
+          runAsNonRoot: true
+
+  # Postgres resource and security hardening
+  - target:
+      kind: Deployment
+      name: postgres
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 8Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "4"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 4Gi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "2"
+      - op: add
+        path: /spec/template/spec/securityContext
+        value:
+          fsGroup: 999
+          runAsUser: 70
+          runAsNonRoot: true

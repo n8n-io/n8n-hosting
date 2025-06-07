@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: n8n
+
+labels:
+  - pairs:
+      app: n8n
+
+resources:
+  - namespace.yaml
+  - n8n-deployment.yaml
+  - n8n-deployment-workers.yaml
+  - n8n-service.yaml
+  - redis-deployment.yaml
+  - redis-service.yaml
+  - pvcs.yaml
+  - postgres-deployment.yaml
+  - postgres-service.yaml
+  - postgres-pvc.yaml
+  - postgres-configmap.yaml
+  - postgres-secret.yaml
+  - n8n-secret.yaml
+  - n8n-ingress.yaml
+  - n8n-worker-scaledobject.yaml
+  - n8n-servicemonitor.yaml
