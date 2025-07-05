@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n-ingress
+  namespace: {{ .Values.namespace.name }}
+spec:
+  ingressClassName: traefik # or nginx, depending on your controller
+  tls:
+    - hosts:
+        - {{ .Values.n8nIngress.host }}
+      secretName: {{ .Values.n8nIngress.tlsSecretName }}
+  rules:
+    - host: {{ .Values.n8nIngress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.n8nService.name }}
+                port:
+                  number: {{ .Values.n8nService.port }}

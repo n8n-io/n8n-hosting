@@ -22,7 +22,6 @@ n8n:
     DB_POSTGRESDB_DATABASE: n8n
     N8N_PROTOCOL: http
     N8N_PORT: "5678"
-    N8N_SECURE_COOKIE: "false"
   secretRefs:
     DB_POSTGRESDB_USER:
       name: postgres-secret
@@ -94,3 +93,6 @@ postgresService:
   protocol: TCP
   selector:
     service: postgres-n8n
+n8nIngress:
+  host: n8n.loca # Change to your domain or local DNS
+  tlsSecretName: n8n-tls
