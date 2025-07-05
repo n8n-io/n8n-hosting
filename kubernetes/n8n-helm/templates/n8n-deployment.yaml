@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: n8n
+  name: n8n
+  namespace: {{ .Values.namespace.name }}
+spec:
+  replicas: {{ .Values.n8n.replicaCount }}
+  selector:
+    matchLabels:
+      service: n8n
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        service: n8n
+    spec:
+      initContainers:
+        - name: volume-permissions
+          image: {{ .Values.n8n.initContainer.image }}
+          command: {{ toJson .Values.n8n.initContainer.command }}
+          volumeMounts:
+            - name: {{ .Values.pvc.name }}
+              mountPath: {{ .Values.n8n.initContainer.mountPath }}
+      containers:
+        - name: n8n
+          image: "{{ .Values.n8n.image }}:{{ .Values.n8n.tag }}"
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - sleep 5; n8n start
+          env:
+            - name: DB_TYPE
+              value: "{{ .Values.n8n.env.DB_TYPE }}"
+            - name: DB_POSTGRESDB_HOST
+              value: "{{ .Values.n8n.env.DB_POSTGRESDB_HOST }}"
+            - name: DB_POSTGRESDB_PORT
+              value: "{{ .Values.n8n.env.DB_POSTGRESDB_PORT }}"
+            - name: DB_POSTGRESDB_DATABASE
+              value: "{{ .Values.n8n.env.DB_POSTGRESDB_DATABASE }}"
+            - name: DB_POSTGRESDB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.n8n.secretRefs.DB_POSTGRESDB_USER.name }}
+                  key: {{ .Values.n8n.secretRefs.DB_POSTGRESDB_USER.key }}
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.n8n.secretRefs.DB_POSTGRESDB_PASSWORD.name }}
+                  key: {{ .Values.n8n.secretRefs.DB_POSTGRESDB_PASSWORD.key }}
+            - name: N8N_PROTOCOL
+              value: "{{ .Values.n8n.env.N8N_PROTOCOL }}"
+            - name: N8N_PORT
+              value: "{{ .Values.n8n.env.N8N_PORT }}"
+          ports:
+            - containerPort: 5678
+          resources:
+            requests:
+              memory: {{ .Values.n8n.resources.requests.memory }}
+            limits:
+              memory: {{ .Values.n8n.resources.limits.memory }}
+          volumeMounts:
+            - mountPath: {{ .Values.n8n.pvcMountPath }}
+              name: {{ .Values.pvc.name }}
+      restartPolicy: Always
+      volumes:
+        - name: {{ .Values.pvc.name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.name }}
+        - name: n8n-secret
+          secret:
+            secretName: n8n-secret
+        - name: postgres-secret
+          secret:
+            secretName: postgres-secret

@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: postgres-n8n
+  name: postgres
+  namespace: {{ .Values.namespace.name }}
+spec:
+  replicas: {{ .Values.postgres.replicaCount }}
+  selector:
+    matchLabels:
+      service: postgres-n8n
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        service: postgres-n8n
+    spec:
+      containers:
+        - image: "{{ .Values.postgres.image }}:{{ .Values.postgres.tag }}"
+          name: postgres
+          resources:
+            limits:
+              cpu: {{ .Values.postgres.resources.limits.cpu }}
+              memory: {{ .Values.postgres.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.postgres.resources.requests.cpu }}
+              memory: {{ .Values.postgres.resources.requests.memory }}
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: {{ .Values.postgresPvc.name }}
+              mountPath: {{ .Values.postgres.pvcMountPath }}
+            - name: init-data
+              mountPath: {{ .Values.postgres.configMapMountPath }}
+              subPath: {{ .Values.postgres.configMapSubPath }}
+          env:
+            - name: PGDATA
+              value: "{{ .Values.postgres.env.PGDATA }}"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresSecret.name }}
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresSecret.name }}
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "{{ .Values.postgres.env.POSTGRES_DB }}"
+            - name: POSTGRES_NON_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresSecret.name }}
+                  key: POSTGRES_NON_ROOT_USER
+            - name: POSTGRES_NON_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresSecret.name }}
+                  key: POSTGRES_NON_ROOT_PASSWORD
+            - name: POSTGRES_HOST
+              value: "{{ .Values.postgres.env.POSTGRES_HOST }}"
+            - name: POSTGRES_PORT
+              value: "{{ .Values.postgres.env.POSTGRES_PORT }}"
+      restartPolicy: Always
+      volumes:
+        - name: {{ .Values.postgresPvc.name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.postgresPvc.name }}
+        - name: postgres-secret
+          secret:
+            secretName: {{ .Values.postgresSecret.name }}
+        - name: init-data
+          configMap:
+            name: {{ .Values.postgresConfigMap.name }}
+            defaultMode: 0744
