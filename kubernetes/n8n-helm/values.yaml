@@ -94,5 +94,6 @@ postgresService:
   selector:
     service: postgres-n8n
 n8nIngress:
-  host: n8n.loca # Change to your domain or local DNS
+  host: n8n.local # Change to your domain or local DNS
   tlsSecretName: n8n-tls
+  ingressClassName: traefik # Change to your ingress class if needed

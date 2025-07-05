@@ -4,7 +4,7 @@ metadata:
   name: n8n-ingress
   namespace: {{ .Values.namespace.name }}
 spec:
-  ingressClassName: traefik # or nginx, depending on your controller
+  ingressClassName: {{ .Values.n8nIngress.ingressClassName }}
   tls:
     - hosts:
         - {{ .Values.n8nIngress.host }}
