@@ -34,13 +34,13 @@ spec:
             - sleep 5; n8n start
           env:
             - name: DB_TYPE
-              value: {{ .Values.n8n.env.DB_TYPE }}
+              value: "{{ .Values.n8n.env.DB_TYPE }}"
             - name: DB_POSTGRESDB_HOST
-              value: {{ .Values.n8n.env.DB_POSTGRESDB_HOST }}
+              value: "{{ .Values.n8n.env.DB_POSTGRESDB_HOST }}"
             - name: DB_POSTGRESDB_PORT
-              value: {{ .Values.n8n.env.DB_POSTGRESDB_PORT }}
+              value: "{{ .Values.n8n.env.DB_POSTGRESDB_PORT }}"
             - name: DB_POSTGRESDB_DATABASE
-              value: {{ .Values.n8n.env.DB_POSTGRESDB_DATABASE }}
+              value: "{{ .Values.n8n.env.DB_POSTGRESDB_DATABASE }}"
             - name: DB_POSTGRESDB_USER
               valueFrom:
                 secretKeyRef:
@@ -52,9 +52,9 @@ spec:
                   name: {{ .Values.n8n.secretRefs.DB_POSTGRESDB_PASSWORD.name }}
                   key: {{ .Values.n8n.secretRefs.DB_POSTGRESDB_PASSWORD.key }}
             - name: N8N_PROTOCOL
-              value: {{ .Values.n8n.env.N8N_PROTOCOL }}
+              value: "{{ .Values.n8n.env.N8N_PROTOCOL }}"
             - name: N8N_PORT
-              value: {{ .Values.n8n.env.N8N_PORT }}
+              value: "{{ .Values.n8n.env.N8N_PORT }}"
           ports:
             - containerPort: 5678
           resources:

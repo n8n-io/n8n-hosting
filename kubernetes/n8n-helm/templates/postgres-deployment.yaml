@@ -40,7 +40,7 @@ spec:
               subPath: {{ .Values.postgres.configMapSubPath }}
           env:
             - name: PGDATA
-              value: {{ .Values.postgres.env.PGDATA }}
+              value: "{{ .Values.postgres.env.PGDATA }}"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -52,7 +52,7 @@ spec:
                   name: {{ .Values.postgresSecret.name }}
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
-              value: {{ .Values.postgres.env.POSTGRES_DB }}
+              value: "{{ .Values.postgres.env.POSTGRES_DB }}"
             - name: POSTGRES_NON_ROOT_USER
               valueFrom:
                 secretKeyRef:
@@ -64,9 +64,9 @@ spec:
                   name: {{ .Values.postgresSecret.name }}
                   key: POSTGRES_NON_ROOT_PASSWORD
             - name: POSTGRES_HOST
-              value: {{ .Values.postgres.env.POSTGRES_HOST }}
+              value: "{{ .Values.postgres.env.POSTGRES_HOST }}"
             - name: POSTGRES_PORT
-              value: {{ .Values.postgres.env.POSTGRES_PORT }}
+              value: "{{ .Values.postgres.env.POSTGRES_PORT }}"
       restartPolicy: Always
       volumes:
         - name: {{ .Values.postgresPvc.name }}
