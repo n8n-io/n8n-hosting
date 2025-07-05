@@ -1,0 +1,95 @@
+namespace:
+  name: n8n
+pvc:
+  name: n8n-claim0
+  label: n8n-claim0
+  accessMode: ReadWriteOnce
+  storage: 2Gi
+# n8n deployment configuration
+n8n:
+  image: n8nio/n8n
+  tag: latest
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "250Mi"
+    limits:
+      memory: "500Mi"
+  env:
+    DB_TYPE: postgresdb
+    DB_POSTGRESDB_HOST: postgres-service.n8n.svc.cluster.local
+    DB_POSTGRESDB_PORT: "5432"
+    DB_POSTGRESDB_DATABASE: n8n
+    N8N_PROTOCOL: http
+    N8N_PORT: "5678"
+  secretRefs:
+    DB_POSTGRESDB_USER:
+      name: postgres-secret
+      key: POSTGRES_NON_ROOT_USER
+    DB_POSTGRESDB_PASSWORD:
+      name: postgres-secret
+      key: POSTGRES_NON_ROOT_PASSWORD
+  pvcMountPath: /home/node/.n8n
+  initContainer:
+    image: busybox:1.36
+    command: ["sh", "-c", "chown 1000:1000 /data"]
+    mountPath: /data
+n8nService:
+  name: n8n
+  type: LoadBalancer
+  port: 5678
+  targetPort: 5678
+  protocol: TCP
+  selector:
+    service: n8n
+postgresPvc:
+  name: postgresql-pv
+  accessMode: ReadWriteOnce
+  storage: 300Gi
+postgresConfigMap:
+  name: init-data
+  script: |
+    #!/bin/bash
+    set -e;
+    if [ -n "${POSTGRES_NON_ROOT_USER:-}" ] && [ -n "${POSTGRES_NON_ROOT_PASSWORD:-}" ]; then
+    	psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    		CREATE USER "${POSTGRES_NON_ROOT_USER}" WITH PASSWORD '${POSTGRES_NON_ROOT_PASSWORD}';
+    		GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO "${POSTGRES_NON_ROOT_USER}";
+    	EOSQL
+    else
+    	echo "SETUP INFO: No Environment variables given!"
+    fi
+postgresSecret:
+  name: postgres-secret
+  user: changeUser
+  password: changePassword
+  db: n8n
+  nonRootUser: changeUser
+  nonRootPassword: changePassword
+postgres:
+  image: postgres
+  tag: "11"
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      cpu: "4"
+      memory: 4Gi
+  pvcMountPath: /var/lib/postgresql/data
+  configMapMountPath: /docker-entrypoint-initdb.d/init-n8n-user.sh
+  configMapSubPath: init-data.sh
+  env:
+    PGDATA: /var/lib/postgresql/data/pgdata
+    POSTGRES_DB: n8n
+    POSTGRES_HOST: postgres-service
+    POSTGRES_PORT: '5432'
+postgresService:
+  name: postgres-service
+  clusterIP: None
+  port: 5432
+  targetPort: 5432
+  protocol: TCP
+  selector:
+    service: postgres-n8n
