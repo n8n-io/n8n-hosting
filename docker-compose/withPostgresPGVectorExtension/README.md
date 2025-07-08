@@ -1,11 +1,17 @@
-# n8n with PostgreSQL
+# n8n with PostgreSQL and pgvector Extension
 
-Starts n8n with PostgreSQL as database.
+Starts n8n with PostgreSQL as database, including the pgvector extension for vector similarity searches.
+
+## Features
+
+- PostgreSQL database for n8n
+- pgvector extension for storing and querying vector embeddings
+- Automatic creation of an embeddings table for AI/ML workflows
+- Non-root user creation for improved security
 
 ## Start
 
-To start n8n with PostgreSQL simply start docker-compose by executing the following
-command in the current folder.
+To start n8n with PostgreSQL and pgvector extension, simply run docker-compose by executing the following command in the current folder.
 
 **IMPORTANT:** But before you do that change the default users and passwords in the [`.env`](.env) file!
 
@@ -22,3 +28,29 @@ docker-compose stop
 ## Configuration
 
 The default name of the database, user and password for PostgreSQL can be changed in the [`.env`](.env) file in the current directory.
+
+## PGVector Store Information
+
+This setup automatically creates:
+
+1. The pgvector extension in your PostgreSQL database
+2. An embeddings table with the following schema:
+
+```sql
+CREATE TABLE embeddings (
+  id SERIAL PRIMARY KEY,
+  embedding vector,
+  text text,
+  created_at timestamptz DEFAULT now()
+);
+```
+
+You can use this table to store vector embeddings from AI models for semantic search, similarity comparison, and other vector-based operations in your n8n workflows.
+
+## Accessing PostgreSQL with pgvector
+
+The PostgreSQL instance is exposed on port 15432 (to avoid conflicts with any local PostgreSQL installations). You can connect to it using:
+
+```
+psql -h localhost -p 15432 -U [POSTGRES_USER] -d [POSTGRES_DB]
+```
