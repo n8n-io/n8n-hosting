@@ -9,6 +9,22 @@ Starts n8n with PostgreSQL as database, including the pgvector extension for vec
 - Automatic creation of an embeddings table for AI/ML workflows
 - Non-root user creation for improved security
 
+## What's Possible?
+
+This Docker Compose setup delivers a ready-to-use PostgreSQL database with **PGvector** extension, enabling powerful vector-based AI capabilities right out of the box.
+
+### Example: RAG Workflow with pgvector
+
+The diagram below shows a sample n8n workflow that demonstrates Retrieval-Augmented Generation (RAG) capabilities using the PostgreSQL/pgvector backend:
+
+![AI-Powered Semantic Search Workflow](./rag_pg_vector_workflow_example.png)
+
+This example workflow illustrates:
+- Document embeddings storage using Google Gemini embeddings 001
+- Semantic similarity searches against your vector database
+- AI reasoning with Google Gemini Flash 2.0 as the LLM
+- A complete RAG pipeline implementation with minimal configuration
+
 ## Start
 
 To start n8n with PostgreSQL and pgvector extension, simply run docker-compose by executing the following command in the current folder.
