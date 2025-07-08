@@ -1,7 +1,7 @@
 version: '3.8'
 
 volumes:
-  db_storage:
+  pgvector_storage:
   n8n_storage:
 
 networks:
@@ -37,7 +37,7 @@ services:
     restart: always
     environment:
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_HOST=postgres-pgvector
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
       - DB_POSTGRESDB_USER=${POSTGRES_NON_ROOT_USER}
@@ -45,11 +45,11 @@ services:
     ports:
       - 5678:5678
     links:
-      - postgres
+      - postgres-pgvector
     volumes:
       - n8n_storage:/home/node/.n8n
     depends_on:
-      postgres:
+      postgres-pgvector:
         condition: service_healthy
     networks:
       - n8n-network
