@@ -1,13 +1,11 @@
 # n8n with PostgreSQL and pgvector Extension
 
-Starts n8n with PostgreSQL as database, including the pgvector extension for vector similarity searches.
+Starts n8n with PostgreSQL as database, including the PGvector extension for vector similarity searches.
 
 ## Features
 
 - PostgreSQL database for n8n
-- pgvector extension for storing and querying vector embeddings
-- Automatic creation of an embeddings table for AI/ML workflows
-- Non-root user creation for improved security
+- PGvector extension for storing and querying vector embeddings
 
 ## What's Possible?
 
