@@ -1,35 +1,67 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    service: n8n
   name: n8n
   namespace: n8n
+
 spec:
   replicas: 1
   selector:
     matchLabels:
-      service: n8n
+      app: n8n
+
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
   template:
     metadata:
       labels:
-        service: n8n
+        app: n8n
+
     spec:
+      restartPolicy: Always
       initContainers:
         - name: volume-permissions
           image: busybox:1.36
           command: ["sh", "-c", "chown 1000:1000 /data"]
           volumeMounts:
-            - name: n8n-claim0
+            - name: n8n-volume
               mountPath: /data
+
       containers:
-        - command:
+        - name: n8n
+          image: n8nio/n8n
+          command:
             - /bin/sh
           args:
             - -c
             - sleep 5; n8n start
+
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 5678
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5678
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5678
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 10
+
           env:
             - name: DB_TYPE
               value: postgresdb
@@ -49,27 +81,30 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_NON_ROOT_PASSWORD
-            - name: N8N_PROTOCOL
-              value: http
-            - name: N8N_PORT
-              value: "5678"
-          image: n8nio/n8n
-          name: n8n
+
+          envFrom:
+            - configMapRef:
+                name: n8n-config
+
           ports:
             - containerPort: 5678
+
           resources:
             requests:
-              memory: "250Mi"
-            limits:
+              cpu: "250m"
               memory: "500Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+
           volumeMounts:
             - mountPath: /home/node/.n8n
-              name: n8n-claim0
-      restartPolicy: Always
+              name: n8n-volume
+
       volumes:
-        - name: n8n-claim0
+        - name: n8n-volume
           persistentVolumeClaim:
-            claimName: n8n-claim0
+            claimName: n8n-pvc
         - name: n8n-secret
           secret:
             secretName: n8n-secret

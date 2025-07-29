@@ -1,0 +1,14 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: n8n-config
+  namespace: n8n
+
+data:
+  TZ: Europe/Berlin
+  N8N_URL: https://n8n.your-domain.de
+  N8N_HOST: n8n.your-domain.de
+  N8N_SECURE_COOKIE: "true"
+  N8N_EDITOR_BASE_URL: https://n8n.your-domain.de
+  N8N_PROTOCOL: http
+  N8N_PORT: "5678"

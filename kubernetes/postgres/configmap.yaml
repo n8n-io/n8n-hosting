@@ -3,6 +3,7 @@ kind: ConfigMap
 metadata:
   name: init-data
   namespace: n8n
+
 data:
   init-data.sh: |
     #!/bin/bash
