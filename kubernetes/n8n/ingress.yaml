@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n-ingress
+  namespace: n8n
+  labels:
+    app.kubernetes.io/name: n8n
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: n8n.your-domain.de
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: n8n-service
+                port:
+                  number: 5678
+
+  tls:
+    - hosts:
+        - n8n.your-domain.de
+      secretName: n8n-tls
