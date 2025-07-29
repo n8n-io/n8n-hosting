@@ -5,24 +5,30 @@ metadata:
     service: postgres-n8n
   name: postgres
   namespace: n8n
+
 spec:
   replicas: 1
   selector:
     matchLabels:
       service: postgres-n8n
+
   strategy:
     rollingUpdate:
       maxSurge: 1
       maxUnavailable: 1
     type: RollingUpdate
+
   template:
     metadata:
       labels:
         service: postgres-n8n
+
     spec:
+      restartPolicy: Always
       containers:
-        - image: postgres:11
-          name: postgres
+        - name: postgres
+          image: postgres:11
+
           resources:
             limits:
               cpu: "4"
@@ -30,17 +36,20 @@ spec:
             requests:
               cpu: "1"
               memory: 2Gi
+
           ports:
             - containerPort: 5432
+
           volumeMounts:
-            - name: postgresql-pv
+            - name: postgresql-volume
               mountPath: /var/lib/postgresql/data
             - name: init-data
               mountPath: /docker-entrypoint-initdb.d/init-n8n-user.sh
               subPath: init-data.sh
+
           env:
             - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata      
+              value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -52,7 +61,10 @@ spec:
                   name: postgres-secret
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
-              value: n8n
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
             - name: POSTGRES_NON_ROOT_USER
               valueFrom:
                 secretKeyRef:
@@ -67,11 +79,11 @@ spec:
               value: postgres-service
             - name: POSTGRES_PORT
               value: '5432'
-      restartPolicy: Always
+
       volumes:
-        - name: postgresql-pv
+        - name: postgresql-volume
           persistentVolumeClaim:
-            claimName: postgresql-pv
+            claimName: postgresql-pvc
         - name: postgres-secret
           secret:
             secretName: postgres-secret

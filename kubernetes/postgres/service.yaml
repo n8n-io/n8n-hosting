@@ -5,6 +5,7 @@ metadata:
     service: postgres-n8n
   name: postgres-service
   namespace: n8n
+
 spec:
   clusterIP: None
   ports:
