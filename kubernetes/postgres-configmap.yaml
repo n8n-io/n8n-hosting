@@ -15,9 +15,15 @@ data:
     if [ -n "${POSTGRES_NON_ROOT_USER:-}" ] && [ -n "${POSTGRES_NON_ROOT_PASSWORD:-}" ]; then
       if [ "$POSTGRES_NON_ROOT_USER" != "$POSTGRES_USER" ]; then
         psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-          CREATE USER "${POSTGRES_NON_ROOT_USER}" WITH PASSWORD '${POSTGRES_NON_ROOT_PASSWORD}';
+          DO \$\$
+          BEGIN
+            CREATE USER "${POSTGRES_NON_ROOT_USER}" WITH PASSWORD '${POSTGRES_NON_ROOT_PASSWORD}';
+          EXCEPTION WHEN duplicate_object THEN
+            RAISE NOTICE 'User ${POSTGRES_NON_ROOT_USER} already exists, skipping creation.';
+          END
+          \$\$;
           GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO "${POSTGRES_NON_ROOT_USER}";
-        EOSQL
+    EOSQL
       else
         echo "SETUP INFO: Non-root user is the same as root user, skipping creation."
       fi
