@@ -21,7 +21,7 @@ spec:
         service: postgres-n8n
     spec:
       containers:
-        - image: postgres:11
+        - image: postgres:18
           name: postgres
           resources:
             limits:
