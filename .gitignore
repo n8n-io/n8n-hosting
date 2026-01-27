@@ -1,0 +1,73 @@
+# Environment files with sensitive credentials
+.env
+.env.*
+*.env
+!*.env.example
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# n8n data and credentials
+.n8n/
+**/credentials.json
+**/*credentials*.json
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Docker volumes and local data
+**/db_storage/
+**/n8n_storage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# Secrets and keys
+*.pem
+*.key
+*.cert
+secrets/
+credentials/
+
+# Build outputs
+dist/
+build/

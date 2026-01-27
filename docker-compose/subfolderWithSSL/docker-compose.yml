@@ -32,10 +32,9 @@ services:
       - '127.0.0.1:5678:5678'
     labels:
       - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(`${DOMAIN_NAME}`)
       - traefik.http.routers.n8n.tls=true
       - traefik.http.routers.n8n.entrypoints=websecure
-      - 'traefik.http.routers.n8n.rule=PathPrefix(`/${SUBFOLDER}{regex:$$|/.*}`)'
+      - "traefik.http.routers.n8n.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/${SUBFOLDER}{regex:$$|/.*}`)"
       - 'traefik.http.middlewares.n8n-stripprefix.stripprefix.prefixes=/${SUBFOLDER}'
       - 'traefik.http.routers.n8n.middlewares=n8n-stripprefix'
       - traefik.http.routers.n8n.tls.certresolver=mytlschallenge

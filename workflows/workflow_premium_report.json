@@ -1,0 +1,1115 @@
+{
+  "name": "V5 AI Operating Model Audit - PREMIUM REPORT",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-manual",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "client_id"
+            },
+            {
+              "name": "slack_data"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        480
+      ],
+      "id": "trigger-workflow",
+      "name": "When Called by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n// SHARED UTILITIES - Reusable Functions for Entire Workflow\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nconst utilities = {\n  \n  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  // JSON Parser - Handles GPT-4o output with multiple formats\n  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  parseModelJson(raw, label = 'model output') {\n    if (raw && typeof raw === 'object') return raw;\n    \n    const text = String(raw || '').trim();\n    if (!text) return {};\n    \n    // Try multiple extraction patterns\n    const patterns = [\n      /```json\\s*([\\s\\S]*?)```/i,\n      /```\\s*([\\s\\S]*?)```/,\n      /\\{[\\s\\S]*\\}/\n    ];\n    \n    let jsonStr = text;\n    for (const pattern of patterns) {\n      const match = text.match(pattern);\n      if (match) {\n        jsonStr = match[1] || match[0];\n        break;\n      }\n    }\n    \n    // Sanitize\n    const sanitized = jsonStr\n      .replace(/^\\uFEFF/, '')\n      .replace(/\\r/g, '')\n      .replace(/\\\\(?![\"\\\\/ bfnrtu])/g, '\\\\\\\\');\n    \n    try {\n      const parsed = JSON.parse(sanitized);\n      if (!parsed || typeof parsed !== 'object') {\n        throw new Error('Parsed result is not an object');\n      }\n      return parsed;\n    } catch (error) {\n      console.error(`\u274c JSON Parse Error [${label}]:`, error.message);\n      console.error('Snippet:', sanitized.slice(0, 300));\n      return {\n        _parseError: true,\n        _error: error.message,\n        _label: label\n      };\n    }\n  },\n  \n  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  // Safe Node Accessor - Prevents workflow crashes\n  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  safeNode(nodeName, defaultValue = {}) {\n    try {\n      const node = $(nodeName);\n      if (!node || node.length === 0) return defaultValue;\n      return node.first().json || defaultValue;\n    } catch (error) {\n      console.warn(`\u26a0\ufe0f  Node ${nodeName} not accessible:`, error.message);\n      return defaultValue;\n    }\n  },\n  \n  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  // Metadata Wrapper - Adds audit tracking to all outputs\n  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  addMetadata(data, context = {}) {\n    return {\n      ...data,\n      _meta: {\n        timestamp: new Date().toISOString(),\n        workflow_id: typeof $workflow !== 'undefined' ? $workflow.id : 'unknown',\n        execution_id: typeof $execution !== 'undefined' ? $execution.id : 'unknown',\n        ...context\n      }\n    };\n  },\n  \n  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  // Validation Helper\n  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  validate(data, rules, phaseName) {\n    const errors = [];\n    \n    for (const [field, rule] of Object.entries(rules)) {\n      const value = data[field];\n      \n      if (rule.required && !value) {\n        errors.push(`Missing required field: ${field}`);\n      }\n      \n      if (rule.minItems && Array.isArray(value) && value.length < rule.minItems) {\n        errors.push(`${field} has ${value.length} items, minimum ${rule.minItems} required`);\n      }\n      \n      if (rule.type && typeof value !== rule.type) {\n        errors.push(`${field} should be type ${rule.type}, got ${typeof value}`);\n      }\n    }\n    \n    if (errors.length > 0) {\n      throw new Error(`\u274c ${phaseName} VALIDATION FAILED:\\n  - ${errors.join('\\n  - ')}`);\n    }\n    \n    return true;\n  }\n};\n\n// Return utilities for use by other nodes\nreturn [{ json: { utilities } }];"
+      },
+      "id": "util-shared",
+      "name": "Shared Utilities",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n// ENVIRONMENT VALIDATION - Runs on ALL triggers\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nconst requiredEnv = [\n  'OPENAI_API_KEY',\n  'AIRTABLE_TOKEN',\n  'SUPABASE_URL',\n  'SUPABASE_SERVICE_ROLE_KEY'\n];\n\nconst missing = [];\nconst invalid = [];\n\nfor (const key of requiredEnv) {\n  const value = process.env[key] || $env[key];\n  \n  if (!value) {\n    missing.push(key);\n  } else if (value.length < 10) {\n    invalid.push(`${key} (too short, likely invalid)`);\n  }\n}\n\nif (missing.length > 0 || invalid.length > 0) {\n  let errorMsg = '\u274c WORKFLOW BLOCKED - Environment Configuration Issues:\\n\\n';\n  \n  if (missing.length > 0) {\n    errorMsg += `Missing variables:\\n  - ${missing.join('\\n  - ')}\\n\\n`;\n  }\n  \n  if (invalid.length > 0) {\n    errorMsg += `Invalid variables:\\n  - ${invalid.join('\\n  - ')}\\n\\n`;\n  }\n  \n  errorMsg += 'Please configure these in n8n Settings > Environment Variables';\n  \n  throw new Error(errorMsg);\n}\n\nconsole.log('\u2705 Environment validation passed');\n\n// Pass through input data\nreturn $input.all();"
+      },
+      "id": "guard-env",
+      "name": "Environment Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n// CLIENT CONFIGURATION - Hogarth Worldwide Default\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nconst clientId = $json.client_id || 'Hogarth Worldwide';\n\nconst config = {\n  client_name: clientId,\n  client_email: \"mrchspence@gmail.com\",\n  sector: clientId === 'Hogarth Worldwide' ? 'Marketing & Creative Production' : 'Unknown',\n  gdrive_folder_id: \"1ecFCQPJIxS7pwmswxfHvnLqGe3garKlb\",\n  google_sheets_raci_id: \"1zyGVKc_6I5Q2cqoKGq-ifdPvdKRMZZpn_EVybRuPa_8\",\n  google_sheets_kpi_id: \"1XcggscF9iSF3saKBnM_CWmbGnr7Ls3qBjgKNBRgzp5M\",\n  market_count: 25,\n  maturity_stage: \"Walk\",\n  audit_timestamp: new Date().toISOString(),\n  audit_id: `${clientId.replace(/\\s+/g, '_')}_${new Date().toISOString().replace(/[:.]/g, '').slice(0, 15)}`\n};\n\nconsole.log(`\ud83c\udfaf Starting audit for: ${config.client_name}`);\nconsole.log(`\ud83d\udccb Audit ID: ${config.audit_id}`);\n\nreturn [{ json: config }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        300
+      ],
+      "id": "config-client",
+      "name": "Set Client Config"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1zXqRsXEmw-PQE-9nQKeDy_shjarz6Y97",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            }
+          }
+        }
+      },
+      "id": "data-gdrive",
+      "name": "1.1 Google Drive - Org Data",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        1240,
+        140
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HGcwinsAHvFxWc4L",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zyGVKc_6I5Q2cqoKGq-ifdPvdKRMZZpn_EVybRuPa_8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "yes"
+        },
+        "options": {}
+      },
+      "id": "data-raci",
+      "name": "1.2 Google Sheets - RACI Matrix",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1240,
+        300
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "HSKZd2nGiLCRcvQ9",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.airtable.com/v0/appE3ZTIBGNCbQmPf/Tools_Inventory?filterByFormula=AND({Client}='{{ $('Set Client Config').first().json.client_name }}')",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {}
+      },
+      "id": "data-tools",
+      "name": "1.3 Tool Inventory - API",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1240,
+        460
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0Gdjq1yShsYU4A6D",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1XcggscF9iSF3saKBnM_CWmbGnr7Ls3qBjgKNBRgzp5M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "id": "data-kpi",
+      "name": "1.4 KPI Snapshot - Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1240,
+        620
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "HSKZd2nGiLCRcvQ9",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "merge-discovery",
+      "name": "Merge Discovery Data",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        1440,
+        300
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n// DATA CLEANER v3 - ENHANCED WITH LOGGING & FALLBACKS\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nconst items = $input.all();\n\nconsole.log(`\\n${'='.repeat(60)}`);\nconsole.log('\ud83d\udcca DATA CLEANER - STARTING');\nconsole.log(`Total items received: ${items.length}`);\nconsole.log(`${'='.repeat(60)}\\n`);\n\nconst currentModelData = {\n  client_name: items[0].json.client_name,\n  audit_id: items[0].json.audit_id,\n  audit_timestamp: items[0].json.audit_timestamp || new Date().toISOString(),\n  org_structure: [],\n  tools: [],\n  processes: [],\n  kpis: {}\n};\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// HELPER: Flexible field getter (case-insensitive)\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nfunction getField(obj, ...possibleNames) {\n  for (const name of possibleNames) {\n    if (obj[name] !== undefined) return obj[name];\n    \n    // Try case-insensitive match\n    const lowerName = name.toLowerCase();\n    for (const key of Object.keys(obj)) {\n      if (key.toLowerCase() === lowerName) return obj[key];\n    }\n  }\n  return null;\n}\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// PROCESS EACH INPUT\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nlet raciCount = 0;\nlet toolCount = 0;\nlet kpiCount = 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  \n  console.log(`\\n--- Processing item ${i + 1}/${items.length} ---`);\n  console.log('Available keys:', Object.keys(item.json).slice(0, 20).join(', '));\n  \n  // RACI Matrix - flexible field matching\n  const process = getField(item.json, 'Process/Task', 'Process', 'process', 'Task', 'task', 'ProcessTask');\n  \n  if (process && String(process).trim()) {\n    const raciEntry = {\n      type: 'raci_matrix',\n      process: String(process).trim(),\n      responsible: String(getField(item.json, 'Responsible', 'responsible', 'R') || ''),\n      accountable: String(getField(item.json, 'Accountable', 'accountable', 'A') || ''),\n      consulted: String(getField(item.json, 'Consulted', 'consulted', 'C') || ''),\n      informed: String(getField(item.json, 'Informed', 'informed', 'I') || ''),\n      tool_used: String(getField(item.json, 'Tool Used', 'Tool', 'tool', 'ToolUsed') || ''),\n      manual_pct: parseFloat(getField(item.json, 'Manual %', 'Manual', 'manual', 'ManualPct') || 0)\n    };\n    \n    currentModelData.org_structure.push(raciEntry);\n    raciCount++;\n    console.log(`\u2705 RACI entry added: ${raciEntry.process}`);\n  }\n  \n  // Tool Inventory - Airtable format\n  if (item.json.records && Array.isArray(item.json.records)) {\n    for (const record of item.json.records) {\n      const toolEntry = {\n        name: String(record.fields.ToolName || record.fields.Name || record.fields.name || ''),\n        purpose: String(record.fields.Purpose || record.fields.purpose || ''),\n        users: parseInt(record.fields.UserCount || record.fields.Users || 0),\n        annual_cost: parseFloat(record.fields.AnnualCost || record.fields.Cost || 0)\n      };\n      \n      if (toolEntry.name) {\n        currentModelData.tools.push(toolEntry);\n        toolCount++;\n        console.log(`\u2705 Tool added: ${toolEntry.name}`);\n      }\n    }\n  }\n  \n  // KPIs - flexible field matching\n  const metricName = getField(item.json, 'Metric', 'metric', 'KPI', 'kpi', 'MetricName');\n  const metricValue = getField(item.json, 'Value', 'value', 'Vale', 'vale', 'Amount', 'amount');\n  \n  if (metricName && String(metricName).trim()) {\n    const metric = String(metricName).toLowerCase();\n    const value = parseFloat(metricValue || 0);\n    \n    if (metric.includes('turnaround') || metric.includes('tat')) {\n      currentModelData.kpis.turnaround_time_avg = value;\n      kpiCount++;\n      console.log(`\u2705 KPI added: turnaround_time_avg = ${value}`);\n    } else if (metric.includes('utilization') || metric.includes('fte')) {\n      currentModelData.kpis.fte_utilization = value;\n      kpiCount++;\n      console.log(`\u2705 KPI added: fte_utilization = ${value}`);\n    } else if (metric.includes('cost')) {\n      currentModelData.kpis.cost_per_asset = value;\n      kpiCount++;\n      console.log(`\u2705 KPI added: cost_per_asset = ${value}`);\n    } else if (metric.includes('error') || metric.includes('quality')) {\n      currentModelData.kpis.error_rate = value;\n      kpiCount++;\n      console.log(`\u2705 KPI added: error_rate = ${value}`);\n    } else if (metric.includes('volume') || metric.includes('throughput')) {\n      currentModelData.kpis.volume_per_month = value;\n      kpiCount++;\n      console.log(`\u2705 KPI added: volume_per_month = ${value}`);\n    }\n  }\n}\n\nconsole.log(`\\n\ud83d\udcca DATA COLLECTION SUMMARY:`);\nconsole.log(`- RACI entries: ${raciCount}`);\nconsole.log(`- Tools: ${toolCount}`);\nconsole.log(`- KPIs: ${kpiCount}`);\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// FALLBACK DATA - If sources are empty\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nif (currentModelData.org_structure.length === 0) {\n  console.warn('\u26a0\ufe0f  No RACI data found - using fallback sample data');\n  currentModelData.org_structure = [\n    { type: 'raci_matrix', process: 'Content Creation', responsible: 'Creative Team', accountable: 'Creative Director', consulted: 'Brand Team', informed: 'Client', tool_used: 'Adobe Creative Suite', manual_pct: 60 },\n    { type: 'raci_matrix', process: 'Asset Review & Approval', responsible: 'Account Manager', accountable: 'Client', consulted: 'Creative Team', informed: 'Production', tool_used: 'Email/Manual', manual_pct: 80 },\n    { type: 'raci_matrix', process: 'Localization', responsible: 'Production Team', accountable: 'Project Manager', consulted: 'Translation Service', informed: 'Client', tool_used: 'Manual Process', manual_pct: 90 },\n    { type: 'raci_matrix', process: 'Quality Assurance', responsible: 'QA Team', accountable: 'Production Lead', consulted: 'Creative Team', informed: 'Client', tool_used: 'Manual Checklist', manual_pct: 85 },\n    { type: 'raci_matrix', process: 'Asset Distribution', responsible: 'Production Team', accountable: 'Account Manager', consulted: 'IT', informed: 'Client', tool_used: 'FTP/Email', manual_pct: 70 }\n  ];\n}\n\nif (currentModelData.tools.length === 0) {\n  console.warn('\u26a0\ufe0f  No tool data found - using fallback sample data');\n  currentModelData.tools = [\n    { name: 'Adobe Creative Cloud', purpose: 'Content creation and editing', users: 50, annual_cost: 75000 },\n    { name: 'Project Management Tool', purpose: 'Task tracking and collaboration', users: 100, annual_cost: 24000 },\n    { name: 'DAM System', purpose: 'Digital asset storage', users: 80, annual_cost: 60000 },\n    { name: 'Email/Manual Review', purpose: 'Asset review and approval', users: 120, annual_cost: 0 }\n  ];\n}\n\nif (Object.keys(currentModelData.kpis).length === 0) {\n  console.warn('\u26a0\ufe0f  No KPI data found - using fallback estimates');\n  currentModelData.kpis = {\n    turnaround_time_avg: 5.2,\n    fte_utilization: 68,\n    cost_per_asset: 850,\n    error_rate: 12,\n    volume_per_month: 450\n  };\n}\n\n// Remove duplicates\ncurrentModelData.tools = [...new Map(currentModelData.tools.map(t => [t.name, t])).values()];\ncurrentModelData.org_structure = [...new Map(currentModelData.org_structure.map(o => [o.process, o])).values()];\n\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// VALIDATION\n// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst validation = {\n  processCount: currentModelData.org_structure.length,\n  toolCount: currentModelData.tools.length,\n  kpiCount: Object.keys(currentModelData.kpis).length,\n  dataQuality: 100,\n  usedFallbackData: raciCount === 0 || toolCount === 0 || kpiCount === 0\n};\n\nconst issues = [];\n\nif (validation.processCount < 3) {\n  issues.push(`Only ${validation.processCount} processes found`);\n  validation.dataQuality -= 20;\n}\n\nif (validation.toolCount < 2) {\n  issues.push(`Only ${validation.toolCount} tools found`);\n  validation.dataQuality -= 15;\n}\n\nif (validation.kpiCount < 2) {\n  issues.push(`Only ${validation.kpiCount} KPIs found`);\n  validation.dataQuality -= 10;\n}\n\nif (validation.usedFallbackData) {\n  console.warn('\u26a0\ufe0f  Using fallback data - connect real data sources for accurate results');\n}\n\nconsole.log(`\\n\u2705 Data Cleaner complete:`);\nconsole.log(`   - Processes: ${validation.processCount}`);\nconsole.log(`   - Tools: ${validation.toolCount}`);\nconsole.log(`   - KPIs: ${validation.kpiCount}`);\nconsole.log(`   - Data Quality: ${validation.dataQuality}%`);\nconsole.log(`${'='.repeat(60)}\\n`);\n\nreturn [{ json: currentModelData, validation }];"
+      },
+      "id": "clean-data",
+      "name": "2.1 Data Cleaner",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1640,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a senior management consultant analyzing operational inefficiencies.\n\nClient: {{ $json.client_name }}\n\nAnalyze the operating model data below and identify 8-12 specific inefficiencies.\n\nData:\n```json\n{{ JSON.stringify({\n  processes: $json.org_structure,\n  tools: $json.tools,\n  kpis: $json.kpis\n}, null, 2) }}\n```\n\nFor each inefficiency, provide:\n- **Category**: redundancy, bottleneck, manual_dependency, communication_gap, tool_sprawl, quality_issue\n- **Description**: 2-3 sentence detailed explanation\n- **Affected Process**: Which process is impacted\n- **Root Cause**: Why this inefficiency exists\n- **Annual Cost**: Estimated cost ($) - be realistic\n- **Urgency**: Low, Medium, High, Very High\n- **Automation Readiness** (1-10): How ready for AI automation\n- **Impact Potential** (1-10): Business impact if fixed\n- **Risk Level** (1-10): Risk of making the change\n\nReturn ONLY valid JSON:\n{\n  \"inefficiencies\": [\n    {\n      \"category\": \"manual_dependency\",\n      \"description\": \"Detailed description...\",\n      \"affected_process\": \"Process name\",\n      \"root_cause\": \"Why it exists\",\n      \"annual_cost\": 35000,\n      \"urgency\": \"High\",\n      \"automation_readiness\": 8,\n      \"impact_potential\": 9,\n      \"risk_level\": 3\n    }\n  ],\n  \"total_inefficiency_cost\": 185000,\n  \"summary\": \"2-3 sentence overall summary\"\n}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 6000
+        }
+      },
+      "id": "analyze-inefficiency",
+      "name": "2.2 Inefficiency Scorer",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        1840,
+        180
+      ],
+      "typeVersion": 1.7,
+      "credentials": {
+        "openAiApi": {
+          "id": "sHNKcTxbhPX7Z73K",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler for GPT-4o nodes\nconst input = $input.first().json;\n\n// Check for API errors\nif (input.error) {\n  console.error('\u274c GPT-4o API Error:', input.error);\n  \n  return [{\n    json: {\n      inefficiencies: [],\n      summary: 'Analysis failed - using fallback',\n      _error: input.error\n    }\n  }];\n}\n\n// Parse response\nconst content = input.message?.content || input.content || '';\n\ntry {\n  // Use shared parser\n  const parsed = JSON.parse(content.match(/```json\\s*([\\s\\S]*?)```/)?.[1] || content);\n  \n  if (!parsed.inefficiencies) {\n    throw new Error('Missing inefficiencies array');\n  }\n  \n  console.log(`\u2705 Parsed ${parsed.inefficiencies.length} inefficiencies`);\n  return [{ json: parsed }];\n  \n} catch (error) {\n  console.error('\u274c Parse error:', error.message);\n  \n  return [{\n    json: {\n      inefficiencies: [],\n      summary: content.slice(0, 500),\n      _parseError: true\n    }\n  }];\n}"
+      },
+      "id": "handle-inefficiency",
+      "name": "Parse Inefficiency Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2040,
+        180
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an AI transformation consultant identifying automation opportunities. Return ONLY valid JSON."
+            },
+            {
+              "content": "=You are an AI transformation strategist identifying automation opportunities.\n\nClient: {{ $('2.1 Data Cleaner').first().json.client_name }}\n\nOperating Model Data:\n- Processes: {{ $('2.1 Data Cleaner').first().json.org_structure.length }}\n- Tools: {{ $('2.1 Data Cleaner').first().json.tools.length }}\n- Manual processes: {{ $('2.1 Data Cleaner').first().json.org_structure.filter(p => p.manual_pct > 50).map(p => p.process).join(', ') }}\n\nIdentify 7-10 specific, high-value AI use cases for this client.\n\nReturn ONLY valid JSON:\n{\n  \"overall_summary\": {\n    \"headline\": \"One sentence transformation opportunity\",\n    \"current_state\": \"2-3 sentences on current limitations\",\n    \"ai_opportunity_theme\": \"Main AI opportunity area\"\n  },\n  \"use_cases\": [\n    {\n      \"id\": \"UC01\",\n      \"title\": \"Specific use case title\",\n      \"short_description\": \"2-3 sentences\",\n      \"detailed_description\": \"4-5 sentences explaining how it works\",\n      \"ai_technologies\": [\"GPT-4o\", \"Computer Vision\", \"NLP\"],\n      \"processes_impacted\": [\"Process 1\", \"Process 2\"],\n      \"readiness_level\": \"ready_now\",\n      \"impact_score_1_to_5\": 5,\n      \"complexity_score_1_to_5\": 2,\n      \"estimated_annual_saving\": 75000,\n      \"implementation_timeline_months\": 3\n    }\n  ]\n}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 6000
+        }
+      },
+      "id": "analyze-aifit",
+      "name": "2.3 AI Fit Mapper",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        1840,
+        420
+      ],
+      "typeVersion": 1.7,
+      "credentials": {
+        "openAiApi": {
+          "id": "sHNKcTxbhPX7Z73K",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI Fit Mapper response\nconst input = $input.first().json;\nconst content = input.message?.content || input.content || '';\n\ntry {\n  const parsed = JSON.parse(content.match(/```json\\s*([\\s\\S]*?)```/)?.[1] || content);\n  \n  if (!parsed.use_cases || !Array.isArray(parsed.use_cases)) {\n    throw new Error('Invalid structure');\n  }\n  \n  console.log(`\u2705 Identified ${parsed.use_cases.length} AI use cases`);\n  return [{ json: parsed }];\n  \n} catch (error) {\n  console.error('\u274c AI Fit parse error:', error.message);\n  \n  return [{\n    json: {\n      overall_summary: { headline: 'Parse failed' },\n      use_cases: [],\n      _parseError: true,\n      _rawContent: content.slice(0, 500)\n    }\n  }];\n}"
+      },
+      "id": "handle-aifit",
+      "name": "Parse AI Fit Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2040,
+        420
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {},
+      "id": "merge-analysis",
+      "name": "Merge Analysis Results",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        2240,
+        300
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an enterprise architect designing AI-enabled operating models.\n\nClient: {{ $('Set Client Config').first().json.client_name }}\n\nContext:\n- Inefficiencies found: {{ $('Parse Inefficiency Response').first().json.inefficiencies?.length || 0 }}\n- AI use cases identified: {{ $('Parse AI Fit Response').first().json.use_cases?.length || 0 }}\n\nDesign a comprehensive future-state operating model.\n\nReturn ONLY valid JSON with detailed data:\n{\n  \"organization_structure\": {\n    \"model_type\": \"Hub-and-Spoke\",\n    \"description\": \"2-3 sentences explaining the model\",\n    \"new_roles\": [\n      {\n        \"role\": \"AI Agent Supervisor\",\n        \"team\": \"Technology\",\n        \"description\": \"Detailed role description\",\n        \"reports_to\": \"CTO\",\n        \"key_responsibilities\": [\"Resp 1\", \"Resp 2\"]\n      }\n    ],\n    \"roles_to_retire\": [\"Manual QA Analyst\", \"Data Entry Coordinator\"]\n  },\n  \"ai_agents\": [\n    {\n      \"agent_name\": \"Content Generation Agent\",\n      \"platform\": \"GPT-4o\",\n      \"responsibilities\": \"Detailed responsibilities\",\n      \"triggers\": \"What triggers this agent\",\n      \"outputs\": \"What it produces\",\n      \"integrations\": [\"System 1\", \"System 2\"],\n      \"human_touchpoints\": \"When humans are involved\",\n      \"automation_level\": \"85%\"\n    }\n  ],\n  \"n8n_workflows\": [\n    {\n      \"workflow_name\": \"Content Lifecycle Automation\",\n      \"purpose\": \"End-to-end content workflow\",\n      \"trigger\": \"New brief submitted\",\n      \"steps\": \"Generate \u2192 Translate \u2192 QA \u2192 Notify\",\n      \"systems_connected\": [\"Production Studio\", \"Supabase\", \"DAM\"],\n      \"frequency\": \"Real-time\",\n      \"estimated_time_saving_per_execution\": \"4 hours\"\n    }\n  ],\n  \"raci_matrix\": [\n    {\n      \"process\": \"Content Creation\",\n      \"responsible\": \"Content Generation Agent\",\n      \"accountable\": \"Content Strategist\",\n      \"consulted\": \"Localization Manager\",\n      \"informed\": \"Project Manager\",\n      \"automation_level\": \"85%\"\n    }\n  ],\n  \"tools_to_retire\": [\n    {\"tool\": \"Google Sheets\", \"reason\": \"Replaced by automation\", \"annual_saving\": 50000}\n  ],\n  \"tools_to_add\": [\n    {\"tool\": \"n8n Enterprise\", \"purpose\": \"Workflow orchestration\", \"annual_cost\": 12000}\n  ],\n  \"technology_architecture\": {\n    \"orchestration_layer\": \"n8n\",\n    \"data_layer\": \"Supabase\",\n    \"ai_layer\": \"GPT-4o, GPT-4o Vision\",\n    \"integration_layer\": \"n8n + APIs\",\n    \"key_integrations\": [\"Production Studio\", \"DAM\", \"CRM\"]\n  }\n}"
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 8000,
+          "temperature": 0.3
+        }
+      },
+      "id": "design-blueprint",
+      "name": "3.1 Blueprint Generator",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        2440,
+        300
+      ],
+      "typeVersion": 1.7,
+      "credentials": {
+        "openAiApi": {
+          "id": "sHNKcTxbhPX7Z73K",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Blueprint\nconst input = $input.first().json;\nconst content = input.message?.content || input.content || '';\n\ntry {\n  const parsed = JSON.parse(content.match(/```json\\s*([\\s\\S]*?)```/)?.[1] || content);\n  console.log('\u2705 Blueprint parsed successfully');\n  return [{ json: parsed }];\n} catch (error) {\n  console.error('\u274c Blueprint parse error:', error.message);\n  return [{\n    json: {\n      organization_structure: {},\n      process_flows: [],\n      technology_architecture: { ai_agents: [] },\n      transformation_roadmap: {},\n      success_metrics: { kpis_to_track: [] },\n      _parseError: true\n    }\n  }];\n}"
+      },
+      "id": "handle-blueprint",
+      "name": "Parse Blueprint",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2640,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// ROI Simulator - 3 Scenarios\n// Based on industry benchmarks for AI transformation\n\nconst clientData = $('2.1 Data Cleaner').first().json;\nconst toolCount = clientData.tools.length;\nconst processCount = clientData.org_structure.length;\n\n// Calculate baseline metrics\nconst avgToolCost = clientData.tools.reduce((sum, t) => sum + (t.annual_cost || 50000), 0) / Math.max(toolCount, 1);\nconst totalToolCost = toolCount * avgToolCost;\n\nconst result = {\n  scenarios: {\n    cautious: {\n      name: \"Cautious - Quick Wins Only\",\n      timeline_months: 6,\n      implementation_cost: 75000,\n      annual_saving: Math.round(totalToolCost * 0.15 + 100000),\n      fte_saved: 2,\n      efficiency_gain_pct: 25,\n      three_year_roi: 500,\n      payback_period_months: 4\n    },\n    hybrid: {\n      name: \"Hybrid - Balanced (Recommended)\",\n      timeline_months: 12,\n      implementation_cost: 180000,\n      annual_saving: Math.round(totalToolCost * 0.35 + 250000),\n      fte_saved: 5,\n      efficiency_gain_pct: 55,\n      three_year_roi: 650,\n      payback_period_months: 5\n    },\n    aggressive: {\n      name: \"Aggressive - Full Transformation\",\n      timeline_months: 18,\n      implementation_cost: 350000,\n      annual_saving: Math.round(totalToolCost * 0.60 + 500000),\n      fte_saved: 10,\n      efficiency_gain_pct: 85,\n      three_year_roi: 800,\n      payback_period_months: 6\n    }\n  },\n  recommended_scenario: \"hybrid\"\n};\n\nconsole.log('\u2705 ROI scenarios calculated:', result.scenarios.hybrid);\n\nreturn [{ json: result }];"
+      },
+      "id": "simulate-roi",
+      "name": "3.2 ROI Simulator",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2840,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a senior consultant writing executive summaries. Be concise and business-focused."
+            },
+            {
+              "content": "=You are a senior consultant writing an executive overview for a C-suite audience.\n\nClient: {{ $('Set Client Config').first().json.client_name }}\n\nFinancial Impact (Hybrid Scenario):\n- 3-Year ROI: {{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.three_year_roi }}%\n- Annual Savings: ${{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.annual_saving }}\n- Implementation Cost: ${{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.implementation_cost }}\n- FTE Saved: {{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.fte_saved }}\n- Payback: {{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.payback_period_months }} months\n- Efficiency Gain: {{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.efficiency_gain_pct }}%\n\nWrite a comprehensive **Section 1: EXECUTIVE OVERVIEW** (1,000-1,500 words) with these subsections:\n\n### 1.1 Situation Analysis\n- Current operating model challenges\n- Market context and competitive pressure\n- Why change is needed now\n\n### 1.2 Transformation Opportunity\n- What AI enablement can achieve\n- Strategic alignment with business priorities\n- Unique advantages for this organization\n\n### 1.3 Recommended Approach\n- Why Hybrid scenario is optimal\n- 4-phase transformation approach\n- Critical success factors\n\n### 1.4 Expected Business Impact\nPresent this as a formatted markdown list:\n- **3-Year ROI:** X%\n- **Annual Savings:** $X\n- **Implementation Investment:** $X\n- **Payback Period:** X months\n- **FTE Optimization:** X FTEs\n- **Efficiency Gain:** X%\n\nWrite in a confident, professional consulting tone. Be specific with numbers and timeframes."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 6000
+        }
+      },
+      "id": "report-exec",
+      "name": "3.4a Exec Overview",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        3040,
+        100
+      ],
+      "typeVersion": 1.7,
+      "credentials": {
+        "openAiApi": {
+          "id": "sHNKcTxbhPX7Z73K",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a senior consultant analyzing current state operations."
+            },
+            {
+              "content": "=You are a senior consultant analyzing current state operations.\n\nClient: {{ $('Set Client Config').first().json.client_name }}\n\nInefficiencies Data:\n{{ JSON.stringify($('Parse Inefficiency Response').first().json.inefficiencies, null, 2) }}\n\nWrite **Section 2: CURRENT STATE ASSESSMENT** (1,200-1,800 words):\n\n### 2.1 Operating Model Maturity\n- Current maturity level (\"Walk\" stage)\n- Key characteristics of current state\n- Comparison to industry leaders\n- Capability gaps\n\n### 2.2 Key Inefficiencies & Pain Points\nCreate a detailed markdown table:\n\n| Inefficiency | Description | Annual Cost | Root Cause | Urgency |\n|--------------|-------------|-------------|------------|---------|\n| Row 1 data | ... | ... | ... | ... |\n\nThen analyze:\n- Patterns across inefficiencies\n- Systemic issues\n- Total cost of inefficiency: $XXX,XXX annually\n\n### 2.3 Cost of Inaction\n- 3-year cost if nothing changes: $XXX,XXX\n- Competitive risks\n- Strategic risks\n- Employee satisfaction impacts\n\nUse specific data from the inefficiencies. Be quantitative."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 6000
+        }
+      },
+      "id": "report-current",
+      "name": "3.4b Current State",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        3040,
+        260
+      ],
+      "typeVersion": 1.7,
+      "credentials": {
+        "openAiApi": {
+          "id": "sHNKcTxbhPX7Z73K",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a senior consultant designing future state operating models."
+            },
+            {
+              "content": "=You are a senior consultant designing future state operating models.\n\nClient: {{ $('Set Client Config').first().json.client_name }}\n\nBlueprint Data:\n{{ JSON.stringify($('Parse Blueprint').first().json, null, 2) }}\n\nAI Use Cases:\n{{ $('Parse AI Fit Response').first().json.use_cases?.length || 0 }} use cases identified\n\nWrite **Section 3: FUTURE STATE VISION** (2,000-2,500 words):\n\n### 3.1 AI-Enabled Operating Model Overview\n- Hub-and-Spoke structure explained\n- How AI agents fit into the organization\n- Human-AI collaboration model\n\n### 3.2 Core Capabilities Enabled\n- Intelligent Automation\n- Enhanced Quality & Speed\n- Scalability & Flexibility\n- Data-Driven Decision Making\n- Workflow Orchestration\n- Tool Consolidation\n- Human-AI Collaboration\n\n### 3.3 AI Agents & Automation Architecture\nCreate this markdown table:\n\n| Agent Name | Platform | Responsibilities | Triggers | Outputs | Integrations | Human Touchpoints |\n|------------|----------|------------------|----------|---------|--------------|-------------------|\n| Data here | ... | ... | ... | ... | ... | ... |\n\n### 3.4 n8n Workflow Automation\nCreate this table:\n\n| Workflow Name | Purpose | Trigger | Steps | Systems Connected | Frequency |\n|---------------|---------|---------|-------|-------------------|-----------|\n| Data | ... | ... | ... | ... | ... |\n\n### 3.5 New RACI Matrix\nCreate this table:\n\n| Process | Responsible | Accountable | Consulted | Informed | Automation Level |\n|---------|-------------|-------------|-----------|----------|------------------|\n| Data | ... | ... | ... | ... | 85% |\n\nInclude:\n- **New Roles:** AI Agent Supervisor, Automation Specialist\n- **Eliminated Roles:** Manual QA Analyst, etc.\n\nBe comprehensive and specific. Use actual data from the blueprint."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 8000
+        }
+      },
+      "id": "report-future",
+      "name": "3.4c Future State",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        3040,
+        420
+      ],
+      "typeVersion": 1.7,
+      "credentials": {
+        "openAiApi": {
+          "id": "sHNKcTxbhPX7Z73K",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a senior consultant defining governance and next steps."
+            },
+            {
+              "content": "=You are a senior consultant defining governance and next steps.\n\nClient: {{ $('Set Client Config').first().json.client_name }}\n\nWrite **Sections 4-8** (total 2,000-2,500 words):\n\n## 4. FINANCIAL ANALYSIS & ROI\n\n### 4.1 Investment Required\nMarkdown table:\n| Category | Cost |\n|----------|------|\n| Technology Licenses | $50,000 |\n| Total | $XXX,XXX |\n\n### 4.2 Expected Benefits\nTable showing benefit breakdown\n\n### 4.3 ROI Scenarios\nTable with Cautious, Hybrid, Aggressive scenarios\n\n### 4.4 Recommendation\nWhy Hybrid is optimal\n\n---\n\n## 5. IMPLEMENTATION ROADMAP\n\n### 5.1 Phase 1: Quick Wins (0-3 months)\n- Objectives\n- Key Deliverables\n- Success Metrics\n\n### 5.2 Phase 2: Foundation (3-9 months)\nSame structure\n\n### 5.3 Phase 3: Scale (9-18 months)\nSame structure\n\n### 5.4 Phase 4: Optimize (18-24 months)\nSame structure\n\n---\n\n## 6. RISKS & MITIGATION\n\n### 6.1 Key Risks\nBy category: Technical, Organizational, Operational, External\n\n### 6.2 Mitigation Strategies\nTable:\n| Risk | Mitigation | Owner | Timeline |\n|------|------------|-------|----------|\n\n---\n\n## 7. GOVERNANCE & DECISION FRAMEWORK\n\n### 7.1 Program Governance\n- Steering Committee composition\n- Decision rights\n- Review cadence\n\n### 7.2 Success Metrics & KPIs\nList of KPIs to track\n\n---\n\n## 8. NEXT STEPS & CALL TO ACTION\n\n### 8.1 Immediate Actions (Next 30 Days)\nNumbered list\n\n### 8.2 Decision Points\nWhat needs approval\n\n### 8.3 Timeline to Value\nWeek-by-week timeline\n\nBe comprehensive, specific, and actionable."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 5000
+        }
+      },
+      "id": "report-governance",
+      "name": "3.4d Governance",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        3040,
+        580
+      ],
+      "typeVersion": 1.7,
+      "credentials": {
+        "openAiApi": {
+          "id": "sHNKcTxbhPX7Z73K",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "merge-report",
+      "name": "Merge Report Sections",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        3240,
+        340
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assemble Premium Executive Report\nconst sections = $input.all();\n\nconst parts = sections\n  .map(s => s.json.message?.content || s.json.content || '')\n  .map(s => String(s).trim())\n  .filter(s => s.length > 0);\n\nconst clientName = $('Set Client Config').first().json.client_name;\nconst auditId = $('2.1 Data Cleaner').first().json.audit_id;\nconst roi = $('3.2 ROI Simulator').first().json.scenarios.hybrid;\nconst sector = $('Set Client Config').first().json.sector || 'Business Operations';\n\nconst header = `---\n\n# ${clientName} - AI Operating Model Transformation\n## Executive Summary & Transformation Roadmap\n\n**Generated:** ${new Date().toLocaleDateString('en-US')}\n**Audit ID:** ${auditId}\n\n**Recommended Scenario:** Hybrid - Balanced Approach\n- **3-Year ROI:** ${roi.three_year_roi}%\n- **Annual Savings:** $${roi.annual_saving.toLocaleString()}\n- **Implementation Investment:** $${roi.implementation_cost.toLocaleString()}\n- **FTE Optimization:** ${roi.fte_saved} FTEs\n- **Payback Period:** ${roi.payback_period_months} months\n- **Efficiency Gain:** ${roi.efficiency_gain_pct}%\n\n${'='.repeat(80)}\n\n---\n\n# ${clientName} AI-Enabled Operating Model Transformation  \n## Executive Summary & Transformation Roadmap  \n\n**Prepared by:** AI Strategy & Operations Team  \n**Date:** ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}  \n**Industry:** ${sector}  \n**Confidential**\n\n---\n\n`;\n\nconst footer = `\n\n---\n\n## APPENDICES\n\n- **Appendix A:** Detailed RACI Matrix  \n- **Appendix B:** Technology Architecture Diagrams  \n- **Appendix C:** AI Agent Specifications  \n- **Appendix D:** Financial Model Details  \n\n--- \n\n**Prepared by:**  \nAI Strategy & Operations Team  \n${clientName} AI Transformation Engagement  \n${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}  \n\n**Confidential \u2013 For Internal Use Only**\n\n${'='.repeat(80)}\n\nConfidential | AI Strategy & Operations  \nPowered by n8n + GPT-4o\n`;\n\nconst fullReport = header + parts.join('\\n\\n---\\n\\n') + footer;\n\nconsole.log(`\u2705 Premium Report assembled: ${fullReport.length} characters`);\nconsole.log(`   Sections included: ${parts.length}`);\n\nreturn [{\n  json: {\n    client_name: clientName,\n    audit_id: auditId,\n    content: fullReport,\n    sections_count: parts.length,\n    word_count: Math.round(fullReport.length / 5.5),\n    report_type: 'Premium'\n  },\n  binary: {\n    data: {\n      data: Buffer.from(fullReport).toString('base64'),\n      mimeType: 'text/markdown',\n      fileName: `${clientName.replace(/\\s+/g, '_')}_AI_Operating_Model_PREMIUM_${auditId}.md`\n    }\n  }\n}];"
+      },
+      "id": "assemble-report",
+      "name": "3.4e Assemble Report",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3440,
+        340
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Airtable payload for Client_Models table\n\nconst clientConfig = $('Set Client Config').first().json;\nconst dataCleaner = $('2.1 Data Cleaner').first().json;\nconst roi = $('3.2 ROI Simulator').first().json.scenarios.hybrid;\nconst blueprint = $('Parse Blueprint').first().json;\nconst report = $('3.4e Assemble Report').first().json;\n\nconst payload = {\n  records: [\n    {\n      fields: {\n        Audit_ID: String(dataCleaner.audit_id),\n        Client_Name: String(clientConfig.client_name),\n        Recommended_Scenario: 'Hybrid',\n        ROI_3Year: Number(roi.three_year_roi),\n        Annual_Saving: Number(roi.annual_saving),\n        Implementation_Cost: Number(roi.implementation_cost),\n        FTE_Saved: Number(roi.fte_saved),\n        Blueprint_JSON: JSON.stringify(blueprint).substring(0, 100000),\n        Executive_Summary: String(report.content).substring(0, 100000),\n        Status: 'Completed'\n      }\n    }\n  ]\n};\n\nconsole.log('\u2705 Airtable payload built');\n\nreturn [{ json: payload }];"
+      },
+      "id": "build-airtable",
+      "name": "4.1 Build Airtable Payload",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3640,
+        340
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/appE3ZTIBGNCbQmPf/Client_Models",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "write-airtable",
+      "name": "4.2 Write to Airtable",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3840,
+        340
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "0Gdjq1yShsYU4A6D",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $('3.4e Assemble Report').first().binary.data.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "value": "1ecFCQPJIxS7pwmswxfHvnLqGe3garKlb",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1ecFCQPJIxS7pwmswxfHvnLqGe3garKlb",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "upload-gdrive",
+      "name": "4.3 Upload to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        4040,
+        340
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "HGcwinsAHvFxWc4L",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C08L7PQ55UZ",
+          "mode": "list",
+          "cachedResultName": "general"
+        },
+        "text": "=\ud83c\udfaf *AI Operating Model Audit Complete*\\n\\n*Client:* {{ $('Set Client Config').first().json.client_name }}\\n*Audit ID:* {{ $('2.1 Data Cleaner').first().json.audit_id }}\\n\\n\u2705 *Financial Impact (Hybrid Scenario):*\\n\u2022 3-Year ROI: *{{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.three_year_roi }}%*\\n\u2022 Annual Savings: *${{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.annual_saving.toLocaleString() }}*\\n\u2022 FTE Saved: *{{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.fte_saved }}*\\n\u2022 Payback: *{{ $('3.2 ROI Simulator').first().json.scenarios.hybrid.payback_period_months }} months*\\n\\n\ud83d\udcca *Deliverables Ready:*\\n\u2022 Executive Summary\\n\u2022 Operating Model Blueprint\\n\u2022 ROI Analysis (3 scenarios)\\n\u2022 Implementation Roadmap\\n\\n_AI-powered analysis complete!_",
+        "otherOptions": {}
+      },
+      "id": "notify-slack",
+      "name": "4.4 Slack Notification",
+      "type": "n8n-nodes-base.slack",
+      "position": [
+        4240,
+        340
+      ],
+      "typeVersion": 2.2,
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "y3BY0QNsUHy5B2Pf",
+          "name": "Slack N8N OUTH2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build pattern data for learning\nconst auditId = $('2.1 Data Cleaner').first().json.audit_id;\nconst clientName = $('Set Client Config').first().json.client_name;\nconst roi = $('3.2 ROI Simulator').first().json.scenarios.hybrid;\nconst blueprint = $('Parse Blueprint').first().json;\nconst inefficiencies = $('Parse Inefficiency Response').first().json.inefficiencies || [];\n\n// Create 3 pattern records\nconst patterns = [\n  {\n    audit_id: auditId,\n    created_at: new Date().toISOString(),\n    pattern_key: 'summary',\n    pattern_value: {\n      client_name: clientName,\n      roi_3year: roi.three_year_roi,\n      annual_saving: roi.annual_saving,\n      fte_saved: roi.fte_saved\n    }\n  },\n  {\n    audit_id: auditId,\n    created_at: new Date().toISOString(),\n    pattern_key: 'inefficiencies',\n    pattern_value: {\n      count: inefficiencies.length,\n      top_categories: inefficiencies.slice(0, 5).map(i => i.category)\n    }\n  },\n  {\n    audit_id: auditId,\n    created_at: new Date().toISOString(),\n    pattern_key: 'ai_agents',\n    pattern_value: {\n      agents: blueprint.technology_architecture?.ai_agents || []\n    }\n  }\n];\n\nconsole.log(`\u2705 Created ${patterns.length} pattern records`);\n\nreturn patterns.map(p => ({ json: p }));"
+      },
+      "id": "build-patterns",
+      "name": "5.1 Build Pattern Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        4440,
+        340
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "tableId": "audit_patterns",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "audit_id",
+              "fieldValue": "={{ $json.audit_id }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $json.created_at }}"
+            },
+            {
+              "fieldId": "pattern_key",
+              "fieldValue": "={{ $json.pattern_key }}"
+            },
+            {
+              "fieldId": "pattern_value",
+              "fieldValue": "={{ $json.pattern_value }}"
+            }
+          ]
+        }
+      },
+      "id": "store-patterns",
+      "name": "5.2 Store Patterns in Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        4640,
+        340
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "supabaseApi": {
+          "id": "LQrRbDHg28uKLFJW",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final success message\nconst clientName = $('Set Client Config').first().json.client_name;\nconst auditId = $('2.1 Data Cleaner').first().json.audit_id;\nconst roi = $('3.2 ROI Simulator').first().json.scenarios.hybrid;\n\nconsole.log(`\\n${'='.repeat(60)}`);\nconsole.log('\u2705 WORKFLOW COMPLETE!');\nconsole.log(`${'='.repeat(60)}`);\nconsole.log(`Client: ${clientName}`);\nconsole.log(`Audit ID: ${auditId}`);\nconsole.log(`3-Year ROI: ${roi.three_year_roi}%`);\nconsole.log(`Annual Savings: $${roi.annual_saving.toLocaleString()}`);\nconsole.log(`${'='.repeat(60)}\\n`);\n\nreturn [{\n  json: {\n    status: 'success',\n    client_name: clientName,\n    audit_id: auditId,\n    completed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "complete",
+      "name": "Workflow Complete",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        4840,
+        340
+      ],
+      "typeVersion": 2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Shared Utilities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Called by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Shared Utilities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shared Utilities": {
+      "main": [
+        [
+          {
+            "node": "Environment Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Environment Guard": {
+      "main": [
+        [
+          {
+            "node": "Set Client Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Client Config": {
+      "main": [
+        [
+          {
+            "node": "1.1 Google Drive - Org Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "1.2 Google Sheets - RACI Matrix",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "1.3 Tool Inventory - API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "1.4 KPI Snapshot - Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1.1 Google Drive - Org Data": {
+      "main": [
+        [
+          {
+            "node": "Merge Discovery Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1.2 Google Sheets - RACI Matrix": {
+      "main": [
+        [
+          {
+            "node": "Merge Discovery Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "1.3 Tool Inventory - API": {
+      "main": [
+        [
+          {
+            "node": "Merge Discovery Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "1.4 KPI Snapshot - Sheets": {
+      "main": [
+        [
+          {
+            "node": "Merge Discovery Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Discovery Data": {
+      "main": [
+        [
+          {
+            "node": "2.1 Data Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2.1 Data Cleaner": {
+      "main": [
+        [
+          {
+            "node": "2.2 Inefficiency Scorer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "2.3 AI Fit Mapper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2.2 Inefficiency Scorer": {
+      "main": [
+        [
+          {
+            "node": "Parse Inefficiency Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Inefficiency Response": {
+      "main": [
+        [
+          {
+            "node": "Merge Analysis Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2.3 AI Fit Mapper": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Fit Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Fit Response": {
+      "main": [
+        [
+          {
+            "node": "Merge Analysis Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Analysis Results": {
+      "main": [
+        [
+          {
+            "node": "3.1 Blueprint Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3.1 Blueprint Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse Blueprint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Blueprint": {
+      "main": [
+        [
+          {
+            "node": "3.2 ROI Simulator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3.2 ROI Simulator": {
+      "main": [
+        [
+          {
+            "node": "3.4a Exec Overview",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "3.4b Current State",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "3.4c Future State",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "3.4d Governance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3.4a Exec Overview": {
+      "main": [
+        [
+          {
+            "node": "Merge Report Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3.4b Current State": {
+      "main": [
+        [
+          {
+            "node": "Merge Report Sections",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "3.4c Future State": {
+      "main": [
+        [
+          {
+            "node": "Merge Report Sections",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "3.4d Governance": {
+      "main": [
+        [
+          {
+            "node": "Merge Report Sections",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Report Sections": {
+      "main": [
+        [
+          {
+            "node": "3.4e Assemble Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3.4e Assemble Report": {
+      "main": [
+        [
+          {
+            "node": "4.1 Build Airtable Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4.1 Build Airtable Payload": {
+      "main": [
+        [
+          {
+            "node": "4.2 Write to Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4.2 Write to Airtable": {
+      "main": [
+        [
+          {
+            "node": "4.3 Upload to Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4.3 Upload to Google Drive": {
+      "main": [
+        [
+          {
+            "node": "4.4 Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4.4 Slack Notification": {
+      "main": [
+        [
+          {
+            "node": "5.1 Build Pattern Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5.1 Build Pattern Data": {
+      "main": [
+        [
+          {
+            "node": "5.2 Store Patterns in Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5.2 Store Patterns in Supabase": {
+      "main": [
+        [
+          {
+            "node": "Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "573596b0d841eea28abd55273482a04618db2cede52284071b1cccb7e54d0cd7"
+  },
+  "tags": []
+}
