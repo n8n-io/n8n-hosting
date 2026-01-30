@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "n8n-self-hosted.fullname" . }}
+  labels:
+    {{- include "n8n-self-hosted.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "n8n-self-hosted.selectorLabels" . | nindent 4 }}
