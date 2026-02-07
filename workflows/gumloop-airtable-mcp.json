@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "airtable-guMCP-server": {
+      "command": "npx",
+      "args": [
+        "mcp-remote@0.1.12",
+        "https://mcp.gumloop.com/airtable/Po4tsiByVANmPe33wJygwM6qNJG3:d965ea51425a4c7e9c15f5d3b21088c3:eyJleHRlcm5hbF9jbGllbnQiOnRydWV9/mcp"
+      ]
+    }
+  }
+}
