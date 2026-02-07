@@ -1,0 +1,92 @@
+name: Backup n8n Workflows
+
+on:
+  # Run daily at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+
+  # Allow manual triggering
+  workflow_dispatch:
+
+  # Run on pushes to main (optional - comment out if not needed)
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install jq (for JSON processing)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Backup workflows from n8n
+        env:
+          N8N_URL: ${{ secrets.N8N_URL }}
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          echo "Fetching workflows from $N8N_URL..."
+
+          # Fetch all workflows
+          response=$(curl -s \
+            -H "X-N8N-API-KEY: $N8N_API_KEY" \
+            "$N8N_URL/api/v1/workflows")
+
+          # Check if request was successful
+          if [ $? -ne 0 ]; then
+            echo "Error: Failed to fetch workflows"
+            exit 1
+          fi
+
+          # Create backups directory
+          mkdir -p workflows/backups
+
+          # Process each workflow
+          echo "$response" | jq -c '.data[]' | while read -r workflow; do
+            workflow_id=$(echo "$workflow" | jq -r '.id')
+            workflow_name=$(echo "$workflow" | jq -r '.name')
+
+            # Sanitize filename
+            safe_name=$(echo "$workflow_name" | tr ' ' '-' | tr -cd '[:alnum:]-_')
+
+            if [ -z "$safe_name" ]; then
+              safe_name="workflow-${workflow_id}"
+            fi
+
+            echo "Backing up: $workflow_name ($workflow_id)"
+
+            # Save to workflows directory
+            echo "$workflow" | jq '.' > "workflows/${safe_name}.json"
+
+            # Also save timestamped backup
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            echo "$workflow" | jq '.' > "workflows/backups/${safe_name}_${timestamp}.json"
+
+            echo "Saved: ${safe_name}.json"
+          done
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Commit and push changes
+        run: |
+          git add workflows/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: automated workflow backup $(date +%Y-%m-%d)"
+            git push
+          fi

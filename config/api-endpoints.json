@@ -1,0 +1,200 @@
+{
+  "version": "1.0.0",
+  "description": "API endpoint configurations for Cyclone-S5 workflows",
+  "apis": {
+    "fal": {
+      "name": "fal.ai Image Generation",
+      "baseUrl": "https://fal.run",
+      "apiKeyEnvVar": "FAL_API_KEY",
+      "authHeader": "Authorization",
+      "authFormat": "Key {apiKey}",
+      "endpoints": {
+        "fluxDev": {
+          "path": "/fal-ai/flux/dev",
+          "method": "POST",
+          "description": "Flux Dev model - balanced quality and speed"
+        },
+        "fluxSchnell": {
+          "path": "/fal-ai/flux/schnell",
+          "method": "POST",
+          "description": "Flux Schnell model - fastest generation"
+        },
+        "fluxPro": {
+          "path": "/fal-ai/flux-pro",
+          "method": "POST",
+          "description": "Flux Pro model - highest quality"
+        }
+      },
+      "defaultModel": "fluxDev",
+      "defaultParams": {
+        "image_size": "landscape_16_9",
+        "num_inference_steps": 28,
+        "guidance_scale": 3.5,
+        "num_images": 1,
+        "enable_safety_checker": false,
+        "output_format": "jpeg"
+      },
+      "imageSizes": {
+        "square_hd": "1024x1024",
+        "square": "512x512",
+        "portrait_4_3": "768x1024",
+        "portrait_16_9": "768x1344",
+        "landscape_4_3": "1024x768",
+        "landscape_16_9": "1344x768"
+      },
+      "rateLimit": {
+        "requestsPerMinute": 60,
+        "retryableStatusCodes": [429, 500, 502, 503, 504],
+        "maxRetries": 3,
+        "retryDelay": 5000
+      },
+      "timeout": 120000
+    },
+    "bannerbear": {
+      "name": "Bannerbear Image Overlays",
+      "baseUrl": "https://api.bannerbear.com/v2",
+      "apiKeyEnvVar": "BANNERBEAR_API_KEY",
+      "authHeader": "Authorization",
+      "authFormat": "Bearer {apiKey}",
+      "endpoints": {
+        "createImage": {
+          "path": "/images",
+          "method": "POST",
+          "description": "Create image from template"
+        },
+        "getImage": {
+          "path": "/images/{uid}",
+          "method": "GET",
+          "description": "Get image status and URL"
+        },
+        "listTemplates": {
+          "path": "/templates",
+          "method": "GET",
+          "description": "List all templates"
+        }
+      },
+      "pollingConfig": {
+        "maxAttempts": 30,
+        "intervalSeconds": 2,
+        "statuses": {
+          "pending": "pending",
+          "completed": "completed",
+          "failed": "failed"
+        }
+      },
+      "templates": {
+        "square": {
+          "envVar": "BANNERBEAR_TEMPLATE_SQUARE",
+          "format": "1080x1080",
+          "description": "Instagram square post"
+        },
+        "story": {
+          "envVar": "BANNERBEAR_TEMPLATE_STORY",
+          "format": "1080x1920",
+          "description": "Instagram story"
+        },
+        "landscape": {
+          "envVar": "BANNERBEAR_TEMPLATE_LANDSCAPE",
+          "format": "1200x628",
+          "description": "Facebook/Twitter landscape"
+        }
+      },
+      "rateLimit": {
+        "requestsPerMinute": 60,
+        "retryableStatusCodes": [429, 500, 502, 503],
+        "maxRetries": 3,
+        "retryDelay": 2000
+      },
+      "timeout": 60000
+    },
+    "airtable": {
+      "name": "Airtable API",
+      "baseUrl": "https://api.airtable.com/v0",
+      "apiKeyEnvVar": "AIRTABLE_PAT",
+      "authHeader": "Authorization",
+      "authFormat": "Bearer {apiKey}",
+      "endpoints": {
+        "getRecord": {
+          "path": "/{baseId}/{tableId}/{recordId}",
+          "method": "GET",
+          "description": "Retrieve a single record"
+        },
+        "updateRecord": {
+          "path": "/{baseId}/{tableId}/{recordId}",
+          "method": "PATCH",
+          "description": "Update a record"
+        },
+        "createRecord": {
+          "path": "/{baseId}/{tableId}",
+          "method": "POST",
+          "description": "Create a new record"
+        },
+        "listRecords": {
+          "path": "/{baseId}/{tableId}",
+          "method": "GET",
+          "description": "List records with optional filters"
+        },
+        "deleteRecord": {
+          "path": "/{baseId}/{tableId}/{recordId}",
+          "method": "DELETE",
+          "description": "Delete a record"
+        }
+      },
+      "queryParams": {
+        "filterByFormula": "Airtable formula to filter records",
+        "maxRecords": "Maximum number of records to return",
+        "pageSize": "Number of records per page (max 100)",
+        "sort": "Array of sort objects",
+        "view": "Name of view to use",
+        "fields": "Array of field names to return"
+      },
+      "rateLimit": {
+        "requestsPerSecond": 5,
+        "retryableStatusCodes": [429, 500, 502, 503],
+        "maxRetries": 3,
+        "retryDelay": 30000
+      },
+      "timeout": 30000
+    },
+    "openai": {
+      "name": "OpenAI API",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnvVar": "OPENAI_API_KEY",
+      "authHeader": "Authorization",
+      "authFormat": "Bearer {apiKey}",
+      "endpoints": {
+        "chatCompletion": {
+          "path": "/chat/completions",
+          "method": "POST",
+          "description": "Create chat completion"
+        },
+        "embeddings": {
+          "path": "/embeddings",
+          "method": "POST",
+          "description": "Create embeddings"
+        }
+      },
+      "defaultModel": "gpt-4-turbo-preview",
+      "defaultParams": {
+        "model": "gpt-4-turbo-preview",
+        "temperature": 0.7,
+        "max_tokens": 1000
+      },
+      "rateLimit": {
+        "requestsPerMinute": 60,
+        "tokensPerMinute": 90000,
+        "retryableStatusCodes": [429, 500, 502, 503],
+        "maxRetries": 3,
+        "retryDelay": 20000
+      },
+      "timeout": 60000
+    }
+  },
+  "usage": {
+    "description": "This file centralizes all API configurations for easy management and updates",
+    "examples": {
+      "usingFal": "Import defaultParams from apis.fal.defaultParams and merge with custom params",
+      "checkingRateLimit": "Use apis.fal.rateLimit.retryableStatusCodes to determine if error is retryable"
+    }
+  }
+}

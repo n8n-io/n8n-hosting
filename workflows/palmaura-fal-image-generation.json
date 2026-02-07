@@ -1,0 +1,826 @@
+{
+  "name": "PalmAura - fal.ai Image Generation at Scale",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "Runs hourly. Adjust interval based on your generation volume."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_URL }}/webhook/palmaura-generate-images",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 200],
+      "webhookId": "palmaura-generate-images",
+      "notes": "Alternative trigger via Airtable automation or manual call"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID }}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Ad Copy",
+          "mode": "list"
+        },
+        "filterByFormula": "AND({Generate Image Prompts} = 'Done', {Image Generated} != TRUE(), {Prompt 1} != '')",
+        "options": {
+          "fields": [
+            "recordId",
+            "Full Concept",
+            "Avatar Target",
+            "Angle",
+            "Prompt 1",
+            "Prompt 2",
+            "Prompt 3",
+            "headline",
+            "CTA",
+            "Product"
+          ]
+        }
+      },
+      "id": "airtable-search",
+      "name": "Search Records Ready for Image Gen",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [250, 100],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable Personal Access Token"
+        }
+      },
+      "notes": "Fetches Ad Copy records that have prompts but no generated images"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// PROMPT VALIDATION & TRANSFORMATION\n// ============================================\n// Purpose: Validate prompts, flatten for batch processing,\n// add metadata for tracking and retry logic\n\nconst items = $input.all();\nconst outputItems = [];\n\nfor (const item of items) {\n  const record = item.json;\n  const recordId = record.id || record.recordId;\n  \n  // Extract all prompt fields (Prompt 1, Prompt 2, Prompt 3)\n  const promptFields = ['Prompt 1', 'Prompt 2', 'Prompt 3'];\n  \n  for (let i = 0; i < promptFields.length; i++) {\n    const promptField = promptFields[i];\n    const prompt = record[promptField];\n    \n    // Skip empty prompts\n    if (!prompt || prompt.trim() === '') continue;\n    \n    // Validate prompt length (fal.ai has limits)\n    if (prompt.length > 2000) {\n      console.log(`WARNING: Prompt too long for ${recordId}, ${promptField}`);\n      continue;\n    }\n    \n    // Clean the prompt\n    const cleanPrompt = prompt\n      .replace(/\\n+/g, ' ')           // Remove newlines\n      .replace(/\\s+/g, ' ')           // Normalize whitespace\n      .replace(/[\"']/g, '')           // Remove quotes that might break JSON\n      .trim();\n    \n    if (cleanPrompt.length < 10) {\n      console.log(`WARNING: Prompt too short for ${recordId}, ${promptField}`);\n      continue;\n    }\n    \n    outputItems.push({\n      json: {\n        // Record tracking\n        recordId: recordId,\n        promptIndex: i + 1,\n        promptField: promptField,\n        \n        // Content\n        cleanPrompt: cleanPrompt,\n        fullConcept: record['Full Concept'] || '',\n        avatarTarget: record['Avatar Target'] || '',\n        angle: record['Angle'] || '',\n        headline: record['headline'] || '',\n        \n        // Metadata for Airtable update\n        outputField: `Image ${i + 1}`,\n        \n        // Retry tracking\n        attemptNumber: 1,\n        maxAttempts: 3,\n        \n        // Timestamp\n        queuedAt: new Date().toISOString()\n      }\n    });\n  }\n}\n\nconsole.log(`Prepared ${outputItems.length} prompts for generation`);\n\n// Return empty array handler\nif (outputItems.length === 0) {\n  return [{ json: { _noItems: true, message: 'No valid prompts to process' } }];\n}\n\nreturn outputItems;"
+      },
+      "id": "js-validate-prompts",
+      "name": "Validate & Flatten Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 100],
+      "notes": "Validates prompts, flattens multi-prompt records into individual items for parallel processing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-has-items",
+              "leftValue": "={{ $json._noItems }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-items",
+      "name": "Has Items to Process?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [750, 100],
+      "notes": "Guards against empty batches"
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1000, 0],
+      "notes": "Process 5 images at a time to avoid rate limits. Adjust based on your fal.ai plan."
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "id": "rate-limit-delay",
+      "name": "Rate Limit Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1250, 0],
+      "notes": "1 second delay between batches. Increase if hitting rate limits."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fal.run/fal-ai/flux/dev",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {{ JSON.stringify($json.cleanPrompt) }},\n  \"image_size\": \"landscape_16_9\",\n  \"num_inference_steps\": 28,\n  \"guidance_scale\": 3.5,\n  \"num_images\": 1,\n  \"enable_safety_checker\": false,\n  \"output_format\": \"jpeg\",\n  \"seed\": {{ Math.floor(Math.random() * 2147483647) }}\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "fal-ai-request",
+      "name": "fal.ai Flux Dev",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fal-api-key",
+          "name": "fal.ai API Key"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "Main image generation call. Using Flux Dev for photorealistic quality."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "Generation Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1750, 0],
+      "notes": "Routes successful vs failed generations"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// EXTRACT IMAGE DATA FROM FAL.AI RESPONSE\n// ============================================\n\nconst response = $json;\nconst inputData = $('Split In Batches').item.json;\n\n// Parse the response body\nlet body;\ntry {\n  body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;\n} catch (e) {\n  body = response.body;\n}\n\n// Extract image URL\nconst imageUrl = body?.images?.[0]?.url || null;\nconst seed = body?.seed || null;\nconst width = body?.images?.[0]?.width || null;\nconst height = body?.images?.[0]?.height || null;\n\nif (!imageUrl) {\n  throw new Error('No image URL in response');\n}\n\nreturn {\n  json: {\n    // Original tracking data\n    recordId: inputData.recordId,\n    promptIndex: inputData.promptIndex,\n    promptField: inputData.promptField,\n    outputField: inputData.outputField,\n    \n    // Generated image data\n    imageUrl: imageUrl,\n    seed: seed,\n    width: width,\n    height: height,\n    \n    // Metadata\n    generatedAt: new Date().toISOString(),\n    model: 'fal-ai/flux/dev',\n    \n    // For Airtable attachment format\n    attachmentArray: [\n      {\n        url: imageUrl,\n        filename: `${inputData.recordId}_prompt${inputData.promptIndex}.jpg`\n      }\n    ]\n  }\n};"
+      },
+      "id": "js-extract-image",
+      "name": "Extract Image Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, -100],
+      "notes": "Parses fal.ai response and formats for Airtable"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID }}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Ad Copy",
+          "mode": "list"
+        },
+        "id": "={{ $json.recordId }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Image Generated": true,
+            "Image Gen Timestamp": "={{ $json.generatedAt }}",
+            "Image Seed": "={{ $json.seed }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Image Generated",
+              "displayName": "Image Generated",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean"
+            },
+            {
+              "id": "Image Gen Timestamp",
+              "displayName": "Image Gen Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "Image Seed",
+              "displayName": "Image Seed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "airtable-update-success",
+      "name": "Update Ad Copy Record",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [2250, -200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable Personal Access Token"
+        }
+      },
+      "notes": "Marks record as processed and stores seed for reproducibility"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID }}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Images",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Extract Image Data').item.json.recordId }}_{{ $('Extract Image Data').item.json.outputField }}",
+            "Image URL": "={{ $('Extract Image Data').item.json.imageUrl }}",
+            "Source Record": "={{ $('Extract Image Data').item.json.recordId }}",
+            "Prompt Index": "={{ $('Extract Image Data').item.json.promptIndex }}",
+            "Seed": "={{ $('Extract Image Data').item.json.seed }}",
+            "Model": "={{ $('Extract Image Data').item.json.model }}",
+            "Generated At": "={{ $('Extract Image Data').item.json.generatedAt }}",
+            "Width": "={{ $('Extract Image Data').item.json.width }}",
+            "Height": "={{ $('Extract Image Data').item.json.height }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "Image URL",
+              "displayName": "Image URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "Source Record",
+              "displayName": "Source Record",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "Prompt Index",
+              "displayName": "Prompt Index",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number"
+            },
+            {
+              "id": "Seed",
+              "displayName": "Seed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number"
+            },
+            {
+              "id": "Model",
+              "displayName": "Model",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "Generated At",
+              "displayName": "Generated At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "Width",
+              "displayName": "Width",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number"
+            },
+            {
+              "id": "Height",
+              "displayName": "Height",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "airtable-create-image",
+      "name": "Create Image Record",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [2250, 0],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable Personal Access Token"
+        }
+      },
+      "notes": "Creates new record in Images table with all metadata"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// ERROR HANDLING & RETRY LOGIC\n// ============================================\n\nconst response = $json;\nconst inputData = $('Split In Batches').item.json;\n\n// Parse error details\nlet errorMessage = 'Unknown error';\nlet errorCode = response.statusCode || 500;\n\ntry {\n  const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;\n  errorMessage = body?.detail || body?.error || body?.message || JSON.stringify(body);\n} catch (e) {\n  errorMessage = response.body || e.message;\n}\n\n// Determine if retryable\nconst retryableCodes = [429, 500, 502, 503, 504];\nconst isRetryable = retryableCodes.includes(errorCode);\nconst currentAttempt = inputData.attemptNumber || 1;\nconst maxAttempts = inputData.maxAttempts || 3;\nconst shouldRetry = isRetryable && currentAttempt < maxAttempts;\n\nconsole.log(`ERROR: ${errorCode} - ${errorMessage}`);\nconsole.log(`Record: ${inputData.recordId}, Prompt: ${inputData.promptIndex}`);\nconsole.log(`Attempt ${currentAttempt}/${maxAttempts}, Will retry: ${shouldRetry}`);\n\nreturn {\n  json: {\n    // Original data\n    recordId: inputData.recordId,\n    promptIndex: inputData.promptIndex,\n    promptField: inputData.promptField,\n    cleanPrompt: inputData.cleanPrompt,\n    \n    // Error details\n    errorCode: errorCode,\n    errorMessage: errorMessage,\n    failedAt: new Date().toISOString(),\n    \n    // Retry logic\n    isRetryable: isRetryable,\n    shouldRetry: shouldRetry,\n    attemptNumber: currentAttempt + 1,\n    maxAttempts: maxAttempts\n  }\n};"
+      },
+      "id": "js-handle-error",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 100],
+      "notes": "Parses errors and determines retry eligibility"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-retry",
+              "leftValue": "={{ $json.shouldRetry }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-should-retry",
+      "name": "Should Retry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2250, 100],
+      "notes": "Routes to retry queue or permanent failure logging"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "retry-delay",
+      "name": "Retry Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2500, 50],
+      "notes": "5 second backoff before retry"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID }}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Ad Copy",
+          "mode": "list"
+        },
+        "id": "={{ $json.recordId }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Image Gen Error": "={{ $json.errorMessage }}",
+            "Image Gen Failed At": "={{ $json.failedAt }}",
+            "Image Gen Attempts": "={{ $json.attemptNumber - 1 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Image Gen Error",
+              "displayName": "Image Gen Error",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "Image Gen Failed At",
+              "displayName": "Image Gen Failed At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "Image Gen Attempts",
+              "displayName": "Image Gen Attempts",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "airtable-log-failure",
+      "name": "Log Permanent Failure",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [2500, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable Personal Access Token"
+        }
+      },
+      "notes": "Records permanent failure for manual review"
+    },
+    {
+      "parameters": {},
+      "id": "no-op-end",
+      "name": "No Items - End",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1000, 200],
+      "notes": "Clean exit when no items to process"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "merge-back",
+              "name": "cleanPrompt",
+              "value": "={{ $json.cleanPrompt }}",
+              "type": "string"
+            },
+            {
+              "id": "record-id",
+              "name": "recordId",
+              "value": "={{ $json.recordId }}",
+              "type": "string"
+            },
+            {
+              "id": "prompt-index",
+              "name": "promptIndex",
+              "value": "={{ $json.promptIndex }}",
+              "type": "number"
+            },
+            {
+              "id": "attempt",
+              "name": "attemptNumber",
+              "value": "={{ $json.attemptNumber }}",
+              "type": "number"
+            },
+            {
+              "id": "max-attempts",
+              "name": "maxAttempts",
+              "value": "={{ $json.maxAttempts }}",
+              "type": "number"
+            },
+            {
+              "id": "prompt-field",
+              "name": "promptField",
+              "value": "={{ $json.promptField }}",
+              "type": "string"
+            },
+            {
+              "id": "output-field",
+              "name": "outputField",
+              "value": "={{ $json.outputField }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-retry-data",
+      "name": "Prepare Retry Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2750, 50],
+      "notes": "Formats data for retry attempt"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search Records Ready for Image Gen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search Records Ready for Image Gen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Records Ready for Image Gen": {
+      "main": [
+        [
+          {
+            "node": "Validate & Flatten Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Flatten Prompts": {
+      "main": [
+        [
+          {
+            "node": "Has Items to Process?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Items to Process?": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Items - End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Delay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Rate Limit Delay": {
+      "main": [
+        [
+          {
+            "node": "fal.ai Flux Dev",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fal.ai Flux Dev": {
+      "main": [
+        [
+          {
+            "node": "Generation Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generation Success?": {
+      "main": [
+        [
+          {
+            "node": "Extract Image Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Image Data": {
+      "main": [
+        [
+          {
+            "node": "Update Ad Copy Record",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Image Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Ad Copy Record": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Image Record": {
+      "main": [
+        []
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Should Retry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Retry?": {
+      "main": [
+        [
+          {
+            "node": "Retry Delay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Permanent Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Delay": {
+      "main": [
+        [
+          {
+            "node": "Prepare Retry Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Retry Data": {
+      "main": [
+        [
+          {
+            "node": "fal.ai Flux Dev",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Permanent Failure": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "PalmAura",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Image Generation",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "pinData": {}
+}

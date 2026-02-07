@@ -1,0 +1,96 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# n8n data
+.n8n/
+n8n_storage/
+
+# Database
+db_storage/
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Secrets and credentials
+*secret*
+*credentials*
+*credential*
+!*-example
+*.key
+*.pem
+*.p12
+*.pfx
+
+# API keys (additional protection)
+*apikey*
+*api-key*
+*api_key*
+
+# Node modules (for future JavaScript projects)
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+*.js.map
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Backup files
+*.bak
+*.backup
+*~
+*.tmp
+*.temp
+
+# Workflow backups (keep in git, but ignore temp backups)
+workflows/backups/*
+!workflows/backups/.gitkeep
+
+# Test files
+*.test.local.*
+test-data/local-*
+
+# Docker
+docker-compose.override.yml
+
+# Certificates
+*.crt
+*.cert
+*.cer
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output/

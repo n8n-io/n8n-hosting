@@ -1,0 +1,26 @@
+{
+    "parameters": {
+      "method": "POST",
+      "url": "https://queue.fal.run/fal-ai/flux/dev",
+      "authentication": "genericCredentialType",
+      "genericAuthType": "httpHeaderAuth",
+      "sendHeaders": true,
+      "headerParameters": {
+        "parameters": [
+          {
+            "name": "Authorization",
+            "value": "Key {{ $credentials.falApiKey.apiKey }}"
+          }
+        ]
+      },
+      "sendBody": true,
+      "specifyBody": "json",
+      "jsonBody": "={\n  \"prompt\": $json['Image Prompt'],\n  \"image_size\": \"square_hd\",\n  \"num_inference_steps\": 28,\n  \"guidance_scale\": 3.5,\n  \"num_images\": 1,\n  \"enable_safety_checker\": false,\n  \"seed\": Math.floor(Math.random() * 2147483647)\n}",
+      "options": {}
+    },
+    "type": "n8n-nodes-base.httpRequest",
+    "typeVersion": 4.2,
+    "position": [368, 1360],
+    "id": "6b878b1c-713d-4dc5-95e2-976a4d70583f",
+    "name": "HTTP Request"
+  }

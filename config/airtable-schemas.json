@@ -1,0 +1,293 @@
+{
+  "version": "1.0.0",
+  "description": "Airtable schema definitions for Cyclone-S5 workflows",
+  "baseIdEnvVar": "AIRTABLE_BASE_ID",
+  "tables": {
+    "adCopy": {
+      "name": "Ad Copy",
+      "tableIdEnvVar": "AIRTABLE_TABLE_AD_COPY",
+      "description": "Store ad concepts, prompts, and image generation status",
+      "fields": {
+        "recordId": {
+          "type": "singleLineText",
+          "description": "Auto-generated record ID"
+        },
+        "fullConcept": {
+          "type": "longText",
+          "fieldName": "Full Concept",
+          "description": "Complete ad concept description",
+          "required": true
+        },
+        "avatarTarget": {
+          "type": "singleLineText",
+          "fieldName": "Avatar Target",
+          "description": "Target audience persona"
+        },
+        "angle": {
+          "type": "singleLineText",
+          "fieldName": "Angle",
+          "description": "Marketing angle"
+        },
+        "headline": {
+          "type": "singleLineText",
+          "fieldName": "Headline",
+          "description": "Ad headline"
+        },
+        "cta": {
+          "type": "singleLineText",
+          "fieldName": "CTA",
+          "description": "Call to action text"
+        },
+        "product": {
+          "type": "linkedRecord",
+          "fieldName": "Product",
+          "linkedTable": "Products",
+          "description": "Link to product record"
+        },
+        "generateImagePrompts": {
+          "type": "singleSelect",
+          "fieldName": "Generate Image Prompts",
+          "options": ["Not Started", "In Progress", "Done"],
+          "description": "Status of image prompt generation"
+        },
+        "prompt1": {
+          "type": "longText",
+          "fieldName": "Prompt 1",
+          "description": "First image prompt variation"
+        },
+        "prompt2": {
+          "type": "longText",
+          "fieldName": "Prompt 2",
+          "description": "Second image prompt variation"
+        },
+        "prompt3": {
+          "type": "longText",
+          "fieldName": "Prompt 3",
+          "description": "Third image prompt variation"
+        },
+        "imagePrompts": {
+          "type": "multilineText",
+          "fieldName": "Image Prompts",
+          "description": "Alternative: Array of prompts as multiline text"
+        },
+        "imageGenerated": {
+          "type": "checkbox",
+          "fieldName": "Image Generated",
+          "description": "Has image been generated successfully?"
+        },
+        "imageGenTimestamp": {
+          "type": "dateTime",
+          "fieldName": "Image Gen Timestamp",
+          "description": "When image was successfully generated"
+        },
+        "imageSeed": {
+          "type": "number",
+          "fieldName": "Image Seed",
+          "description": "AI model seed for reproducibility"
+        },
+        "imageGenError": {
+          "type": "longText",
+          "fieldName": "Image Gen Error",
+          "description": "Error message if generation failed"
+        },
+        "imageGenFailedAt": {
+          "type": "dateTime",
+          "fieldName": "Image Gen Failed At",
+          "description": "When generation failed"
+        },
+        "imageGenAttempts": {
+          "type": "number",
+          "fieldName": "Image Gen Attempts",
+          "description": "Number of generation attempts"
+        },
+        "baseImageUrl": {
+          "type": "url",
+          "fieldName": "Base Image URL",
+          "description": "URL of base generated image"
+        },
+        "finalImageUrl": {
+          "type": "url",
+          "fieldName": "Final Image URL",
+          "description": "URL of final image with overlays"
+        },
+        "status": {
+          "type": "singleSelect",
+          "fieldName": "Status",
+          "options": ["Pending", "Generated", "Failed"],
+          "description": "Overall generation status"
+        },
+        "model": {
+          "type": "singleLineText",
+          "fieldName": "Model",
+          "description": "AI model used (e.g., fal-ai/flux/dev)"
+        },
+        "width": {
+          "type": "number",
+          "fieldName": "Width",
+          "description": "Image width in pixels"
+        },
+        "height": {
+          "type": "number",
+          "fieldName": "Height",
+          "description": "Image height in pixels"
+        }
+      }
+    },
+    "images": {
+      "name": "Images",
+      "tableIdEnvVar": "AIRTABLE_TABLE_IMAGES",
+      "description": "Store generated image metadata",
+      "fields": {
+        "name": {
+          "type": "singleLineText",
+          "fieldName": "Name",
+          "description": "Image identifier",
+          "required": true
+        },
+        "imageUrl": {
+          "type": "url",
+          "fieldName": "Image URL",
+          "description": "URL of generated image",
+          "required": true
+        },
+        "sourceRecord": {
+          "type": "linkedRecord",
+          "fieldName": "Source Record",
+          "linkedTable": "Ad Copy",
+          "description": "Link to source ad copy record"
+        },
+        "promptIndex": {
+          "type": "number",
+          "fieldName": "Prompt Index",
+          "description": "Which prompt was used (1-3)"
+        },
+        "seed": {
+          "type": "number",
+          "fieldName": "Seed",
+          "description": "AI model seed"
+        },
+        "model": {
+          "type": "singleLineText",
+          "fieldName": "Model",
+          "description": "AI model used"
+        },
+        "generatedAt": {
+          "type": "dateTime",
+          "fieldName": "Generated At",
+          "description": "Generation timestamp"
+        },
+        "width": {
+          "type": "number",
+          "fieldName": "Width",
+          "description": "Image width in pixels"
+        },
+        "height": {
+          "type": "number",
+          "fieldName": "Height",
+          "description": "Image height in pixels"
+        }
+      }
+    },
+    "actors": {
+      "name": "Actors",
+      "tableIdEnvVar": "AIRTABLE_TABLE_ACTORS",
+      "description": "Store character/person descriptions for prompts",
+      "fields": {
+        "name": {
+          "type": "singleLineText",
+          "fieldName": "Name",
+          "description": "Actor name or identifier",
+          "required": true
+        },
+        "demographics": {
+          "type": "singleLineText",
+          "fieldName": "Demographics",
+          "description": "Age, gender, ethnicity"
+        },
+        "description": {
+          "type": "longText",
+          "fieldName": "Description",
+          "description": "Detailed appearance description"
+        },
+        "referenceImages": {
+          "type": "multipleAttachments",
+          "fieldName": "Reference Images",
+          "description": "Example images of this actor"
+        }
+      }
+    },
+    "products": {
+      "name": "Products",
+      "tableIdEnvVar": "AIRTABLE_TABLE_PRODUCTS",
+      "description": "Store product information",
+      "fields": {
+        "name": {
+          "type": "singleLineText",
+          "fieldName": "Name",
+          "description": "Product name",
+          "required": true
+        },
+        "description": {
+          "type": "longText",
+          "fieldName": "Description",
+          "description": "Product details and features"
+        },
+        "category": {
+          "type": "singleSelect",
+          "fieldName": "Category",
+          "options": ["Electronics", "Fashion", "Home", "Beauty", "Food", "Other"],
+          "description": "Product category"
+        },
+        "productImages": {
+          "type": "multipleAttachments",
+          "fieldName": "Product Images",
+          "description": "Product photos"
+        }
+      }
+    },
+    "scenes": {
+      "name": "Scenes",
+      "tableIdEnvVar": "AIRTABLE_TABLE_SCENES",
+      "description": "Store scene/environment descriptions",
+      "fields": {
+        "name": {
+          "type": "singleLineText",
+          "fieldName": "Name",
+          "description": "Scene name",
+          "required": true
+        },
+        "description": {
+          "type": "longText",
+          "fieldName": "Description",
+          "description": "Detailed scene description"
+        },
+        "lighting": {
+          "type": "singleLineText",
+          "fieldName": "Lighting",
+          "description": "Lighting description (e.g., golden hour, studio, natural)"
+        },
+        "mood": {
+          "type": "singleLineText",
+          "fieldName": "Mood",
+          "description": "Mood or atmosphere (e.g., energetic, calm, professional)"
+        }
+      }
+    }
+  },
+  "relationships": {
+    "adCopyToProduct": {
+      "from": "adCopy.product",
+      "to": "products",
+      "type": "manyToOne"
+    },
+    "imagesToAdCopy": {
+      "from": "images.sourceRecord",
+      "to": "adCopy",
+      "type": "manyToOne"
+    }
+  },
+  "usage": {
+    "accessingFields": "Use the 'fieldName' property to access fields in Airtable API calls",
+    "example": "To access 'Full Concept' field: record.fields['Full Concept']"
+  }
+}

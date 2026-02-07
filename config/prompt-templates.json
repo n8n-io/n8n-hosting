@@ -1,0 +1,161 @@
+{
+  "version": "1.0.0",
+  "description": "Reusable prompt templates for AI image generation and text processing",
+  "templates": {
+    "imageGeneration": {
+      "description": "Templates for AI image generation with Flux models",
+      "base": {
+        "suffix": ", clean composition, no text, no watermark, no logo, professional photography",
+        "description": "Append to all prompts for consistent quality"
+      },
+      "negativePrompt": {
+        "default": "text, words, letters, watermark, logo, signature, writing, captions, subtitles, blurry, low quality, distorted, deformed",
+        "description": "Things to avoid in generated images"
+      },
+      "styleModifiers": {
+        "photorealistic": {
+          "suffix": "photorealistic, highly detailed, 8k resolution, studio lighting, professional photography",
+          "description": "For realistic product photos and portraits"
+        },
+        "artistic": {
+          "suffix": "artistic rendering, creative composition, vibrant colors, aesthetic",
+          "description": "For creative and stylized images"
+        },
+        "minimal": {
+          "suffix": "minimal design, clean aesthetic, simple composition, negative space",
+          "description": "For minimalist product shots"
+        },
+        "cinematic": {
+          "suffix": "cinematic composition, dramatic lighting, film grain, bokeh, depth of field",
+          "description": "For storytelling images"
+        },
+        "lifestyle": {
+          "suffix": "lifestyle photography, natural lighting, authentic moment, candid",
+          "description": "For lifestyle and use-case images"
+        }
+      },
+      "qualityEnhancers": {
+        "high": "ultra-detailed, sharp focus, high resolution, professional quality",
+        "medium": "detailed, good quality, clear",
+        "quick": "clean, simple"
+      },
+      "lightingPresets": {
+        "goldenHour": "golden hour lighting, warm tones, soft shadows, sunset glow",
+        "studio": "studio lighting, soft box, even illumination, professional setup",
+        "natural": "natural daylight, window light, soft ambient",
+        "dramatic": "dramatic lighting, strong shadows, high contrast, moody",
+        "softDiffused": "soft diffused lighting, gentle shadows, flattering"
+      },
+      "compositionPresets": {
+        "centerFocus": "centered composition, subject in focus, balanced frame",
+        "ruleOfThirds": "rule of thirds composition, dynamic framing",
+        "closeUp": "close-up shot, detailed view, shallow depth of field",
+        "wideAngle": "wide angle shot, environmental context, expansive view"
+      }
+    },
+    "promptGeneration": {
+      "description": "Templates for generating image prompts using LLMs",
+      "system": "You are an expert at creating detailed image generation prompts for AI models like Flux and Stable Diffusion. Create vivid, specific prompts that describe scenes, lighting, composition, and mood. Focus on visual elements that can be rendered by an AI. Avoid abstract concepts. Be specific about colors, textures, and spatial relationships.",
+      "userTemplate": "Based on this ad concept:\n\n{fullConcept}\n\nTarget audience: {avatarTarget}\nMarketing angle: {angle}\nProduct: {product}\n\nCreate {numVariations} different image prompt variations that would work well for social media ads. Each prompt should:\n- Be 1-2 sentences long\n- Be highly specific and visual\n- Include lighting and mood\n- Be optimized for Flux AI image generation\n- Avoid any text, logos, or watermarks in the image\n\nReturn only the prompts, numbered 1-{numVariations}.",
+      "defaultNumVariations": 3,
+      "examples": [
+        {
+          "concept": "Serene beach yoga promoting wellness app",
+          "prompt": "Professional photo of young woman in yoga pose on beach at golden hour, serene expression, turquoise ocean in background, soft warm lighting, peaceful atmosphere, high detail"
+        },
+        {
+          "concept": "Energetic product launch for sports drink",
+          "prompt": "Dynamic action shot of athlete mid-motion, vibrant sports drink bottle in foreground, stadium lights, dramatic lighting, high energy, motion blur effect, professional sports photography"
+        }
+      ]
+    },
+    "adCopyAnalysis": {
+      "description": "Templates for analyzing ad copy with LLMs",
+      "system": "You are an expert ad copywriter and marketing analyst. Analyze ad copy and extract key components with precision and clarity.",
+      "userTemplate": "Analyze this ad copy and extract the following components:\n\n{adCopy}\n\nPlease identify:\n1. Headline: The main attention-grabbing statement\n2. Call-to-Action (CTA): The action you want the reader to take\n3. Value Proposition: The main benefit or value offered\n4. Emotional Hooks: The emotional triggers used (fear, desire, urgency, etc.)\n5. Target Audience: Who this ad is aimed at\n\nReturn as structured JSON.",
+      "outputFormat": {
+        "headline": "string",
+        "cta": "string",
+        "valueProposition": "string",
+        "emotionalHooks": ["array of strings"],
+        "targetAudience": "string"
+      }
+    },
+    "promptEnhancement": {
+      "description": "Templates for enhancing existing prompts",
+      "enhanceForQuality": {
+        "template": "{originalPrompt}, {qualityModifiers}",
+        "qualityModifiers": "professional photography, highly detailed, sharp focus, studio quality, 8k resolution"
+      },
+      "enhanceForStyle": {
+        "template": "{originalPrompt}, {styleModifiers}",
+        "styleOptions": "Choose from: photorealistic, artistic, minimal, cinematic, lifestyle"
+      },
+      "addContext": {
+        "template": "{subjectDescription}, {environment}, {lighting}, {mood}, {cameraAngle}",
+        "description": "Build complete prompt from components"
+      }
+    },
+    "promptCleaning": {
+      "description": "Patterns for cleaning and validating prompts",
+      "removePatterns": [
+        "\\n+",
+        "\\s+",
+        "[\"']",
+        "watermark",
+        "logo",
+        "text",
+        "writing"
+      ],
+      "replacePatterns": {
+        "multiple_spaces": {
+          "pattern": "\\s+",
+          "replacement": " "
+        },
+        "newlines": {
+          "pattern": "\\n+",
+          "replacement": " "
+        },
+        "quotes": {
+          "pattern": "[\"']",
+          "replacement": ""
+        }
+      },
+      "validation": {
+        "minLength": 10,
+        "maxLength": 2000,
+        "required": ["subject", "style or mood"],
+        "forbidden": ["nsfw", "explicit", "graphic"]
+      }
+    },
+    "variationGeneration": {
+      "description": "Templates for creating prompt variations",
+      "strategies": {
+        "angleVariation": {
+          "description": "Change camera angle",
+          "variations": ["aerial view", "close-up", "wide shot", "eye level", "low angle", "high angle"]
+        },
+        "lightingVariation": {
+          "description": "Change lighting style",
+          "variations": ["golden hour", "studio lighting", "natural light", "dramatic lighting", "soft diffused"]
+        },
+        "moodVariation": {
+          "description": "Change overall mood",
+          "variations": ["energetic", "calm", "professional", "playful", "elegant", "modern"]
+        },
+        "styleVariation": {
+          "description": "Change visual style",
+          "variations": ["photorealistic", "artistic", "minimal", "cinematic", "lifestyle"]
+        }
+      }
+    }
+  },
+  "usage": {
+    "description": "Import templates and merge with dynamic data",
+    "examples": {
+      "basicUsage": "const baseTemplate = templates.imageGeneration.base.suffix; const fullPrompt = `${userPrompt}${baseTemplate}`;",
+      "withStyle": "const styleModifier = templates.imageGeneration.styleModifiers.photorealistic.suffix; const fullPrompt = `${userPrompt}, ${styleModifier}`;",
+      "promptGeneration": "Use templates.promptGeneration.userTemplate and replace {placeholders} with actual data"
+    }
+  }
+}
