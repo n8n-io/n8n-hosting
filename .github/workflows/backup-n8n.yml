@@ -36,6 +36,7 @@ jobs:
           N8N_URL: ${{ secrets.N8N_URL }}
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
         run: |
+          set -euo pipefail
           echo "Fetching workflows from $N8N_URL..."
 
           # Fetch all workflows
@@ -52,8 +53,18 @@ jobs:
           # Create backups directory
           mkdir -p workflows/backups
 
+          # Track counts for summary
+          saved_count=0
+          error_count=0
+          timestamp=$(date +%Y%m%d_%H%M%S)
+
           # Process each workflow
-          echo "$response" | jq -c '.data[]' | while read -r workflow; do
+          if ! workflows=$(echo "$response" | jq -c '.data[]'); then
+            echo "Error: Failed to parse workflows response"
+            exit 1
+          fi
+
+          while IFS= read -r workflow; do
             workflow_id=$(echo "$workflow" | jq -r '.id')
             workflow_name=$(echo "$workflow" | jq -r '.name')
 
@@ -67,14 +78,24 @@ jobs:
             echo "Backing up: $workflow_name ($workflow_id)"
 
             # Save to workflows directory
-            echo "$workflow" | jq '.' > "workflows/${safe_name}.json"
+            if echo "$workflow" | jq '.' > "workflows/${safe_name}.json"; then
+              # Also save timestamped backup
+              echo "$workflow" | jq '.' > "workflows/backups/${safe_name}_${timestamp}.json"
+              echo "Saved: ${safe_name}.json"
+              saved_count=$((saved_count + 1))
+            else
+              echo "ERROR: Failed to save ${safe_name}.json"
+              error_count=$((error_count + 1))
+            fi
+          done <<< "$workflows"
 
-            # Also save timestamped backup
-            timestamp=$(date +%Y%m%d_%H%M%S)
-            echo "$workflow" | jq '.' > "workflows/backups/${safe_name}_${timestamp}.json"
-
-            echo "Saved: ${safe_name}.json"
-          done
+          # Summary and exit status
+          echo ""
+          echo "Backup complete: $saved_count workflows saved"
+          if [ $error_count -gt 0 ]; then
+            echo "ERROR: $error_count workflows failed to backup"
+            exit 1
+          fi
 
       - name: Configure Git
         run: |

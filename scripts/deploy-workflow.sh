@@ -161,6 +161,13 @@ else
   else
     echo -e "Failed: $fail_count"
   fi
+
+  # Exit with error code if any deployments failed
+  if [ $fail_count -gt 0 ]; then
+    echo ""
+    echo -e "${RED}Deployment completed with errors!${NC}"
+    exit 1
+  fi
 fi
 
 echo ""

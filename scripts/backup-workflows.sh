@@ -14,7 +14,7 @@
 #   export N8N_API_KEY="your_api_key"
 #   ./backup-workflows.sh
 
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -96,11 +96,17 @@ echo -e "${BLUE}Found $workflow_count workflows${NC}"
 echo ""
 
 # Process each workflow
-backup_count=0
+# Use a pre-parsed list to avoid subshell issues and catch jq failures
 saved_count=0
+error_count=0
 timestamp=$(date +%Y%m%d_%H%M%S)
 
-echo "$workflows" | jq -c '.data[]' 2>/dev/null | while read -r workflow; do
+if ! workflows_list=$(echo "$workflows" | jq -c '.data[]' 2>/dev/null); then
+  echo -e "${RED}ERROR: Failed to parse workflow data${NC}"
+  exit 1
+fi
+
+while IFS= read -r workflow; do
   workflow_id=$(echo "$workflow" | jq -r '.id')
   workflow_name=$(echo "$workflow" | jq -r '.name')
 
@@ -115,33 +121,52 @@ echo "$workflows" | jq -c '.data[]' 2>/dev/null | while read -r workflow; do
   echo -e "${YELLOW}Backing up: ${workflow_name} (${workflow_id})${NC}"
 
   # Save to workflows directory
+  save_success=true
   if [ "$HAS_JQ" = true ]; then
-    echo "$workflow" | jq '.' > "${WORKFLOWS_DIR}/${safe_name}.json"
+    if ! echo "$workflow" | jq '.' > "${WORKFLOWS_DIR}/${safe_name}.json"; then
+      save_success=false
+    fi
   else
-    echo "$workflow" > "${WORKFLOWS_DIR}/${safe_name}.json"
+    if ! echo "$workflow" > "${WORKFLOWS_DIR}/${safe_name}.json"; then
+      save_success=false
+    fi
   fi
 
-  # Also save timestamped backup
-  if [ "$HAS_JQ" = true ]; then
-    echo "$workflow" | jq '.' > "${BACKUP_DIR}/${safe_name}_${timestamp}.json"
+  if [ "$save_success" = true ]; then
+    # Also save timestamped backup
+    if [ "$HAS_JQ" = true ]; then
+      echo "$workflow" | jq '.' > "${BACKUP_DIR}/${safe_name}_${timestamp}.json"
+    else
+      echo "$workflow" > "${BACKUP_DIR}/${safe_name}_${timestamp}.json"
+    fi
+
+    echo -e "${GREEN}✓ Saved: ${safe_name}.json${NC}"
+    saved_count=$((saved_count + 1))
   else
-    echo "$workflow" > "${BACKUP_DIR}/${safe_name}_${timestamp}.json"
+    echo -e "${RED}✗ Failed to save: ${safe_name}.json${NC}"
+    error_count=$((error_count + 1))
   fi
-
-  echo -e "${GREEN}✓ Saved: ${safe_name}.json${NC}"
-
-  saved_count=$((saved_count + 1))
-done
+done <<< "$workflows_list"
 
 echo ""
 echo "================================================"
 echo "Backup Summary"
 echo "================================================"
 echo -e "${GREEN}Workflows backed up: $saved_count${NC}"
+if [ $error_count -gt 0 ]; then
+  echo -e "${RED}Failed to backup: $error_count${NC}"
+fi
 echo ""
 echo "Main copies saved to: ${WORKFLOWS_DIR}"
 echo "Timestamped backups saved to: ${BACKUP_DIR}"
 echo ""
+
+# Exit with error if any backups failed
+if [ $error_count -gt 0 ]; then
+  echo -e "${RED}Backup completed with errors!${NC}"
+  exit 1
+fi
+
 echo -e "${GREEN}Backup complete!${NC}"
 echo ""
 echo "To deploy these workflows to another n8n instance:"

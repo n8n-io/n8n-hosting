@@ -536,6 +536,15 @@
       "notes": "Clean exit when no items to process"
     },
     {
+      "parameters": {},
+      "id": "continue-batch",
+      "name": "Continue Batch",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2500, 200],
+      "notes": "Triggers the next batch without re-feeding items"
+    },
+    {
       "parameters": {
         "assignments": {
           "assignments": [
@@ -665,7 +674,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "No Items - End",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Rate Limit Delay": {
@@ -728,7 +743,7 @@
       "main": [
         [
           {
-            "node": "Split In Batches",
+            "node": "Continue Batch",
             "type": "main",
             "index": 0
           }
@@ -792,6 +807,17 @@
       ]
     },
     "Log Permanent Failure": {
+      "main": [
+        [
+          {
+            "node": "Continue Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue Batch": {
       "main": [
         [
           {
