@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - ".releaserc.json"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.17.0"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install semantic-release
+        run: |
+          npm install -g semantic-release \
+            @semantic-release/changelog \
+            @semantic-release/git \
+            @semantic-release/exec \
+            conventional-changelog-conventionalcommits
+
+      - name: Run semantic-release
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+      - name: Check if new release was created
+        id: check
+        run: |
+          CHART_VERSION=$(helm show chart charts/n8n | grep '^version:' | awk '{print $2}')
+          echo "version=$CHART_VERSION" >> "$GITHUB_OUTPUT"
+          if git tag -l "v$CHART_VERSION" | grep -q .; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to GHCR
+        if: steps.check.outputs.released == 'true'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Package and push to GHCR
+        if: steps.check.outputs.released == 'true'
+        run: |
+          CHART_VERSION="${{ steps.check.outputs.version }}"
+          helm package charts/n8n --destination /tmp/chart-pkg/
+          helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io

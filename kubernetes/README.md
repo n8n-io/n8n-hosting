@@ -1,5 +1,7 @@
 # n8n-kubernetes-hosting
 
+> **For production Kubernetes deployments, use the official [n8n Helm chart](../charts/n8n/).** The raw manifests below are intended for tutorial-based deployments and simple setups.
+
 Get up and running with n8n on the following platforms:
 
 * [AWS](https://docs.n8n.io/hosting/server-setups/aws/)

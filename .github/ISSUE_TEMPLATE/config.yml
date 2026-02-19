@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: n8n Community Forum
+    url: https://community.n8n.io/
+    about: Ask questions and get help from the n8n community
+  - name: n8n Documentation
+    url: https://docs.n8n.io/
+    about: Official n8n documentation
+  - name: Helm Chart Documentation
+    url: https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/README.md
+    about: Read the chart documentation and examples

@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.17.0"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: helm/chart-testing-action@v2.7.0
+
+      - name: Run chart-testing (lint)
+        run: ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false
+
+  template-validation:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example:
+          - charts/n8n/examples/minimal.yaml
+          - charts/n8n/examples/minimal-with-docker.yaml
+          - charts/n8n/examples/multi-main-queue.yaml
+          - charts/n8n/examples/production-s3.yaml
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.17.0"
+
+      - name: Validate ${{ matrix.example }}
+        run: helm template test charts/n8n -f ${{ matrix.example }} --dry-run > /dev/null
+
+  install-test:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'test-install')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.17.0"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: helm/chart-testing-action@v2.7.0
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.10.0
+
+      - name: Install PostgreSQL
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          helm install postgres bitnami/postgresql \
+            --set auth.database=n8n \
+            --set auth.username=n8n \
+            --set auth.password=n8n-test-password \
+            --wait --timeout 120s
+
+      - name: Install Redis
+        run: |
+          helm install redis bitnami/redis \
+            --set auth.enabled=false \
+            --wait --timeout 120s
+
+      - name: Create required secrets
+        run: |
+          kubectl create secret generic n8n-db-secret \
+            --from-literal=password=n8n-test-password
+          kubectl create secret generic n8n-core-secrets \
+            --from-literal=N8N_ENCRYPTION_KEY=test-encryption-key-must-be-long-enough \
+            --from-literal=N8N_HOST=localhost \
+            --from-literal=N8N_PORT=5678 \
+            --from-literal=N8N_PROTOCOL=http
+
+      - name: Install chart
+        run: |
+          helm install n8n charts/n8n \
+            --set database.host=postgres-postgresql \
+            --set database.passwordSecret.name=n8n-db-secret \
+            --set database.passwordSecret.key=password \
+            --set redis.host=redis-master \
+            --set secretRefs.existingSecret=n8n-core-secrets \
+            --set queueMode.workerReplicaCount=1 \
+            --set hpa.main.enabled=false \
+            --set hpa.worker.enabled=false \
+            --wait --timeout 300s
+
+      - name: Run helm test
+        run: helm test n8n
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: charts/n8n
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif

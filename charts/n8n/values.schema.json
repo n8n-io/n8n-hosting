@@ -1,0 +1,826 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "n8n values schema",
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string", "minLength": 1 },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        }
+      },
+      "required": ["repository", "tag"]
+    },
+    "replicaCount": { "type": "integer", "minimum": 1 },
+    "multiMain": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicas": { "type": "integer", "minimum": 1 },
+        "antiAffinity": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["preferred", "required", "none"]
+            }
+          }
+        },
+        "topologySpreadConstraints": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "maxSkew": { "type": "integer", "minimum": 1 },
+            "whenUnsatisfiable": {
+              "type": "string",
+              "enum": ["ScheduleAnyway", "DoNotSchedule"]
+            }
+          }
+        },
+        "setup": {
+          "type": "object",
+          "properties": {
+            "keyTtl": { 
+              "type": "integer", 
+              "minimum": 1,
+              "description": "Time to live (in seconds) for leader key in multi-main setup"
+            },
+            "checkInterval": { 
+              "type": "integer", 
+              "minimum": 1,
+              "description": "Interval (in seconds) for leader check in multi-main setup"
+            }
+          }
+        }
+      },
+      "required": ["enabled", "replicas"]
+    },
+    "taskRunners": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string", "minLength": 1 },
+            "tag": {
+              "type": "string",
+              "description": "Task runner image tag. Leave empty to use the same tag as the main n8n image"
+            },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            }
+          },
+          "required": ["repository"]
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["external"],
+          "description": "Task runner mode (only external is supported)"
+        },
+        "authToken": {
+          "type": "object",
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string" },
+            "value": { "type": "string" }
+          }
+        },
+        "broker": {
+          "type": "object",
+          "properties": {
+            "listenAddress": { "type": "string", "minLength": 1 },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          },
+          "required": ["listenAddress", "port"]
+        },
+        "launcher": {
+          "type": "object",
+          "properties": {
+            "logLevel": {
+              "type": "string",
+              "enum": ["debug", "info", "warn", "error"]
+            },
+            "autoShutdownTimeout": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "nativePythonRunner": { "type": "boolean" },
+        "customConfig": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "configMapName": { "type": "string" },
+            "configMapKey": { "type": "string" }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": { "type": "string" },
+                "memory": { "type": "string" }
+              }
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpu": { "type": "string" },
+                "memory": { "type": "string" }
+              }
+            }
+          }
+        },
+        "extraEnv": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "required": ["enabled"]
+    },
+    "queueMode": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "workerReplicaCount": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "annotations": { "type": "object", "additionalProperties": true },
+        "sessionAffinity": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "timeoutSeconds": { "type": "integer", "minimum": 1 }
+          }
+        }
+      },
+      "required": ["type", "port"]
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "type": "object", "additionalProperties": true },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": { "type": "string", "minLength": 1 },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": { "type": "string", "minLength": 1 },
+                    "pathType": { "type": "string", "minLength": 1 }
+                  },
+                  "required": ["path", "pathType"]
+                },
+                "minItems": 1
+              }
+            },
+            "required": ["host", "paths"]
+          }
+        },
+        "tls": { "type": "array" },
+        "sticky": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "cookieName": { "type": "string" },
+            "cookieExpires": { "type": "string" },
+            "cookieMaxAge": { "type": "string" }
+          }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "className": { "type": "string" },
+            "annotations": { "type": "object", "additionalProperties": true },
+            "tls": { "type": "array" }
+          }
+        }
+      },
+      "required": ["enabled", "hosts"]
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "size": { "type": "string", "pattern": "^[0-9]+Gi$" },
+        "accessModes": { "type": "array", "items": { "type": "string" } },
+        "storageClassName": { "type": "string" },
+        "existingClaim": { "type": "string" }
+      },
+      "required": ["enabled"]
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "main": { "type": "object" },
+        "worker": { "type": "object" }
+      }
+    },
+    "nodeSelector": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "tolerations": { "type": "array" },
+    "affinity": { "type": "object" },
+    "podAnnotations": { "type": "object", "additionalProperties": true },
+    "podLabels": { "type": "object", "additionalProperties": true },
+    "securityContext": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "fsGroup": { "type": "integer", "minimum": 0 },
+        "runAsUser": { "type": "integer", "minimum": 0 },
+        "runAsGroup": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "annotations": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "properties": { "create": { "type": "boolean" } }
+    },
+    "probes": {
+      "type": "object",
+      "properties": {
+        "liveness": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "path": { "type": "string" },
+            "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+            "periodSeconds": { "type": "integer", "minimum": 1 },
+            "timeoutSeconds": { "type": "integer", "minimum": 1 },
+            "failureThreshold": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "readiness": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "path": { "type": "string" },
+            "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+            "periodSeconds": { "type": "integer", "minimum": 1 },
+            "timeoutSeconds": { "type": "integer", "minimum": 1 },
+            "failureThreshold": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "readiness": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "type": { 
+                  "type": "string",
+                  "enum": ["httpGet", "exec"]
+                },
+                "path": { "type": "string" },
+                "port": { "type": "integer" },
+                "command": { 
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+                "periodSeconds": { "type": "integer", "minimum": 1 },
+                "timeoutSeconds": { "type": "integer", "minimum": 1 },
+                "failureThreshold": { "type": "integer", "minimum": 1 }
+              }
+            },
+            "liveness": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "type": { 
+                  "type": "string",
+                  "enum": ["httpGet", "exec"]
+                },
+                "command": { 
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+                "periodSeconds": { "type": "integer", "minimum": 1 },
+                "timeoutSeconds": { "type": "integer", "minimum": 1 },
+                "failureThreshold": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hpa": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minReplicas": { "type": "integer", "minimum": 1 },
+        "maxReplicas": { "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "targetMemoryUtilizationPercentage": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minReplicas": { "type": "integer", "minimum": 1 },
+            "maxReplicas": { "type": "integer", "minimum": 1 },
+            "targetCPUUtilizationPercentage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "targetMemoryUtilizationPercentage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        }
+      }
+    },
+    "webhook": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "url": { "type": "string" },
+        "testUrl": { "type": "string" },
+        "timeout": { 
+          "type": "integer", 
+          "minimum": 1000,
+          "maximum": 600000,
+          "description": "Webhook timeout in milliseconds (1s to 10min)"
+        },
+        "extraEnv": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "value": { "type": "string" }
+            },
+            "required": ["name", "value"]
+          }
+        }
+      },
+      "required": ["enabled"]
+    },
+    "license": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "activationKey": { "type": "string" },
+        "existingSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "key": { "type": "string" }
+          }
+        }
+      },
+      "required": ["enabled"]
+    },
+    "executions": {
+      "type": "object",
+      "properties": {
+        "timeout": { "type": "integer" },
+        "timeoutMax": { "type": "integer", "minimum": 1 },
+        "data": {
+          "type": "object",
+          "properties": {
+            "saveOnError": { 
+              "type": "string",
+              "enum": ["all", "none"]
+            },
+            "saveOnSuccess": { 
+              "type": "string",
+              "enum": ["all", "none"]
+            },
+            "saveOnProgress": { "type": "boolean" },
+            "saveManualExecutions": { "type": "boolean" }
+          }
+        },
+        "pruning": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "maxAge": { "type": "integer", "minimum": 1 },
+            "maxCount": { "type": "integer", "minimum": 0 },
+            "hardDeleteBuffer": { "type": "integer", "minimum": 1 },
+            "hardDeleteInterval": { "type": "integer", "minimum": 1 },
+            "softDeleteInterval": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "concurrency": {
+          "type": "object",
+          "properties": {
+            "productionLimit": { "type": "integer" }
+          }
+        },
+        "extraEnv": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "value": { "type": "string" }
+            },
+            "required": ["name", "value"]
+          }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "timezone": { "type": "string" },
+        "extraEnv": { "type": "array" },
+        "extraEnvFrom": { "type": "array" }
+      }
+    },
+    "secretRefs": {
+      "type": "object",
+      "properties": {
+        "existingSecret": { "type": "string" },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["postgresdb", "sqlite"] },
+        "useExternal": { "type": "boolean" },
+        "host": { "type": "string" },
+        "port": { "type": "integer" },
+        "database": { "type": "string" },
+        "user": { "type": "string" },
+        "passwordSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "key": { "type": "string" }
+          },
+          "required": ["name", "key"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "redis": {
+      "type": "object",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer" },
+        "username": { "type": "string" },
+        "passwordSecret": {
+          "type": ["object", "null"],
+          "properties": {
+            "name": { "type": ["string", "null"], "default": null },
+            "key": { "type": ["string", "null"], "default": null }
+          },
+          "additionalProperties": false,
+          "default": null
+        },
+        "database": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "timeout": { "type": "integer", "minimum": 1000 },
+        "prefix": { "type": "string" },
+        "tls": { "type": "boolean" },
+        "dualstack": { "type": "boolean" },
+        "clusterNodes": { "type": "string" },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "timeout": { "type": "integer", "minimum": 1 },
+            "lockDuration": { "type": "integer", "minimum": 1000 },
+            "lockRenewTime": { "type": "integer", "minimum": 1000 },
+            "stalledInterval": { "type": "integer", "minimum": 1000 },
+            "maxStalledCount": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "healthCheck": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        },
+        "extraEnv": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "value": { "type": "string" }
+            },
+            "required": ["name", "value"]
+          }
+        }
+      }
+    },
+    "s3": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "bucket": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "region": { "type": "string" },
+            "host": { "type": "string" }
+          },
+          "required": ["name", "region"]
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "autoDetect": { "type": "boolean" },
+            "accessKeyId": { "type": "string" },
+            "secretAccessKeySecret": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "key": { "type": "string" }
+              },
+              "required": ["name", "key"]
+            }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "mode": { 
+              "type": "string",
+              "enum": ["filesystem", "s3"],
+              "description": "Binary data storage mode"
+            },
+            "availableModes": {
+              "type": "string",
+              "description": "Available binary data modes (comma-separated)"
+            },
+            "forcePathStyle": { "type": "boolean" },
+            "extraEnv": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "value": { "type": "string" }
+                },
+                "required": ["name", "value"]
+              }
+            }
+          },
+          "required": ["mode"]
+        }
+      },
+      "required": ["enabled"]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "multiMain": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "queueMode": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "multiMain": {
+            "properties": { "replicas": { "minimum": 2 } }
+          }
+        },
+        "errorMessage": "multiMain.enabled=true requires queueMode.enabled=true and multiMain.replicas>=2"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "queueMode": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "queueMode": {
+            "required": ["workerReplicaCount"]
+          },
+          "redis": {
+            "type": "object",
+            "properties": {
+              "host": { "type": "string", "minLength": 1 },
+              "passwordSecret": {
+                "type": ["object", "null"],
+                "properties": {
+                  "name": { "type": ["string", "null"] },
+                  "key": { "type": ["string", "null"] }
+                },
+                "additionalProperties": false,
+                "default": null
+              }
+            },
+            "required": ["host"]
+          }
+        },
+        "errorMessage": "queueMode.enabled=true requires redis.host and queueMode.workerReplicaCount"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ingress": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "ingress": { "properties": { "hosts": { "minItems": 1 } } }
+        },
+        "errorMessage": "ingress.enabled=true requires at least one hosts[] entry"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "service": {
+            "properties": {
+              "sessionAffinity": {
+                "properties": { "enabled": { "const": true } },
+                "required": ["enabled"]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "service": {
+            "properties": {
+              "sessionAffinity": { "required": ["timeoutSeconds"] }
+            }
+          }
+        },
+        "errorMessage": "service.sessionAffinity.enabled=true requires timeoutSeconds"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "database": {
+            "properties": { "type": { "const": "postgres" } },
+            "required": ["type"]
+          }
+        }
+      },
+      "then": {
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "database": {
+                  "properties": { "useExternal": { "const": true } },
+                  "required": ["useExternal"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "database": {
+                  "required": ["host", "port", "database", "user", "passwordSecret"]
+                }
+              },
+              "errorMessage": "database.type=postgresdb & useExternal=true requires host, port, database, user and passwordSecret"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "database": {
+                  "properties": { "useExternal": { "const": false } },
+                  "required": ["useExternal"]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "database": {
+                  "required": ["database", "user"]
+                }
+              },
+              "errorMessage": "database.type=postgresdb & useExternal=false requires at least database and user (host/port/secret are provided by the in-cluster DB)"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "database": {
+            "properties": { "useExternal": { "const": false } },
+            "required": ["useExternal"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "database": {
+            "properties": { "type": { "const": "sqlite" } },
+            "required": ["type"]
+          },
+          "queueMode": {
+            "properties": { "enabled": { "const": false } },
+            "required": ["enabled"]
+          },
+          "multiMain": {
+            "properties": { "enabled": { "const": false } },
+            "required": ["enabled"]
+          }
+        },
+        "errorMessage": "useExternal=false enforces SQLite and disables queueMode and multiMain"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "s3": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "s3": {
+            "properties": {
+              "bucket": { "required": ["name", "region"] },
+              "storage": { "required": ["mode"] }
+            },
+            "anyOf": [
+              {
+                "properties": {
+                  "auth": {
+                    "properties": { "autoDetect": { "const": true } },
+                    "required": ["autoDetect"]
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "auth": {
+                    "required": ["accessKeyId", "secretAccessKeySecret"]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "errorMessage": "s3.enabled=true requires bucket configuration and either autoDetect=true or explicit credentials"
+      }
+    }
+  ],
+  "additionalProperties": true
+}

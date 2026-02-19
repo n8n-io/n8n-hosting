@@ -1,0 +1,110 @@
+name: Bump n8n Version
+
+on:
+  schedule:
+    # Every Wednesday at 10:00 UTC
+    - cron: "0 10 * * 3"
+  workflow_dispatch: {} # Allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get latest stable n8n release
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch the latest non-prerelease, non-draft release
+          LATEST=$(gh api repos/n8n-io/n8n/releases \
+            --jq '[.[] | select(.prerelease == false and .draft == false)][0].tag_name' \
+            | sed 's/^n8n@//')
+          echo "version=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Latest stable n8n release: $LATEST"
+
+      - name: Get current chart version
+        id: current
+        run: |
+          CURRENT=$(grep '^  tag:' charts/n8n/values.yaml | head -1 | sed 's/.*tag: *"\(.*\)"/\1/')
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Current chart default: $CURRENT"
+
+      - name: Check if update needed
+        id: check
+        run: |
+          if [ "${{ steps.latest.outputs.version }}" = "${{ steps.current.outputs.version }}" ]; then
+            echo "Already up to date"
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Update available: ${{ steps.current.outputs.version }} -> ${{ steps.latest.outputs.version }}"
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for existing PR
+        if: steps.check.outputs.needed == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="automated/bump-n8n-${{ steps.latest.outputs.version }}"
+          PR_COUNT=$(gh pr list --head "$BRANCH" --state open --json number --jq 'length')
+          if [ "$PR_COUNT" -gt 0 ]; then
+            echo "PR already exists for this version"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update version files
+        if: steps.check.outputs.needed == 'true' && steps.existing.outputs.exists == 'false'
+        env:
+          NEW_VERSION: ${{ steps.latest.outputs.version }}
+          OLD_VERSION: ${{ steps.current.outputs.version }}
+        run: |
+          # Update image.tag in values.yaml
+          sed -i "s/tag: \"${OLD_VERSION}\"/tag: \"${NEW_VERSION}\"/" charts/n8n/values.yaml
+
+          # Update appVersion in Chart.yaml
+          sed -i "s/^appVersion: \"${OLD_VERSION}\"/appVersion: \"${NEW_VERSION}\"/" charts/n8n/Chart.yaml
+
+          echo "Updated values.yaml and Chart.yaml to n8n ${NEW_VERSION}"
+          git diff
+
+      - name: Create pull request
+        if: steps.check.outputs.needed == 'true' && steps.existing.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.latest.outputs.version }}
+          OLD_VERSION: ${{ steps.current.outputs.version }}
+        run: |
+          BRANCH="automated/bump-n8n-${NEW_VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add charts/n8n/values.yaml charts/n8n/Chart.yaml
+          git commit -m "feat(chart): bump n8n to ${NEW_VERSION}"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "Bump n8n to ${NEW_VERSION}" \
+            --body "$(cat <<EOF
+          ## Summary
+
+          Automated bump of default n8n version from \`${OLD_VERSION}\` to \`${NEW_VERSION}\`.
+
+          - Updated \`image.tag\` in \`values.yaml\`
+          - Updated \`appVersion\` in \`Chart.yaml\`
+
+          Release notes: https://github.com/n8n-io/n8n/releases/tag/n8n%40${NEW_VERSION}
+
+          > This PR was created automatically by the [bump-n8n-version](.github/workflows/bump-n8n-version.yml) workflow.
+          EOF
+          )" \
+            --label "automated"

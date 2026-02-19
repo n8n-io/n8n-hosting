@@ -1,0 +1,266 @@
+{{- include "n8n.validate" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "n8n.fullname" . }}-main
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+    app.kubernetes.io/component: main
+spec:
+  replicas: {{ ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "n8n.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: main
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "n8n.labels" . | nindent 8 }}
+        app.kubernetes.io/component: main
+    spec:
+      {{- with include "n8n.serviceAccountName" . }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
+
+      {{- with .Values.lifecycle.main.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
+
+      containers:
+        - name: n8n-main
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          {{- if .Values.lifecycle.main.preStop.enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  {{- toYaml .Values.lifecycle.main.preStop.command | nindent 18 }}
+          {{- end }}
+
+          env:
+            {{- with .Values.webhook.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+            # Shared configuration from ConfigMap
+            {{- include "n8n.sharedConfigMapEnv" . | nindent 12 }}
+            
+            # Main-specific configuration from ConfigMap
+            {{- include "n8n.mainConfigMapEnv" . | nindent 12 }}
+            
+            {{- if .Values.database.useExternal }}
+            # Database password (secret)
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.passwordSecret.name }}
+                  key: {{ .Values.database.passwordSecret.key }}
+            {{- end }}
+            {{- if .Values.queueMode.enabled }}
+            # Redis password (secret)
+            {{- with .Values.redis.passwordSecret }}
+            {{- if and .name .key }}
+            - name: QUEUE_BULL_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+            {{- end }}
+            {{- end }}
+
+            # Health check settings
+            {{- if .Values.redis.healthCheck.enabled }}
+            - name: QUEUE_HEALTH_CHECK_ACTIVE
+              value: "true"
+            - name: QUEUE_HEALTH_CHECK_PORT
+              value: "{{ .Values.redis.healthCheck.port }}"
+            {{- end }}
+
+            # Redis-specific extra environment variables
+            {{- with .Values.redis.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- end }}
+
+            # S3 External Storage
+            {{- include "n8n.s3Env" . | nindent 12 }}
+
+            # Executions Configuration  
+            {{- include "n8n.executionsEnv" . | nindent 12 }}
+
+            # License Configuration
+            {{- include "n8n.licenseEnv" . | nindent 12 }}
+
+            # Core n8n secrets
+            {{- include "n8n.coreSecretsEnv" . | nindent 12 }}
+
+            # Task Runners Configuration
+            {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}
+
+            {{- with .Values.config.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          {{- with .Values.config.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+
+          # Probes
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          {{- end }}
+
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.resources.main | nindent 12 }}
+
+          # Persist n8n home for SQLite DB and files
+          volumeMounts:
+            - name: data
+              mountPath: /home/node/.n8n
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+        {{- if .Values.taskRunners.enabled }}
+        # Task Runner sidecar container
+        - name: task-runner
+          image: "{{ .Values.taskRunners.image.repository }}:{{ default .Values.image.tag .Values.taskRunners.image.tag }}"
+          imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          env:
+            {{- include "n8n.taskRunnerSidecarEnv" . | nindent 12 }}
+
+          resources:
+            {{- toYaml .Values.taskRunners.resources | nindent 12 }}
+
+          {{- if .Values.taskRunners.customConfig.enabled }}
+          volumeMounts:
+            - name: task-runner-config
+              mountPath: /etc/n8n-task-runners.json
+              subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
+              readOnly: true
+          {{- end }}
+        {{- end }}
+
+      # Volumes: prefer PVC, fallback to emptyDir if persistence disabled
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        {{- if and .Values.taskRunners.enabled .Values.taskRunners.customConfig.enabled }}
+        - name: task-runner-config
+          configMap:
+            name: {{ .Values.taskRunners.customConfig.configMapName }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if and .Values.multiMain.enabled (ne .Values.multiMain.antiAffinity.type "none") }}
+      affinity:
+        podAntiAffinity:
+          {{- if eq .Values.multiMain.antiAffinity.type "required" }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: {{ include "n8n.name" . }}
+                  app.kubernetes.io/instance: {{ .Release.Name }}
+                  app.kubernetes.io/component: main
+              topologyKey: kubernetes.io/hostname
+          {{- else }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: {{ include "n8n.name" . }}
+                    app.kubernetes.io/instance: {{ .Release.Name }}
+                    app.kubernetes.io/component: main
+                topologyKey: kubernetes.io/hostname
+          {{- end }}
+      {{- end }}
+      {{- if and .Values.multiMain.enabled .Values.multiMain.topologySpreadConstraints.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: {{ .Values.multiMain.topologySpreadConstraints.maxSkew }}
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: {{ .Values.multiMain.topologySpreadConstraints.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "n8n.name" . }}
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: main
+      {{- end }}

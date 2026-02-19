@@ -1,0 +1,29 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    ["@semantic-release/commit-analyzer", {
+      "preset": "conventionalcommits",
+      "releaseRules": [
+        { "type": "feat", "release": "minor" },
+        { "type": "fix", "release": "patch" },
+        { "type": "perf", "release": "patch" },
+        { "type": "revert", "release": "patch" },
+        { "type": "docs", "release": "patch" },
+        { "type": "refactor", "release": "patch" },
+        { "scope": "no-release", "release": false }
+      ]
+    }],
+    ["@semantic-release/release-notes-generator", {
+      "preset": "conventionalcommits"
+    }],
+    "@semantic-release/changelog",
+    ["@semantic-release/exec", {
+      "verifyReleaseCmd": "python3 -c \"import re; content=open('charts/n8n/Chart.yaml').read(); open('charts/n8n/Chart.yaml','w').write(re.sub(r'^version:.*', 'version: ${nextRelease.version}', content, flags=re.MULTILINE))\""
+    }],
+    ["@semantic-release/git", {
+      "assets": ["CHANGELOG.md", "charts/n8n/Chart.yaml"],
+      "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+    }],
+    "@semantic-release/github"
+  ]
+}

@@ -1,0 +1,16 @@
+{{- if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "n8n.fullname" . }}-main
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "n8n.name" . }}
+      app.kubernetes.io/component: main
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

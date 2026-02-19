@@ -1,0 +1,508 @@
+# ----- Image -----
+image:
+  repository: docker.n8n.io/n8nio/n8n
+  tag: "2.9.0"
+  pullPolicy: IfNotPresent
+
+# ----- Names -----
+nameOverride: ""
+fullnameOverride: ""
+
+# ----- Queue mode -----
+# Two deployment modes are supported:
+#   1. Queue mode (enabled: true, default) — main + workers + optional webhook processors.
+#      Requires external PostgreSQL and Redis.
+#   2. Standalone mode (enabled: false) — single main pod with SQLite.
+#      No workers, no Redis, no external database. Requires persistence for SQLite storage.
+queueMode:
+  enabled: true
+  workerReplicaCount: 2
+  # Worker concurrency (number of jobs each worker can handle simultaneously)
+  workerConcurrency: 10
+
+# ----- Webhook processors (optional scaling layer) -----
+webhookProcessor:
+  # Enable dedicated webhook processing pods for high-throughput webhook scenarios
+  enabled: false
+  replicaCount: 2
+  # Disable webhook processing in main process when webhook processors are enabled
+  disableProductionWebhooksOnMainProcess: true
+
+# ----- Multi-main (optional, requires queue mode) -----
+multiMain:
+  enabled: false
+  replicas: 2
+  antiAffinity:
+    type: preferred
+  topologySpreadConstraints:
+    enabled: false
+    maxSkew: 1
+    whenUnsatisfiable: ScheduleAnyway
+  # Multi-main setup configuration (requires enterprise license)
+  setup:
+    keyTtl: 10                               # <-- Leader key TTL (seconds)
+    checkInterval: 3                         # <-- Leader check interval (seconds)
+
+# ----- Task Runners (external mode with sidecar containers) -----
+taskRunners:
+  # Enable task runners for executing user-provided JavaScript and Python code
+  # When enabled, a sidecar container (n8nio/runners) is added to main and worker pods
+  enabled: false
+
+  # Task runner image configuration
+  image:
+    repository: n8nio/runners
+    # Tag must match n8n version
+    # Leave empty to automatically use the same tag as the main n8n image
+    # Set explicitly only if you need a different version (not recommended)
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  # Task runner mode (only external mode is supported in this chart)
+  mode: external
+
+  # Authentication token for task runners to connect to the broker
+  # This should be a random secure shared secret
+  # You can generate one with: openssl rand -base64 32
+  authToken:
+    # Use existing secret for auth token
+    existingSecret: ""
+    existingSecretKey: ""
+    # Or provide the token directly (not recommended for production)
+    value: ""
+
+  # Task broker configuration (runs within n8n main/worker containers)
+  broker:
+    # Listen address for the task broker (0.0.0.0 allows external connections from sidecar)
+    listenAddress: "0.0.0.0"
+    # Port for task broker to listen on
+    port: 5679
+
+  # Launcher configuration
+  launcher:
+    # Log level for the launcher (debug, info, warn, error)
+    logLevel: info
+    # Number of seconds of inactivity before shutting down task runner process
+    # The launcher will automatically start the runner again when there are new tasks
+    # Set to 0 to disable automatic shutdown
+    autoShutdownTimeout: 15
+
+  # Enable native Python runner (required for Python support, currently in beta)
+  nativePythonRunner: true
+
+  # Custom launcher configuration file
+  # You can mount a custom n8n-task-runners.json to allowlist additional packages
+  customConfig:
+    enabled: false
+    # ConfigMap name containing the custom launcher config
+    configMapName: ""
+    # Key in the ConfigMap containing the config file
+    configMapKey: "n8n-task-runners.json"
+
+  # Resource limits for task runner sidecar containers
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Additional environment variables for task runners
+  extraEnv: []
+  # Example:
+  # extraEnv:
+  #   - name: N8N_RUNNERS_LAUNCHER_LOG_LEVEL
+  #     value: debug
+
+# ----- Main replicas (when multi-main is disabled) -----
+replicaCount: 1
+
+# ----- Service -----
+service:
+  type: ClusterIP
+  port: 5678
+  annotations: {}
+  sessionAffinity:
+    enabled: false
+    timeoutSeconds: 10800
+
+# ----- Ingress -----
+ingress:
+  enabled: false
+  sticky:
+    enabled: false
+    cookieName: n8n_affinity
+    cookieExpires: "172800"  # 2 days in seconds
+    cookieMaxAge: "172800"   # 2 days in seconds
+  hosts:
+    - host: n8n.example.com   # <-- Change to your actual domain
+      paths:
+        - path: /
+          pathType: Prefix
+  # Separate Ingress for webhook processor pods (requires webhookProcessor.enabled=true)
+  webhookProcessor:
+    enabled: false
+    className: ""
+    annotations: {}
+    tls: []
+
+# ----- Persistence -----
+persistence:
+  enabled: false
+  accessModes: ["ReadWriteOnce"]
+  size: 10Gi
+  storageClassName: ""
+
+# ----- External Volumes -----
+extraVolumes: []
+# Examples:
+# extraVolumes:
+#   - name: ssl-certs
+#     secret:
+#       secretName: ssl-certificates
+#   - name: custom-config
+#     configMap:
+#       name: n8n-config
+
+extraVolumeMounts: []
+# Examples:
+# extraVolumeMounts:
+#   - name: ssl-certs
+#     mountPath: /usr/local/share/ca-certificates
+#     readOnly: true
+#   - name: custom-config
+#     mountPath: /app/config
+#     readOnly: true
+
+# ----- Resources -----
+resources:
+  main:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  worker:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  webhookProcessor:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ----- Node placement -----
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ----- Security -----
+# Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
+# ~/.n8n/, /tmp/, and other paths at runtime. Enabling it would require
+# extensive volumeMount overrides and is not practical for this workload.
+securityContext:
+  enabled: true
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsGroup: 1000
+
+# ----- RBAC ServiceAccount & Network Policy -----
+rbac:
+  create: true
+
+serviceAccount:
+  # Create a new service account for n8n pods
+  create: true
+  # Service account name - supports multiple configuration scenarios:
+  #
+  # 1. Create new service account (default):
+  #    create: true
+  #    name: "n8n"  # <-- Custom name, or leave empty to use chart fullname
+  #
+  # 2. Use existing/managed service account (e.g., created by Terraform):
+  #    create: false
+  #    name: "my-terraform-service-account"
+  #
+  # 3. Use no service account (pods run with default permissions):
+  #    create: false
+  #    name: ""  # <-- Empty or omit entirely
+  name: n8n
+  # AWS IAM Role ARN for IRSA (IAM Roles for Service Accounts)
+  # Required when s3.auth.autoDetect=true for AWS S3 access
+  awsRoleArn: ""
+  # Additional annotations for the service account
+  annotations: {}
+
+networkPolicy:
+  enabled: false
+
+# ----- Health checks -----
+probes:
+  liveness:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 6
+  readiness:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 6
+  # Worker-specific probes (workers don't have HTTP endpoints)
+  worker:
+    readiness:
+      enabled: true
+      # Custom readiness probe that checks if worker is ready
+      type: "exec"                           # <-- Use exec probe instead of HTTP
+      command:
+        - "/bin/sh"
+        - "-c"
+        - "pgrep -f 'n8n worker' > /dev/null"
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+    liveness:
+      enabled: true
+      # Check if n8n worker process is still running
+      type: "exec"
+      command:
+        - "/bin/sh"
+        - "-c"
+        - "pgrep -f 'n8n worker' > /dev/null"
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+# ----- Lifecycle (graceful shutdown) -----
+lifecycle:
+  # Main pods lifecycle configuration
+  main:
+    terminationGracePeriodSeconds: 60
+    preStop:
+      enabled: true
+      # Sleep to allow pod to be removed from service endpoints before SIGTERM
+      command:
+        - "/bin/sh"
+        - "-c"
+        - "sleep 10"
+  # Worker pods lifecycle configuration
+  worker:
+    terminationGracePeriodSeconds: 60
+    preStop:
+      enabled: true
+      # Sleep to allow current workflow executions to complete
+      command:
+        - "/bin/sh"
+        - "-c"
+        - "sleep 10"
+  # Webhook processor pods lifecycle configuration
+  webhookProcessor:
+    terminationGracePeriodSeconds: 60
+    preStop:
+      enabled: true
+      # Sleep to allow current webhook requests to complete
+      command:
+        - "/bin/sh"
+        - "-c"
+        - "sleep 10"
+
+# ----- Autoscaling -----
+hpa:
+  # Main pods autoscaling (UI/API pods)
+  main:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+  # Worker pods autoscaling (execution pods)
+  worker:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+  # Webhook processor pods autoscaling (webhook handling)
+  webhookProcessor:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 60
+
+# ----- Pod Disruption Budget -----
+pdb:
+  enabled: true
+  minAvailable: 1
+
+# ----- Webhook config -----
+webhook:
+  # Enable webhook functionality
+  enabled: true
+  # Custom webhook URL base domain (if not set, will use ingress host)
+  # Format: https://your-domain.com (n8n adds /webhook path automatically)
+  url: ""
+  # Timeout for webhook requests in milliseconds
+  timeout: 120000
+  # Additional webhook environment variables
+  extraEnv: []
+
+# ----- Executions config -----
+executions:
+  # Execution timeout settings
+  timeout: -1                                    # <-- Default timeout in seconds (-1 = disabled)
+  timeoutMax: 3600                              # <-- Maximum timeout users can set
+  # Data persistence settings
+  data:
+    saveOnError: "all"                          # <-- Save data on error (all, none)
+    saveOnSuccess: "all"                        # <-- Save data on success (all, none)
+    saveOnProgress: false                       # <-- Save progress for each node
+    saveManualExecutions: true                  # <-- Save manual execution data
+  # Data pruning settings
+  pruning:
+    enabled: true                               # <-- Enable execution data pruning
+    maxAge: 336                                 # <-- Max execution age in hours (14 days)
+    maxCount: 10000                            # <-- Max executions to keep (0 = no limit)
+    hardDeleteBuffer: 1                         # <-- Buffer hours before hard delete
+    hardDeleteInterval: 15                      # <-- Hard delete interval in minutes
+    softDeleteInterval: 60                      # <-- Soft delete interval in minutes
+  # Concurrency settings
+  concurrency:
+    productionLimit: -1                         # <-- Max concurrent production executions (-1 = disabled)
+  # Additional execution environment variables
+  extraEnv: []
+
+# ----- App config -----
+config:
+  timezone: UTC
+  # Additional environment variables for n8n container
+  # All n8n environment variables can be set here including:
+  # Proxy: HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY
+  # Core: N8N_EDITOR_BASE_URL, N8N_CONFIG_FILES, N8N_USER_FOLDER, etc.
+  # Features: N8N_DISABLE_UI, N8N_PREVIEW_MODE, N8N_TEMPLATES_ENABLED, etc.
+  # Network: N8N_LISTEN_ADDRESS, N8N_SSL_KEY, N8N_SSL_CERT, etc.
+  # Telemetry: N8N_DIAGNOSTICS_ENABLED, N8N_VERSION_NOTIFICATIONS_ENABLED, etc.
+  # API: N8N_PUBLIC_API_DISABLED, N8N_PUBLIC_API_ENDPOINT, etc.
+  # System: N8N_GRACEFUL_SHUTDOWN_TIMEOUT, N8N_PROXY_HOPS, etc.
+  # Dev: N8N_DEV_RELOAD, N8N_REINSTALL_MISSING_PACKAGES, etc.
+  # See documentation for complete list of supported variables
+  extraEnv: []
+  # Example:
+  # extraEnv:
+  #   - name: HTTP_PROXY
+  #     value: "http://proxy.example.com:8080"
+  #   - name: N8N_EDITOR_BASE_URL
+  #     value: "https://n8n.example.com"
+  #   - name: N8N_DISABLE_UI
+  #     value: "false"
+  extraEnvFrom: []
+
+# ----- License (for n8n Enterprise) -----
+license:
+  # Set to true if using n8n Enterprise
+  enabled: false
+  # License activation key (leave empty to use secret)
+  activationKey: ""
+  # Or reference existing secret containing the license key
+  existingSecret:
+    name: ""                           # <-- K8s Secret name
+    key: "license-key"                 # <-- Key inside the secret
+
+# ----- Secrets -----
+secretRefs:
+  existingSecret: ""
+  env:
+    N8N_ENCRYPTION_KEY: "change-me-to-a-long-random-key"
+    N8N_HOST: "n8n.example.com"  # <-- Change to your actual domain
+    N8N_PORT: "5678"
+    N8N_PROTOCOL: "http"
+
+# ----- Database (PostgreSQL - required for queue mode) -----
+database:
+  type: postgresdb
+  # External database is required for queue mode
+  useExternal: true
+  host: "your-postgres-hostname"     # <-- Change to your actual PostgreSQL host
+  port: 5432
+  database: n8n
+  schema: "public"                   # <-- PostgreSQL schema name
+  user: n8n
+  passwordSecret:
+    name: "n8n-db-password"          # <-- K8s Secret name
+    key: "password"                  # <-- Key inside the secret
+  # SSL configuration
+  ssl:
+    enabled: false                   # <-- Enable SSL connection
+    ca: ""                           # <-- Path to CA certificate file
+    cert: ""                         # <-- Path to client certificate file
+    key: ""                          # <-- Path to client key file
+    rejectUnauthorized: true         # <-- Reject unauthorized SSL connections
+
+# ----- Redis (required for queue mode) -----
+redis:
+  # Redis is required for queue mode
+  enabled: true
+  useExternal: true
+  host: "your-redis-hostname"                      # <-- Change to your actual Redis host
+  port: 6379
+  # Redis authentication
+  username: ""                                     # <-- Redis username (Redis 6+)
+  passwordSecret: null
+  # Advanced Redis settings
+  database: 0                                      # <-- Redis database number
+  timeout: 10000                                   # <-- Redis timeout threshold (ms)
+  prefix: ""                                       # <-- Queue key prefix
+  tls: false                                       # <-- Enable TLS (required for AWS ElastiCache and other managed Redis services)
+  dualstack: false                                 # <-- Enable dual-stack (IPv4/IPv6)
+  # Redis Cluster support (comma-separated list of host:port)
+  clusterNodes: ""                                 # <-- For Redis Cluster mode
+  # Queue worker settings
+  worker:
+    timeout: 30                                    # <-- Worker shutdown timeout (seconds)
+    lockDuration: 60000                            # <-- Worker lease duration (ms)
+    lockRenewTime: 10000                           # <-- Lock renewal frequency (ms)
+    stalledInterval: 30000                         # <-- Stalled job check interval (ms)
+    maxStalledCount: 1                             # <-- Max stalled job retries
+  # Health check settings
+  healthCheck:
+    enabled: false                                 # <-- Enable queue health checks
+    port: 5678                                     # <-- Health check port
+  # Additional Redis environment variables
+  extraEnv: []
+
+# ----- S3 External Storage (required for queue mode with binary data) -----
+s3:
+  enabled: false
+  # S3 bucket configuration
+  bucket:
+    name: ""                                   # <-- S3 bucket name
+    region: ""                                 # <-- S3 region (use "auto" if not required)
+    host: ""                                   # <-- S3 endpoint (optional for AWS S3)
+  # Authentication
+  auth:
+    autoDetect: false                          # <-- Use AWS credential provider chain (requires serviceAccount.awsRoleArn)
+    accessKeyId: ""                            # <-- S3 access key ID (not needed if autoDetect=true)
+    secretAccessKeySecret:                     # <-- Secret containing S3 secret access key (not needed if autoDetect=true)
+      name: ""                                 # <-- K8s Secret name
+      key: ""                                  # <-- Key inside the secret
+  # Storage configuration
+  storage:
+    # Binary data storage mode (filesystem or s3 (filesystem))
+    mode: "filesystem"
+    # Available binary data modes (comma-separated ex: filesystem,s3)
+    availableModes: "filesystem"              # <-- Available storage modes for n8n
+    # S3 specific settings
+    forcePathStyle: false                      # <-- Force path-style URLs (for S3-compatible providers)
+    # Additional S3 environment variables
+    extraEnv: []

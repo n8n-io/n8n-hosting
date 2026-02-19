@@ -1,0 +1,42 @@
+{{- if and .Values.webhookProcessor.enabled ((.Values.ingress).webhookProcessor).enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "n8n.fullname" . }}-webhook-processor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webhook-processor
+  {{- with (.Values.ingress.webhookProcessor).annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with (.Values.ingress.webhookProcessor).className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+  {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: /webhook/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "n8n.fullname" $ }}-webhook-processor
+                port:
+                  number: {{ $.Values.service.port }}
+          - path: /webhook-waiting/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "n8n.fullname" $ }}-webhook-processor
+                port:
+                  number: {{ $.Values.service.port }}
+  {{- end }}
+  {{- with (.Values.ingress.webhookProcessor).tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

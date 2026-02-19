@@ -1,0 +1,26 @@
+apiVersion: v2
+name: n8n
+version: 1.0.0
+kubeVersion: ">=1.25.0-0"
+icon: >-
+  https://raw.githubusercontent.com/n8n-io/n8n/master/packages/editor-ui/public/images/n8n-logo.png
+description: >-
+  Production-grade Helm chart for n8n, the workflow automation platform.
+  Supports queue mode, multi-main HA, webhook processors, task runners, HPA,
+  PDB, network policies, and S3 external storage.
+appVersion: "2.9.0"
+type: application
+keywords:
+  - n8n
+  - workflow-automation
+  - automation
+  - queue
+  - redis
+  - postgres
+home: https://n8n.io
+sources:
+  - https://github.com/n8n-io/n8n-hosting
+  - https://github.com/n8n-io/n8n
+maintainers:
+  - name: n8n
+    url: https://github.com/n8n-io

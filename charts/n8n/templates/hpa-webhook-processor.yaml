@@ -1,0 +1,32 @@
+{{- if and .Values.webhookProcessor.enabled .Values.hpa.webhookProcessor.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "n8n.fullname" . }}-webhook-processor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webhook-processor
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "n8n.fullname" . }}-webhook-processor
+  minReplicas: {{ .Values.hpa.webhookProcessor.minReplicas }}
+  maxReplicas: {{ .Values.hpa.webhookProcessor.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.webhookProcessor.targetCPUUtilizationPercentage }}
+    {{- if hasKey .Values.hpa.webhookProcessor "targetMemoryUtilizationPercentage" }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.webhookProcessor.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

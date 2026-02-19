@@ -1,0 +1,32 @@
+{{- if .Values.hpa.main.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "n8n.fullname" . }}-main
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+    app.kubernetes.io/component: main
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "n8n.fullname" . }}-main
+  minReplicas: {{ .Values.hpa.main.minReplicas }}
+  maxReplicas: {{ .Values.hpa.main.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.main.targetCPUUtilizationPercentage }}
+    {{- if hasKey .Values.hpa.main "targetMemoryUtilizationPercentage" }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.main.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

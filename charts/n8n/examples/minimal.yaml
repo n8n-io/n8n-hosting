@@ -1,0 +1,63 @@
+# Minimal n8n Configuration
+# This example shows the absolute minimum configuration needed to run n8n
+# 
+# IMPORTANT: This chart requires external PostgreSQL and Redis
+# You must set up these services before deploying n8n
+# 
+# For quick testing, you can use Docker:
+# docker run -d --name postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:15
+# docker run -d --name redis -p 6379:6379 redis:7-alpine
+#
+# Use this as a starting point for development or testing
+
+# Basic deployment settings
+queueMode:
+  enabled: true
+  workerReplicaCount: 1
+  workerConcurrency: 5
+
+# Database configuration (MUST be external)
+database:
+  type: postgresdb
+  useExternal: true  # Chart only supports external databases
+  host: "your-postgres-host.com"
+  port: 5432
+  database: n8n
+  schema: "public"   # PostgreSQL schema name
+  user: n8n
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+# Redis configuration (MUST be external)
+redis:
+  enabled: true
+  useExternal: true  # Chart only supports external Redis
+  host: "your-redis-host.com"
+  port: 6379
+
+# Core secrets (you must create this secret manually)
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+# Basic service configuration
+service:
+  type: ClusterIP
+  port: 5678
+
+# Resource limits (adjust based on your needs)
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# Storage (filesystem by default, S3 recommended for production)
+# This chart uses filesystem storage by default
+# For production, configure S3 storage (see other examples)
+
+# Basic configuration
+config:
+  timezone: UTC

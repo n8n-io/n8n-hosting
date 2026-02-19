@@ -1,0 +1,196 @@
+# Production n8n Configuration with S3 Storage
+# This example shows a production-ready setup with external services and S3 storage
+# Cloud-agnostic except for S3 which requires AWS
+
+# Multi-main setup for high availability
+multiMain:
+  enabled: true
+  replicas: 2
+
+# Queue mode with multiple workers
+queueMode:
+  enabled: true
+  workerReplicaCount: 5
+  workerConcurrency: 15
+
+# Load balancer must route /webhook/* to webhook processor service
+webhookProcessor:
+  enabled: true
+  replicaCount: 2
+  disableProductionWebhooksOnMainProcess: true
+
+# Enterprise license required for multi-main setup
+license:
+  enabled: true
+  activationKey: "your-enterprise-license-key"
+
+hpa:
+  main:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  worker:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 80
+  webhookProcessor:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 75
+
+database:
+  type: postgresdb
+  useExternal: true
+  host: "your-postgres-host.com"  # Replace with your PostgreSQL endpoint
+  port: 5432
+  database: n8n
+  schema: "public"                 # PostgreSQL schema name
+  user: n8n
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+redis:
+  enabled: true
+  useExternal: true
+  host: "your-redis-host.com"  # Replace with your Redis endpoint
+  port: 6379
+
+s3:
+  enabled: true
+  bucket:
+    name: "your-s3-bucket-name"  # Replace with your S3 bucket name
+    region: "us-east-1"          # Replace with your S3 bucket region
+  auth:
+    # Option 1: IRSA (IAM Roles for Service Accounts) - Recommended for AWS EKS
+    autoDetect: true  # Only works with AWS S3, requires serviceAccount.awsRoleArn
+    
+    # Option 2: Access Keys - Alternative authentication method
+    # autoDetect: false
+    # accessKeyId: "your-access-key-id"
+    # secretAccessKeySecret:
+    #   name: "s3-credentials"
+    #   key: "secret-access-key"
+  
+  storage:
+    mode: "s3"
+    availableModes: "filesystem,s3"
+
+# Service Account with AWS IAM Role
+serviceAccount:
+  create: true
+  name: n8n-prod
+  # AWS IAM Role ARN (only needed if using S3 with autoDetect: true)
+  awsRoleArn: "arn:aws:iam::your-account-id:role/your-n8n-s3-role"
+  annotations:
+    # EKS annotation for IRSA (only needed for AWS EKS)
+    eks.amazonaws.com/role-arn: "arn:aws:iam::your-account-id:role/your-n8n-s3-role"
+
+# Service configuration with session affinity for WebSocket stability
+service:
+  type: ClusterIP
+  port: 5678
+  sessionAffinity:
+    enabled: true
+    timeoutSeconds: 10800  # 3 hours
+
+# Production resource limits
+resources:
+  main:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi" 
+      cpu: "1000m"
+  worker:
+    requests:
+      memory: "512Mi"
+      cpu: "300m"
+    limits:
+      memory: "1Gi"
+      cpu: "800m"
+  webhookProcessor:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Production configuration
+config:
+  timezone: Europe/Berlin
+  extraEnv:
+    # Security settings
+    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+      value: "true"
+    
+    - name: DB_POSTGRESDB_SSL_ENABLED
+      value: "true"
+    - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+      value: "false"
+    
+    - name: N8N_LOG_LEVEL
+      value: "info"
+    - name: N8N_LOG_OUTPUT
+      value: "console"
+    
+    - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
+      value: "50"
+
+executions:
+  concurrency:
+    productionLimit: 50
+  timeout: 3600  # 1 hour
+  dataRetention:
+    saveOnError: true
+    saveOnSuccess: true
+    saveOnProgress: false
+    saveManualExecutions: true
+    prune: true
+    maxAge: 336  # 14 days
+    maxCount: 10000
+    hardDeleteBuffer: 1  # 1 hour
+    pruneHardDeleteInterval: "0 4 * * *"  # Daily at 4 AM
+    pruneSoftDeleteInterval: "0 5 * * *"  # Daily at 5 AM
+
+webhook:
+  timeout: 300000  # 5 minutes
+
+# Core secrets reference
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+# Production readiness probes
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+  readiness:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Network policies (if using a CNI that supports them)
+networkPolicy:
+  enabled: false  # Enable if your cluster supports network policies

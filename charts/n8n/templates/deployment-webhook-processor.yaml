@@ -1,0 +1,205 @@
+{{- if and .Values.webhookProcessor.enabled .Values.queueMode.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "n8n.fullname" . }}-webhook-processor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webhook-processor
+spec:
+  replicas: {{ .Values.webhookProcessor.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "n8n.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: webhook-processor
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "n8n.labels" . | nindent 8 }}
+        app.kubernetes.io/component: webhook-processor
+    spec:
+      {{- with include "n8n.serviceAccountName" . }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
+
+      {{- with .Values.lifecycle.webhookProcessor.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
+
+      containers:
+        - name: n8n-webhook-processor
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["n8n"]
+          args: ["webhook"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          {{- if .Values.lifecycle.webhookProcessor.preStop.enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  {{- toYaml .Values.lifecycle.webhookProcessor.preStop.command | nindent 18 }}
+          {{- end }}
+
+          env:
+            # Shared configuration from ConfigMap
+            {{- include "n8n.sharedConfigMapEnv" . | nindent 12 }}
+            
+            # Webhook processor-specific configuration from ConfigMap
+            {{- include "n8n.webhookProcessorConfigMapEnv" . | nindent 12 }}
+            
+            # Database password (secret)
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.passwordSecret.name }}
+                  key: {{ .Values.database.passwordSecret.key }}
+            # Redis password (secret)
+            {{- with .Values.redis.passwordSecret }}
+            {{- if and .name .key }}
+            - name: QUEUE_BULL_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+            {{- end }}
+            {{- end }}
+            
+            # Redis-specific extra environment variables
+            {{- with .Values.redis.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            
+            # Webhook-specific extra environment variables
+            {{- with .Values.webhook.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+            # ----------------- License (for n8n Enterprise) -----------------
+            {{- if .Values.license.enabled }}
+            {{- if .Values.license.activationKey }}
+            - name: N8N_LICENSE_ACTIVATION_KEY
+              value: {{ .Values.license.activationKey | quote }}
+            {{- else if .Values.license.existingSecret.name }}
+            - name: N8N_LICENSE_ACTIVATION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.license.existingSecret.name }}
+                  key: {{ .Values.license.existingSecret.key }}
+            {{- end }}
+            {{- end }}
+
+            # ----------------- Core n8n secrets -----------------
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
+                  key: N8N_ENCRYPTION_KEY
+            - name: N8N_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
+                  key: N8N_HOST
+            - name: N8N_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
+                  key: N8N_PORT
+            - name: N8N_PROTOCOL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
+                  key: N8N_PROTOCOL
+
+            {{- with .Values.config.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          {{- with .Values.config.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+
+          # --- Probes ---
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          {{- end }}
+
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.resources.webhookProcessor | nindent 12 }}
+
+          # Volume mounts for external volumes
+          volumeMounts:
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+      # External volumes
+      volumes:
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

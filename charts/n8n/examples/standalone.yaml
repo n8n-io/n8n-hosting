@@ -1,0 +1,26 @@
+# Standalone mode — single n8n pod with SQLite, no external dependencies.
+# Suitable for development, testing, or small-scale production use.
+# Data is stored in a PersistentVolumeClaim; no PostgreSQL or Redis required.
+
+queueMode:
+  enabled: false
+
+database:
+  type: sqlite
+  useExternal: false
+
+redis:
+  enabled: false
+
+persistence:
+  enabled: true
+  size: 5Gi
+
+# You must still provide an encryption key for credential storage.
+# Create a secret: kubectl create secret generic n8n-secrets \
+#   --from-literal=N8N_ENCRYPTION_KEY=$(openssl rand -hex 32) \
+#   --from-literal=N8N_HOST=localhost \
+#   --from-literal=N8N_PORT=5678 \
+#   --from-literal=N8N_PROTOCOL=http
+secretRefs:
+  existingSecret: "n8n-secrets"

@@ -1,0 +1,219 @@
+{{- if .Values.queueMode.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "n8n.fullname" . }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.queueMode.workerReplicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "n8n.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "n8n.labels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      {{- with include "n8n.serviceAccountName" . }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
+
+      {{- with .Values.lifecycle.worker.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
+
+      containers:
+        - name: n8n-worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["n8n"]
+          args:
+            - "worker"
+            - "--concurrency={{ .Values.queueMode.workerConcurrency }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          {{- if .Values.lifecycle.worker.preStop.enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  {{- toYaml .Values.lifecycle.worker.preStop.command | nindent 18 }}
+          {{- end }}
+
+          env:
+            # Shared configuration from ConfigMap
+            {{- include "n8n.sharedConfigMapEnv" . | nindent 12 }}
+
+            # Database password (secret)
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.passwordSecret.name }}
+                  key: {{ .Values.database.passwordSecret.key }}
+
+            # Redis password (secret)
+            {{- with .Values.redis.passwordSecret }}
+            {{- if and .name .key }}
+            - name: QUEUE_BULL_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name }}
+                  key: {{ .key }}
+            {{- end }}
+            {{- end }}
+
+            # Health check settings (not in ConfigMap as it's optional)
+            {{- if .Values.redis.healthCheck.enabled }}
+            - name: QUEUE_HEALTH_CHECK_ACTIVE
+              value: "true"
+            - name: QUEUE_HEALTH_CHECK_PORT
+              value: "{{ .Values.redis.healthCheck.port }}"
+            {{- end }}
+
+            # Redis-specific extra environment variables
+            {{- with .Values.redis.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+            # S3 External Storage
+            {{- include "n8n.s3Env" . | nindent 12 }}
+
+            # Executions Configuration
+            {{- include "n8n.executionsEnv" . | nindent 12 }}
+
+            # License Configuration
+            {{- include "n8n.licenseEnv" . | nindent 12 }}
+
+            # N8N encryption key
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
+                  key: N8N_ENCRYPTION_KEY
+
+            # Task Runners Configuration
+            {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}
+
+            {{- with .Values.config.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          {{- with .Values.config.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          # Worker Health Probes
+          {{- if .Values.probes.worker.readiness.enabled }}
+          readinessProbe:
+            {{- if and .Values.redis.healthCheck.enabled (eq .Values.probes.worker.readiness.type "httpGet") }}
+            httpGet:
+              path: {{ .Values.probes.worker.readiness.path | default "/healthz" }}
+              port: {{ .Values.redis.healthCheck.port | default 5678 }}
+            {{- else }}
+            exec:
+              command:
+                {{- toYaml .Values.probes.worker.readiness.command | nindent 16 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.probes.worker.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.worker.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.worker.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.worker.readiness.failureThreshold }}
+          {{- end }}
+
+          {{- if .Values.probes.worker.liveness.enabled }}
+          livenessProbe:
+            {{- if eq .Values.probes.worker.liveness.type "exec" }}
+            exec:
+              command:
+                {{- toYaml .Values.probes.worker.liveness.command | nindent 16 }}
+            {{- end }}
+            initialDelaySeconds: {{ .Values.probes.worker.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.worker.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.worker.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.worker.liveness.failureThreshold }}
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.resources.worker | nindent 12 }}
+
+          # Volume mounts for external volumes
+          volumeMounts:
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+        {{- if .Values.taskRunners.enabled }}
+        # Task Runner sidecar container
+        - name: task-runner
+          image: "{{ .Values.taskRunners.image.repository }}:{{ default .Values.image.tag .Values.taskRunners.image.tag }}"
+          imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          env:
+            {{- include "n8n.taskRunnerSidecarEnv" . | nindent 12 }}
+
+          resources:
+            {{- toYaml .Values.taskRunners.resources | nindent 12 }}
+
+          {{- if .Values.taskRunners.customConfig.enabled }}
+          volumeMounts:
+            - name: task-runner-config
+              mountPath: /etc/n8n-task-runners.json
+              subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
+              readOnly: true
+          {{- end }}
+        {{- end }}
+
+      # External volumes
+      volumes:
+        {{- if and .Values.taskRunners.enabled .Values.taskRunners.customConfig.enabled }}
+        - name: task-runner-config
+          configMap:
+            name: {{ .Values.taskRunners.customConfig.configMapName }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

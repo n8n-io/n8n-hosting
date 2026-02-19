@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "n8n.fullname" . }}-main
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.service.annotations }}{{ toYaml . | nindent 4 }}{{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "n8n.name" . }}
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+  {{- if .Values.service.sessionAffinity.enabled }}
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: {{ .Values.service.sessionAffinity.timeoutSeconds }}
+  {{- end }}

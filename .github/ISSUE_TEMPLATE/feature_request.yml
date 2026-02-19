@@ -1,0 +1,90 @@
+name: Feature Request
+description: Suggest an idea for the n8n Helm Chart
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is.
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe alternatives you've considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+
+  - type: dropdown
+    id: feature-category
+    attributes:
+      label: Feature Category
+      description: What category does this feature request fall into?
+      options:
+        - Chart configuration (new values, options)
+        - Deployment modes (scaling, availability)
+        - Storage and persistence
+        - Security and authentication
+        - Networking and ingress
+        - Monitoring and observability
+        - Documentation and examples
+        - CI/CD and automation
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low (nice to have)
+        - Medium (would be helpful)
+        - High (important for my use case)
+        - Critical (blocking my deployment)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: implementation-offer
+    attributes:
+      label: Implementation
+      options:
+        - label: I would be willing to contribute to the implementation of this feature
+          required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context, screenshots, or examples about the feature request here.
+
+  - type: textarea
+    id: example-config
+    attributes:
+      label: Example Configuration (if applicable)
+      description: If this feature involves configuration, please provide an example of how you'd like it to work
+      render: yaml
+      placeholder: |
+        # Example of how you'd like the feature to be configured
+        newFeature:
+          enabled: true
+          option1: value1

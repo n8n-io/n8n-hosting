@@ -1,0 +1,5 @@
+remote: origin
+chart-dirs:
+  - charts
+check-version-increment: true
+validate-maintainers: false

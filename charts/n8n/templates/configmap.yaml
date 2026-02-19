@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "n8n.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+data:
+  # ----- Shared Configuration (used by all components: main, worker, webhook-processor) -----
+  TZ: {{ .Values.config.timezone | quote }}
+  
+  # Database configuration
+  DB_TYPE: {{ .Values.database.type | quote }}
+  {{- if .Values.database.useExternal }}
+  DB_POSTGRESDB_DATABASE: {{ .Values.database.database | quote }}
+  DB_POSTGRESDB_HOST: {{ .Values.database.host | quote }}
+  DB_POSTGRESDB_PORT: "{{ .Values.database.port }}"
+  DB_POSTGRESDB_USER: {{ .Values.database.user | quote }}
+  {{- if .Values.database.schema }}
+  DB_POSTGRESDB_SCHEMA: {{ .Values.database.schema | quote }}
+  {{- end }}
+  {{- if .Values.database.ssl.enabled }}
+  DB_POSTGRESDB_SSL: "true"
+  {{- if .Values.database.ssl.ca }}
+  DB_POSTGRESDB_SSL_CA: {{ .Values.database.ssl.ca | quote }}
+  {{- end }}
+  {{- if .Values.database.ssl.cert }}
+  DB_POSTGRESDB_SSL_CERT: {{ .Values.database.ssl.cert | quote }}
+  {{- end }}
+  {{- if .Values.database.ssl.key }}
+  DB_POSTGRESDB_SSL_KEY: {{ .Values.database.ssl.key | quote }}
+  {{- end }}
+  {{- if not .Values.database.ssl.rejectUnauthorized }}
+  DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED: "false"
+  {{- end }}
+  {{- end }}
+  {{- end }}
+
+  # Queue configuration
+  {{- if .Values.queueMode.enabled }}
+  EXECUTIONS_MODE: "queue"
+  OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
+  {{- end }}
+  # Task Runners configuration (shared across all pods)
+  # N8N_RUNNERS_ENABLED is deprecated in n8n 2.9+; runners are always active.
+  # Setting MODE to "external" prevents n8n from trying to launch internal runners
+  # (which would fail for Python since the n8n image lacks Python 3).
+  N8N_RUNNERS_MODE: {{ .Values.taskRunners.mode | quote }}
+  {{- if .Values.taskRunners.enabled }}
+  N8N_RUNNERS_BROKER_LISTEN_ADDRESS: {{ .Values.taskRunners.broker.listenAddress | quote }}
+  N8N_NATIVE_PYTHON_RUNNER: {{ ternary "true" "false" .Values.taskRunners.nativePythonRunner | quote }}
+  {{- end }}
+
+  {{- if .Values.queueMode.enabled }}
+  # Redis configuration (queue mode only)
+  {{- if .Values.redis.clusterNodes }}
+  QUEUE_BULL_REDIS_CLUSTER_NODES: {{ .Values.redis.clusterNodes | quote }}
+  {{- else }}
+  QUEUE_BULL_REDIS_HOST: {{ .Values.redis.host | quote }}
+  QUEUE_BULL_REDIS_PORT: "{{ default 6379 .Values.redis.port }}"
+  {{- end }}
+  {{- if .Values.redis.username }}
+  QUEUE_BULL_REDIS_USERNAME: {{ .Values.redis.username | quote }}
+  {{- end }}
+  {{- if and .Values.redis.database (ne (.Values.redis.database | int) 0) }}
+  QUEUE_BULL_REDIS_DB: "{{ .Values.redis.database }}"
+  {{- end }}
+  {{- if .Values.redis.timeout }}
+  QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD: "{{ .Values.redis.timeout }}"
+  {{- end }}
+  {{- if .Values.redis.prefix }}
+  QUEUE_BULL_PREFIX: {{ .Values.redis.prefix | quote }}
+  {{- end }}
+  {{- if .Values.redis.tls }}
+  QUEUE_BULL_REDIS_TLS: "true"
+  {{- end }}
+  {{- if .Values.redis.dualstack }}
+  QUEUE_BULL_REDIS_DUALSTACK: "true"
+  {{- end }}
+
+  # Worker settings (queue mode only)
+  {{- if .Values.redis.worker.lockDuration }}
+  QUEUE_WORKER_LOCK_DURATION: "{{ .Values.redis.worker.lockDuration }}"
+  {{- end }}
+  {{- if .Values.redis.worker.lockRenewTime }}
+  QUEUE_WORKER_LOCK_RENEW_TIME: "{{ .Values.redis.worker.lockRenewTime }}"
+  {{- end }}
+  {{- if .Values.redis.worker.stalledInterval }}
+  QUEUE_WORKER_STALLED_INTERVAL: "{{ .Values.redis.worker.stalledInterval }}"
+  {{- end }}
+  {{- if .Values.redis.worker.maxStalledCount }}
+  QUEUE_WORKER_MAX_STALLED_COUNT: "{{ .Values.redis.worker.maxStalledCount }}"
+  {{- end }}
+
+  # Graceful shutdown timeout
+  N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "{{ .Values.redis.worker.timeout }}"
+  {{- end }}
+  
+  # ----- Main-only Configuration -----
+  {{- if .Values.webhook.enabled }}
+  {{- if .Values.webhook.url }}
+  WEBHOOK_URL: {{ .Values.webhook.url | quote }}
+  {{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) }}
+  WEBHOOK_URL: "https://{{ (index .Values.ingress.hosts 0).host }}"
+  {{- end }}
+  {{- if .Values.webhook.timeout }}
+  N8N_WEBHOOK_TIMEOUT: "{{ .Values.webhook.timeout }}"
+  {{- end }}
+  {{- end }}
+  
+  # Editor Base URL (for proper webhook URL display in UI)
+  # Only set when external access is configured to avoid issues with internal-only deployments
+  {{- if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) }}
+  N8N_EDITOR_BASE_URL: "https://{{ (index .Values.ingress.hosts 0).host }}"
+  {{- else if .Values.webhook.url }}
+  # If custom webhook URL is set, use it as editor base URL (since webhook.url is the domain)
+  {{- if hasPrefix "http" .Values.webhook.url }}
+  N8N_EDITOR_BASE_URL: {{ .Values.webhook.url | quote }}
+  {{- end }}
+  {{- end }}
+  
+  # Multi-main setup (main pods only)
+  {{- if and .Values.multiMain.enabled .Values.license.enabled }}
+  N8N_MULTI_MAIN_SETUP_ENABLED: "true"
+  {{- if .Values.multiMain.setup.keyTtl }}
+  N8N_MULTI_MAIN_SETUP_KEY_TTL: "{{ .Values.multiMain.setup.keyTtl }}"
+  {{- end }}
+  {{- if .Values.multiMain.setup.checkInterval }}
+  N8N_MULTI_MAIN_SETUP_CHECK_INTERVAL: "{{ .Values.multiMain.setup.checkInterval }}"
+  {{- end }}
+  {{- end }}
+  
+  # ----- Webhook Processor Configuration -----
+  {{- if .Values.webhookProcessor.enabled }}
+  # Main process disable (when webhook processors are enabled)
+  {{- if .Values.webhookProcessor.disableProductionWebhooksOnMainProcess }}
+  N8N_DISABLE_PRODUCTION_MAIN_PROCESS: "true"
+  {{- end }}
+  {{- end }}
