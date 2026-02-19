@@ -710,7 +710,7 @@
       "if": {
         "properties": {
           "database": {
-            "properties": { "type": { "const": "postgres" } },
+            "properties": { "type": { "const": "postgresdb" } },
             "required": ["type"]
           }
         }
