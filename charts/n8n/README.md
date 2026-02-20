@@ -6,10 +6,9 @@ Production-grade Helm chart for [n8n](https://n8n.io), the workflow automation p
 
 - Helm 3.12+
 - Kubernetes 1.25+
-- External PostgreSQL database
-- External Redis instance
 
-This chart does **not** bundle PostgreSQL or Redis. You must provision these separately.
+**Queue mode** (default): requires external PostgreSQL and Redis — this chart does not bundle them.
+**Standalone mode**: no external dependencies; uses SQLite with a PersistentVolumeClaim.
 
 ## Install
 
@@ -20,7 +19,7 @@ helm install n8n oci://ghcr.io/n8n-io/n8n --version 1.0.0 -f my-values.yaml
 
 ## Quick Start
 
-1. **Set up external services** (PostgreSQL and Redis)
+1. **Set up external services** — PostgreSQL and Redis for queue mode (not needed for standalone mode)
 
 2. **Create required secrets:**
    ```bash
@@ -55,6 +54,7 @@ All three use the same n8n container image, differentiated by command/args.
 
 | File | Use case |
 |---|---|
+| [standalone.yaml](./examples/standalone.yaml) | Single pod with SQLite, no external dependencies |
 | [minimal.yaml](./examples/minimal.yaml) | Single main pod, minimum config |
 | [minimal-with-docker.yaml](./examples/minimal-with-docker.yaml) | Quick testing with Docker Postgres/Redis |
 | [multi-main-queue.yaml](./examples/multi-main-queue.yaml) | Multi-main HA (Enterprise license required) |
@@ -62,11 +62,9 @@ All three use the same n8n container image, differentiated by command/args.
 
 ## Secret Management
 
-Three types of secrets are required:
-
-1. **Core secrets** (`secretRefs.existingSecret`): `N8N_ENCRYPTION_KEY`, `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL`
-2. **Database password** (`database.passwordSecret`): PostgreSQL password
-3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis
+1. **Core secrets** (`secretRefs.existingSecret`): `N8N_ENCRYPTION_KEY`, `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL` — always required
+2. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
+3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
 For production, use an external secrets operator (e.g., [External Secrets Operator](https://external-secrets.io/)) rather than storing secrets in values files.
 
