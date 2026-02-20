@@ -4,7 +4,7 @@
 n8n has been successfully deployed!
 
 Your n8n instance is available at:
-{{- if .Values.ingress.tls }}
+{{- if $.Values.ingress.tls }}
   https://{{ .host }}
 {{- else }}
   http://{{ .host }}
