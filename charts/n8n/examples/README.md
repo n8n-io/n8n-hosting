@@ -55,7 +55,7 @@ docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
 
 1. **Set up external services** (PostgreSQL and Redis)
 2. Choose the example that matches your scenario
-3. Copy the values file: `cp examples/production-aws.yaml my-values.yaml`
+3. Copy the values file: `cp examples/production-s3.yaml my-values.yaml`
 4. Customize the values for your environment
 5. Create required secrets: `./examples/create-secrets.sh`
 6. Deploy: `helm install n8n ./charts/n8n -f my-values.yaml`

@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     {{- with .Values.ingress.annotations }}{{ toYaml . | nindent 4 }}{{- end }}
-    {{- if and .Values.ingress.sticky.enabled (or (eq .Values.ingress.className "nginx") (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class")) }}
+    {{- if and .Values.ingress.sticky.enabled (or (eq .Values.ingress.className "nginx") (hasKey (default dict .Values.ingress.annotations) "kubernetes.io/ingress.class")) }}
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/session-cookie-name: {{ .Values.ingress.sticky.cookieName | quote }}
     nginx.ingress.kubernetes.io/session-cookie-expires: {{ .Values.ingress.sticky.cookieExpires | quote }}

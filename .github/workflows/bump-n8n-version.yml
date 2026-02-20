@@ -26,6 +26,10 @@ jobs:
           LATEST=$(gh api repos/n8n-io/n8n/releases \
             --jq '[.[] | select(.prerelease == false and .draft == false)][0].tag_name' \
             | sed 's/^n8n@//')
+          if [ -z "$LATEST" ]; then
+            echo "::error::Failed to fetch latest n8n version"
+            exit 1
+          fi
           echo "version=$LATEST" >> "$GITHUB_OUTPUT"
           echo "Latest stable n8n release: $LATEST"
 

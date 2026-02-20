@@ -36,7 +36,12 @@ helm install n8n oci://ghcr.io/n8n-io/n8n --version 1.0.0 -f my-values.yaml
 
 ## Architecture
 
-This chart deploys n8n in **queue mode** (mandatory). Three pod types are supported:
+This chart supports two deployment modes:
+
+- **Queue mode** (default) — main + workers + optional webhook processors. Requires external PostgreSQL and Redis.
+- **Standalone mode** — single pod with SQLite. No external dependencies. Suitable for development and small-scale use.
+
+In queue mode, three pod types are supported:
 
 | Component | Purpose | Scaling |
 |---|---|---|
