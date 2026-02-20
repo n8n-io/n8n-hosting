@@ -143,12 +143,6 @@ config:
     # Advanced webhook settings
     - name: N8N_WEBHOOK_TIMEOUT
       value: "300000"  # 5 minutes
-    
-    # LDAP/SSO configuration (if applicable)
-    # - name: N8N_LDAP_ENABLED
-    #   value: "true"
-    # - name: N8N_LDAP_SERVER
-    #   value: "ldap://your-ldap-server.com"
 
 # Advanced execution settings
 executions:
