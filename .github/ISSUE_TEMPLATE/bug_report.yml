@@ -103,7 +103,7 @@ body:
       placeholder: |
         # Your values.yaml configuration here
         database:
-          type: postgres
+          type: postgresdb
           useExternal: true
           # ... rest of config
     validations:
