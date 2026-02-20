@@ -14,7 +14,7 @@ prompt_with_default() {
     local var_name="$3"
     
     read -p "$prompt [$default]: " input
-    eval "$var_name=\${input:-$default}"
+    printf -v "$var_name" '%s' "${input:-$default}"
 }
 
 prompt_secret() {
@@ -23,7 +23,7 @@ prompt_secret() {
     
     read -s -p "$prompt: " input
     echo
-    eval "$var_name=\$input"
+    printf -v "$var_name" '%s' "$input"
 }
 
 echo "This script will create the following secrets:"
