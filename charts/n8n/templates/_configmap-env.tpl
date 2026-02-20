@@ -61,13 +61,8 @@ Environment variables from ConfigMap for all components
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_SSL_CERT
 {{- end }}
-{{- if .Values.database.ssl.key }}
-- name: DB_POSTGRESDB_SSL_KEY
-  valueFrom:
-    configMapKeyRef:
-      name: {{ include "n8n.fullname" . }}
-      key: DB_POSTGRESDB_SSL_KEY
-{{- end }}
+# DB_POSTGRESDB_SSL_KEY is not sourced from the ConfigMap because TLS private keys
+# must not be stored unencrypted. Provide it via config.extraEnv from a Secret.
 {{- if not .Values.database.ssl.rejectUnauthorized }}
 - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
   valueFrom:

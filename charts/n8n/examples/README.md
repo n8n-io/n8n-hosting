@@ -28,7 +28,7 @@ This directory contains common configuration examples for different deployment s
 
 ### 1. Create Required Secrets
 ```bash
-./create-secrets.sh
+./examples/create-secrets.sh
 ```
 
 ### 2. Choose Your Example

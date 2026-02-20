@@ -27,9 +27,17 @@ data:
   {{- if .Values.database.ssl.cert }}
   DB_POSTGRESDB_SSL_CERT: {{ .Values.database.ssl.cert | quote }}
   {{- end }}
-  {{- if .Values.database.ssl.key }}
-  DB_POSTGRESDB_SSL_KEY: {{ .Values.database.ssl.key | quote }}
-  {{- end }}
+  # DB_POSTGRESDB_SSL_KEY is intentionally omitted from this ConfigMap.
+  # TLS private keys must not be stored in ConfigMaps, which are not encrypted
+  # at rest and are readable by anyone with ConfigMap read access in the namespace.
+  # Provide DB_POSTGRESDB_SSL_KEY via config.extraEnv referencing a Secret instead, e.g.:
+  #   config:
+  #     extraEnv:
+  #       - name: DB_POSTGRESDB_SSL_KEY
+  #         valueFrom:
+  #           secretKeyRef:
+  #             name: my-db-ssl-secret
+  #             key: tls.key
   {{- if not .Values.database.ssl.rejectUnauthorized }}
   DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED: "false"
   {{- end }}
