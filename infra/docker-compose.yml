@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: n8n_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ}
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data
+    networks: [net]
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: always
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      GENERIC_TIMEZONE: ${TZ}
+    ports:
+      - "5678:5678"
+    depends_on:
+      - postgres
+    volumes:
+      - ../data/n8n:/home/node/.n8n
+    networks: [net]
+
+  # ── OpenClaw – uncomment once the image is published ──────────────────────
+  # openclaw:
+  #   image: ${OPENCLAW_IMAGE}
+  #   container_name: openclaw
+  #   restart: always
+  #   environment:
+  #     GITHUB_TOKEN: ${GITHUB_PAT}
+  #     GITHUB_REPO: ${GITHUB_REPO}
+  #     OPENCLAW_CONFIG: /config/openclaw.yml
+  #     TZ: ${TZ}
+  #   volumes:
+  #     - ../openclaw-config:/config
+  #     - ../data/openclaw:/var/lib/openclaw
+  #   networks: [net]
+
+  # ── Gotenberg – PDF conversion micro-service (uncomment to enable) ────────
+  # Used by n8n HTTP Request node to convert DOCX/HTML → PDF
+  # Docs: https://gotenberg.dev
+  # gotenberg:
+  #   image: gotenberg/gotenberg:8
+  #   container_name: gotenberg
+  #   restart: always
+  #   networks: [net]
+  #   # Call from n8n: POST http://gotenberg:3000/forms/libreoffice/convert/office
+
+networks:
+  net:
+    driver: bridge
