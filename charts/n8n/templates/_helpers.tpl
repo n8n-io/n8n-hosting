@@ -132,7 +132,7 @@ Validate values — called once from deployment-main.yaml to fail fast on bad co
 
 {{/* --- Encryption key --- */}}
 {{- if and (not .Values.secretRefs.existingSecret) (eq .Values.secretRefs.env.N8N_ENCRYPTION_KEY "change-me-to-a-long-random-key") -}}
-{{- fail "secretRefs.encryptionKey must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret" -}}
+{{- fail "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret" -}}
 {{- end -}}
 
 {{- end -}}
