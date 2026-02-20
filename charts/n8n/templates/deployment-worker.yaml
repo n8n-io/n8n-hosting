@@ -150,11 +150,10 @@ spec:
 
           {{- if .Values.probes.worker.liveness.enabled }}
           livenessProbe:
-            {{- if eq .Values.probes.worker.liveness.type "exec" }}
+            # Workers don't expose an HTTP endpoint; only exec probes are supported here.
             exec:
               command:
                 {{- toYaml .Values.probes.worker.liveness.command | nindent 16 }}
-            {{- end }}
             initialDelaySeconds: {{ .Values.probes.worker.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.worker.liveness.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.worker.liveness.timeoutSeconds }}

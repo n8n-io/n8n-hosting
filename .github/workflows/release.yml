@@ -52,7 +52,7 @@ jobs:
         run: |
           CHART_VERSION=$(helm show chart charts/n8n | grep '^version:' | awk '{print $2}')
           echo "version=$CHART_VERSION" >> "$GITHUB_OUTPUT"
-          if git tag -l "v$CHART_VERSION" | grep -q .; then
+          if git tag -l "v$CHART_VERSION" | grep -q . && [ "$(git rev-parse "v$CHART_VERSION")" = "$(git rev-parse HEAD)" ]; then
             echo "released=true" >> "$GITHUB_OUTPUT"
           else
             echo "released=false" >> "$GITHUB_OUTPUT"

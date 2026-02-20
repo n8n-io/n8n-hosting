@@ -18,7 +18,7 @@ This directory contains common configuration examples for different deployment s
 
 ### External Services
 **Queue mode** (default) requires external PostgreSQL and Redis services — this chart does not bundle them.
-**Standalone mode** (`queueMode.enabled: false`) uses SQLite with a PersistentVolumeClaim and has no external dependencies.
+**Standalone mode** (`queueMode.enabled: false`) uses SQLite with a PersistentVolumeClaim and has no external dependencies — see `standalone.yaml`.
 
 ### License Requirements
 - **Multi-main setup** (`multiMain.enabled: true`) requires an n8n Enterprise license

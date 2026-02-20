@@ -132,7 +132,7 @@ config:
     - name: DB_POSTGRESDB_SSL_ENABLED
       value: "true"
     - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-      value: "false"
+      value: "true"  # Set to "false" only if using self-signed certs (not recommended for production)
     
     - name: N8N_LOG_LEVEL
       value: "info"

@@ -12,7 +12,7 @@ prompt_with_default() {
     local prompt="$1"
     local default="$2"
     local var_name="$3"
-    
+
     read -p "$prompt [$default]: " input
     printf -v "$var_name" '%s' "${input:-$default}"
 }
@@ -20,7 +20,7 @@ prompt_with_default() {
 prompt_secret() {
     local prompt="$1"
     local var_name="$2"
-    
+
     read -s -p "$prompt: " input
     echo
     printf -v "$var_name" '%s' "$input"
