@@ -1,0 +1,1332 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploys n8n with multi-main and queue mode configured. s3 is used for storage. 
+
+Parameters:
+
+# n8n host parameters
+
+  N8nHostedZone:
+    Type: AWS::Route53::HostedZone::Id
+    Description: "Selected the hosted zone you would like to use to access n8n. https://docs.n8n.io/hosting/configuration/environment-variables/deployment/"
+    AllowedPattern: "Z.+"
+    ConstraintDescription: "You must selected a hosted zone in order to continue"
+
+  N8nHostRecordName:
+    Type: String
+    Description: "Enter the host name that matches the hosted zone you selected. Must match Cert ARN."
+    AllowedPattern: ".+"
+    ConstraintDescription: "Please enter a host record name to continue."
+    Default: "ENTER-YOUR-HOST-RECORD-HERE"
+  
+  N8nCertArn:
+    Type: String
+    Description: "Copy paste the ARN of the security certificate associated with your hosted zone. MUST BE IN SAME REGION AS STACK!"
+    Default: "ENTER-YOUR-CERT-ARN-HERE"
+
+# vpc/network configuration
+
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC.
+
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for private subnet 1.
+
+  PrivateSubnet2Cidr:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for private subnet 2.
+
+  PrivateSubnet3Cidr:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for private subnet 3.
+
+  
+
+# postgres parameters
+  DBInstanceClass:
+    Type: String
+    Description: "Select instance class for n8n's PostgresDB"
+    Default: db.t4g.small
+    AllowedValues: 
+      - db.t4g.micro
+      - db.t4g.small
+      - db.t4g.medium
+      - db.m7g.large
+      - db.m7g.xlarge
+      - db.m7g.2xlarge
+  DBAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    Description: Storage in GiB (minimum for RDS is typically 20 GiB)
+  MasterUsername:
+    Type: String
+    Default: postgres
+    Description: Master (admin) username
+    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9_]{0,15}$'
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+    Default: Password123!
+    Description: "Master (admin) password. IMPORTANT NOTE! Please change this from the default for optimal security."
+    MinLength: 8
+  DBName:
+    Type: String
+    Default: n8n
+    Description: Initial database to create
+    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9_]{0,62}$'
+
+# redis parameters
+  RedisInstanceClass:
+    Type: String
+    Description: "Select instance class for n8n's Redis cache"
+    Default: cache.t4g.small
+    AllowedValues:
+      - cache.t4g.micro
+      - cache.t4g.small
+      - cache.t4g.medium
+      - cache.m4.large
+      - cache.m4.xlarge
+      - cache.m4.2xlarge
+  RedisPassword:
+    Type: String
+    NoEcho: true
+    Description: "Password for the Redis user 'default'. Must be 16 characters at least. IMPORTANT NOTE! Please change this from the default for optimal security."
+    AllowedPattern: ".{16}.*"
+    Default: "Myverysecureredispassword1!"
+
+# license key parameters
+  N8nLicenseKey:
+    Type: String
+    Description: "Enter your n8n enterprise license key."
+    Default: 12345678-0987-1234-5678-123456789012
+    AllowedPattern: '^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$'
+             
+  N8nTenantId:
+    Type: String
+    Description: "[Embed only] Enter your n8n tenant ID. Leave as default for a standard install."
+    Default: 1
+    AllowedPattern: '^[0-9]+$'
+
+# labels to make everything easier to read during setup
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "n8n License Config"
+        Parameters:
+          - N8nLicenseKey
+          - N8nTenantId
+      - Label:
+          default: "DNS Config"
+        Parameters:
+           - N8nHostedZone
+           - N8nCertArn
+           - N8nHostRecordName
+      - Label:
+          default: "VPC & Network Config"
+        Parameters:
+          - VpcCidr
+          - PrivateSubnet1Cidr
+          - PrivateSubnet2Cidr
+          - PrivateSubnet3Cidr
+      - Label:
+          default: "Postgres DB Config"
+        Parameters:
+          - DBInstanceClass
+          - MasterUsername
+          - MasterUserPassword
+          - DBAllocatedStorage
+          - DBName
+      - Label: 
+          default: "Redis Config"
+        Parameters:
+          - RedisInstanceClass
+          - RedisPassword
+
+Resources:
+
+  # create n8n license secret
+  N8nLicenseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: app-user/n8nlicense
+      Description: Access keys for app-user created by CloudFormation
+      SecretString: !Sub |
+        {
+          "LicenseKey": "${N8nLicenseKey}",
+          "TenantId": "${N8nTenantId}"
+        }
+
+  # create encryption key secret        
+  N8nEncryptionKey:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: app-user/encryptionkey
+      Description: Encryption key for queue mode
+      SecretString: !Select
+        - 2
+        - !Split
+          - "/"
+          - !Ref AWS::StackId
+
+  # create VPC just for n8n
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-vpc"
+
+  # Internet Gateway (created and attached to the VPC; not routed to by private subnets)
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-igw"
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Subnets (first 3 AZs in the chosen region)
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-1"
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-2"
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet3Cidr
+      AvailabilityZone: !Select [2, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-3"
+
+  # Public subnets, first two in chosen region  
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.10.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-public-1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-public-2"
+
+  # route table for  allowing public access
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-public-rt"
+
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+  
+  # Public NAT gateways, one per public subnet/AZ
+  NatEipAz1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGatewayAz1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEipAz1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-nat-az1"
+  
+  NatEipAz2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGatewayAz2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEipAz2.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-nat-az2"
+
+  # private route tables configured per AZ
+
+  PrivateRouteTableAz1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-rt-az1"
+
+  PrivateDefaultRouteViaNatAz1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableAz1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayAz1
+
+  PrivateRouteTableAz2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-rt-az2"
+
+  PrivateDefaultRouteViaNatAz2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableAz2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayAz2
+
+  PrivateSubnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTableAz1
+
+  PrivateSubnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTableAz2
+
+  PrivateSubnet3Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref PrivateRouteTableAz1
+  
+  # Security group for 443, 80, 5678 access over HTTPS
+  ALBSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: default VPC security group
+      VpcId: !Ref VPC
+      GroupName: !Sub "${AWS::StackName}-alb-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  # separate egress rules to prevent circular reference 
+  ALBTaskEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ALBSecGroup
+      IpProtocol: tcp
+      FromPort: 5678
+      ToPort: 5678
+      DestinationSecurityGroupId: !Ref TaskSecGroupMain
+    
+  # Load balancer for reaching mains
+  ElasticLoadBalancingV2LoadBalancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+        Name: !Sub "${AWS::StackName}-alb"
+        Scheme: "internet-facing"
+        Type: "application"
+        Subnets: 
+          - !Ref PublicSubnet1
+          - !Ref PublicSubnet2
+        SecurityGroups: 
+          - !Ref ALBSecGroup
+        IpAddressType: "ipv4"
+        LoadBalancerAttributes: 
+          - 
+            Key: "access_logs.s3.enabled"
+            Value: "false"
+          - 
+            Key: "idle_timeout.timeout_seconds"
+            Value: "60"
+          - 
+            Key: "deletion_protection.enabled"
+            Value: "false"
+          - 
+            Key: "routing.http2.enabled"
+            Value: "true"
+          - 
+            Key: "routing.http.drop_invalid_header_fields.enabled"
+            Value: "false"
+          - 
+            Key: "routing.http.xff_client_port.enabled"
+            Value: "false"
+          - 
+            Key: "routing.http.preserve_host_header.enabled"
+            Value: "false"
+          - 
+            Key: "routing.http.xff_header_processing.mode"
+            Value: "append"
+          - 
+            Key: "load_balancing.cross_zone.enabled"
+            Value: "true"
+          - 
+            Key: "routing.http.desync_mitigation_mode"
+            Value: "defensive"
+          - 
+            Key: "client_keep_alive.seconds"
+            Value: "3600"
+          - 
+            Key: "waf.fail_open.enabled"
+            Value: "false"
+          - 
+            Key: "routing.http.x_amzn_tls_version_and_cipher_suite.enabled"
+            Value: "false"
+          - 
+            Key: "zonal_shift.config.enabled"
+            Value: "false"
+          - 
+            Key: "connection_logs.s3.enabled"
+            Value: "false"
+
+  # ALB target groups
+  HttpAppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-alb-tg"
+      VpcId: !Ref VPC
+      Protocol: HTTP
+      Port: 5678
+      TargetType: ip
+      IpAddressType: ipv4
+      ProtocolVersion: HTTP1
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: 5678
+      HealthCheckIntervalSeconds: 60
+      HealthCheckTimeoutSeconds: 30
+      HealthyThresholdCount: 8
+      UnhealthyThresholdCount: 5
+      HealthCheckPath: /
+      Matcher:
+        HttpCode: '200-399'
+  
+  # Listeners
+  ElasticLoadBalancingV2Listener2:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+        LoadBalancerArn: !Ref ElasticLoadBalancingV2LoadBalancer
+        Port: 443
+        Protocol: "HTTPS"
+        Certificates:
+          - CertificateArn: !Ref N8nCertArn
+        DefaultActions: 
+          - 
+            Order: 1
+            TargetGroupArn: !Ref HttpAppTargetGroup
+            Type: "forward"
+
+  ElasticLoadBalancingV2Listener3:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+        LoadBalancerArn: !Ref ElasticLoadBalancingV2LoadBalancer
+        Port: 80
+        Protocol: "HTTP"
+        DefaultActions: 
+          - 
+            Order: 1
+            Type: "redirect"
+            RedirectConfig:
+              Protocol: HTTPS
+              Port: 443
+              StatusCode: HTTP_301
+
+
+
+  # create A record in hosted zone
+  N8nHostRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Ref N8nHostRecordName
+      HostedZoneId: !Ref N8nHostedZone
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ElasticLoadBalancingV2LoadBalancer.DNSName
+        HostedZoneId: !GetAtt ElasticLoadBalancingV2LoadBalancer.CanonicalHostedZoneID
+        EvaluateTargetHealth: false
+
+  # create s3 bucket for binary data
+  S3BinaryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketName: !Sub "${AWS::StackName}-n8n-bin"
+  
+  # directly attach bucket policy
+  S3BucketPolicy:
+    DependsOn:
+      - N8nTaskRole
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3BinaryBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowS3UserFullAccess
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt N8nTaskRole.Arn
+            Action:
+              - "s3:GetBucketLocation"
+              - "s3:ListBucket"
+            Resource: !Sub "arn:aws:s3:::${S3BinaryBucket}"
+          - Sid: AllowS3UserFullAccessToObjects
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt N8nTaskRole.Arn
+            Action:
+              - "s3:PutObject"
+              - "s3:GetObject"
+              - "s3:DeleteObject"
+            Resource: !Sub "arn:aws:s3:::${S3BinaryBucket}/*"
+
+  # add vpc gateway endpoint for s3
+  S3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      RouteTableIds:
+        - !Ref PrivateRouteTableAz1
+        - !Ref PrivateRouteTableAz2
+      VpcEndpointType: Gateway
+
+  # security groups and subnet group for postgres
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${AWS::StackName}-rds-sg"
+      GroupDescription: Allow PostgreSQL access to RDS on 5432
+      VpcId: !Ref VPC
+  
+  # separate security group ingresses for workers and mains to prevent circular reference
+  RDSSecGroupIngressMain:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RDSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref TaskSecGroupMain
+  
+  RDSSecGroupIngressWorker:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RDSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref TaskSecGroupWorker
+
+  # subnet group for RDS
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub "${AWS::StackName}-pg-db-subnets"
+      DBSubnetGroupDescription: Subnet group for RDS Postgres
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3]
+
+  # launch postgresdb instance
+  PostgresDB:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      Engine: postgres
+      EngineVersion: 16
+      DBInstanceClass: !Ref DBInstanceClass
+      DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-db"
+      AllocatedStorage: !Ref DBAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      PubliclyAccessible: false
+      MultiAZ: true
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: 15
+      Port: 5432
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBName: !Ref DBName
+      VPCSecurityGroups:
+        - !GetAtt RDSSecurityGroup.GroupId
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      DeletionProtection: false
+      EnablePerformanceInsights: false
+      CopyTagsToSnapshot: true
+
+
+  # create secrets file for n8n to connect to RDS
+  RDSSecrets:
+    DependsOn:
+      - PostgresDB
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: app-user/dbcredentials
+      Description: Credentials for n8n to connect to postgres
+      SecretString: !Sub |
+        {
+          "user": "${MasterUsername}",
+          "password": "${MasterUserPassword}",
+          "host": "${PostgresDB.Endpoint.Address}",
+          "port": "5432",
+          "database": "${DBName}"
+        }  
+
+  # create subnet group for elasticache
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnet group for Redis
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3]
+      CacheSubnetGroupName: !Sub ${AWS::StackName}-subnets
+
+  # create security group for elasticache
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow Redis (TCP 6379) from the app SG
+      VpcId: !Ref VPC
+
+  # separate security group ingresses for workers and mains
+  CacheSecGroupIngressMain:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref CacheSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6379
+      ToPort: 6379
+      SourceSecurityGroupId: !Ref TaskSecGroupMain
+
+  CacheSecGroupIngressWorker:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref CacheSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6379
+      ToPort: 6379
+      SourceSecurityGroupId: !Ref TaskSecGroupWorker
+
+  # create parameter group for elasticache
+  RedisParamGroup:
+    Type: AWS::ElastiCache::ParameterGroup
+    Properties:
+      CacheParameterGroupFamily: redis7
+      Description: Minimal parameter group (defaults)
+
+  # create password secret for n8n to connect to redis
+  RedisPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: app-user/redispassword
+      Description: Password for n8n to connect to redis
+      SecretString: !Ref RedisPassword
+
+  # create elasticache replication group for redis
+  Redis:
+    DependsOn:
+      - RedisParamGroup
+      - CacheSecurityGroup
+      - CacheSubnetGroup
+      - RedisPasswordSecret
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupId: !Sub ${AWS::StackName}-redis
+      ReplicationGroupDescription: Minimal single-node Redis
+      Engine: redis
+      CacheNodeType: !Ref RedisInstanceClass
+      NumNodeGroups: 1
+      ReplicasPerNodeGroup: 0  # single primary, no replicas
+      MultiAZEnabled: false
+      AutomaticFailoverEnabled: false
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      SecurityGroupIds: [ !Ref CacheSecurityGroup ]
+      CacheParameterGroupName: !Ref RedisParamGroup
+      AuthToken: !Sub "{{resolve:secretsmanager:${RedisPasswordSecret}}}" 
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: true
+      Port: 6379
+
+
+
+
+  # create fargate cluster
+  ECSCluster:
+    Type: "AWS::ECS::Cluster"
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - PostgresDB
+      - S3BinaryBucket
+    Properties:
+        ClusterName: !Sub "${AWS::StackName}-cluster"
+        CapacityProviders: 
+          - "FARGATE"
+          - "FARGATE_SPOT"
+
+# security group for n8n main tasks
+  TaskSecGroupMain:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: "Allow only the ALB to reach tasks on 5678"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5678
+          ToPort: 5678
+          SourceSecurityGroupId: !Ref ALBSecGroup
+      SecurityGroupEgress:
+        # postgres
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          DestinationSecurityGroupId: !Ref RDSSecurityGroup
+        # redis
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          DestinationSecurityGroupId: !Ref CacheSecurityGroup
+        # for fetching certs
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+# security group for n8n worker tasks
+  TaskSecGroupWorker:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: "Do not allow ALB to reach workers"
+      SecurityGroupEgress:
+        # postgres
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          DestinationSecurityGroupId: !Ref RDSSecurityGroup
+        # redis
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          DestinationSecurityGroupId: !Ref CacheSecurityGroup
+        # for rds cert fetching
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  # create log group for n8n in cloudwatch logs
+  N8nLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${AWS::StackName}
+      RetentionInDays: 7
+      
+  # ECS Task Role (shared by workers and mains)
+  # in-line policy grants access to s3
+  N8nTaskRole:
+    Type: AWS::IAM::Role
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - PostgresDB
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-task-role"
+      Path: /
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: inline-s3-for-task-role
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: BucketAccess
+                Effect: Allow
+                Action:
+                  - "s3:GetBucketLocation"
+                  - "s3:ListBucket"
+                Resource:
+                  - !Sub "arn:aws:s3:::${S3BinaryBucket}"
+              - Sid: ObjectAccess
+                Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:DeleteObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${S3BinaryBucket}/*"
+
+
+  # ECS Task Execution Role
+  N8nTaskExecutionRole:
+    Type: AWS::IAM::Role
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - PostgresDB
+      - RedisPasswordSecret
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-task-execution-role"
+      Path: /
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        # grant access to secrets for db etc.
+        - PolicyName: secrets-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource:
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials*"                  
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense*" 
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/redispassword*"
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/encryptionkey*"
+        # grant access to services to write logs to cloudwatch
+        - PolicyName: cloudwatch-write-logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Sid: "WriteToN8nLogGroup"
+                Action:
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: 
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${AWS::StackName}"
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${AWS::StackName}:*"                  
+  # Task Definition for n8n main
+  N8nMainTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - PostgresDB
+      - RDSSecrets
+      - N8nLicenseSecret
+      - N8nEncryptionKey
+    Properties:
+      Family: n8n-main
+      Cpu: "1024"
+      Memory: "3072"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      TaskRoleArn: !GetAtt N8nTaskRole.Arn
+      ExecutionRoleArn: !GetAtt N8nTaskExecutionRole.Arn
+      Volumes:
+        - Name: certs
+      ContainerDefinitions:
+        - Name: n8n
+          Image: n8nio/n8n:latest
+          Essential: true
+          PortMappings:
+            - ContainerPort: 5678
+              HostPort: 5678
+              Protocol: tcp
+              Name: n8n-5678-tcp
+              AppProtocol: http
+          Secrets:
+            - Name: N8N_LICENSE_ACTIVATION_KEY
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:LicenseKey::"
+            - Name: N8N_LICENSE_TENANT_ID
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:TenantId::"
+            - Name: N8N_ENCRYPTION_KEY
+              ValueFrom: !Ref N8nEncryptionKey
+            - Name: DB_POSTGRESDB_HOST
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:host::"
+            - Name: DB_POSTGRESDB_PORT
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:port::"
+            - Name: DB_POSTGRESDB_DATABASE
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:database::"
+            - Name: DB_POSTGRESDB_USER
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:user::"
+            - Name: DB_POSTGRESDB_PASSWORD
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:password::"
+            - Name: QUEUE_BULL_REDIS_PASSWORD
+              ValueFrom: !Ref RedisPasswordSecret
+          Environment:
+            - Name: N8N_HOST
+              Value: !Ref N8nHostRecord
+            - Name: N8N_PROTOCOL
+              Value: https
+            - Name: N8N_DEFAULT_BINARY_DATA_MODE
+              Value: s3
+            - Name: N8N_RUNNERS_ENABLED
+              Value: true
+            - Name: N8N_METRICS
+              Value: true
+            - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
+              Value: true
+            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
+              Value: filesystem,s3
+            - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
+              Value: true
+            - Name: N8N_SECURE_COOKIE
+              Value: true
+            - Name: DB_TYPE
+              Value: postgresdb
+            - Name: DB_POSTGRESDB_SSL_ENABLED
+              Value: true
+            - Name: DB_POSTGRESDB_SSL_CA
+              Value: /certs/rds-global-bundle.pem
+            - Name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+              Value: false
+            - Name: N8N_EXTERNAL_STORAGE_S3_HOST
+              Value: !Sub "s3.${AWS::Region}.amazonaws.com"
+            - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME
+              Value: !Ref S3BinaryBucket
+            - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION
+              Value: !Ref AWS::Region
+            - Name: EXECUTIONS_MODE
+              Value: queue
+            - Name: N8N_LOG_LEVEL
+              Value: warn
+            - Name: N8N_MULTI_MAIN_SETUP_ENABLED
+              Value: true
+            - Name: QUEUE_HEALTH_CHECK_ACTIVE
+              Value: true
+            - Name: QUEUE_BULL_REDIS_TLS
+              Value: true
+            - Name: QUEUE_BULL_REDIS_HOST
+              Value: !GetAtt Redis.PrimaryEndPoint.Address
+            - Name: QUEUE_BULL_REDIS_PORT
+              Value: !GetAtt Redis.PrimaryEndPoint.Port            
+            - Name: QUEUE_BULL_REDIS_USERNAME
+              Value: default
+            - Name: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
+              Value: true
+            - Name: WEBHOOK_URL
+              Value: !Sub "https://${N8nHostRecord}/"
+
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub /ecs/${AWS::StackName}
+              awslogs-region: !Sub ${AWS::Region}
+              awslogs-stream-prefix: ecs
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -fsS http://127.0.0.1:5678/ || wget -qO- http://127.0.0.1:5678/ >/dev/null || exit 1
+            Interval: 15
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 90
+          DependsOn:
+            - ContainerName: rds-cert-fetcher
+              Condition: SUCCESS
+          MountPoints:
+            - SourceVolume: certs
+              ContainerPath: /certs
+        - Name: rds-cert-fetcher
+          Image: public.ecr.aws/amazonlinux/amazonlinux:2023
+          Essential: false
+          Command:
+            - /bin/sh
+            - -c
+            - >
+              set -euo pipefail;
+              dnf install -y gawk openssl;
+              mkdir -p /certs;
+              curl -fsSL --retry 5
+              https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+              -o /certs/rds-global-bundle.pem;
+              # (optional) basic sanity check:
+              awk 'BEGIN{c=0} /BEGIN CERTIFICATE/{c++} END{ if(c<1){exit 1} }' /certs/rds-global-bundle.pem
+          MountPoints:
+            - SourceVolume: certs
+              ContainerPath: /certs
+
+  # Fargate Service for main
+  ECSMainService:
+    Type: "AWS::ECS::Service"
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - PostgresDB
+      - Redis
+    Properties:
+        ServiceName: !Sub "${AWS::StackName}-svc-main"
+        Cluster: !GetAtt ECSCluster.Arn
+        LoadBalancers: 
+          -  
+            TargetGroupArn: !Ref HttpAppTargetGroup
+            ContainerName: "n8n"
+            ContainerPort: 5678
+        DesiredCount: 2
+        TaskDefinition: !Ref N8nMainTaskDefinition
+        DeploymentConfiguration: 
+            MaximumPercent: 200
+            MinimumHealthyPercent: 100
+            DeploymentCircuitBreaker: 
+                Enable: true
+                Rollback: true
+        NetworkConfiguration: 
+            AwsvpcConfiguration: 
+                AssignPublicIp: "DISABLED"
+                SecurityGroups: 
+                  - !Ref TaskSecGroupMain
+                Subnets: 
+                  - !Ref PrivateSubnet1
+                  - !Ref PrivateSubnet2
+        HealthCheckGracePeriodSeconds: 600
+        SchedulingStrategy: "REPLICA"
+        DeploymentController: 
+            Type: "ECS"
+        CapacityProviderStrategy: 
+          - 
+            CapacityProvider: "FARGATE"
+            Weight: 1
+            Base: 0
+  
+  # Task Definition for workers
+  N8nWorkerTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - PostgresDB
+      - N8nLicenseSecret
+    Properties:
+      Family: n8n-worker
+      Cpu: "1024"
+      Memory: "3072"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      TaskRoleArn: !GetAtt N8nTaskRole.Arn
+      ExecutionRoleArn: !GetAtt N8nTaskExecutionRole.Arn
+      Volumes:
+        - Name: certs
+      ContainerDefinitions:
+        - Name: n8n
+          Image: n8nio/n8n:latest
+          Essential: true
+          PortMappings:
+            - ContainerPort: 5678
+              HostPort: 5678
+              Protocol: tcp
+              Name: n8n-5678-tcp
+              AppProtocol: http
+          EntryPoint:
+            - "node"
+            - "/usr/local/bin/n8n"
+            - "worker"
+          Secrets:
+            - Name: N8N_LICENSE_ACTIVATION_KEY
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:LicenseKey::"
+            - Name: N8N_LICENSE_TENANT_ID
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:TenantId::"
+            - Name: N8N_ENCRYPTION_KEY
+              ValueFrom: !Ref N8nEncryptionKey
+            - Name: DB_POSTGRESDB_HOST
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:host::"
+            - Name: DB_POSTGRESDB_PORT
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:port::"
+            - Name: DB_POSTGRESDB_DATABASE
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:database::"
+            - Name: DB_POSTGRESDB_USER
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:user::"
+            - Name: DB_POSTGRESDB_PASSWORD
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:password::"
+            - Name: QUEUE_BULL_REDIS_PASSWORD
+              ValueFrom: !Ref RedisPasswordSecret               
+          Environment:
+            - Name: N8N_HOST
+              Value: !Ref N8nHostRecord
+            - Name: N8N_PORT
+              Value: 0
+            - Name: N8N_PROTOCOL
+              Value: https
+            - Name: N8N_MODE
+              Value: worker
+            - Name: N8N_DEFAULT_BINARY_DATA_MODE
+              Value: s3
+            - Name: N8N_RUNNERS_ENABLED
+              Value: true
+            - Name: N8N_METRICS
+              Value: true
+            - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
+              Value: true
+            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
+              Value: filesystem,s3
+            - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
+              Value: true
+            - Name: N8N_SECURE_COOKIE
+              Value: true
+            - Name: DB_TYPE
+              Value: postgresdb
+            - Name: DB_POSTGRESDB_SSL_ENABLED
+              Value: true
+            - Name: DB_POSTGRESDB_SSL_CA
+              Value: /certs/rds-global-bundle.pem
+            - Name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+              Value: false
+            - Name: N8N_EXTERNAL_STORAGE_S3_HOST
+              Value: !Sub "s3.${AWS::Region}.amazonaws.com"
+            - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME
+              Value: !Ref S3BinaryBucket
+            - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION
+              Value: !Ref AWS::Region
+            - Name: EXECUTIONS_MODE
+              Value: queue
+            - Name: N8N_LOG_LEVEL
+              Value: warn
+            - Name: N8N_MULTI_MAIN_SETUP_ENABLED
+              Value: true
+            - Name: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
+              Value: true
+            - Name: QUEUE_HEALTH_CHECK_ACTIVE
+              Value: true
+            - Name: QUEUE_BULL_REDIS_TLS
+              Value: true
+            - Name: QUEUE_BULL_REDIS_HOST
+              Value: !GetAtt Redis.PrimaryEndPoint.Address
+            - Name: QUEUE_BULL_REDIS_PORT
+              Value: !GetAtt Redis.PrimaryEndPoint.Port  
+            - Name: QUEUE_BULL_REDIS_USERNAME
+              Value: default              
+            - Name: WEBHOOK_URL
+              Value: !Sub "https://${N8nHostRecord}/"
+
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub /ecs/${AWS::StackName}
+              awslogs-region: !Sub ${AWS::Region}
+              awslogs-stream-prefix: ecs
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - echo ok
+            Timeout: 15
+            Retries: 3
+            StartPeriod: 90
+          DependsOn:
+            - ContainerName: rds-cert-fetcher
+              Condition: SUCCESS
+          MountPoints:
+            - SourceVolume: certs
+              ContainerPath: /certs
+        - Name: rds-cert-fetcher
+          Image: public.ecr.aws/amazonlinux/amazonlinux:2023
+          Essential: false
+          Command:
+            - /bin/sh
+            - -c
+            - >
+              set -euo pipefail;
+              dnf install -y gawk openssl;
+              mkdir -p /certs;
+              curl -fsSL --retry 5
+              https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+              -o /certs/rds-global-bundle.pem;
+              # (optional) basic sanity check:
+              awk 'BEGIN{c=0} /BEGIN CERTIFICATE/{c++} END{ if(c<1){exit 1} }' /certs/rds-global-bundle.pem
+          MountPoints:
+            - SourceVolume: certs
+              ContainerPath: /certs
+
+  # Fargate Service for workers
+  ECSWorkerService:
+    Type: "AWS::ECS::Service"
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - PostgresDB
+      - Redis
+    Properties:
+        ServiceName: !Sub "${AWS::StackName}-svc-worker"
+        Cluster: !GetAtt ECSCluster.Arn
+        DesiredCount: 3
+        TaskDefinition: !Ref N8nWorkerTaskDefinition
+        DeploymentConfiguration: 
+            MaximumPercent: 200
+            MinimumHealthyPercent: 100
+            DeploymentCircuitBreaker: 
+                Enable: true
+                Rollback: true
+        NetworkConfiguration: 
+            AwsvpcConfiguration: 
+                AssignPublicIp: "DISABLED"
+                SecurityGroups: 
+                  - !Ref TaskSecGroupWorker
+                Subnets: 
+                  - !Ref PrivateSubnet1
+                  - !Ref PrivateSubnet2
+                  - !Ref PrivateSubnet3
+        HealthCheckGracePeriodSeconds: 600
+        SchedulingStrategy: "REPLICA"
+        DeploymentController: 
+            Type: "ECS"
+        CapacityProviderStrategy: 
+          - 
+            CapacityProvider: "FARGATE"
+            Weight: 1
+            Base: 0
+
+  # auto scaling for worker service
+  ECSServiceScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn: ECSWorkerService
+    Properties:
+      ServiceNamespace: ecs
+      ScalableDimension: ecs:service:DesiredCount
+      ResourceId: !Sub 
+        - "service/${ClusterName}/${ServiceName}"
+        - { ClusterName: !Ref ECSCluster, ServiceName: !GetAtt ECSWorkerService.Name }
+      MinCapacity: 2
+      MaxCapacity: 10
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
+
+  # scaling rules for CPU
+  ECSServiceCPUScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub "${AWS::StackName}-cpu-tt"
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ECSServiceScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 60
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+
+  # scaling rules for memory
+  ECSServiceMemoryScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub "${AWS::StackName}-mem-tt"
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ECSServiceScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageMemoryUtilization
+        TargetValue: 70
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+
+# output useful information to make things easier to read.
+Outputs:
+  VpcUrl:
+    Description: Links to VPC for deploying n8n resources. 
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/vpcconsole/home?region=${AWS::Region}#VpcDetails:VpcId=${VPC}"
+
+  N8nHostname: 
+    Description: URL used to access n8n
+    Value: !Sub "https://${N8nHostRecord}" 
+  
+  N8nMainServiceUrl:
+    Description: URL to reach n8n main service in ECS
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/ecs/v2/clusters/${ECSCluster}/services/${ECSMainService.Name}/health?region=${AWS::Region}"
+
+  N8nWorkerServiceUrl:
+    Description: URL to reach n8n worker service in ECS
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/ecs/v2/clusters/${ECSCluster}/services/${ECSWorkerService.Name}/health?region=${AWS::Region}"
+
+  S3BucketUrl:
+    Description: Link to S3 bucket used for binary data
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/s3/buckets/${S3BinaryBucket}"
+
+  PostgresDbUrl:
+    Description: Link to Postgres DB used for n8n
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/rds/home?region=${AWS::Region}#database:id=${PostgresDB}"
+  
+  RedisUrl:
+    Description: Link to Elasticache used for n8n
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/elasticache/home?region=${AWS::Region}#/redis/${Redis}"
