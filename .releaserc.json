@@ -18,11 +18,7 @@
     }],
     "@semantic-release/changelog",
     ["@semantic-release/exec", {
-      "verifyReleaseCmd": "python3 -c \"import re; content=open('charts/n8n/Chart.yaml').read(); open('charts/n8n/Chart.yaml','w').write(re.sub(r'^version:.*', 'version: ${nextRelease.version}', content, flags=re.MULTILINE))\""
-    }],
-    ["@semantic-release/git", {
-      "assets": ["CHANGELOG.md", "charts/n8n/Chart.yaml"],
-      "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      "prepareCmd": "python3 -c \"import re; content=open('charts/n8n/Chart.yaml').read(); open('charts/n8n/Chart.yaml','w').write(re.sub(r'^version:.*', 'version: ${nextRelease.version}', content, flags=re.MULTILINE))\""
     }],
     "@semantic-release/github"
   ]

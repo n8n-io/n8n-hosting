@@ -10,6 +10,7 @@ on:
 permissions:
   contents: write
   packages: write
+  pull-requests: write
 
 jobs:
   release:
@@ -37,7 +38,6 @@ jobs:
         run: |
           npm install -g semantic-release \
             @semantic-release/changelog \
-            @semantic-release/git \
             @semantic-release/exec \
             conventional-changelog-conventionalcommits
 
@@ -72,3 +72,19 @@ jobs:
           CHART_VERSION="${{ steps.check.outputs.version }}"
           helm package charts/n8n --destination /tmp/chart-pkg/
           helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io
+
+      - name: Open PR to update repo files
+        if: steps.check.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHART_VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          BRANCH="automated/release-v${CHART_VERSION}"
+          git checkout -b "$BRANCH"
+          git add charts/n8n/Chart.yaml CHANGELOG.md
+          git commit -m "chore(release): v${CHART_VERSION} [skip ci]"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore(release): v${CHART_VERSION}" \
+            --body "Automated update of Chart.yaml version and CHANGELOG.md from release v${CHART_VERSION}." \
+            --base main
