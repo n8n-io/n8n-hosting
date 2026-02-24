@@ -14,7 +14,7 @@ Production-grade Helm chart for [n8n](https://n8n.io), the workflow automation p
 
 ```bash
 # OCI registry (recommended)
-helm install n8n oci://ghcr.io/n8n-io/n8n --version 1.0.0 -f my-values.yaml
+helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-values.yaml
 ```
 
 ## Quick Start
@@ -30,7 +30,7 @@ helm install n8n oci://ghcr.io/n8n-io/n8n --version 1.0.0 -f my-values.yaml
 
 4. **Deploy:**
    ```bash
-   helm install n8n oci://ghcr.io/n8n-io/n8n --version 1.0.0 -f my-values.yaml
+   helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-values.yaml
    ```
 
 ## Architecture
@@ -92,5 +92,5 @@ See [values.yaml](./values.yaml) for the full list of configurable values.
 Chart version bumps are automated via semantic-release. Check the [CHANGELOG](../../CHANGELOG.md) for breaking changes before upgrading.
 
 ```bash
-helm upgrade n8n oci://ghcr.io/n8n-io/n8n --version <new-version> -f my-values.yaml
+helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml
 ```

@@ -7,7 +7,7 @@ Official hosting configurations for [n8n](https://n8n.io) -- the workflow automa
 The official n8n Helm chart for production Kubernetes deployments.
 
 ```bash
-helm install n8n oci://ghcr.io/n8n-io/n8n --version 1.0.0 -f my-values.yaml
+helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-values.yaml
 ```
 
 See the [chart README](./charts/n8n/README.md) for full documentation and the [examples](./charts/n8n/examples/) directory for common configurations.
