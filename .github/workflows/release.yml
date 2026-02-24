@@ -71,7 +71,7 @@ jobs:
         run: |
           CHART_VERSION="${{ steps.check.outputs.version }}"
           helm package charts/n8n --destination /tmp/chart-pkg/
-          helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io
+          helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io/n8n-helm-chart
 
       - name: Open PR to update repo files
         if: steps.check.outputs.released == 'true'
