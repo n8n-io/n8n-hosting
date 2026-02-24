@@ -5,6 +5,7 @@ This directory contains common configuration examples for different deployment s
 ## Available Examples
 
 ### Community Examples (No License Required)
+- **[standalone.yaml](./standalone.yaml)** - Single pod with SQLite, no external dependencies
 - **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis
 - **[minimal-with-docker.yaml](./minimal-with-docker.yaml)** - Quick testing with Docker containers
 
@@ -15,8 +16,9 @@ This directory contains common configuration examples for different deployment s
 
 ## Important Notice
 
-### External Services Required
-**This chart requires external PostgreSQL and Redis services.** It does not include internal database dependencies. You must set up these services before deploying n8n.
+### External Services
+**Queue mode** (default) requires external PostgreSQL and Redis services — this chart does not bundle them.
+**Standalone mode** (`queueMode.enabled: false`) uses SQLite with a PersistentVolumeClaim and has no external dependencies — see `standalone.yaml`.
 
 ### License Requirements
 - **Multi-main setup** (`multiMain.enabled: true`) requires an n8n Enterprise license
@@ -26,7 +28,7 @@ This directory contains common configuration examples for different deployment s
 
 ### 1. Create Required Secrets
 ```bash
-./create-secrets.sh
+./examples/create-secrets.sh
 ```
 
 ### 2. Choose Your Example
@@ -53,7 +55,7 @@ docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
 
 ## 🚀 Quick Start
 
-1. **Set up external services** (PostgreSQL and Redis)
+1. **Set up external services** — PostgreSQL and Redis for queue mode (not needed for standalone mode)
 2. Choose the example that matches your scenario
 3. Copy the values file: `cp examples/production-s3.yaml my-values.yaml`
 4. Customize the values for your environment
@@ -65,7 +67,7 @@ docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
 Before deploying, ensure you have:
 
 - [ ] **Secrets created** (database password, encryption key, etc.)
-- [ ] **External services** (PostgreSQL, Redis) if using external
+- [ ] **External services** (PostgreSQL, Redis) if using queue mode
 - [ ] **Storage configuration** (S3, GCS, Azure) if using external storage
 - [ ] **Network access** configured for your cluster
 - [ ] **Resource limits** appropriate for your workload
@@ -75,6 +77,10 @@ Before deploying, ensure you have:
 ### Essential Settings
 ```yaml
 # Always required
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+# Queue mode only (not needed for standalone mode)
 database:
   host: "your-postgres-host"
   passwordSecret:
@@ -83,9 +89,6 @@ database:
 
 redis:
   host: "your-redis-host"
-
-secretRefs:
-  existingSecret: "n8n-core-secrets"
 ```
 
 ### Scaling Configuration

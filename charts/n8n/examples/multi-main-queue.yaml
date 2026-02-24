@@ -124,7 +124,7 @@ config:
     - name: DB_POSTGRESDB_SSL_ENABLED
       value: "true"
     - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-      value: "false"
+      value: "true"  # Set to "false" only if using self-signed certs (not recommended for production)
     
     # Enterprise logging
     - name: N8N_LOG_LEVEL
@@ -143,12 +143,6 @@ config:
     # Advanced webhook settings
     - name: N8N_WEBHOOK_TIMEOUT
       value: "300000"  # 5 minutes
-    
-    # LDAP/SSO configuration (if applicable)
-    # - name: N8N_LDAP_ENABLED
-    #   value: "true"
-    # - name: N8N_LDAP_SERVER
-    #   value: "ldap://your-ldap-server.com"
 
 # Advanced execution settings
 executions:

@@ -316,11 +316,12 @@
               "type": "object",
               "properties": {
                 "enabled": { "type": "boolean" },
-                "type": { 
+                "type": {
                   "type": "string",
-                  "enum": ["httpGet", "exec"]
+                  "enum": ["exec"],
+                  "description": "Workers don't expose an HTTP endpoint; only exec probes are supported"
                 },
-                "command": { 
+                "command": {
                   "type": "array",
                   "items": { "type": "string" }
                 },

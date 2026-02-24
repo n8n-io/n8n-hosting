@@ -132,7 +132,7 @@ config:
     - name: DB_POSTGRESDB_SSL_ENABLED
       value: "true"
     - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-      value: "false"
+      value: "true"  # Set to "false" only if using self-signed certs (not recommended for production)
     
     - name: N8N_LOG_LEVEL
       value: "info"
@@ -146,17 +146,18 @@ executions:
   concurrency:
     productionLimit: 50
   timeout: 3600  # 1 hour
-  dataRetention:
-    saveOnError: true
-    saveOnSuccess: true
+  data:
+    saveOnError: "all"       # "all" or "none"
+    saveOnSuccess: "all"     # "all" or "none"
     saveOnProgress: false
     saveManualExecutions: true
-    prune: true
-    maxAge: 336  # 14 days
+  pruning:
+    enabled: true
+    maxAge: 336              # 14 days in hours
     maxCount: 10000
-    hardDeleteBuffer: 1  # 1 hour
-    pruneHardDeleteInterval: "0 4 * * *"  # Daily at 4 AM
-    pruneSoftDeleteInterval: "0 5 * * *"  # Daily at 5 AM
+    hardDeleteBuffer: 1      # 1 hour buffer before hard delete
+    hardDeleteInterval: 15   # minutes between hard delete runs
+    softDeleteInterval: 60   # minutes between soft delete runs
 
 webhook:
   timeout: 300000  # 5 minutes
