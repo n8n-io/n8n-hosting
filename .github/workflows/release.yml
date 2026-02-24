@@ -80,7 +80,7 @@ jobs:
           CHART_VERSION: ${{ steps.check.outputs.version }}
         run: |
           BRANCH="automated/release-v${CHART_VERSION}"
-          git checkout -b "$BRANCH"
+          git checkout -B "$BRANCH"
           git add charts/n8n/Chart.yaml CHANGELOG.md
           git commit -m "chore(release): v${CHART_VERSION} [skip ci]"
           git push origin "$BRANCH"
