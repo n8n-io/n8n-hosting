@@ -110,5 +110,4 @@ jobs:
 
           > This PR was created automatically by the [bump-n8n-version](.github/workflows/bump-n8n-version.yml) workflow.
           EOF
-          )" \
-            --label "automated"
+          )"
