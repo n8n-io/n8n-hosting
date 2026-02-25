@@ -1,7 +1,7 @@
 # ----- Image -----
 image:
   repository: docker.n8n.io/n8nio/n8n
-  tag: "2.9.0"
+  tag: "2.9.2"
   pullPolicy: IfNotPresent
 
 # ----- Names -----

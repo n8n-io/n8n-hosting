@@ -8,7 +8,7 @@ description: >-
   Production-grade Helm chart for n8n, the workflow automation platform.
   Supports queue mode, multi-main HA, webhook processors, task runners, HPA,
   PDB, network policies, and S3 external storage.
-appVersion: "2.9.0"
+appVersion: "2.9.2"
 type: application
 keywords:
   - n8n
