@@ -1,6 +1,6 @@
 apiVersion: v2
 name: n8n
-version: 1.0.0
+version: 1.0.2
 kubeVersion: ">=1.25.0-0"
 icon: >-
   https://raw.githubusercontent.com/n8n-io/n8n/master/packages/editor-ui/public/images/n8n-logo.png
