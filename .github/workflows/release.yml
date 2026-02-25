@@ -12,6 +12,10 @@ permissions:
   packages: write
   pull-requests: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
