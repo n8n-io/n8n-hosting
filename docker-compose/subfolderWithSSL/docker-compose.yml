@@ -54,6 +54,7 @@ services:
       - NODE_ENV=production
       - N8N_PATH
       - WEBHOOK_URL=https://${DOMAIN_NAME}${N8N_PATH}
+      - N8N_RUNNERS_MODE=external
     volumes:
       - ${DATA_FOLDER}/.n8n:/home/node/.n8n
     depends_on:
