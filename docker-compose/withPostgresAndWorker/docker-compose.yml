@@ -1,5 +1,3 @@
-version: '3.8'
-
 volumes:
   db_storage:
   n8n_storage:
@@ -19,9 +17,10 @@ x-shared: &shared
     - QUEUE_BULL_REDIS_HOST=redis
     - QUEUE_HEALTH_CHECK_ACTIVE=true
     - N8N_ENCRYPTION_KEY=${ENCRYPTION_KEY}
-  links:
-    - postgres
-    - redis
+    - N8N_RUNNERS_MODE=external
+    - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
+    - N8N_RUNNERS_BROKER_LISTEN_ADDRESS=0.0.0.0
+    - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=true
   volumes:
     - n8n_storage:/home/node/.n8n
   depends_on:
@@ -29,6 +28,12 @@ x-shared: &shared
       condition: service_healthy
     postgres:
       condition: service_healthy
+
+x-runner: &runner
+  restart: always
+  image: n8nio/runners
+  environment:
+    - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
 
 services:
   postgres:
@@ -65,8 +70,24 @@ services:
     ports:
       - 5678:5678
 
+  n8n-runner:
+    <<: *runner
+    environment:
+      - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
+      - N8N_RUNNERS_TASK_BROKER_URI=http://n8n:5679
+    depends_on:
+      - n8n
+
   n8n-worker:
     <<: *shared
     command: worker
     depends_on:
       - n8n
+
+  n8n-worker-runner:
+    <<: *runner
+    environment:
+      - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
+      - N8N_RUNNERS_TASK_BROKER_URI=http://n8n-worker:5679
+    depends_on:
+      - n8n-worker
