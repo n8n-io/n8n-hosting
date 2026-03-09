@@ -38,7 +38,6 @@ Deployment is managed through `kustomization.yaml`.
 
 Recommended:
 
-- Pin image tags instead of using floating tags (`n8nio/n8n`, `postgres:18`).
 - Right-size PostgreSQL resources and storage (`300Gi` may be larger than needed in small labs).
 
 ## Deploy
