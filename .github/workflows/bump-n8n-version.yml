@@ -78,7 +78,14 @@ jobs:
           # Update appVersion in Chart.yaml
           sed -i "s/^appVersion: \"${OLD_VERSION}\"/appVersion: \"${NEW_VERSION}\"/" charts/n8n/Chart.yaml
 
-          echo "Updated values.yaml and Chart.yaml to n8n ${NEW_VERSION}"
+          # Update N8N_VERSION in Docker Compose .env files
+          sed -i "s/^N8N_VERSION=.*/N8N_VERSION=${NEW_VERSION}/" \
+            docker-compose/withPostgres/.env \
+            docker-compose/withPostgresAndWorker/.env \
+            docker-compose/subfolderWithSSL/.env \
+            docker-caddy/.env
+
+          echo "Updated values.yaml, Chart.yaml, and Docker Compose .env files to n8n ${NEW_VERSION}"
           git diff
 
       - name: Create pull request
@@ -92,7 +99,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add charts/n8n/values.yaml charts/n8n/Chart.yaml
+          git add charts/n8n/values.yaml charts/n8n/Chart.yaml \
+            docker-compose/withPostgres/.env \
+            docker-compose/withPostgresAndWorker/.env \
+            docker-compose/subfolderWithSSL/.env \
+            docker-caddy/.env
           git commit -m "feat(chart): bump n8n to ${NEW_VERSION}"
           git push origin "$BRANCH"
 
@@ -105,6 +116,7 @@ jobs:
 
           - Updated \`image.tag\` in \`values.yaml\`
           - Updated \`appVersion\` in \`Chart.yaml\`
+          - Updated \`N8N_VERSION\` in Docker Compose \`.env\` files
 
           Release notes: https://github.com/n8n-io/n8n/releases/tag/n8n%40${NEW_VERSION}
 
