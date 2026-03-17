@@ -1,3 +1,9 @@
+## [1.0.4](https://github.com/n8n-io/n8n-hosting/compare/v1.0.3...v1.0.4) (2026-03-17)
+
+### Bug Fixes
+
+* **docker:** update docker-compose examples for n8n 2.0 ([#81](https://github.com/n8n-io/n8n-hosting/issues/81)) ([8fe5f9b](https://github.com/n8n-io/n8n-hosting/commit/8fe5f9ba724acece25beafa0801b2606a9e0c8dc))
+
 ## [1.0.3](https://github.com/n8n-io/n8n-hosting/compare/v1.0.2...v1.0.3) (2026-03-04)
 
 ### Bug Fixes
