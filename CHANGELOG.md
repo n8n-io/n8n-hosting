@@ -1,3 +1,13 @@
+## [1.1.0](https://github.com/n8n-io/n8n-hosting/compare/v1.0.4...v1.1.0) (2026-03-17)
+
+### Features
+
+* **docker:** pin n8n version in Docker Compose examples ([#89](https://github.com/n8n-io/n8n-hosting/issues/89)) ([238cb07](https://github.com/n8n-io/n8n-hosting/commit/238cb0798cb726b5261618f03f8435ad6469f922))
+
+### Bug Fixes
+
+* **chart:** add WEBHOOK_URL to worker pods ([#90](https://github.com/n8n-io/n8n-hosting/issues/90)) ([c2deae9](https://github.com/n8n-io/n8n-hosting/commit/c2deae9693281a1770b7e99d4600ff604fdd2912))
+
 ## [1.0.3](https://github.com/n8n-io/n8n-hosting/compare/v1.0.2...v1.0.3) (2026-03-04)
 
 ### Bug Fixes
