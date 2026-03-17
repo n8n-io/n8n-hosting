@@ -47,7 +47,7 @@ services:
         condition: service_healthy
 
   n8n-runner:
-    image: n8nio/runners
+    image: n8nio/runners:${N8N_VERSION}
     restart: always
     environment:
       - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
