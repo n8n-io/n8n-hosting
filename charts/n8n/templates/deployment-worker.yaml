@@ -71,6 +71,9 @@ spec:
             # Shared configuration from ConfigMap
             {{- include "n8n.sharedConfigMapEnv" . | nindent 12 }}
 
+            # Webhook URL for resume/waiting URLs
+            {{- include "n8n.workerConfigMapEnv" . | nindent 12 }}
+
             # Database password (secret)
             - name: DB_POSTGRESDB_PASSWORD
               valueFrom:
