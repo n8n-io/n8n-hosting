@@ -55,8 +55,19 @@ services:
       - N8N_PATH
       - WEBHOOK_URL=https://${DOMAIN_NAME}${N8N_PATH}
       - N8N_RUNNERS_MODE=external
+      - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
+      - N8N_RUNNERS_BROKER_LISTEN_ADDRESS=0.0.0.0
     volumes:
       - ${DATA_FOLDER}/.n8n:/home/node/.n8n
     depends_on:
       initContainer:
         condition: service_completed_successfully
+
+  n8n-runner:
+    image: n8nio/runners:${N8N_VERSION}
+    restart: always
+    environment:
+      - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
+      - N8N_RUNNERS_TASK_BROKER_URI=http://n8n:5679
+    depends_on:
+      - n8n
