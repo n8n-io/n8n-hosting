@@ -269,6 +269,21 @@ Environment variables from ConfigMap for webhook processor pods (similar to main
 {{- end }}
 
 {{/*
+Environment variables from ConfigMap for worker pods (webhook URL for resume/waiting URLs)
+*/}}
+{{- define "n8n.workerConfigMapEnv" -}}
+{{- if .Values.webhook.enabled }}
+{{- if or .Values.webhook.url (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) }}
+- name: WEBHOOK_URL
+  valueFrom:
+    configMapKeyRef:
+      name: {{ include "n8n.fullname" . }}
+      key: WEBHOOK_URL
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
 Task Runners environment variables for n8n broker (main and worker pods)
 */}}
 {{- define "n8n.taskRunnerBrokerEnv" -}}
