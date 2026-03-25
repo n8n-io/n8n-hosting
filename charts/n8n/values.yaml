@@ -123,6 +123,10 @@ service:
   type: ClusterIP
   port: 5678
   annotations: {}
+  main:
+    annotations: {}
+  webhookProcessor:
+    annotations: {}
   sessionAffinity:
     enabled: false
     timeoutSeconds: 10800
