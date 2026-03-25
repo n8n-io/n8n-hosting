@@ -1,14 +1,8 @@
-## [1.2.0](https://github.com/n8n-io/n8n-hosting/compare/v1.1.0...v1.2.0) (2026-03-25)
+## [1.3.0](https://github.com/n8n-io/n8n-hosting/compare/v1.2.0...v1.3.0) (2026-03-25)
 
 ### Features
 
-* **chart:** add KEDA support for queue-based autoscaling ([#98](https://github.com/n8n-io/n8n-hosting/issues/98)) ([a7a7558](https://github.com/n8n-io/n8n-hosting/commit/a7a7558020515ad106bb5cbc687cc87eb9210e5a))
-
-### Bug Fixes
-
-* **ci:** correct trivy-action version comment to v0.35.0 ([#96](https://github.com/n8n-io/n8n-hosting/issues/96)) ([9fa9809](https://github.com/n8n-io/n8n-hosting/commit/9fa9809a138a88a95b245486bc14543fd5a8b920))
-* **ci:** pin trivy-action to SHA for supply chain security ([#95](https://github.com/n8n-io/n8n-hosting/issues/95)) ([e9c19be](https://github.com/n8n-io/n8n-hosting/commit/e9c19bee6551bcc31baf69e41b41cc3904c3f370))
-* **docker:** add missing runner auth token and sidecar to compose examples ([#91](https://github.com/n8n-io/n8n-hosting/issues/91)) ([76aafba](https://github.com/n8n-io/n8n-hosting/commit/76aafba53265c36bf251b24098d6c2d970eac7d1))
+* **chart:** support independent service annotations for main and webhook-processor ([#100](https://github.com/n8n-io/n8n-hosting/issues/100)) ([41b6345](https://github.com/n8n-io/n8n-hosting/commit/41b634523788c3fe633ab086964081e687be0169))
 
 ## [1.0.3](https://github.com/n8n-io/n8n-hosting/compare/v1.0.2...v1.0.3) (2026-03-04)
 
