@@ -39,6 +39,7 @@ jobs:
           - charts/n8n/examples/minimal.yaml
           - charts/n8n/examples/minimal-with-docker.yaml
           - charts/n8n/examples/multi-main-queue.yaml
+          - charts/n8n/examples/task-runners.yaml
           - charts/n8n/examples/keda-autoscaling.yaml
           - charts/n8n/examples/production-s3.yaml
     steps:
@@ -120,7 +121,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: fs
           scan-ref: charts/n8n

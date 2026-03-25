@@ -9,6 +9,9 @@ This directory contains common configuration examples for different deployment s
 - **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis
 - **[minimal-with-docker.yaml](./minimal-with-docker.yaml)** - Quick testing with Docker containers
 
+### Community Examples (Task Runners)
+- **[task-runners.yaml](./task-runners.yaml)** - Queue mode with task runner sidecars for JavaScript/Python execution
+
 ### Community Examples (KEDA Autoscaling)
 - **[keda-autoscaling.yaml](./keda-autoscaling.yaml)** - Redis queue-length worker scaling with KEDA
 

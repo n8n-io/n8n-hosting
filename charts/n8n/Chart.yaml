@@ -1,6 +1,6 @@
 apiVersion: v2
 name: n8n
-version: 1.0.0
+version: 1.0.3
 kubeVersion: ">=1.25.0-0"
 icon: >-
   https://raw.githubusercontent.com/n8n-io/n8n/master/packages/editor-ui/public/images/n8n-logo.png
@@ -8,7 +8,7 @@ description: >-
   Production-grade Helm chart for n8n, the workflow automation platform.
   Supports queue mode, multi-main HA, webhook processors, task runners, HPA,
   PDB, network policies, and S3 external storage.
-appVersion: "2.9.0"
+appVersion: "2.11.2"
 type: application
 keywords:
   - n8n
