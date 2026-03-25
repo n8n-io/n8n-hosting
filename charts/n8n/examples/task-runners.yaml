@@ -1,0 +1,97 @@
+# Task Runners with Queue Mode
+# This example demonstrates enabling task runner sidecars for external code execution
+# Task runners handle JavaScript and Python execution in isolated sidecar containers
+#
+# Architecture:
+#   - The n8n container runs a task broker on port 5679
+#   - A runner sidecar container connects to the broker over localhost
+#   - Both main and worker pods get their own runner sidecar
+#
+# Prerequisites:
+#   - External PostgreSQL and Redis (queue mode)
+#   - A shared auth token secret for runner ↔ broker communication
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 3
+  workerConcurrency: 10
+
+# Enable task runner sidecars on main and worker pods
+taskRunners:
+  enabled: true
+
+  # Auth token for runner ↔ broker communication
+  # Create the secret first:
+  #   kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32)
+  authToken:
+    existingSecret: "n8n-runner-token"
+    existingSecretKey: "auth-token"
+
+  # Broker runs inside the n8n container
+  broker:
+    listenAddress: "0.0.0.0"
+    port: 5679
+
+  # Launcher settings
+  launcher:
+    logLevel: info
+    autoShutdownTimeout: 15
+
+  # Enable Python runner support
+  nativePythonRunner: true
+
+  # Resource limits for runner sidecar (tune based on workflow complexity)
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  # Optional: mount a custom config to allowlist additional npm packages
+  # customConfig:
+  #   enabled: true
+  #   configMapName: "n8n-runner-config"
+  #   configMapKey: "n8n-task-runners.json"
+
+# External database
+database:
+  type: postgresdb
+  useExternal: true
+  host: "your-postgres-host.com"
+  port: 5432
+  database: n8n
+  schema: "public"
+  user: n8n
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+# External Redis
+redis:
+  enabled: true
+  useExternal: true
+  host: "your-redis-host.com"
+  port: 6379
+
+# Core secrets
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+# Resource limits for n8n containers
+resources:
+  main:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  worker:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi

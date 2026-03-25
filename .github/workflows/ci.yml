@@ -39,6 +39,7 @@ jobs:
           - charts/n8n/examples/minimal.yaml
           - charts/n8n/examples/minimal-with-docker.yaml
           - charts/n8n/examples/multi-main-queue.yaml
+          - charts/n8n/examples/task-runners.yaml
           - charts/n8n/examples/production-s3.yaml
     steps:
       - uses: actions/checkout@v4

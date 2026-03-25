@@ -58,6 +58,7 @@ All three use the same n8n container image, differentiated by command/args.
 | [minimal.yaml](./examples/minimal.yaml) | Single main pod, minimum config |
 | [minimal-with-docker.yaml](./examples/minimal-with-docker.yaml) | Quick testing with Docker Postgres/Redis |
 | [multi-main-queue.yaml](./examples/multi-main-queue.yaml) | Multi-main HA (Enterprise license required) |
+| [task-runners.yaml](./examples/task-runners.yaml) | Queue mode with task runner sidecars |
 | [production-s3.yaml](./examples/production-s3.yaml) | Production with S3, HPA, multi-main |
 
 ## Secret Management
@@ -86,6 +87,29 @@ For production, use an external secrets operator (e.g., [External Secrets Operat
 | `networkPolicy.enabled` | Network policies | `false` |
 
 See [values.yaml](./values.yaml) for the full list of configurable values.
+
+## Task Runners
+
+Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, each main and worker pod gets a runner sidecar.
+
+**How it works:** The n8n container runs a task broker on port 5679. The runner sidecar connects to this broker over localhost to receive and execute code tasks.
+
+**Enable task runners:**
+```yaml
+taskRunners:
+  enabled: true
+  authToken:
+    existingSecret: "n8n-runner-token"
+    existingSecretKey: "auth-token"
+```
+
+Create the auth token secret:
+```bash
+kubectl create secret generic n8n-runner-token \
+  --from-literal=auth-token=$(openssl rand -base64 32)
+```
+
+See [task-runners.yaml](./examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
 
 ## Upgrading
 
