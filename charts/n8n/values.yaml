@@ -341,6 +341,37 @@ hpa:
     maxReplicas: 50
     targetCPUUtilizationPercentage: 60
 
+# ----- KEDA (Kubernetes Event-Driven Autoscaler) -----
+# When enabled, creates KEDA ScaledObjects instead of built-in HPAs for workers/webhooks.
+# This allows scaling based on Redis queue length rather than CPU utilization.
+# Requires KEDA to be installed in the cluster: https://keda.sh
+keda:
+  enabled: false
+  worker:
+    pollingInterval: 15
+    cooldownPeriod: 300
+    minReplicaCount: 2
+    maxReplicaCount: 20
+    triggers:
+      - type: redis
+        metadata:
+          # Redis address (auto-derived from redis.host:redis.port if empty)
+          address: ""
+          # Bull queue waiting list key
+          listName: "bull:default:wait"
+          # Target queue length per worker replica
+          listLength: "5"
+        authenticationRef:
+          # Name of a TriggerAuthentication resource for Redis auth (optional)
+          name: ""
+  webhookProcessor:
+    enabled: false
+    pollingInterval: 15
+    cooldownPeriod: 120
+    minReplicaCount: 2
+    maxReplicaCount: 50
+    triggers: []
+
 # ----- Pod Disruption Budget -----
 pdb:
   enabled: true

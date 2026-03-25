@@ -59,6 +59,7 @@ All three use the same n8n container image, differentiated by command/args.
 | [minimal-with-docker.yaml](./examples/minimal-with-docker.yaml) | Quick testing with Docker Postgres/Redis |
 | [multi-main-queue.yaml](./examples/multi-main-queue.yaml) | Multi-main HA (Enterprise license required) |
 | [production-s3.yaml](./examples/production-s3.yaml) | Production with S3, HPA, multi-main |
+| [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
 
 ## Secret Management
 
@@ -83,9 +84,36 @@ For production, use an external secrets operator (e.g., [External Secrets Operat
 | `persistence.enabled` | PVC for main pods | `false` |
 | `hpa.main.enabled` | HPA for main pods | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
+| `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `networkPolicy.enabled` | Network policies | `false` |
 
 See [values.yaml](./values.yaml) for the full list of configurable values.
+
+## KEDA Autoscaling
+
+The built-in HPA scales workers based on CPU utilization. For queue-based workloads, [KEDA](https://keda.sh) can scale workers based on Redis queue length, which is more responsive to actual demand.
+
+When `keda.enabled` is true, the chart creates KEDA `ScaledObject` resources instead of built-in HPAs for workers (and optionally webhook processors). KEDA must be installed in the cluster.
+
+```bash
+# Install KEDA
+helm install keda kedacore/keda --namespace keda-system --create-namespace
+```
+
+```yaml
+keda:
+  enabled: true
+  worker:
+    minReplicaCount: 2
+    maxReplicaCount: 20
+    triggers:
+      - type: redis
+        metadata:
+          listName: "bull:default:wait"
+          listLength: "5"
+```
+
+See [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) for a complete example.
 
 ## Upgrading
 

@@ -1,4 +1,4 @@
-{{- if and .Values.hpa.worker.enabled .Values.queueMode.enabled }}
+{{- if and .Values.hpa.worker.enabled .Values.queueMode.enabled (not .Values.keda.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
