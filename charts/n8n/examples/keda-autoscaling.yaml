@@ -1,0 +1,65 @@
+# KEDA-Based Autoscaling
+# This example demonstrates scaling workers based on Redis queue length using KEDA,
+# instead of the built-in CPU-based HPA.
+#
+# Prerequisites:
+#   - KEDA installed in the cluster: helm install keda kedacore/keda --namespace keda-system --create-namespace
+#   - External PostgreSQL and Redis (queue mode)
+#
+# When keda.enabled is true, the built-in worker/webhook HPAs are automatically disabled.
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 2
+  workerConcurrency: 10
+
+# Disable built-in HPA (KEDA takes over scaling)
+hpa:
+  worker:
+    enabled: false
+
+# KEDA autoscaling configuration
+keda:
+  enabled: true
+  worker:
+    pollingInterval: 15       # How often KEDA checks the queue (seconds)
+    cooldownPeriod: 300        # Wait time before scaling down (seconds)
+    minReplicaCount: 2
+    maxReplicaCount: 20
+    triggers:
+      - type: redis
+        metadata:
+          # Leave empty to auto-derive from redis.host:redis.port
+          address: ""
+          # Bull queue key for waiting jobs
+          listName: "bull:default:wait"
+          # Scale up when queue length exceeds 5 per replica
+          listLength: "5"
+        authenticationRef:
+          # Reference a TriggerAuthentication if Redis requires auth
+          # See: https://keda.sh/docs/latest/concepts/authentication/
+          name: ""
+
+# External database
+database:
+  type: postgresdb
+  useExternal: true
+  host: "your-postgres-host.com"
+  port: 5432
+  database: n8n
+  schema: "public"
+  user: n8n
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+# External Redis
+redis:
+  enabled: true
+  useExternal: true
+  host: "your-redis-host.com"
+  port: 6379
+
+# Core secrets
+secretRefs:
+  existingSecret: "n8n-core-secrets"

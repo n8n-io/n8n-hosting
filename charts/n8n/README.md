@@ -60,6 +60,7 @@ All three use the same n8n container image, differentiated by command/args.
 | [multi-main-queue.yaml](./examples/multi-main-queue.yaml) | Multi-main HA (Enterprise license required) |
 | [task-runners.yaml](./examples/task-runners.yaml) | Queue mode with task runner sidecars |
 | [production-s3.yaml](./examples/production-s3.yaml) | Production with S3, HPA, multi-main |
+| [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
 
 ## Secret Management
 
@@ -84,6 +85,7 @@ For production, use an external secrets operator (e.g., [External Secrets Operat
 | `persistence.enabled` | PVC for main pods | `false` |
 | `hpa.main.enabled` | HPA for main pods | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
+| `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `networkPolicy.enabled` | Network policies | `false` |
 
 See [values.yaml](./values.yaml) for the full list of configurable values.
@@ -110,6 +112,32 @@ kubectl create secret generic n8n-runner-token \
 ```
 
 See [task-runners.yaml](./examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
+
+## KEDA Autoscaling
+
+The built-in HPA scales workers based on CPU utilization. For queue-based workloads, [KEDA](https://keda.sh) can scale workers based on Redis queue length, which is more responsive to actual demand.
+
+When `keda.enabled` is true, the chart creates KEDA `ScaledObject` resources instead of built-in HPAs for workers (and optionally webhook processors). KEDA must be installed in the cluster.
+
+```bash
+# Install KEDA
+helm install keda kedacore/keda --namespace keda-system --create-namespace
+```
+
+```yaml
+keda:
+  enabled: true
+  worker:
+    minReplicaCount: 2
+    maxReplicaCount: 20
+    triggers:
+      - type: redis
+        metadata:
+          listName: "bull:default:wait"
+          listLength: "5"
+```
+
+See [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) for a complete example.
 
 ## Upgrading
 

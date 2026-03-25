@@ -1,4 +1,4 @@
-{{- if and .Values.webhookProcessor.enabled .Values.hpa.webhookProcessor.enabled }}
+{{- if and .Values.webhookProcessor.enabled .Values.hpa.webhookProcessor.enabled (not .Values.keda.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

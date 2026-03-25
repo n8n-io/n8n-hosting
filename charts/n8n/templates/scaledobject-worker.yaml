@@ -1,0 +1,37 @@
+{{- if and .Values.keda.enabled .Values.queueMode.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "n8n.fullname" . }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  scaleTargetRef:
+    name: {{ include "n8n.fullname" . }}-worker
+  pollingInterval: {{ .Values.keda.worker.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.worker.cooldownPeriod }}
+  minReplicaCount: {{ .Values.keda.worker.minReplicaCount }}
+  maxReplicaCount: {{ .Values.keda.worker.maxReplicaCount }}
+  triggers:
+    {{- range .Values.keda.worker.triggers }}
+    - type: {{ .type }}
+      metadata:
+        {{- $address := .metadata.address }}
+        {{- if and (eq .type "redis") (eq (default "" $address) "") }}
+        address: "{{ $.Values.redis.host }}:{{ $.Values.redis.port }}"
+        {{- else }}
+        address: {{ $address | quote }}
+        {{- end }}
+        {{- range $key, $value := .metadata }}
+        {{- if ne $key "address" }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+      {{- if and .authenticationRef .authenticationRef.name }}
+      authenticationRef:
+        name: {{ .authenticationRef.name }}
+      {{- end }}
+    {{- end }}
+{{- end }}
