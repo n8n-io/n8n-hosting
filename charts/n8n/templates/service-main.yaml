@@ -5,8 +5,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
+  {{- $merged := merge (deepCopy (.Values.service.main.annotations | default dict)) (.Values.service.annotations | default dict) }}
+  {{- with $merged }}
   annotations:
-    {{- with .Values.service.annotations }}{{ toYaml . | nindent 4 }}{{- end }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   selector:
