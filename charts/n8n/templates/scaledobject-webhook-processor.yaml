@@ -1,4 +1,4 @@
-{{- if and .Values.keda.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled }}
+{{- if and .Values.keda.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled .Values.queueMode.enabled }}
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
