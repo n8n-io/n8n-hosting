@@ -9,6 +9,9 @@ This directory contains common configuration examples for different deployment s
 - **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis
 - **[minimal-with-docker.yaml](./minimal-with-docker.yaml)** - Quick testing with Docker containers
 
+### Community Examples (Task Runners)
+- **[task-runners.yaml](./task-runners.yaml)** - Queue mode with task runner sidecars for JavaScript/Python execution
+
 ### Enterprise Examples (License Required)
 - **[production-s3.yaml](./production-s3.yaml)** - Production setup with multi-main, webhooks, S3 storage, and autoscaling
 - **[multi-main-queue.yaml](./multi-main-queue.yaml)** - Multi-main and queue mode configuration
