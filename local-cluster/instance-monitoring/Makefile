@@ -26,8 +26,17 @@ down: unforward uninstall ## Stop port-forward and remove from cluster
 
 # ── Image ─────────────────────────────────────────────────────────────────────
 
+.PHONY: cluster
+cluster: ## Ensure the kind cluster exists (creates it if not)
+	@if kind get clusters 2>/dev/null | grep -q n8n-local; then \
+		echo "==> Cluster n8n-local already exists. Skipping creation."; \
+	else \
+		echo "==> Creating kind cluster n8n-local..."; \
+		kind create cluster --name n8n-local --kubeconfig $(KUBECONFIG); \
+	fi
+
 .PHONY: image
-image: ## Build the Docker image and load it into the kind cluster
+image: cluster ## Build the Docker image and load it into the kind cluster
 	@echo "==> Building $(MONITORING_IMAGE)..."
 	@docker build -t $(MONITORING_IMAGE) .
 	@echo "==> Loading $(MONITORING_IMAGE) into kind cluster..."
