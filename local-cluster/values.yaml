@@ -20,6 +20,15 @@ persistence:
   enabled: true
   size: 1Gi
 
+# If a .env file is present, `make install` creates an n8n-env-file secret from it.
+# All vars in that secret are injected into n8n pods as environment variables.
+# optional: true means pods start normally when no .env is present.
+config:
+  extraEnvFrom:
+    - secretRef:
+        name: n8n-env-file
+        optional: true
+
 # Each namespace gets its own n8n-secrets secret (created by `make install`).
 secretRefs:
   existingSecret: "n8n-secrets"

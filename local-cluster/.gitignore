@@ -6,3 +6,6 @@
 
 # Port-forward output logs (managed by `make forward`)
 logs/
+
+# Local environment overrides (optional — see .env.example)
+.env

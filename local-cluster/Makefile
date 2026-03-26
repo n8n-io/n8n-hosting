@@ -80,6 +80,11 @@ install: ## Create namespaces, secrets, and install Helm releases
 			`# to fail, leaving those pods permanently non-Ready.` \
 			--from-literal=N8N_PROTOCOL=http \
 			--dry-run=client -o yaml | kubectl apply -f -; \
+		if [ -f .env ]; then \
+			kubectl create secret generic n8n-env-file -n $$ns \
+				--from-env-file=.env \
+				--dry-run=client -o yaml | kubectl apply -f -; \
+		fi; \
 		extra_args=""; \
 		if [ "$(MONITORING)" = "1" ]; then \
 			extra_args="-f monitoring-values.yaml --set-string config.extraEnv[3].name=N8N_WORKFLOW_EXECUTION_DATA_REPORTING_INSTANCE_IDENTIFIER --set-string config.extraEnv[3].value=$$identifier"; \
