@@ -1,0 +1,36 @@
+# Shared Helm values for all three local dev instances.
+# Standalone mode: single pod with SQLite, no PostgreSQL or Redis required.
+
+image:
+  repository: n8nio/n8n
+  tag: local
+  pullPolicy: Never
+
+queueMode:
+  enabled: false
+
+database:
+  type: sqlite
+  useExternal: false
+
+redis:
+  enabled: false
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+# Each namespace gets its own n8n-secrets secret (created by `make install`).
+secretRefs:
+  existingSecret: "n8n-secrets"
+
+# Reduced resource requests for local dev (default: 200m CPU / 512Mi memory).
+# Helps schedule all three instances on a single-node kind cluster.
+resources:
+  main:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
