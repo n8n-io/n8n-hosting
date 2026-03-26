@@ -14,11 +14,35 @@ function groupByInstanceId(records: IngestRecord[]): Map<string, IngestRecord[]>
   return groups;
 }
 
+function computeTotals(groups: Map<string, IngestRecord[]>): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const [instanceId, records] of groups) {
+    const label = records[0].instance_identifier ?? instanceId;
+    const sum = records.reduce((acc, r) => acc + (r.total_prod_executions ?? 0), 0);
+    totals.set(label, sum);
+  }
+  return totals;
+}
+
+function renderSummary(totals: Map<string, number>): string {
+  if (totals.size === 0) return "";
+  const rows = [...totals.entries()]
+    .map(([label, sum]) => `<div class="summary-row"><span>${label}</span><span>${sum.toLocaleString()}</span></div>`)
+    .join("");
+  return `
+  <section class="summary">
+    <h2>Total prod executions (all time)</h2>
+    ${rows}
+  </section>`;
+}
+
 function formatDate(iso: string): string {
   return iso.replace("T", " ").replace(".000Z", "").replace("Z", "");
 }
 
 function renderHtml(groups: Map<string, IngestRecord[]>): string {
+  const totals = computeTotals(groups);
+  const summary = renderSummary(totals);
   const sections =
     groups.size === 0
       ? `<p class="empty">No data ingested yet.</p>`
@@ -78,11 +102,15 @@ function renderHtml(groups: Map<string, IngestRecord[]>): string {
     td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0f0f0; font-variant-numeric: tabular-nums; }
     tr:last-child td { border-bottom: none; }
     .empty { color: #888; font-style: italic; }
+    .summary h2 { margin-bottom: 0.75rem; }
+    .summary-row { display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid #f0f0f0; font-variant-numeric: tabular-nums; }
+    .summary-row:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
   <h1>n8n Instance Monitoring</h1>
   <p class="meta">Auto-refreshes every 30 seconds &nbsp;&bull;&nbsp; ${groups.size} instance${groups.size !== 1 ? "s" : ""}</p>
+  ${summary}
   ${sections}
 </body>
 </html>`;
