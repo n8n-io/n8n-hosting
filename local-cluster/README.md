@@ -121,6 +121,19 @@ The dashboard is available at `http://localhost:5700/dashboard` once the monitor
 
 ---
 
+## Inspecting Instance Logs
+
+> All commands below must be run from the `local-cluster/` directory, where `.kubeconfig` lives.
+
+**Stream live logs from an instance:**
+```bash
+kubectl --kubeconfig .kubeconfig logs -f -l app.kubernetes.io/component=main -n n8n-1
+```
+
+Replace `n8n-1` with `n8n-2` or `n8n-3` for the other instances.
+
+---
+
 ## Troubleshooting
 
 **Pod not becoming ready:**
