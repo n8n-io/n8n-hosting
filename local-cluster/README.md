@@ -88,7 +88,7 @@ This applies `monitoring-values.yaml` as a Helm values overlay, which sets three
 
 It also injects a human-readable `N8N_WORKFLOW_EXECUTION_DATA_REPORTING_INSTANCE_IDENTIFIER` per instance (`axolotl`, `narwhal`, `dolphin`).
 
-**The instance-monitoring service must already be running before you start the n8n instances.** Start it first from `local-cluster/instance-monitoring/`:
+Start the instance-monitoring service from `local-cluster/instance-monitoring/`:
 
 ```bash
 cd instance-monitoring
