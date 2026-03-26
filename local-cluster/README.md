@@ -70,6 +70,38 @@ Run from the `local-cluster/` directory:
 
 ---
 
+## Instance Monitoring
+
+Pass `MONITORING=1` to `make up` (or `make install`) to configure each n8n instance to automatically report execution data to the local [instance-monitoring](instance-monitoring/) service:
+
+```bash
+make up MONITORING=1
+```
+
+This applies `monitoring-values.yaml` as a Helm values overlay, which sets three extra environment variables on each n8n pod:
+
+| Variable | Value |
+|----------|-------|
+| `N8N_WORKFLOW_EXECUTION_DATA_REPORTING_WEBHOOK_URL` | `http://instance-monitoring.monitoring.svc.cluster.local:5700/ingest-data` |
+| `N8N_WORKFLOW_EXECUTION_DATA_REPORTING_INTERVAL_MINUTES` | `2` |
+| `N8N_INSIGHTS_COMPACTION_INTERVAL_MINUTES` | `1` |
+
+It also injects a human-readable `N8N_WORKFLOW_EXECUTION_DATA_REPORTING_INSTANCE_IDENTIFIER` per instance (`axolotl`, `narwhal`, `dolphin`).
+
+**The instance-monitoring service must already be running before you start the n8n instances.** Start it first from `local-cluster/instance-monitoring/`:
+
+```bash
+cd instance-monitoring
+make up
+cd ..
+
+make up MONITORING=1
+```
+
+The dashboard is available at `http://localhost:5700/dashboard` once the monitoring service is running.
+
+---
+
 ## How It Works
 
 `make up` runs the following steps in sequence:

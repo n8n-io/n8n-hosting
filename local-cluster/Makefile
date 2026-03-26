@@ -4,6 +4,10 @@ NAMESPACES  := n8n-1 n8n-2 n8n-3
 PIDS_FILE   := .pids
 N8N_IMAGE   := n8nio/n8n:local
 
+# Set MONITORING=1 to configure n8n instances to report to the local instance-monitoring service.
+# Requires the instance-monitoring service to be running (see local-cluster/instance-monitoring/).
+MONITORING  ?= 0
+
 # Isolated kubeconfig — never touches ~/.kube/config
 export KUBECONFIG := $(CURDIR)/.kubeconfig
 
@@ -59,9 +63,9 @@ nuke: down delete-cluster ## Full destruction: teardown + delete the kind cluste
 install: ## Create namespaces, secrets, and install Helm releases
 	@for ns in $(NAMESPACES); do \
 		case $$ns in \
-			n8n-1) port=5678 ;; \
-			n8n-2) port=5679 ;; \
-			n8n-3) port=5680 ;; \
+			n8n-1) port=5678; identifier=axolotl ;; \
+			n8n-2) port=5679; identifier=narwhal ;; \
+			n8n-3) port=5680; identifier=dolphin ;; \
 		esac; \
 		echo "==> Installing $$ns (localhost:$$port)"; \
 		kubectl create namespace $$ns --dry-run=client -o yaml | kubectl apply -f -; \
@@ -76,7 +80,11 @@ install: ## Create namespaces, secrets, and install Helm releases
 			`# to fail, leaving those pods permanently non-Ready.` \
 			--from-literal=N8N_PROTOCOL=http \
 			--dry-run=client -o yaml | kubectl apply -f -; \
-		helm upgrade --install n8n $(CHART) -n $$ns -f $(VALUES) --wait=false; \
+		extra_args=""; \
+		if [ "$(MONITORING)" = "1" ]; then \
+			extra_args="-f monitoring-values.yaml --set-string config.extraEnv[3].name=N8N_WORKFLOW_EXECUTION_DATA_REPORTING_INSTANCE_IDENTIFIER --set-string config.extraEnv[3].value=$$identifier"; \
+		fi; \
+		helm upgrade --install n8n $(CHART) -n $$ns -f $(VALUES) $$extra_args --wait=false; \
 	done
 
 .PHONY: uninstall

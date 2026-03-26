@@ -1,0 +1,12 @@
+# Helm values overlay for instance-monitoring integration.
+# Applied automatically when MONITORING=1 is passed to make install / make up.
+# The per-instance identifier (N8N_WORKFLOW_EXECUTION_DATA_REPORTING_INSTANCE_IDENTIFIER)
+# is injected by the Makefile on a per-namespace basis.
+config:
+  extraEnv:
+    - name: N8N_WORKFLOW_EXECUTION_DATA_REPORTING_WEBHOOK_URL
+      value: "http://instance-monitoring.monitoring.svc.cluster.local:5700/ingest-data"
+    - name: N8N_WORKFLOW_EXECUTION_DATA_REPORTING_INTERVAL_MINUTES
+      value: "2"
+    - name: N8N_INSIGHTS_COMPACTION_INTERVAL_MINUTES
+      value: "1"
