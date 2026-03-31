@@ -23,8 +23,4 @@ n8n recommends self-hosting for expert users. Mistakes can lead to data loss, se
 
 ## Contributions
 
-For common changes, please open a PR to `main` branch and we will merge this
-into cloud provider specific branches.
-
-If you have a contribution specific to a cloud provider, please open your PR to
-the relevant branch.
+Please open PRs to the `main` branch.
