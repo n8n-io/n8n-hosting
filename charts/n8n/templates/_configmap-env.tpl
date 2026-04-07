@@ -29,11 +29,19 @@ Environment variables from ConfigMap for all components
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_PORT
+{{- if and .Values.database.userSecret .Values.database.userSecret.name }}
+- name: DB_POSTGRESDB_USER
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.database.userSecret.name }}
+      key: {{ .Values.database.userSecret.key }}
+{{- else }}
 - name: DB_POSTGRESDB_USER
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_USER
+{{- end }}
 {{- if .Values.database.schema }}
 - name: DB_POSTGRESDB_SCHEMA
   valueFrom:

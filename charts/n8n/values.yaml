@@ -242,6 +242,10 @@ serviceAccount:
   # AWS IAM Role ARN for IRSA (IAM Roles for Service Accounts)
   # Required when s3.auth.autoDetect=true for AWS S3 access
   awsRoleArn: ""
+  # GCP Service Account email for GKE Workload Identity
+  # Adds iam.gke.io/gcp-service-account annotation to the ServiceAccount
+  # Example: "n8n-sa@my-project.iam.gserviceaccount.com"
+  gcpServiceAccount: ""
   # Additional annotations for the service account
   annotations: {}
 
@@ -473,6 +477,11 @@ database:
   database: n8n
   schema: "public"                   # <-- PostgreSQL schema name
   user: n8n
+  # Optional: read DB user from a K8s Secret instead of the user field above
+  # Useful when the username is dynamically generated (e.g., by easymile operator)
+  userSecret:
+    name: ""                             # <-- K8s Secret name (leave empty to use database.user)
+    key: ""                              # <-- Key inside the secret
   passwordSecret:
     name: "n8n-db-password"          # <-- K8s Secret name
     key: "password"                  # <-- Key inside the secret
@@ -541,3 +550,7 @@ s3:
     forcePathStyle: false                      # <-- Force path-style URLs (for S3-compatible providers)
     # Additional S3 environment variables
     extraEnv: []
+
+# ----- Extra Manifests -----
+# Additional Kubernetes manifests to deploy alongside the chart (e.g., secrets, configmaps)
+extraManifests: []
