@@ -148,7 +148,7 @@
       "type": "object",
       "properties": {
         "enabled": { "type": "boolean" },
-        "workerReplicaCount": { "type": "integer", "minimum": 1 }
+        "workerReplicaCount": { "type": "integer", "minimum": 0 }
       }
     },
     "service": {
