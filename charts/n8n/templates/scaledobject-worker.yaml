@@ -1,4 +1,4 @@
-{{- if and .Values.keda.enabled .Values.queueMode.enabled }}
+{{- if and .Values.keda.enabled .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) }}
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
