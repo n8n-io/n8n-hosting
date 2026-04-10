@@ -115,6 +115,11 @@ taskRunners:
   #   - name: N8N_RUNNERS_LAUNCHER_LOG_LEVEL
   #     value: debug
 
+# ----- Deployment Strategy -----
+# Set to { type: Recreate } when using persistence with a RWO PVC (e.g. SQLite)
+# to avoid Multi-Attach errors during upgrades.
+strategy: {}
+
 # ----- Main replicas (when multi-main is disabled) -----
 replicaCount: 1
 
