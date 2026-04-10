@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/n8n-io/n8n-hosting/compare/v1.3.1...v1.4.0) (2026-04-10)
+
+### Features
+
+* **chart:** allow configuring Deployment strategy ([#111](https://github.com/n8n-io/n8n-hosting/issues/111)) ([731f01c](https://github.com/n8n-io/n8n-hosting/commit/731f01c0429273058b4ed9d4371b5383b5991be6))
+
 ## [1.3.1](https://github.com/n8n-io/n8n-hosting/compare/v1.3.0...v1.3.1) (2026-04-08)
 
 ### Bug Fixes
