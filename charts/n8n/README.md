@@ -83,6 +83,7 @@ For production, use an external secrets operator (e.g., [External Secrets Operat
 | `taskRunners.enabled` | Task runner sidecars | `false` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
+| `strategy` | Deployment update strategy | `{}` (k8s default) |
 | `hpa.main.enabled` | HPA for main pods | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
