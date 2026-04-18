@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/n8n-io/n8n-hosting/compare/v1.3.0...v1.3.1) (2026-04-08)
+
+### Bug Fixes
+
+* **chart:** allow workerReplicaCount=0 for migration-only deploys ([#109](https://github.com/n8n-io/n8n-hosting/issues/109)) ([f367807](https://github.com/n8n-io/n8n-hosting/commit/f367807b9a36e305bca12a97a151df389998ca8d))
+* correct Traefik PathPrefix rule and remove stale vendor-branch refs ([#104](https://github.com/n8n-io/n8n-hosting/issues/104)) ([5d0ba6a](https://github.com/n8n-io/n8n-hosting/commit/5d0ba6a6d1c4795eeaa2bb65745d757039c71702))
+
 ## [1.3.0](https://github.com/n8n-io/n8n-hosting/compare/v1.2.0...v1.3.0) (2026-03-25)
 
 ### Features

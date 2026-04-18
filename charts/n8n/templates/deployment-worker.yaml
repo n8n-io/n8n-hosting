@@ -1,4 +1,4 @@
-{{- if .Values.queueMode.enabled -}}
+{{- if and .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
