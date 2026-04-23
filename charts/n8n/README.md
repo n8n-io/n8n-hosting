@@ -70,6 +70,18 @@ All three use the same n8n container image, differentiated by command/args.
 
 For production, use an external secrets operator (e.g., [External Secrets Operator](https://external-secrets.io/)) rather than storing secrets in values files.
 
+## ServiceAccount
+
+By default the chart creates a ServiceAccount named `n8n`. To use an externally-managed ServiceAccount (e.g. one created by Terraform for IRSA), set `serviceAccount.create: false` **and** change `serviceAccount.name` to the name of the existing SA:
+
+```yaml
+serviceAccount:
+  create: false
+  name: "my-external-sa"   # must already exist in the release namespace
+```
+
+To use the namespace's default ServiceAccount, set `name: ""`. If you set `create: false` without also changing `name` from the chart default `"n8n"`, rendering will fail with a clear error — this prevents pods from being wired to a ServiceAccount that was never created.
+
 ## Key Configuration
 
 | Value | Description | Default |

@@ -135,4 +135,9 @@ Validate values — called once from deployment-main.yaml to fail fast on bad co
 {{- fail "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret" -}}
 {{- end -}}
 
+{{/* --- Service account --- */}}
+{{- if and (not .Values.serviceAccount.create) (eq .Values.serviceAccount.name "n8n") -}}
+{{- fail "serviceAccount.create=false but serviceAccount.name is still the chart default \"n8n\". Set serviceAccount.name to your pre-existing ServiceAccount, or to \"\" to use the namespace's default ServiceAccount." -}}
+{{- end -}}
+
 {{- end -}}
