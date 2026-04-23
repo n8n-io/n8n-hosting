@@ -192,12 +192,16 @@ webhookProcessor:
 
 When `disableProductionWebhooksOnMainProcess: true`, configure your load balancer to route:
 - `/webhook/*` → webhook processor service (production webhooks)
-- `/webhook-test/*` → main service (test webhooks)  
+- `/form/*` → webhook processor service (production form triggers)
+- `/form-waiting/*` → webhook processor service (waiting form pages)
+- `/webhook-test/*` → main service (test webhooks)
+- `/form-test/*` → main service (test form triggers)
 - `/*` → main service (UI, API, everything else)
 
 ### Testing
 ```bash
 curl -i http://your-domain/webhook/test-id      # Should reach webhook processor
+curl -i http://your-domain/form/test-id         # Should reach webhook processor
 curl -i http://your-domain/webhook-test/test-id # Should reach main service
 ```
 

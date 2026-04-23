@@ -13,7 +13,7 @@ queueMode:
   workerReplicaCount: 5
   workerConcurrency: 15
 
-# Load balancer must route /webhook/* to webhook processor service
+# Load balancer must route /webhook/*, /form/*, and /form-waiting/* to webhook processor service
 webhookProcessor:
   enabled: true
   replicaCount: 2
