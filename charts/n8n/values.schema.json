@@ -257,6 +257,8 @@
       "properties": {
         "create": { "type": "boolean" },
         "name": { "type": "string" },
+        "awsRoleArn": { "type": "string", "description": "AWS IAM Role ARN for IRSA" },
+        "gcpServiceAccount": { "type": "string", "description": "GCP Service Account email for GKE Workload Identity" },
         "annotations": { "type": "object", "additionalProperties": true }
       }
     },
