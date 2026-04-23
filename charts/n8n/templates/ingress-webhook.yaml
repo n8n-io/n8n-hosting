@@ -34,6 +34,20 @@ spec:
                 name: {{ include "n8n.fullname" $ }}-webhook-processor
                 port:
                   number: {{ $.Values.service.port }}
+          - path: /form/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "n8n.fullname" $ }}-webhook-processor
+                port:
+                  number: {{ $.Values.service.port }}
+          - path: /form-waiting/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "n8n.fullname" $ }}-webhook-processor
+                port:
+                  number: {{ $.Values.service.port }}
   {{- end }}
   {{- with (.Values.ingress.webhookProcessor).tls }}
   tls:

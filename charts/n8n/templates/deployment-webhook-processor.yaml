@@ -68,10 +68,10 @@ spec:
           env:
             # Shared configuration from ConfigMap
             {{- include "n8n.sharedConfigMapEnv" . | nindent 12 }}
-            
+
             # Webhook processor-specific configuration from ConfigMap
             {{- include "n8n.webhookProcessorConfigMapEnv" . | nindent 12 }}
-            
+
             # Database password (secret)
             - name: DB_POSTGRESDB_PASSWORD
               valueFrom:
@@ -88,12 +88,12 @@ spec:
                   key: {{ .key }}
             {{- end }}
             {{- end }}
-            
+
             # Redis-specific extra environment variables
             {{- with .Values.redis.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-            
+
             # Webhook-specific extra environment variables
             {{- with .Values.webhook.extraEnv }}
             {{- toYaml . | nindent 12 }}
@@ -134,6 +134,9 @@ spec:
                 secretKeyRef:
                   name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
                   key: N8N_PROTOCOL
+
+            # S3 External Storage
+            {{- include "n8n.s3Env" . | nindent 12 }}
 
             {{- with .Values.config.extraEnv }}
             {{- toYaml . | nindent 12 }}
