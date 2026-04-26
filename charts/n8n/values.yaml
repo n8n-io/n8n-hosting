@@ -120,6 +120,15 @@ taskRunners:
 # to avoid Multi-Attach errors during upgrades.
 strategy: {}
 
+# ----- Pod Labels -----
+# Extra labels added to the main / worker / webhook-processor pod templates,
+# in addition to the chart's own selector labels. Useful for opt-in admission
+# webhooks (e.g. Azure AD Workload Identity's `azure.workload.identity/use=true`,
+# Istio's `sidecar.istio.io/inject=true`) and external scrape selectors.
+# podLabels:
+#   azure.workload.identity/use: "true"
+podLabels: {}
+
 # ----- Main replicas (when multi-main is disabled) -----
 replicaCount: 1
 
