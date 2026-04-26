@@ -125,6 +125,12 @@ strategy: {}
 # in addition to the chart's own selector labels. Useful for opt-in admission
 # webhooks (e.g. Azure AD Workload Identity's `azure.workload.identity/use=true`,
 # Istio's `sidecar.istio.io/inject=true`) and external scrape selectors.
+#
+# Reserved keys (managed by the chart, will fail at install time if set here):
+# - app.kubernetes.io/{name,instance,component,version,managed-by}
+# - helm.sh/chart
+# These are part of the Deployment's selector or recommended-labels set;
+# overriding them would break selector matching or produce duplicate YAML keys.
 # podLabels:
 #   azure.workload.identity/use: "true"
 podLabels: {}

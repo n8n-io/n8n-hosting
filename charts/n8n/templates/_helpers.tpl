@@ -140,4 +140,13 @@ Validate values — called once from deployment-main.yaml to fail fast on bad co
 {{- fail "serviceAccount.create=false but serviceAccount.name is still the chart default \"n8n\". Set serviceAccount.name to your pre-existing ServiceAccount, or to \"\" to use the namespace's default ServiceAccount." -}}
 {{- end -}}
 
+{{/* --- Pod labels --- */}}
+{{/* The chart manages a fixed set of pod-template labels (selector + recommended labels). Reject user-supplied podLabels that overlap them so we don't break the Deployment selector or produce duplicate YAML keys. */}}
+{{- $reservedPodLabels := list "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" "app.kubernetes.io/version" "app.kubernetes.io/managed-by" "helm.sh/chart" -}}
+{{- range $k, $_ := .Values.podLabels -}}
+{{- if has $k $reservedPodLabels -}}
+{{- fail (printf "podLabels.%q is a chart-managed selector/identity label and cannot be overridden. Reserved keys: %s" $k (join ", " $reservedPodLabels)) -}}
+{{- end -}}
+{{- end -}}
+
 {{- end -}}
