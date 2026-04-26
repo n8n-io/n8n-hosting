@@ -13,6 +13,8 @@ command in the current folder.
 docker compose up -d
 ```
 
+Once all containers have successfully started, the n8n UI will be accessible in your browser at localhost:5678
+
 To stop it execute:
 
 ```
