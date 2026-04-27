@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: instance-monitoring
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: instance-monitoring
+  template:
+    metadata:
+      labels:
+        app: instance-monitoring
+    spec:
+      containers:
+        - name: instance-monitoring
+          image: instance-monitoring:local
+          imagePullPolicy: Never
+          ports:
+            - name: ingest
+              containerPort: 5700
+            - name: dashboard
+              containerPort: 5701
+          env:
+            - name: DB_PATH
+              value: /data/monitoring.db
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /dashboard
+              port: 5701
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: instance-monitoring-data
