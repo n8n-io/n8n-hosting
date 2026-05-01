@@ -49,12 +49,10 @@ data:
   EXECUTIONS_MODE: "queue"
   OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
   {{- end }}
-  # Task Runners configuration (shared across all pods)
-  # N8N_RUNNERS_ENABLED is deprecated in n8n 2.9+; runners are always active.
-  # Setting MODE to "external" prevents n8n from trying to launch internal runners
-  # (which would fail for Python since the n8n image lacks Python 3).
-  N8N_RUNNERS_MODE: {{ .Values.taskRunners.mode | quote }}
+  # Task runner configuration (only emitted when sidecars are enabled,
+  # otherwise n8n uses its built-in internal runner default).
   {{- if .Values.taskRunners.enabled }}
+  N8N_RUNNERS_MODE: {{ .Values.taskRunners.mode | quote }}
   N8N_RUNNERS_BROKER_LISTEN_ADDRESS: {{ .Values.taskRunners.broker.listenAddress | quote }}
   N8N_NATIVE_PYTHON_RUNNER: {{ ternary "true" "false" .Values.taskRunners.nativePythonRunner | quote }}
   {{- end }}

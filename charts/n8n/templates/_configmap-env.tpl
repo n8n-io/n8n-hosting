@@ -84,6 +84,7 @@ Environment variables from ConfigMap for all components
       name: {{ include "n8n.fullname" . }}
       key: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
 {{- end }}
+{{- if .Values.taskRunners.enabled }}
 - name: N8N_RUNNERS_MODE
   valueFrom:
     configMapKeyRef:
@@ -99,6 +100,7 @@ Environment variables from ConfigMap for all components
       name: {{ include "n8n.fullname" . }}-task-runners
       key: N8N_RUNNERS_AUTH_TOKEN
       {{- end }}
+{{- end }}
 {{- if .Values.queueMode.enabled }}
 {{- if .Values.redis.clusterNodes }}
 - name: QUEUE_BULL_REDIS_CLUSTER_NODES
