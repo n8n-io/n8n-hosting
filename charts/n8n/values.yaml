@@ -262,7 +262,7 @@ networkPolicy:
 probes:
   liveness:
     enabled: true
-    path: /healthz/readiness
+    path: /healthz/readiness # /healthz always returns ok; /healthz/readiness checks dependencies
     initialDelaySeconds: 30
     periodSeconds: 20
     timeoutSeconds: 5
