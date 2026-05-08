@@ -128,6 +128,11 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
 
+            {{- with .Values.queueMode.workerExtraEnv }}
+            # Worker-specific extra environment variables
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
           {{- with .Values.config.extraEnvFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}

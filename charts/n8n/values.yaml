@@ -19,6 +19,13 @@ queueMode:
   workerReplicaCount: 2
   # Worker concurrency (number of jobs each worker can handle simultaneously)
   workerConcurrency: 10
+  # Additional environment variables injected into worker pods only.
+  # Use for worker-specific tuning that must not affect main or webhook-processor pods.
+  # Example:
+  # workerExtraEnv:
+  #   - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
+  #     value: "10"
+  workerExtraEnv: []
 
 # ----- Webhook processors (optional scaling layer) -----
 webhookProcessor:
@@ -27,6 +34,12 @@ webhookProcessor:
   replicaCount: 2
   # Disable webhook processing in main process when webhook processors are enabled
   disableProductionWebhooksOnMainProcess: true
+  # Additional environment variables injected into webhook-processor pods only.
+  # Example:
+  # extraEnv:
+  #   - name: N8N_LOG_LEVEL
+  #     value: "debug"
+  extraEnv: []
 
 # ----- Multi-main (optional, requires queue mode) -----
 multiMain:
