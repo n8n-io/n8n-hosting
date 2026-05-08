@@ -21,6 +21,7 @@ queueMode:
   workerConcurrency: 10
   # Additional environment variables injected into worker pods only.
   # Use for worker-specific tuning that must not affect main or webhook-processor pods.
+  # For env vars that should apply to all pods, use `config.extraEnv` instead.
   # Example:
   # workerExtraEnv:
   #   - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
@@ -35,6 +36,9 @@ webhookProcessor:
   # Disable webhook processing in main process when webhook processors are enabled
   disableProductionWebhooksOnMainProcess: true
   # Additional environment variables injected into webhook-processor pods only.
+  # Use this when a variable must NOT also be set on the main pod.
+  # For webhook-related env vars that apply to both webhook-handling pods
+  # (main + webhook-processor), use `webhook.extraEnv` instead.
   # Example:
   # extraEnv:
   #   - name: N8N_LOG_LEVEL
@@ -413,7 +417,9 @@ webhook:
   url: ""
   # Timeout for webhook requests in milliseconds
   timeout: 120000
-  # Additional webhook environment variables
+  # Additional webhook-related environment variables.
+  # Applied to BOTH main and webhook-processor pods. For variables that should
+  # only apply to webhook-processor pods, use `webhookProcessor.extraEnv` instead.
   extraEnv: []
 
 # ----- Executions config -----

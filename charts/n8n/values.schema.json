@@ -148,7 +148,38 @@
       "type": "object",
       "properties": {
         "enabled": { "type": "boolean" },
-        "workerReplicaCount": { "type": "integer", "minimum": 0 }
+        "workerReplicaCount": { "type": "integer", "minimum": 0 },
+        "workerConcurrency": { "type": "integer", "minimum": 1 },
+        "workerExtraEnv": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "value": { "type": "string" }
+            },
+            "required": ["name", "value"]
+          }
+        }
+      }
+    },
+    "webhookProcessor": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "disableProductionWebhooksOnMainProcess": { "type": "boolean" },
+        "extraEnv": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "value": { "type": "string" }
+            },
+            "required": ["name", "value"]
+          }
+        }
       }
     },
     "service": {
