@@ -156,9 +156,10 @@
             "type": "object",
             "properties": {
               "name": { "type": "string", "minLength": 1 },
-              "value": { "type": "string" }
+              "value": { "type": "string" },
+              "valueFrom": { "type": "object" }
             },
-            "required": ["name", "value"]
+            "required": ["name"]
           }
         }
       }
@@ -175,9 +176,10 @@
             "type": "object",
             "properties": {
               "name": { "type": "string", "minLength": 1 },
-              "value": { "type": "string" }
+              "value": { "type": "string" },
+              "valueFrom": { "type": "object" }
             },
-            "required": ["name", "value"]
+            "required": ["name"]
           }
         }
       }
