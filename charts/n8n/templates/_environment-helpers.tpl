@@ -76,10 +76,8 @@ Executions Configuration environment variables
 - name: EXECUTIONS_DATA_MAX_AGE
   value: "{{ .Values.executions.pruning.maxAge }}"
 {{- end }}
-{{- if .Values.executions.pruning.maxCount }}
 - name: EXECUTIONS_DATA_PRUNE_MAX_COUNT
   value: "{{ .Values.executions.pruning.maxCount }}"
-{{- end }}
 {{- if .Values.executions.pruning.hardDeleteBuffer }}
 - name: EXECUTIONS_DATA_HARD_DELETE_BUFFER
   value: "{{ .Values.executions.pruning.hardDeleteBuffer }}"
