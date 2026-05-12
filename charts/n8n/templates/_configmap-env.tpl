@@ -16,24 +16,48 @@ Environment variables from ConfigMap for all components
 {{- if .Values.database.useExternal }}
 - name: DB_POSTGRESDB_DATABASE
   valueFrom:
+    {{- if and .Values.database.existingSecret.name .Values.database.existingSecret.databaseKey }}
+    secretKeyRef:
+      name: {{ .Values.database.existingSecret.name }}
+      key: {{ .Values.database.existingSecret.databaseKey }}
+    {{- else }}
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_DATABASE
+    {{- end }}
 - name: DB_POSTGRESDB_HOST
   valueFrom:
+    {{- if and .Values.database.existingSecret.name .Values.database.existingSecret.hostKey }}
+    secretKeyRef:
+      name: {{ .Values.database.existingSecret.name }}
+      key: {{ .Values.database.existingSecret.hostKey }}
+    {{- else }}
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_HOST
+    {{- end }}
 - name: DB_POSTGRESDB_PORT
   valueFrom:
+    {{- if and .Values.database.existingSecret.name .Values.database.existingSecret.portKey }}
+    secretKeyRef:
+      name: {{ .Values.database.existingSecret.name }}
+      key: {{ .Values.database.existingSecret.portKey }}
+    {{- else }}
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_PORT
+    {{- end }}
 - name: DB_POSTGRESDB_USER
   valueFrom:
+    {{- if .Values.database.userSecret.name }}
+    secretKeyRef:
+      name: {{ .Values.database.userSecret.name }}
+      key: {{ .Values.database.userSecret.key | default "username" }}
+    {{- else }}
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_USER
+    {{- end }}
 {{- if .Values.database.schema }}
 - name: DB_POSTGRESDB_SCHEMA
   valueFrom:
@@ -102,30 +126,54 @@ Environment variables from ConfigMap for all components
       {{- end }}
 {{- end }}
 {{- if .Values.queueMode.enabled }}
-{{- if .Values.redis.clusterNodes }}
+{{- if or .Values.redis.clusterNodes (and .Values.redis.existingSecret.name .Values.redis.existingSecret.clusterNodesKey) }}
 - name: QUEUE_BULL_REDIS_CLUSTER_NODES
   valueFrom:
+    {{- if and .Values.redis.existingSecret.name .Values.redis.existingSecret.clusterNodesKey }}
+    secretKeyRef:
+      name: {{ .Values.redis.existingSecret.name }}
+      key: {{ .Values.redis.existingSecret.clusterNodesKey }}
+    {{- else }}
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: QUEUE_BULL_REDIS_CLUSTER_NODES
+    {{- end }}
 {{- else }}
 - name: QUEUE_BULL_REDIS_HOST
   valueFrom:
+    {{- if and .Values.redis.existingSecret.name .Values.redis.existingSecret.hostKey }}
+    secretKeyRef:
+      name: {{ .Values.redis.existingSecret.name }}
+      key: {{ .Values.redis.existingSecret.hostKey }}
+    {{- else }}
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: QUEUE_BULL_REDIS_HOST
+    {{- end }}
 - name: QUEUE_BULL_REDIS_PORT
   valueFrom:
+    {{- if and .Values.redis.existingSecret.name .Values.redis.existingSecret.portKey }}
+    secretKeyRef:
+      name: {{ .Values.redis.existingSecret.name }}
+      key: {{ .Values.redis.existingSecret.portKey }}
+    {{- else }}
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: QUEUE_BULL_REDIS_PORT
+    {{- end }}
 {{- end }}
-{{- if .Values.redis.username }}
+{{- if or .Values.redis.username .Values.redis.usernameSecret.name }}
 - name: QUEUE_BULL_REDIS_USERNAME
   valueFrom:
+    {{- if .Values.redis.usernameSecret.name }}
+    secretKeyRef:
+      name: {{ .Values.redis.usernameSecret.name }}
+      key: {{ .Values.redis.usernameSecret.key | default "username" }}
+    {{- else }}
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: QUEUE_BULL_REDIS_USERNAME
+    {{- end }}
 {{- end }}
 {{- if and .Values.redis.database (ne (.Values.redis.database | int) 0) }}
 - name: QUEUE_BULL_REDIS_DB

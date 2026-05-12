@@ -502,6 +502,19 @@ database:
   database: n8n
   schema: "public"                   # <-- PostgreSQL schema name
   user: n8n
+  # Use an existing Kubernetes Secret for connection parameters (host, port, database).
+  # When existingSecret.name is set, these three values are sourced from the secret and the
+  # corresponding plain-text values above (host, port, database) are ignored.
+  existingSecret:
+    name: ""                         # <-- K8s Secret name (leave empty to use plain values above)
+    hostKey: ""      # <-- Key in the secret for the host
+    portKey: ""      # <-- Key in the secret for the port
+    databaseKey: ""  # <-- Key in the secret for the database name
+  # DB username used when userSecret.name is not set.
+  # When userSecret.name is set, the plain-text user value above is ignored.
+  userSecret:
+    name: ""                         # <-- K8s Secret name (leave empty to use plain user above)
+    key: "username"                  # <-- Key inside the secret
   passwordSecret:
     name: "n8n-db-password"          # <-- K8s Secret name
     key: "password"                  # <-- Key inside the secret
@@ -520,8 +533,22 @@ redis:
   useExternal: true
   host: "your-redis-hostname"                      # <-- Change to your actual Redis host
   port: 6379
+  # Use an existing Kubernetes Secret for connection parameters (host, port).
+  # When existingSecret.name is set, these values are sourced from the secret and the
+  # corresponding plain-text values above (host, port) are ignored.
+  existingSecret:
+    name: ""                              # <-- K8s Secret name (leave empty to use plain values above)
+    hostKey: ""          # <-- Key in the secret for the host
+    portKey: ""          # <-- Key in the secret for the port
+    clusterNodesKey: ""  # <-- Key in the secret for cluster nodes
   # Redis authentication
+  # Redis username used when usernameSecret.name is not set.
   username: ""                                     # <-- Redis username (Redis 6+)
+  # Use an existing Kubernetes Secret for Redis username.
+  # When usernameSecret.name is set, the plain-text username value above is ignored.
+  usernameSecret:
+    name: ""                                       # <-- K8s Secret name (leave empty to use plain username above)
+    key: "username"                                # <-- Key inside the secret
   passwordSecret: null
   # Advanced Redis settings
   database: 0                                      # <-- Redis database number
