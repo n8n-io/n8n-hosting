@@ -83,8 +83,8 @@ Validate values — called once from deployment-main.yaml to fail fast on bad co
 
 {{/* --- Standalone mode constraints --- */}}
 {{- if not .Values.queueMode.enabled -}}
-{{- if not .Values.persistence.enabled -}}
-{{- fail "persistence.enabled must be true when queueMode.enabled=false. Standalone mode requires persistent storage." -}}
+{{- if and (not .Values.persistence.enabled) (not .Values.database.useExternal) -}}
+{{- fail "persistence.enabled must be true when queueMode.enabled=false and database.useExternal=false. Standalone mode requires persistent storage when no external database." -}}
 {{- end -}}
 {{- if .Values.multiMain.enabled -}}
 {{- fail "multiMain.enabled=true requires queueMode.enabled=true" -}}
