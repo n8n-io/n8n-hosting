@@ -6,7 +6,7 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (No License Required)
 - **[standalone.yaml](./standalone.yaml)** - Single pod with SQLite, no external dependencies
-- **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis
+- **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis; includes `commonLabels` and `commonAnnotations` example
 - **[minimal-with-docker.yaml](./minimal-with-docker.yaml)** - Quick testing with Docker containers
 
 ### Community Examples (Task Runners)
