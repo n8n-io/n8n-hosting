@@ -8,7 +8,9 @@ metadata:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: worker
 spec:
+  {{- if not .Values.hpa.worker.enabled }}
   replicas: {{ .Values.queueMode.workerReplicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:

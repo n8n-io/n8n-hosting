@@ -8,7 +8,9 @@ metadata:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: main
 spec:
+  {{- if not .Values.hpa.main.enabled }}
   replicas: {{ ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled }}
+  {{- end }}
   revisionHistoryLimit: 3
   {{- with .Values.strategy }}
   strategy:
