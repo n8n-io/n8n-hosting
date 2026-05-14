@@ -226,9 +226,26 @@ resources:
       memory: 512Mi
 
 # ----- Node placement -----
+# Global defaults used by all n8n pods unless overridden in nodePlacement below.
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# Component-specific node placement. When a component value is empty, the chart
+# falls back to the global nodeSelector, tolerations, or affinity value above.
+nodePlacement:
+  main:
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+  worker:
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+  webhookProcessor:
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
 
 # ----- Security -----
 # Note: readOnlyRootFilesystem is intentionally not set. n8n writes to

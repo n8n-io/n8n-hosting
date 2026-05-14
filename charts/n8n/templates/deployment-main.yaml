@@ -226,13 +226,19 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
 
-      {{- with .Values.nodeSelector }}
-      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- if .Values.nodePlacement.main.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodePlacement.main.nodeSelector | nindent 8 }}
+      {{- else if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations: {{- toYaml . | nindent 8 }}
+      {{- if .Values.nodePlacement.main.tolerations }}
+      tolerations: {{- toYaml .Values.nodePlacement.main.tolerations | nindent 8 }}
+      {{- else if .Values.tolerations }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
       {{- end }}
-      {{- if .Values.affinity }}
+      {{- if .Values.nodePlacement.main.affinity }}
+      affinity: {{- toYaml .Values.nodePlacement.main.affinity | nindent 8 }}
+      {{- else if .Values.affinity }}
       affinity: {{- toYaml .Values.affinity | nindent 8 }}
       {{- else if and .Values.multiMain.enabled (ne .Values.multiMain.antiAffinity.type "none") }}
       affinity:

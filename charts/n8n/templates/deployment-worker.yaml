@@ -214,13 +214,19 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
 
-      {{- with .Values.nodeSelector }}
-      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- if .Values.nodePlacement.worker.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodePlacement.worker.nodeSelector | nindent 8 }}
+      {{- else if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations: {{- toYaml . | nindent 8 }}
+      {{- if .Values.nodePlacement.worker.tolerations }}
+      tolerations: {{- toYaml .Values.nodePlacement.worker.tolerations | nindent 8 }}
+      {{- else if .Values.tolerations }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
-      affinity: {{- toYaml . | nindent 8 }}
+      {{- if .Values.nodePlacement.worker.affinity }}
+      affinity: {{- toYaml .Values.nodePlacement.worker.affinity | nindent 8 }}
+      {{- else if .Values.affinity }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
       {{- end }}
 {{- end }}
