@@ -1,3 +1,5 @@
+## [1.5.1](https://github.com/n8n-io/n8n-hosting/compare/v1.5.0...v1.5.1) (2026-05-15)
+
 <<<<<<< automated/release-v1.5.0
 ## [1.5.0](https://github.com/n8n-io/n8n-hosting/compare/v1.4.4...v1.5.0) (2026-05-08)
 
