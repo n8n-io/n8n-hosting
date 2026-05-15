@@ -10,6 +10,8 @@ description: >-
   PDB, network policies, and S3 external storage.
 appVersion: "stable"
 type: application
+annotations:
+  artifacthub.io/license: MIT
 keywords:
   - n8n
   - workflow-automation
