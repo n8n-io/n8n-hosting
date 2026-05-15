@@ -1,0 +1,85 @@
+name: Documentation Issue
+description: Report an issue with documentation or suggest improvements
+title: "[Docs]: "
+labels: ["documentation", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us improve our documentation! Please provide details about the issue or suggestion.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation issue is this?
+      options:
+        - Bug/Error in documentation
+        - Missing documentation
+        - Unclear/Confusing documentation
+        - Outdated information
+        - Typo/Grammar issue
+        - New documentation request
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: doc-location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation issue located?
+      placeholder: README.md, examples/production-s3.yaml, CONTRIBUTING.md, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-content
+    attributes:
+      label: Current Content (if applicable)
+      description: Copy the current documentation content that has issues
+      render: markdown
+
+  - type: textarea
+    id: issue-description
+    attributes:
+      label: Issue Description
+      description: Clearly describe what's wrong or what's missing
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: Suggested Improvement
+      description: How would you improve this documentation?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: user-type
+    attributes:
+      label: User Type
+      description: What's your experience level with n8n and Kubernetes?
+      options:
+        - Beginner (new to n8n and/or Kubernetes)
+        - Intermediate (some experience)
+        - Advanced (experienced user)
+        - Expert (very experienced, could help others)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution-offer
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to help improve this documentation
+          required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that would help us improve the documentation

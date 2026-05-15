@@ -1,0 +1,127 @@
+name: Bug Report
+description: File a bug report to help us improve the n8n Helm Chart
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is.
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Deploy chart with configuration...
+        2. Access service at...
+        3. See error...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment-mode
+    attributes:
+      label: Deployment Mode
+      description: Which deployment mode are you using?
+      options:
+        - Single main pod
+        - Queue mode (single main + workers)
+        - Multi-main setup (requires Enterprise license)
+        - Multi-main + queue mode + webhook processors
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: chart-version
+    attributes:
+      label: Chart Version
+      description: What version of the n8n Helm Chart are you running?
+      placeholder: v1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: n8n-version
+    attributes:
+      label: n8n Version
+      description: What version of n8n are you running?
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: kubernetes-version
+    attributes:
+      label: Kubernetes Version
+      description: What version of Kubernetes are you running?
+      placeholder: v1.28.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kubernetes-platform
+    attributes:
+      label: Kubernetes Platform
+      description: Where is your Kubernetes cluster running?
+      options:
+        - Amazon EKS
+        - Google GKE
+        - Azure AKS
+        - Self-managed
+        - Kind/Minikube (local)
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: values-config
+    attributes:
+      label: Helm Values Configuration
+      description: Please share your values.yaml configuration (remove sensitive information)
+      render: yaml
+      placeholder: |
+        # Your values.yaml configuration here
+        database:
+          type: postgresdb
+          useExternal: true
+          # ... rest of config
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Please copy and paste any relevant log output
+      render: shell
+      placeholder: |
+        # kubectl logs for relevant pods
+        # kubectl describe for failed resources
+        # helm status output
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here (screenshots, etc.)

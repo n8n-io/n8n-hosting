@@ -1,0 +1,54 @@
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+
+n8n has been successfully deployed!
+
+Your n8n instance is available at:
+{{- if $.Values.ingress.tls }}
+  https://{{ .host }}
+{{- else }}
+  http://{{ .host }}
+{{- end }}
+
+{{- end }}
+{{- else }}
+
+n8n has been successfully deployed!
+
+To access n8n, run the following commands:
+
+1. Get the service URL:
+   kubectl get service {{ include "n8n.fullname" . }}-main{{- if .Release.Namespace }} --namespace {{ .Release.Namespace }}{{- end }}
+
+2. Port forward to access n8n locally:
+   kubectl port-forward service/{{ include "n8n.fullname" . }}-main{{- if .Release.Namespace }} --namespace {{ .Release.Namespace }}{{- end }} 5678:{{ .Values.service.port }}
+
+3. Open your browser to:
+   http://localhost:5678
+
+{{- end }}
+
+Deployment Configuration:
+{{- if .Values.queueMode.enabled }}
+  - Mode: Queue ({{ .Values.queueMode.workerReplicaCount }} workers)
+{{- if .Values.multiMain.enabled }}
+  - Multi-main: {{ .Values.multiMain.replicas }} main pods
+{{- else }}
+  - Main pods: {{ .Values.replicaCount }}
+{{- end }}
+{{- if .Values.webhookProcessor.enabled }}
+  - Webhook processors: {{ .Values.webhookProcessor.replicaCount }} pods
+{{- end }}
+  - Database: PostgreSQL ({{ .Values.database.host }})
+  - Cache: Redis ({{ .Values.redis.host }})
+{{- if .Values.s3.enabled }}
+  - Storage: S3 ({{ .Values.s3.bucket.name }})
+{{- end }}
+{{- else }}
+  - Mode: Standalone (SQLite)
+  - Main pods: {{ .Values.replicaCount }}
+  - Database: SQLite (local storage)
+{{- end }}
+
+Documentation: https://docs.n8n.io/
+Issues: https://github.com/n8n-io/n8n-hosting/issues

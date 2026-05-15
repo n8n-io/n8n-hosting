@@ -1,0 +1,14 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "n8n.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get","list"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+{{- end }}

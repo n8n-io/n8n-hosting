@@ -1,0 +1,207 @@
+# Multi-main and Queue Mode Configuration
+# This example demonstrates multi-main setup with queue mode (requires Enterprise license)
+# Shows basic multi-main configuration without cloud-specific features
+
+# Multi-main for high availability (Enterprise feature)
+multiMain:
+  enabled: true
+  replicas: 3
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 10
+  workerConcurrency: 20
+
+webhookProcessor:
+  enabled: true
+  replicaCount: 5
+  disableProductionWebhooksOnMainProcess: true
+
+hpa:
+  main:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60
+  worker:
+    enabled: true
+    minReplicas: 10
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 70
+  webhookProcessor:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 65
+
+# External database (production PostgreSQL)
+database:
+  type: postgresdb
+  useExternal: true
+  host: "your-postgres-host.com"
+  port: 5432
+  database: n8n_enterprise
+  schema: "public"                    # PostgreSQL schema name
+  user: n8n
+  passwordSecret:
+    name: "n8n-enterprise-db-secret"
+    key: "password"
+
+# External Redis (production Redis)
+redis:
+  enabled: true
+  useExternal: true
+  host: "your-redis-host.com"
+  port: 6379
+
+# Enterprise S3 storage
+s3:
+  enabled: true
+  bucket:
+    name: "n8n-enterprise-storage"
+    region: "us-east-1"
+  auth:
+    autoDetect: true  # Using IRSA
+  storage:
+    mode: "s3"
+    availableModes: "filesystem,s3"
+
+# Service account with enterprise IAM role
+serviceAccount:
+  create: true
+  name: n8n-enterprise
+  awsRoleArn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
+
+# n8n Enterprise License Configuration
+license:
+  enabled: true
+  # Enterprise license activation key (get from n8n customer portal)
+  activationKey: "your-enterprise-license-key-here"
+
+# Service configuration with session affinity
+service:
+  type: ClusterIP
+  port: 5678
+  sessionAffinity:
+    enabled: true
+    timeoutSeconds: 14400  # 4 hours
+
+# Enterprise resource allocation
+resources:
+  main:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+  worker:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  webhookProcessor:
+    requests:
+      memory: "512Mi"
+      cpu: "300m"
+    limits:
+      memory: "1Gi"
+      cpu: "800m"
+
+# Enterprise configuration
+config:
+  timezone: UTC
+  extraEnv:
+    # Security settings
+    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+      value: "true"
+    
+    # Database SSL
+    - name: DB_POSTGRESDB_SSL_ENABLED
+      value: "true"
+    - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+      value: "true"  # Set to "false" only if using self-signed certs (not recommended for production)
+    
+    # Enterprise logging
+    - name: N8N_LOG_LEVEL
+      value: "info"
+    - name: N8N_LOG_OUTPUT
+      value: "json"  # Structured logging for enterprise
+    
+    # Performance settings
+    - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
+      value: "100"
+    
+    # Enterprise features
+    - name: N8N_ENTERPRISE_LICENSE_ENABLED
+      value: "true"
+    
+    # Advanced webhook settings
+    - name: N8N_WEBHOOK_TIMEOUT
+      value: "300000"  # 5 minutes
+
+# Advanced execution settings
+executions:
+  concurrency:
+    productionLimit: 100
+  timeout: 7200  # 2 hours
+  dataRetention:
+    saveOnError: true
+    saveOnSuccess: true
+    saveOnProgress: false
+    saveManualExecutions: true
+    prune: true
+    maxAge: 2160  # 90 days
+    maxCount: 100000
+    hardDeleteBuffer: 24  # 24 hours
+    pruneHardDeleteInterval: "0 2 * * *"  # Daily at 2 AM
+    pruneSoftDeleteInterval: "0 3 * * *"  # Daily at 3 AM
+
+# Webhook configuration
+webhook:
+  timeout: 300000  # 5 minutes for enterprise workloads
+
+# Core secrets
+secretRefs:
+  existingSecret: "n8n-enterprise-secrets"
+
+# Enterprise security settings
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Network policies for enterprise security
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-system
+      ports:
+        - protocol: TCP
+          port: 5678
+  egress:
+    - to: []  # Allow all egress (customize as needed)
+
+# Monitoring and observability (if using Prometheus)
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+  prometheusRule:
+    enabled: true

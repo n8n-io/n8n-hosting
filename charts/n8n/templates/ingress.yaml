@@ -1,0 +1,38 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "n8n.fullname" . }}-main
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- with .Values.ingress.annotations }}{{ toYaml . | nindent 4 }}{{- end }}
+    {{- if and .Values.ingress.sticky.enabled (or (eq .Values.ingress.className "nginx") (hasKey (default dict .Values.ingress.annotations) "kubernetes.io/ingress.class")) }}
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: {{ .Values.ingress.sticky.cookieName | quote }}
+    nginx.ingress.kubernetes.io/session-cookie-expires: {{ .Values.ingress.sticky.cookieExpires | quote }}
+    nginx.ingress.kubernetes.io/session-cookie-max-age: {{ .Values.ingress.sticky.cookieMaxAge | quote }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  rules:
+  {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+        {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "n8n.fullname" $ }}-main
+                port:
+                  number: {{ $.Values.service.port }}
+        {{- end }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+{{- end }}

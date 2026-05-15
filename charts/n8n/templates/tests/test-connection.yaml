@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "n8n.fullname" . }}-test-connection"
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  containers:
+    - name: wget
+      image: busybox:1.36
+      command:
+        - wget
+        - "--spider"
+        - "--timeout=10"
+        - "http://{{ include "n8n.fullname" . }}-main:{{ .Values.service.port }}/healthz"
+  restartPolicy: Never

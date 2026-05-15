@@ -1,0 +1,105 @@
+# Minimal n8n with Docker External Services
+# This example shows a minimal setup using Docker containers for external services
+# Perfect for quick testing and development
+#
+# Prerequisites: Start external services with Docker
+# docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:15
+# docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
+
+# Basic queue mode (minimum required)
+queueMode:
+  enabled: true
+  workerReplicaCount: 1
+  workerConcurrency: 5
+
+# Minimal multi-main (required by schema)
+# multiMain:
+#   enabled: true  # Requires n8n Enterprise license
+#   replicas: 2
+
+# External PostgreSQL (Docker container)
+database:
+  type: postgresdb
+  useExternal: true
+  host: "host.docker.internal"  # For Docker Desktop, use "localhost" for direct connection
+  port: 5432
+  database: n8n
+  schema: "public"               # PostgreSQL schema name
+  user: n8n
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+# External Redis (Docker container)
+redis:
+  enabled: true
+  useExternal: true
+  host: "host.docker.internal"  # For Docker Desktop, use "localhost" for direct connection  
+  port: 6379
+
+# Core secrets (you must create this secret)
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+# Service for local access
+service:
+  type: ClusterIP
+  port: 5678
+  sessionAffinity:
+    enabled: true
+
+# Minimal resources
+resources:
+  main:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  worker:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "300m"
+
+# Basic configuration  
+config:
+  timezone: UTC
+  extraEnv:
+    # Local development settings
+    - name: N8N_LOG_LEVEL
+      value: "debug"
+    - name: WEBHOOK_URL
+      value: "http://localhost:8080/webhook"
+    - name: N8N_EDITOR_BASE_URL
+      value: "http://localhost:8080"
+
+# Service account
+serviceAccount:
+  create: true
+
+# ---
+# Quick Setup Instructions:
+# 
+# 1. Start external services:
+#    docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:15
+#    docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
+#
+# 2. Create secrets:
+#    ./examples/create-secrets.sh
+#    # When prompted for database password, use: n8npassword
+#
+# 3. Deploy:
+#    helm install n8n-minimal ./charts/n8n -f examples/minimal-with-docker.yaml
+#
+# 4. Access:
+#    kubectl port-forward service/n8n-minimal-main 8080:5678
+#    Open: http://localhost:8080
+#
+# 5. Cleanup:
+#    helm uninstall n8n-minimal
+#    docker stop n8n-postgres n8n-redis
+#    docker rm n8n-postgres n8n-redis
