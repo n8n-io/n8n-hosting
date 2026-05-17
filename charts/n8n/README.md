@@ -152,6 +152,18 @@ keda:
 
 See [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) for a complete example.
 
+## GKE Workload Identity
+
+To use [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) on GKE, set the GCP service account email. This adds the `iam.gke.io/gcp-service-account` annotation to the Kubernetes ServiceAccount.
+
+```yaml
+serviceAccount:
+  create: true
+  gcpServiceAccount: "n8n-sa@my-project.iam.gserviceaccount.com"
+```
+
+Workload Identity is useful for authenticating to GCP services (Cloud SQL Auth Proxy, Secret Manager, etc.).
+
 ## Upgrading
 
 Chart version bumps are automated via semantic-release. Check the [CHANGELOG](../../CHANGELOG.md) for breaking changes before upgrading.
