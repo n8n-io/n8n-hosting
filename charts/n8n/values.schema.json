@@ -329,8 +329,23 @@
       "properties": {
         "create": { "type": "boolean" },
         "name": { "type": "string" },
-        "annotations": { "type": "object", "additionalProperties": true }
+        "annotations": { "type": "object", "additionalProperties": true },
+        "automountServiceAccountToken": { "type": ["boolean", "null"] }
       }
+    },
+    "extraInitContainers": {
+      "type": "array",
+      "description": "Additional init containers prepended to main, worker, and webhook-processor pods. Entries with restartPolicy: Always are treated as K8s 1.29+ native sidecars.",
+      "items": { "type": "object" }
+    },
+    "dnsPolicy": {
+      "type": "string",
+      "description": "Pod DNS policy applied to main, worker, and webhook-processor pods. Leave empty to use the cluster default."
+    },
+    "dnsConfig": {
+      "type": "object",
+      "description": "Pod DNS configuration applied to main, worker, and webhook-processor pods.",
+      "additionalProperties": true
     },
     "rbac": {
       "type": "object",

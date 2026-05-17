@@ -201,6 +201,37 @@ extraVolumeMounts: []
 #     mountPath: /app/config
 #     readOnly: true
 
+# ----- Extra init containers -----
+# Prepended to main, worker, and webhook-processor pods. Supports the K8s 1.29+
+# native sidecar pattern by setting `restartPolicy: Always` on an entry —
+# useful for sidecars that must start before the n8n container (e.g. a local
+# DNS resolver that the main container resolves against via dnsConfig).
+# Values are passed through Helm tpl (e.g. `{{ .Release.Name }}`).
+extraInitContainers: []
+# Examples:
+# extraInitContainers:
+#   - name: dns-sidecar
+#     restartPolicy: Always   # <-- native sidecar (requires K8s >= 1.29)
+#     image: my-dns-resolver:1.0.0
+#     startupProbe:
+#       tcpSocket:
+#         port: 53
+#       periodSeconds: 1
+#       failureThreshold: 30
+
+# ----- Pod DNS configuration -----
+# When set, applied to main, worker, and webhook-processor pod specs. Useful
+# for routing DNS through a sidecar resolver (set `dnsPolicy: None` and point
+# `dnsConfig.nameservers` at `127.0.0.1`) or overriding cluster DNS search.
+# See https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+dnsPolicy: ""
+# Example: dnsPolicy: None
+dnsConfig: {}
+# Example:
+# dnsConfig:
+#   nameservers:
+#     - 127.0.0.1
+
 # ----- Resources -----
 resources:
   main:
@@ -291,6 +322,12 @@ serviceAccount:
   awsRoleArn: ""
   # Additional annotations for the service account
   annotations: {}
+  # Whether the projected ServiceAccount token is mounted into n8n pods.
+  # Omit for the Kubernetes default (true). Set to false to remove the token
+  # from each pod's /var/run/secrets/kubernetes.io/serviceaccount path — n8n
+  # workloads that don't call the Kubernetes API don't need it. Applied at
+  # the pod-spec level so it works regardless of serviceAccount.create.
+  # automountServiceAccountToken: false
 
 networkPolicy:
   enabled: false

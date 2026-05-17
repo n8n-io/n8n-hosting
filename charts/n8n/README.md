@@ -101,6 +101,9 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `networkPolicy.enabled` | Network policies | `false` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
+| `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
+| `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
+| `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](./values.yaml) for the full list of configurable values.
 
