@@ -156,11 +156,14 @@ service:
 # ----- Ingress -----
 ingress:
   enabled: false
+  className: "traefik"
   sticky:
     enabled: false
     cookieName: n8n_affinity
-    cookieExpires: "172800"  # 2 days in seconds
-    cookieMaxAge: "172800"   # 2 days in seconds
+    cookieSecure: true          # set to false when using plain HTTP (e.g. local minikube)
+    # cookieExpires and cookieMaxAge are nginx-only — uncomment when using className: nginx
+    # cookieExpires: "172800"  # 2 days in seconds
+    # cookieMaxAge: "172800"   # 2 days in seconds
   hosts:
     - host: n8n.example.com   # <-- Change to your actual domain
       paths:
