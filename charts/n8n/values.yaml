@@ -156,14 +156,14 @@ service:
 # ----- Ingress -----
 ingress:
   enabled: false
-  className: "traefik"
+  className: "" # supported types are "traefik" & "nginx", "traefik" is suggested as nginx-ingress is deprecated
   sticky:
     enabled: false
     cookieName: n8n_affinity
     cookieSecure: true          # set to false when using plain HTTP (e.g. local minikube)
-    # cookieExpires and cookieMaxAge are nginx-only — uncomment when using className: nginx
-    # cookieExpires: "172800"  # 2 days in seconds
-    # cookieMaxAge: "172800"   # 2 days in seconds
+    # cookieExpires and cookieMaxAge are nginx-only, these are ignored by traefik
+    cookieExpires: "172800"  # 2 days in seconds
+    cookieMaxAge: "172800"   # 2 days in seconds
   hosts:
     - host: n8n.example.com   # <-- Change to your actual domain
       paths:
