@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/n8n-io/n8n-hosting/compare/v1.5.1...v1.6.0) (2026-05-20)
+
+### Features
+
+* **chart:** add node placement per deployment ([#135](https://github.com/n8n-io/n8n-hosting/issues/135)) ([98a6d54](https://github.com/n8n-io/n8n-hosting/commit/98a6d543c6371b61db51a9a7bd5a9091d4bdf845))
+
 <<<<<<< automated/release-v1.5.0
 ## [1.5.0](https://github.com/n8n-io/n8n-hosting/compare/v1.4.4...v1.5.0) (2026-05-08)
 
