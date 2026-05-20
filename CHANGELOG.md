@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/n8n-io/n8n-hosting/compare/v1.6.1...v1.7.0) (2026-05-20)
+
+### Features
+
+* **chart:** add extraInitContainers, dnsPolicy/dnsConfig, and serviceAccount.automountServiceAccountToken ([#139](https://github.com/n8n-io/n8n-hosting/issues/139)) ([4109dd3](https://github.com/n8n-io/n8n-hosting/commit/4109dd355a1996f6aa3d1649bc5af46acadd3957))
+
 <<<<<<< automated/release-v1.5.0
 ## [1.5.0](https://github.com/n8n-io/n8n-hosting/compare/v1.4.4...v1.5.0) (2026-05-08)
 
