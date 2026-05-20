@@ -1,3 +1,9 @@
+## [1.6.1](https://github.com/n8n-io/n8n-hosting/compare/v1.6.0...v1.6.1) (2026-05-20)
+
+### Bug Fixes
+
+* **chart:** allow standalone mode with external database ([#132](https://github.com/n8n-io/n8n-hosting/issues/132)) ([40240cf](https://github.com/n8n-io/n8n-hosting/commit/40240cf18c28795e8f1f33121b32e4c74c0414e8))
+
 <<<<<<< automated/release-v1.5.0
 ## [1.5.0](https://github.com/n8n-io/n8n-hosting/compare/v1.4.4...v1.5.0) (2026-05-08)
 
