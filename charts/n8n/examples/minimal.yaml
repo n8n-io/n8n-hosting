@@ -10,6 +10,15 @@
 #
 # Use this as a starting point for development or testing
 
+# Global metadata applied to all rendered Kubernetes resources
+commonLabels:
+  my-platform.io/team: automation
+  my-platform.io/cost-centre: PE24
+
+commonAnnotations:
+  secret.reloader.stakater.com/auto: "true"
+  my-platform.io/contact: team@example.com
+
 # Basic deployment settings
 queueMode:
   enabled: true

@@ -4,6 +4,12 @@ kind: RoleBinding
 metadata:
   name: {{ include "n8n.fullname" . }}
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

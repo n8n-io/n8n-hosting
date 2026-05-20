@@ -16,6 +16,16 @@
       "required": ["repository", "tag"]
     },
     "replicaCount": { "type": "integer", "minimum": 1 },
+    "commonLabels": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "commonAnnotations": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
     "multiMain": {
       "type": "object",
       "properties": {

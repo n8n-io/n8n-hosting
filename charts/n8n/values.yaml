@@ -8,6 +8,22 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
+# ----- Common labels and annotations -----
+# Applied to all Kubernetes resources in this chart.
+# Useful for governance requirements such as cost allocation tags,
+# team ownership labels, and tooling annotations (e.g., Stakater Reloader).
+commonLabels: {}
+# Example:
+# commonLabels:
+#   my-platform.io/team: cloud-engineering
+#   my-platform.io/cost-centre: PE24
+
+commonAnnotations: {}
+# Example:
+# commonAnnotations:
+#   secret.reloader.stakater.com/auto: "true"
+#   my-platform.io/contact: team@example.com
+
 # ----- Queue mode -----
 # Two deployment modes are supported:
 #   1. Queue mode (enabled: true, default) — main + workers + optional webhook processors.
