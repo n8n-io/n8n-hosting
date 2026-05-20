@@ -15,6 +15,9 @@ This directory contains common configuration examples for different deployment s
 ### Community Examples (KEDA Autoscaling)
 - **[keda-autoscaling.yaml](./keda-autoscaling.yaml)** - Redis queue-length worker scaling with KEDA
 
+### Community Examples (Node Placement)
+- **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
+
 ### Enterprise Examples (License Required)
 - **[production-s3.yaml](./production-s3.yaml)** - Production setup with multi-main, webhooks, S3 storage, and autoscaling
 - **[multi-main-queue.yaml](./multi-main-queue.yaml)** - Multi-main and queue mode configuration

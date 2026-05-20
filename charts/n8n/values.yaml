@@ -226,9 +226,29 @@ resources:
       memory: 512Mi
 
 # ----- Node placement -----
+# Global defaults applied to every n8n pod (main, worker, webhook-processor)
+# unless overridden in nodePlacement below.
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# Per-component overrides. Any value set here takes precedence over the global
+# nodeSelector/tolerations/affinity above for that component only; unset
+# components fall back to the globals.
+nodePlacement: {}
+# Example:
+# nodePlacement:
+#   main:
+#     nodeSelector:
+#       workload: n8n-frontend
+#   worker:
+#     nodeSelector:
+#       workload: n8n-workers
+#     tolerations:
+#       - key: dedicated
+#         operator: Equal
+#         value: n8n-workers
+#         effect: NoSchedule
 
 # ----- Security -----
 # Note: readOnlyRootFilesystem is intentionally not set. n8n writes to

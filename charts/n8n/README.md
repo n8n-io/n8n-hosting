@@ -100,8 +100,39 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `networkPolicy.enabled` | Network policies | `false` |
+| `nodePlacement` | Component-specific node placement overrides | `{}` |
 
 See [values.yaml](./values.yaml) for the full list of configurable values.
+
+## Node Placement
+
+Set global `nodeSelector`, `tolerations`, and `affinity` values to apply the same placement rules to all n8n pods. To target a specific deployment, set the matching `nodePlacement.main`, `nodePlacement.worker`, or `nodePlacement.webhookProcessor` value. Component-specific values take precedence; empty component values fall back to the global settings.
+
+```yaml
+nodeSelector:
+  kubernetes.io/os: linux
+
+nodePlacement:
+  worker:
+    nodeSelector:
+      workload: workers
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: n8n-workers
+        effect: NoSchedule
+  webhookProcessor:
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+```
+
+> **Note:** When `multiMain.enabled=true`, the chart emits an automatic pod-anti-affinity rule to spread main replicas across nodes. Setting `nodePlacement.main.affinity` replaces that auto rule — include your own pod-anti-affinity term if you still want main replicas spread.
+
+See [`examples/node-placement.yaml`](./examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
 
 ## Task Runners
 

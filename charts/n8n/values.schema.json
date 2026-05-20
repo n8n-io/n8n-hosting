@@ -274,6 +274,45 @@
     },
     "tolerations": { "type": "array" },
     "affinity": { "type": "object" },
+    "nodePlacement": {
+      "type": "object",
+      "description": "Component-specific pod node placement values. Non-empty component values override the global nodeSelector, tolerations, and affinity values.",
+      "properties": {
+        "main": {
+          "type": "object",
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "tolerations": { "type": "array" },
+            "affinity": { "type": "object" }
+          }
+        },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "tolerations": { "type": "array" },
+            "affinity": { "type": "object" }
+          }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "tolerations": { "type": "array" },
+            "affinity": { "type": "object" }
+          }
+        }
+      }
+    },
     "podAnnotations": { "type": "object", "additionalProperties": true },
     "podLabels": { "type": "object", "additionalProperties": true },
     "securityContext": {
