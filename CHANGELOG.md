@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/n8n-io/n8n-hosting/compare/v1.7.0...v1.8.0) (2026-05-20)
+
+### Features
+
+* **chart:** add global chart metadata support ([#130](https://github.com/n8n-io/n8n-hosting/issues/130)) ([f25bbb4](https://github.com/n8n-io/n8n-hosting/commit/f25bbb4ff13b446da0e084fa26696fe632e478f7))
+
 <<<<<<< automated/release-v1.5.0
 ## [1.5.0](https://github.com/n8n-io/n8n-hosting/compare/v1.4.4...v1.5.0) (2026-05-08)
 
