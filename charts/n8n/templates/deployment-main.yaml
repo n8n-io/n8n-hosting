@@ -25,15 +25,9 @@ spec:
       app.kubernetes.io/component: main
   template:
     metadata:
+      {{- $podAnns := merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
-        {{- with .Values.commonAnnotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        {{- toYaml $podAnns | nindent 8 }}
       labels:
         {{- include "n8n.labels" . | nindent 8 }}
         app.kubernetes.io/component: main

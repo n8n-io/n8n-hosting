@@ -6,11 +6,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
+  {{- $merged := merge (deepCopy (.Values.ingress.annotations | default dict)) (.Values.commonAnnotations | default dict) }}
+  {{- if or $merged (and .Values.ingress.sticky.enabled (or (eq .Values.ingress.className "nginx") (hasKey (default dict .Values.ingress.annotations) "kubernetes.io/ingress.class"))) }}
   annotations:
-    {{- with .Values.commonAnnotations }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
-    {{- with .Values.ingress.annotations }}
+    {{- with $merged }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
     {{- if and .Values.ingress.sticky.enabled (or (eq .Values.ingress.className "nginx") (hasKey (default dict .Values.ingress.annotations) "kubernetes.io/ingress.class")) }}
@@ -19,6 +18,7 @@ metadata:
     nginx.ingress.kubernetes.io/session-cookie-expires: {{ .Values.ingress.sticky.cookieExpires | quote }}
     nginx.ingress.kubernetes.io/session-cookie-max-age: {{ .Values.ingress.sticky.cookieMaxAge | quote }}
     {{- end }}
+  {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
