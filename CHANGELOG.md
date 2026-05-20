@@ -4,19 +4,17 @@
 
 * **chart:** add node placement per deployment ([#135](https://github.com/n8n-io/n8n-hosting/issues/135)) ([98a6d54](https://github.com/n8n-io/n8n-hosting/commit/98a6d543c6371b61db51a9a7bd5a9091d4bdf845))
 
-<<<<<<< automated/release-v1.5.0
 ## [1.5.0](https://github.com/n8n-io/n8n-hosting/compare/v1.4.4...v1.5.0) (2026-05-08)
 
 ### Features
 
 * **chart:** add per-component extraEnv for worker and webhook-processor ([#126](https://github.com/n8n-io/n8n-hosting/issues/126)) ([7dc3464](https://github.com/n8n-io/n8n-hosting/commit/7dc3464332b2f4a8a68e6103e5b9b3d06e74fe9a))
-=======
+
 ## [1.4.4](https://github.com/n8n-io/n8n-hosting/compare/v1.4.3...v1.4.4) (2026-05-08)
 
 ### Bug Fixes
 
 * **chart:** emit EXECUTIONS_DATA_PRUNE_MAX_COUNT when set to 0 ([#127](https://github.com/n8n-io/n8n-hosting/issues/127)) ([604e09c](https://github.com/n8n-io/n8n-hosting/commit/604e09c1ab0f78dc0107cacb7e44cb5ee3742774))
->>>>>>> main
 
 ## [1.4.3](https://github.com/n8n-io/n8n-hosting/compare/v1.4.2...v1.4.3) (2026-05-01)
 
