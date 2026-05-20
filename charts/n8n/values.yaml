@@ -206,7 +206,9 @@ extraVolumeMounts: []
 # native sidecar pattern by setting `restartPolicy: Always` on an entry —
 # useful for sidecars that must start before the n8n container (e.g. a local
 # DNS resolver that the main container resolves against via dnsConfig).
-# Values are passed through Helm tpl (e.g. `{{ .Release.Name }}`).
+# Values are passed through Helm tpl (e.g. `{{ .Release.Name }}`), so any
+# literal `{{` in a container's args/env/command must be escaped as
+# `{{ "{{" }}` to avoid being parsed as a template directive.
 extraInitContainers: []
 # Examples:
 # extraInitContainers:

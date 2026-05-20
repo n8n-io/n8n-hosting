@@ -330,7 +330,7 @@
         "create": { "type": "boolean" },
         "name": { "type": "string" },
         "annotations": { "type": "object", "additionalProperties": true },
-        "automountServiceAccountToken": { "type": ["boolean", "null"] }
+        "automountServiceAccountToken": { "type": "boolean" }
       }
     },
     "extraInitContainers": {
