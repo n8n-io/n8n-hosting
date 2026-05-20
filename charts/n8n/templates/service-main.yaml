@@ -5,7 +5,14 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
+  {{- $isTraefik := and .Values.ingress.enabled .Values.ingress.sticky.enabled (or (eq .Values.ingress.className "traefik") (hasKey (default dict .Values.ingress.annotations) "traefik.ingress.kubernetes.io/router.entrypoints")) }}
   {{- $merged := merge (deepCopy (.Values.service.main.annotations | default dict)) (.Values.service.annotations | default dict) }}
+  {{- if $isTraefik }}
+  {{- $_ := set $merged "traefik.ingress.kubernetes.io/service.sticky.cookie" "true" }}
+  {{- $_ := set $merged "traefik.ingress.kubernetes.io/service.sticky.cookie.name" .Values.ingress.sticky.cookieName }}
+  {{- $_ := set $merged "traefik.ingress.kubernetes.io/service.sticky.cookie.secure" (.Values.ingress.sticky.cookieSecure | toString) }}
+  {{- $_ := set $merged "traefik.ingress.kubernetes.io/service.sticky.cookie.httponly" "true" }}
+  {{- end }}
   {{- with $merged }}
   annotations:
     {{- toYaml . | nindent 4 }}
