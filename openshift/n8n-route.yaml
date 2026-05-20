@@ -1,0 +1,17 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: n8n-web
+  namespace: n8n
+spec:
+  host: n8n.example.com
+  to:
+    kind: Service
+    name: n8n
+    weight: 100
+  port:
+    targetPort: 5678
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
