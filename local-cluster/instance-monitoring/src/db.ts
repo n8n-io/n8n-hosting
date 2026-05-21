@@ -5,51 +5,46 @@ const dbPath = process.env.DB_PATH ?? path.join(process.cwd(), "monitoring.db");
 const db = new DatabaseSync(dbPath);
 
 db.exec(`
-  CREATE TABLE IF NOT EXISTS ingest_records (
-    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-    instance_id           TEXT NOT NULL,
-    instance_identifier   TEXT,
-    n8n_version           TEXT,
-    total_prod_executions INTEGER,
-    interval_start        TEXT,
-    interval_end          TEXT,
-    received_at           TEXT NOT NULL DEFAULT (datetime('now'))
+  CREATE TABLE IF NOT EXISTS instance_executions (
+    instance_id  TEXT NOT NULL,
+    day          TEXT NOT NULL,
+    total        INTEGER NOT NULL,
+    failed       INTEGER NOT NULL,
+    fetched_at   TEXT NOT NULL,
+    PRIMARY KEY (instance_id, fetched_at)
   )
 `);
 
-export interface IngestRecord {
-  id: number;
+export interface ExecutionRecord {
   instance_id: string;
-  instance_identifier: string | null;
-  n8n_version: string | null;
-  total_prod_executions: number | null;
-  interval_start: string | null;
-  interval_end: string | null;
-  received_at: string;
+  day: string;
+  total: number;
+  failed: number;
+  fetched_at: string;
 }
 
 const insertStmt = db.prepare(`
-  INSERT INTO ingest_records
-    (instance_id, instance_identifier, n8n_version, total_prod_executions, interval_start, interval_end)
-  VALUES
-    (@instance_id, @instance_identifier, @n8n_version, @total_prod_executions, @interval_start, @interval_end)
+  INSERT OR REPLACE INTO instance_executions (instance_id, day, total, failed, fetched_at)
+  VALUES (@instance_id, @day, @total, @failed, @fetched_at)
 `);
 
 const selectAllStmt = db.prepare(
-  "SELECT * FROM ingest_records ORDER BY instance_id ASC, received_at DESC"
+  "SELECT * FROM instance_executions ORDER BY instance_id ASC, fetched_at DESC"
 );
 
-export function insertRecord(data: {
-  instance_id: string;
-  instance_identifier: string | null;
-  n8n_version: string;
-  total_prod_executions: number;
-  interval_start: string;
-  interval_end: string;
-}): void {
-  insertStmt.run(data as Record<string, number | string | null>);
+const latestFetchedAtStmt = db.prepare(
+  "SELECT MAX(fetched_at) AS latest FROM instance_executions WHERE instance_id = ?"
+);
+
+export function getLatestFetchedAt(instanceId: string): string | null {
+  const row = latestFetchedAtStmt.get(instanceId) as { latest: string | null } | undefined;
+  return row?.latest ?? null;
 }
 
-export function getAllRecords(): IngestRecord[] {
-  return selectAllStmt.all() as unknown as IngestRecord[];
+export function upsertExecution(data: ExecutionRecord): void {
+  insertStmt.run(data as unknown as Record<string, number | string>);
+}
+
+export function getAllExecutions(): ExecutionRecord[] {
+  return selectAllStmt.all() as unknown as ExecutionRecord[];
 }

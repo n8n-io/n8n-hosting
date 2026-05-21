@@ -28,6 +28,12 @@ config:
     - secretRef:
         name: n8n-env-file
         optional: true
+    - secretRef:
+        name: n8n-token-exchange
+        optional: true
+  extraEnv:
+    - name: N8N_INSIGHTS_COMPACTION_INTERVAL_MINUTES
+      value: "1"
 
 # Each namespace gets its own n8n-secrets secret (created by `make install`).
 secretRefs:

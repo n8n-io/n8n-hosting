@@ -9,3 +9,8 @@ logs/
 
 # Local environment overrides (optional — see .env.example)
 .env
+
+# Generated token-exchange key pair (regenerated on every make up)
+.keys/
+
+.DS_Store

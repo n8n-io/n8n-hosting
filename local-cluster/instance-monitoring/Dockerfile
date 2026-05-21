@@ -1,16 +1,14 @@
 FROM node:24-alpine
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
+COPY package.json ./
+RUN npm install --omit=dev
 
 COPY tsconfig.json ./
 COPY src ./src
 
-EXPOSE 5700 5701
+EXPOSE 5701
 
 VOLUME ["/data"]
 

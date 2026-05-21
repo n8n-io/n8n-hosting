@@ -3,10 +3,7 @@ VALUES      := values.yaml
 NAMESPACES  := n8n-1 n8n-2 n8n-3
 PIDS_FILE   := .pids
 N8N_IMAGE   := n8nio/n8n:local
-
-# Set MONITORING=1 to configure n8n instances to report to the local instance-monitoring service.
-# Requires the instance-monitoring service to be running (see local-cluster/instance-monitoring/).
-MONITORING  ?= 0
+KEYS_DIR    := $(CURDIR)/.keys
 
 # Isolated kubeconfig — never touches ~/.kube/config
 export KUBECONFIG := $(CURDIR)/.kubeconfig
@@ -35,6 +32,16 @@ delete-cluster: ## Delete the local kind cluster and remove the kubeconfig
 
 # ── Full lifecycle ────────────────────────────────────────────────────────────
 
+.PHONY: generate-keys
+generate-keys: ## Generate RSA 2048-bit key pair for token exchange (regenerated on every make up)
+	@mkdir -p $(KEYS_DIR)
+	@echo "==> Generating RSA key pair in $(KEYS_DIR)..."
+	@openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+		-out $(KEYS_DIR)/private.pem 2>/dev/null
+	@openssl pkey -in $(KEYS_DIR)/private.pem -pubout \
+		-out $(KEYS_DIR)/public.pem 2>/dev/null
+	@echo "Keys written to $(KEYS_DIR)/"
+
 .PHONY: preload-images
 preload-images: ## Load the local n8n image into the kind node
 	@echo "==> Loading $(N8N_IMAGE) into kind node..."
@@ -42,14 +49,14 @@ preload-images: ## Load the local n8n image into the kind node
 	@echo "Image loaded."
 
 .PHONY: up
-up: cluster preload-images install ## Full setup: create cluster + preload image + install all instances + start port-forwards
+up: cluster generate-keys preload-images install ## Full setup: create cluster + generate keys + preload image + install all instances + start port-forwards
 	@$(MAKE) wait || echo "==> Warning: some pods may still be initialising — run 'make wait' to check"
 	@$(MAKE) forward
 	@echo ""
 	@echo "All instances are up:"
-	@echo "  http://localhost:5678  →  n8n-1"
-	@echo "  http://localhost:5679  →  n8n-2"
-	@echo "  http://localhost:5680  →  n8n-3"
+	@echo "  http://localhost:5678  →  n8n-1 (axolotl)"
+	@echo "  http://localhost:5679  →  n8n-2 (narwhal)"
+	@echo "  http://localhost:5680  →  n8n-3 (dolphin)"
 
 .PHONY: down
 down: unforward uninstall ## Teardown: stop port-forwards + uninstall all instances (keeps cluster)
@@ -85,11 +92,15 @@ install: ## Create namespaces, secrets, and install Helm releases
 				--from-env-file=.env \
 				--dry-run=client -o yaml | kubectl apply -f -; \
 		fi; \
-		extra_args=""; \
-		if [ "$(MONITORING)" = "1" ]; then \
-			extra_args="-f monitoring-values.yaml --set-string config.extraEnv[3].name=N8N_WORKFLOW_EXECUTION_DATA_REPORTING_INSTANCE_IDENTIFIER --set-string config.extraEnv[3].value=$$identifier"; \
-		fi; \
-		helm upgrade --install n8n $(CHART) -n $$ns -f $(VALUES) $$extra_args --wait=false; \
+		TRUSTED_KEYS=$$(jq -n \
+			--arg key "$$(cat $(KEYS_DIR)/public.pem)" \
+			'[{"type":"static","kid":"instance-monitoring-key","algorithms":["RS256"],"key":$$key,"issuer":"https://instance-monitoring.local","expectedAudience":"n8n","allowedRoles":["global:admin"]}]'); \
+		kubectl create secret generic n8n-token-exchange -n $$ns \
+			--from-literal=N8N_TOKEN_EXCHANGE_ENABLED=true \
+			--from-literal=N8N_ENV_FEAT_TOKEN_EXCHANGE=true \
+			--from-literal="N8N_TOKEN_EXCHANGE_TRUSTED_KEYS=$$TRUSTED_KEYS" \
+			--dry-run=client -o yaml | kubectl apply -f -; \
+		helm upgrade --install n8n $(CHART) -n $$ns -f $(VALUES) --wait=false; \
 	done
 
 .PHONY: uninstall

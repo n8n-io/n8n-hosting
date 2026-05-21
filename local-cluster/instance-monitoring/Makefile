@@ -1,5 +1,7 @@
-MONITORING_IMAGE := instance-monitoring:local
-PIDS_FILE        := .pids
+MONITORING_IMAGE      := instance-monitoring:local
+PIDS_FILE             := .pids
+KEYS_DIR              := $(CURDIR)/../.keys
+POLL_INTERVAL_SECONDS ?= 90
 
 # Kubeconfig lives one level up (created by `make cluster` in local-cluster/)
 export KUBECONFIG := $(CURDIR)/../.kubeconfig
@@ -18,8 +20,6 @@ up: image install wait forward ## Build image, deploy to cluster, and start port
 	@echo "Instance monitoring is up:"
 	@echo "  http://localhost:5700/dashboard  →  dashboard"
 	@echo ""
-	@echo "n8n ingest URL (cluster-internal):"
-	@echo "  http://instance-monitoring.monitoring.svc.cluster.local:5700/ingest-data"
 
 .PHONY: down
 down: unforward uninstall ## Stop port-forward and remove from cluster
@@ -46,10 +46,22 @@ image: cluster ## Build the Docker image and load it into the kind cluster
 # ── Install / Uninstall ───────────────────────────────────────────────────────
 
 .PHONY: install
-install: ## Apply k8s manifests (namespace, pvc, deployment, service)
+install: ## Apply k8s manifests and create the token-exchange private key secret
+	@if [ ! -f $(KEYS_DIR)/private.pem ]; then \
+		echo "ERROR: $(KEYS_DIR)/private.pem not found."; \
+		echo "Run 'make up' in local-cluster/ first to generate keys."; \
+		exit 1; \
+	fi
 	@echo "==> Applying k8s manifests..."
 	@kubectl apply -f k8s/namespace.yaml
+	@echo "==> Creating token-exchange-private-key secret..."
+	@kubectl create secret generic token-exchange-private-key \
+		-n monitoring \
+		--from-file=private.pem=$(KEYS_DIR)/private.pem \
+		--dry-run=client -o yaml | kubectl apply -f -
 	@kubectl apply -f k8s/
+	@kubectl set env deployment/instance-monitoring -n monitoring \
+		POLL_INTERVAL_SECONDS=$(POLL_INTERVAL_SECONDS)
 
 .PHONY: uninstall
 uninstall: ## Delete k8s manifests
@@ -66,10 +78,15 @@ wait: ## Wait for the monitoring pod to become ready
 # ── Port-forward ──────────────────────────────────────────────────────────────
 
 .PHONY: forward
-forward: ## Start background port-forward for the dashboard (localhost:5700)
+forward: ## Start background port-forward for the dashboard (localhost:5700 → :5701)
 	@if [ -f $(PIDS_FILE) ]; then \
-		echo "Port-forward already running ($(PIDS_FILE) exists). Run 'make unforward' first."; \
-		exit 1; \
+		pid=$$(cat $(PIDS_FILE)); \
+		if kill -0 "$$pid" 2>/dev/null; then \
+			echo "Port-forward already running (PID $$pid). Run 'make unforward' first."; \
+			exit 1; \
+		fi; \
+		echo "Removing stale $(PIDS_FILE)..."; \
+		rm -f $(PIDS_FILE); \
 	fi
 	@mkdir -p logs
 	@echo "==> Forwarding localhost:5700 → monitoring/instance-monitoring:5701 (dashboard)"

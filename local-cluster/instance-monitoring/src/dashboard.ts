@@ -1,79 +1,48 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { getAllRecords, type IngestRecord } from "./db.js";
+import { getAllExecutions, type ExecutionRecord } from "./db.js";
 
-function groupByInstanceId(records: IngestRecord[]): Map<string, IngestRecord[]> {
-  const groups = new Map<string, IngestRecord[]>();
-  for (const record of records) {
-    const existing = groups.get(record.instance_id);
-    if (existing) {
-      existing.push(record);
-    } else {
-      groups.set(record.instance_id, [record]);
-    }
+function groupByInstance(records: ExecutionRecord[]): Map<string, ExecutionRecord[]> {
+  const groups = new Map<string, ExecutionRecord[]>();
+  for (const r of records) {
+    const list = groups.get(r.instance_id) ?? [];
+    list.push(r);
+    groups.set(r.instance_id, list);
   }
   return groups;
 }
 
-function computeTotals(groups: Map<string, IngestRecord[]>): Map<string, number> {
-  const totals = new Map<string, number>();
-  for (const [instanceId, records] of groups) {
-    const label = records[0].instance_identifier ?? instanceId;
-    const sum = records.reduce((acc, r) => acc + (r.total_prod_executions ?? 0), 0);
-    totals.set(label, sum);
-  }
-  return totals;
+function formatFetchedAt(iso: string): string {
+  return iso.replace("T", " ").replace(/\.\d+Z$/, " UTC");
 }
 
-function renderSummary(totals: Map<string, number>): string {
-  if (totals.size === 0) return "";
-  const rows = [...totals.entries()]
-    .map(([label, sum]) => `<div class="summary-row"><span>${label}</span><span>${sum.toLocaleString()}</span></div>`)
-    .join("");
-  return `
-  <section class="summary">
-    <h2>Total prod executions (all time)</h2>
-    ${rows}
-  </section>`;
-}
-
-function formatDate(iso: string): string {
-  return iso.replace("T", " ").replace(".000Z", "").replace("Z", "");
-}
-
-function renderHtml(groups: Map<string, IngestRecord[]>): string {
-  const totals = computeTotals(groups);
-  const summary = renderSummary(totals);
+function renderHtml(groups: Map<string, ExecutionRecord[]>): string {
   const sections =
     groups.size === 0
-      ? `<p class="empty">No data ingested yet.</p>`
+      ? `<p class="empty">No data collected yet — waiting for first poll cycle.</p>`
       : [...groups.entries()]
           .map(([instanceId, records]) => {
-            const latest = records[0];
-            const identifier = latest.instance_identifier ?? "";
             const rows = records
               .map(
                 (r) => `
               <tr>
-                <td>${r.received_at}</td>
-                <td>${r.n8n_version ?? ""}</td>
-                <td>${r.total_prod_executions ?? ""}</td>
-                <td>${r.interval_start ? formatDate(r.interval_start) : ""}</td>
-                <td>${r.interval_end ? formatDate(r.interval_end) : ""}</td>
+                <td>${r.day}</td>
+                <td>${r.total.toLocaleString()}</td>
+                <td>${r.failed.toLocaleString()}</td>
+                <td>${formatFetchedAt(r.fetched_at)}</td>
               </tr>`
               )
               .join("");
 
             return `
           <section>
-            <h2>${instanceId}${identifier ? ` <span class="identifier">(${identifier})</span>` : ""}</h2>
+            <h2>${instanceId}</h2>
             <table>
               <thead>
                 <tr>
-                  <th>Received at</th>
-                  <th>n8n version</th>
-                  <th>Prod executions</th>
-                  <th>Interval start</th>
-                  <th>Interval end</th>
+                  <th>Day</th>
+                  <th>Total executions</th>
+                  <th>Failed</th>
+                  <th>Last fetched</th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
@@ -95,22 +64,17 @@ function renderHtml(groups: Map<string, IngestRecord[]>): string {
     h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
     .meta { color: #666; font-size: 0.85rem; margin-bottom: 2rem; }
     section { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1.25rem; margin-bottom: 1.5rem; }
-    h2 { font-size: 1rem; margin-bottom: 1rem; word-break: break-all; }
-    .identifier { font-weight: normal; color: #555; }
+    h2 { font-size: 1rem; margin-bottom: 1rem; }
     table { width: 100%; border-collapse: collapse; }
     th { text-align: left; font-size: 0.8rem; color: #666; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.4rem 0.75rem; border-bottom: 2px solid #e0e0e0; white-space: nowrap; }
     td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0f0f0; font-variant-numeric: tabular-nums; }
     tr:last-child td { border-bottom: none; }
     .empty { color: #888; font-style: italic; }
-    .summary h2 { margin-bottom: 0.75rem; }
-    .summary-row { display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid #f0f0f0; font-variant-numeric: tabular-nums; }
-    .summary-row:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
   <h1>n8n Instance Monitoring</h1>
-  <p class="meta">Auto-refreshes every 30 seconds &nbsp;&bull;&nbsp; ${groups.size} instance${groups.size !== 1 ? "s" : ""}</p>
-  ${summary}
+  <p class="meta">Auto-refreshes every 30 s &nbsp;&bull;&nbsp; Pull-based via token exchange &nbsp;&bull;&nbsp; ${groups.size} instance${groups.size !== 1 ? "s" : ""}</p>
   ${sections}
 </body>
 </html>`;
@@ -123,9 +87,9 @@ export function handleDashboard(req: IncomingMessage, res: ServerResponse): void
     return;
   }
 
-  let records: IngestRecord[];
+  let records: ExecutionRecord[];
   try {
-    records = getAllRecords();
+    records = getAllExecutions();
   } catch (err) {
     console.error("DB query error:", err);
     res.writeHead(500, { "Content-Type": "text/plain" });
@@ -133,9 +97,7 @@ export function handleDashboard(req: IncomingMessage, res: ServerResponse): void
     return;
   }
 
-  const groups = groupByInstanceId(records);
-  const html = renderHtml(groups);
-
+  const groups = groupByInstance(records);
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-  res.end(html);
+  res.end(renderHtml(groups));
 }

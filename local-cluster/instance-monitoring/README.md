@@ -1,24 +1,27 @@
 # Instance Monitoring
 
-A lightweight service that collects daily execution reports from n8n instances running in the local cluster and displays them in a browser dashboard.
+A lightweight service that **pulls** daily execution data from all three n8n instances in the local cluster and displays it in a browser dashboard.
 
-It runs as a single pod in a dedicated `monitoring` namespace — separate from the `n8n-1`, `n8n-2`, `n8n-3` namespaces. All three n8n instances send their data to the same service endpoint via cluster-internal DNS.
+Rather than waiting for n8n instances to push data, this service authenticates against each instance every 5 minutes using [OAuth 2.0 Token Exchange (RFC 8693)](https://datatracker.ietf.org/doc/html/rfc8693): it mints a short-lived JWT signed with the shared private key, exchanges it for a Bearer token at each instance's `/rest/auth/oauth/token` endpoint, then calls the public Insights API (`GET /api/v1/insights/summary`) with that token.
+
+This models the real OEM pattern described in [`How to track billable executions across instances with insights public api.md`](../How%20to%20track%20billable%20executions%20across%20instances%20with%20insights%20public%20api.md).
 
 | Port | Access | Purpose |
 |------|--------|---------|
-| `5700` | Cluster-internal only (never port-forwarded) | `POST /ingest-data` — receives reports from n8n instances |
-| `5701` | Forwarded to `localhost:5700` on your machine | `GET /dashboard` — view ingested data in a browser |
+| `5701` | Forwarded to `localhost:5700` on your machine | `GET /dashboard` — view collected data in a browser |
 
 ---
 
 ## Prerequisites
 
-The local cluster must already be running. If it isn't, start it first from the parent directory:
+The local cluster must already be running and keys must be generated. Run `make up` from the parent directory first:
 
 ```bash
 cd ..
 make up
 ```
+
+This generates `.keys/private.pem` and `.keys/public.pem` and configures all three n8n instances to trust the generated public key for token exchange.
 
 Additionally you need:
 
@@ -40,6 +43,8 @@ make up
 open http://localhost:5700/dashboard
 ```
 
+Data appears within seconds of the pod starting — the poller runs immediately on startup, then every 5 minutes.
+
 Tear down (removes the monitoring service but leaves the cluster and n8n instances running):
 
 ```bash
@@ -55,7 +60,7 @@ make down
 | `make up` | Build image + deploy + wait for ready + start port-forward |
 | `make down` | Stop port-forward + remove from cluster |
 | `make image` | Build Docker image and load it into the kind cluster |
-| `make install` | Apply k8s manifests (namespace, PVC, deployment, service) |
+| `make install` | Apply k8s manifests and create the token-exchange private key secret |
 | `make uninstall` | Delete k8s manifests |
 | `make wait` | Wait for the pod to become ready |
 | `make forward` | Start background port-forward (`localhost:5700` → dashboard) |
@@ -64,47 +69,52 @@ make down
 
 ---
 
-## Configuring n8n to Send Reports
-
-n8n instances inside the cluster reach the monitoring service via cluster-internal DNS. Configure an HTTP Request node (or a Schedule Trigger + HTTP Request workflow) in any n8n instance to POST to:
-
-```
-http://instance-monitoring.monitoring.svc.cluster.local:5700/ingest-data
-```
-
-Expected JSON payload:
-
-```json
-{
-  "interval": {
-    "startTime": "2026-03-25T00:00:00.000Z",
-    "endTime": "2026-03-25T23:59:59.999Z"
-  },
-  "totalProdExecutions": 10,
-  "n8nVersion": "2.14.10",
-  "instanceId": "your-instance-id",
-  "instanceIdentifier": "optional-human-readable-name"
-}
-```
-
-Required fields: `instanceId`, `n8nVersion`, `totalProdExecutions`, `interval`.
-`instanceIdentifier` is optional and shown alongside the instance ID on the dashboard.
-
----
-
 ## How It Works
 
-The service runs two HTTP servers in the same Node.js process:
+### Token exchange flow
 
-- **Port 5700 (ingest)** — exposed only as a `ClusterIP` service, so it is never reachable from outside the cluster. n8n instances use the cluster-internal DNS name to POST their daily report. Each report is stored in a SQLite database on a PersistentVolumeClaim mounted at `/data`.
+On every poll cycle, for each n8n instance:
 
-- **Port 5701 (dashboard)** — also a `ClusterIP` service, but `make forward` creates a `kubectl port-forward` mapping it to `localhost:5700` on your machine. The dashboard page renders all stored records grouped by `instanceId`, newest first, and auto-refreshes every 30 seconds.
+1. **Mint a JWT** — signed with the RSA private key from `../.keys/private.pem`. The JWT carries:
+   - `kid: instance-monitoring-key` (matches the trusted key config on the n8n instances)
+   - `iss: https://instance-monitoring.local`
+   - `role: global:admin`
+   - A fresh `jti` UUID (replay protection — each JWT is single-use)
+   - `exp: now + 300s` (5-minute lifetime)
 
-Data persists across pod restarts via the PVC. It is removed when you run `make uninstall` (which deletes the PVC along with the other manifests).
+2. **Exchange for a Bearer token** — `POST <instance>/rest/auth/oauth/token` with `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`. On the first call to a fresh instance, n8n automatically provisions a `global:admin` user for the monitoring service (JIT provisioning).
+
+3. **Call the Insights API** — `GET <instance>/api/v1/insights/summary?startDate=<today>T00:00:00Z&endDate=<now>` with `Authorization: Bearer <token>`.
+
+4. **Upsert into SQLite** — one row per `(instance_id, day)`. Re-running within the same day updates the totals rather than appending.
+
+### Architecture
+
+```
+instance-monitoring pod
+├── Dashboard server  :5701  GET /dashboard  → renders HTML from SQLite
+└── Poller (every 5 min)
+    ├── [axolotl] mint JWT → exchange → GET /api/v1/insights/summary → upsert
+    ├── [narwhal] mint JWT → exchange → GET /api/v1/insights/summary → upsert
+    └── [dolphin] mint JWT → exchange → GET /api/v1/insights/summary → upsert
+```
+
+All three instances are polled in parallel. A failure on one instance is logged but does not block the others.
+
+### Key handoff
+
+The RSA private key is generated by `local-cluster/make up` and stored in `local-cluster/.keys/private.pem` (gitignored). `make install` reads that file and creates a Kubernetes secret `token-exchange-private-key` in the `monitoring` namespace, which the pod mounts at `/keys/private.pem`.
+
+### Data persistence
+
+SQLite database is stored on a 1Gi PersistentVolumeClaim at `/data/monitoring.db`. Data persists across pod restarts. Running `make uninstall` deletes the PVC and removes all stored data.
 
 ---
 
 ## Troubleshooting
+
+**`make install` fails with "private.pem not found":**
+Run `make up` in the parent `local-cluster/` directory first to generate the key pair.
 
 **Pod not becoming ready:**
 ```bash
@@ -113,19 +123,21 @@ kubectl --kubeconfig ../.kubeconfig describe pod -l app=instance-monitoring -n m
 kubectl --kubeconfig ../.kubeconfig logs -l app=instance-monitoring -n monitoring
 ```
 
-**Port already in use (`bind: address already in use`):**
+**Poll errors in logs (token exchange failing):**
+```bash
+kubectl --kubeconfig ../.kubeconfig logs -l app=instance-monitoring -n monitoring -f
+```
+Common causes:
+- n8n instances not yet ready (pod still initialising)
+- Token exchange not enabled on the instances (`N8N_TOKEN_EXCHANGE_ENABLED` not set) — ensure `make up` in `local-cluster/` completed successfully
+
+**Port already in use:**
 ```bash
 make unforward
 make forward
 ```
 
 **Redeploying after code changes:**
-```bash
-make down
-make up
-```
-
-**Start completely fresh (removes all data):**
 ```bash
 make down
 make up

@@ -8,9 +8,6 @@ spec:
   selector:
     app: instance-monitoring
   ports:
-    - name: ingest
-      port: 5700
-      targetPort: 5700
     - name: dashboard
       port: 5701
       targetPort: 5701

@@ -18,16 +18,29 @@ spec:
           image: instance-monitoring:local
           imagePullPolicy: Never
           ports:
-            - name: ingest
-              containerPort: 5700
             - name: dashboard
               containerPort: 5701
           env:
             - name: DB_PATH
               value: /data/monitoring.db
+            - name: N8N_INSTANCES
+              value: '[{"id":"axolotl","url":"http://n8n-main.n8n-1.svc.cluster.local:5678"},{"id":"narwhal","url":"http://n8n-main.n8n-2.svc.cluster.local:5678"},{"id":"dolphin","url":"http://n8n-main.n8n-3.svc.cluster.local:5678"}]'
+            - name: TOKEN_EXCHANGE_PRIVATE_KEY_PATH
+              value: /keys/private.pem
+            - name: TOKEN_EXCHANGE_KID
+              value: instance-monitoring-key
+            - name: TOKEN_EXCHANGE_ISSUER
+              value: https://instance-monitoring.local
+            - name: TOKEN_EXCHANGE_AUDIENCE
+              value: n8n
+            - name: POLL_INTERVAL_SECONDS
+              value: "90"
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: token-exchange-key
+              mountPath: /keys
+              readOnly: true
           resources:
             requests:
               cpu: 50m
@@ -45,3 +58,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: instance-monitoring-data
+        - name: token-exchange-key
+          secret:
+            secretName: token-exchange-private-key
+            items:
+              - key: private.pem
+                path: private.pem
