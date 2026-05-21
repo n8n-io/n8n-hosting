@@ -44,9 +44,8 @@ async function pollInstance(
   const now = new Date();
   const day = now.toISOString().slice(0, 10);
   const lastFetchedAt = getLatestFetchedAt(instance.id);
-  const startDate = lastFetchedAt
-    ? lastFetchedAt
-    : new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString();
+  const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString();
+  const startDate = lastFetchedAt ? lastFetchedAt : oneYearAgo;
   const endDate = now.toISOString();
   console.log(`[${instance.id}] Polling insights from ${startDate} to ${endDate}...`);
   try {
