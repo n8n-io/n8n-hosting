@@ -217,6 +217,21 @@ extraVolumeMounts: []
 #     mountPath: /app/config
 #     readOnly: true
 
+# ----- Extra containers (sidecars) -----
+# Appended to main, worker, and webhook-processor pods after the n8n container
+# (and after the optional task-runner sidecar). Use with extraVolumes / extraVolumeMounts.
+# Values are passed through Helm tpl (e.g. {{ .Release.Name }}).
+extraContainers: []
+# Examples:
+# extraContainers:
+#   - name: log-shipper
+#     image: busybox:1.36
+#     args: ["sh", "-c", "while true; do sleep 3600; done"]
+#     volumeMounts:
+#       - name: shared-logs
+#         mountPath: /var/log/n8n
+#         readOnly: true
+
 # ----- Extra init containers -----
 # Prepended to main, worker, and webhook-processor pods. Supports the K8s 1.29+
 # native sidecar pattern by setting `restartPolicy: Always` on an entry —

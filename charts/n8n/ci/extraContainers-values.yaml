@@ -1,0 +1,6 @@
+# CI overlay: merged with examples/minimal.yaml in .github/workflows/ci.yml
+# to ensure extraContainers renders on every PR (main + worker + webhook-processor).
+extraContainers:
+  - name: ci-extra-containers-smoke
+    image: busybox:1.36
+    args: ["sleep", "infinity"]

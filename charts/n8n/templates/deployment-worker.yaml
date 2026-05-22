@@ -220,6 +220,10 @@ spec:
           {{- end }}
         {{- end }}
 
+        {{- with .Values.extraContainers }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+
       # External volumes
       volumes:
         {{- if and .Values.taskRunners.enabled .Values.taskRunners.customConfig.enabled }}
