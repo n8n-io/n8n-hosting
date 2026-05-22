@@ -8,6 +8,22 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
+# ----- Common labels and annotations -----
+# Applied to all Kubernetes resources in this chart.
+# Useful for governance requirements such as cost allocation tags,
+# team ownership labels, and tooling annotations (e.g., Stakater Reloader).
+commonLabels: {}
+# Example:
+# commonLabels:
+#   my-platform.io/team: cloud-engineering
+#   my-platform.io/cost-centre: PE24
+
+commonAnnotations: {}
+# Example:
+# commonAnnotations:
+#   secret.reloader.stakater.com/auto: "true"
+#   my-platform.io/contact: team@example.com
+
 # ----- Queue mode -----
 # Two deployment modes are supported:
 #   1. Queue mode (enabled: true, default) — main + workers + optional webhook processors.
@@ -216,6 +232,39 @@ extraContainers: []
 #         mountPath: /var/log/n8n
 #         readOnly: true
 
+# ----- Extra init containers -----
+# Prepended to main, worker, and webhook-processor pods. Supports the K8s 1.29+
+# native sidecar pattern by setting `restartPolicy: Always` on an entry —
+# useful for sidecars that must start before the n8n container (e.g. a local
+# DNS resolver that the main container resolves against via dnsConfig).
+# Values are passed through Helm tpl (e.g. `{{ .Release.Name }}`), so any
+# literal `{{` in a container's args/env/command must be escaped as
+# `{{ "{{" }}` to avoid being parsed as a template directive.
+extraInitContainers: []
+# Examples:
+# extraInitContainers:
+#   - name: dns-sidecar
+#     restartPolicy: Always   # <-- native sidecar (requires K8s >= 1.29)
+#     image: my-dns-resolver:1.0.0
+#     startupProbe:
+#       tcpSocket:
+#         port: 53
+#       periodSeconds: 1
+#       failureThreshold: 30
+
+# ----- Pod DNS configuration -----
+# When set, applied to main, worker, and webhook-processor pod specs. Useful
+# for routing DNS through a sidecar resolver (set `dnsPolicy: None` and point
+# `dnsConfig.nameservers` at `127.0.0.1`) or overriding cluster DNS search.
+# See https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
+dnsPolicy: ""
+# Example: dnsPolicy: None
+dnsConfig: {}
+# Example:
+# dnsConfig:
+#   nameservers:
+#     - 127.0.0.1
+
 # ----- Resources -----
 resources:
   main:
@@ -241,9 +290,29 @@ resources:
       memory: 512Mi
 
 # ----- Node placement -----
+# Global defaults applied to every n8n pod (main, worker, webhook-processor)
+# unless overridden in nodePlacement below.
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# Per-component overrides. Any value set here takes precedence over the global
+# nodeSelector/tolerations/affinity above for that component only; unset
+# components fall back to the globals.
+nodePlacement: {}
+# Example:
+# nodePlacement:
+#   main:
+#     nodeSelector:
+#       workload: n8n-frontend
+#   worker:
+#     nodeSelector:
+#       workload: n8n-workers
+#     tolerations:
+#       - key: dedicated
+#         operator: Equal
+#         value: n8n-workers
+#         effect: NoSchedule
 
 # ----- Security -----
 # Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
@@ -286,6 +355,12 @@ serviceAccount:
   awsRoleArn: ""
   # Additional annotations for the service account
   annotations: {}
+  # Whether the projected ServiceAccount token is mounted into n8n pods.
+  # Omit for the Kubernetes default (true). Set to false to remove the token
+  # from each pod's /var/run/secrets/kubernetes.io/serviceaccount path — n8n
+  # workloads that don't call the Kubernetes API don't need it. Applied at
+  # the pod-spec level so it works regardless of serviceAccount.create.
+  # automountServiceAccountToken: false
 
 networkPolicy:
   enabled: false

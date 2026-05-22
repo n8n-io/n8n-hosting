@@ -16,6 +16,16 @@
       "required": ["repository", "tag"]
     },
     "replicaCount": { "type": "integer", "minimum": 1 },
+    "commonLabels": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "commonAnnotations": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
     "multiMain": {
       "type": "object",
       "properties": {
@@ -274,6 +284,45 @@
     },
     "tolerations": { "type": "array" },
     "affinity": { "type": "object" },
+    "nodePlacement": {
+      "type": "object",
+      "description": "Component-specific pod node placement values. Non-empty component values override the global nodeSelector, tolerations, and affinity values.",
+      "properties": {
+        "main": {
+          "type": "object",
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "tolerations": { "type": "array" },
+            "affinity": { "type": "object" }
+          }
+        },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "tolerations": { "type": "array" },
+            "affinity": { "type": "object" }
+          }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "properties": {
+            "nodeSelector": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "tolerations": { "type": "array" },
+            "affinity": { "type": "object" }
+          }
+        }
+      }
+    },
     "podAnnotations": { "type": "object", "additionalProperties": true },
     "podLabels": { "type": "object", "additionalProperties": true },
     "securityContext": {
@@ -290,8 +339,23 @@
       "properties": {
         "create": { "type": "boolean" },
         "name": { "type": "string" },
-        "annotations": { "type": "object", "additionalProperties": true }
+        "annotations": { "type": "object", "additionalProperties": true },
+        "automountServiceAccountToken": { "type": "boolean" }
       }
+    },
+    "extraInitContainers": {
+      "type": "array",
+      "description": "Additional init containers prepended to main, worker, and webhook-processor pods. Entries with restartPolicy: Always are treated as K8s 1.29+ native sidecars.",
+      "items": { "type": "object" }
+    },
+    "dnsPolicy": {
+      "type": "string",
+      "description": "Pod DNS policy applied to main, worker, and webhook-processor pods. Leave empty to use the cluster default."
+    },
+    "dnsConfig": {
+      "type": "object",
+      "description": "Pod DNS configuration applied to main, worker, and webhook-processor pods.",
+      "additionalProperties": true
     },
     "rbac": {
       "type": "object",

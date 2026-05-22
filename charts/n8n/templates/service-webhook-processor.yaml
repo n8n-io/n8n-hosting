@@ -7,7 +7,7 @@ metadata:
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: webhook-processor
-  {{- $merged := merge (deepCopy (.Values.service.webhookProcessor.annotations | default dict)) (.Values.service.annotations | default dict) }}
+  {{- $merged := merge (deepCopy (.Values.service.webhookProcessor.annotations | default dict)) (.Values.service.annotations | default dict) (.Values.commonAnnotations | default dict) }}
   {{- with $merged }}
   annotations:
     {{- toYaml . | nindent 4 }}

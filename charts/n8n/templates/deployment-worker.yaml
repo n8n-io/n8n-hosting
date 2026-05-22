@@ -7,6 +7,10 @@ metadata:
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: worker
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.queueMode.workerReplicaCount }}
   revisionHistoryLimit: 3
@@ -17,18 +21,18 @@ spec:
       app.kubernetes.io/component: worker
   template:
     metadata:
+      {{- $podAnns := merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
-        {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        {{- toYaml $podAnns | nindent 8 }}
       labels:
         {{- include "n8n.labels" . | nindent 8 }}
         app.kubernetes.io/component: worker
     spec:
       {{- with include "n8n.serviceAccountName" . }}
       serviceAccountName: {{ . }}
+      {{- end }}
+      {{- if hasKey .Values.serviceAccount "automountServiceAccountToken" }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
       {{- if .Values.securityContext.enabled }}
@@ -41,8 +45,21 @@ spec:
           type: RuntimeDefault
       {{- end }}
 
+      {{- with .Values.dnsPolicy }}
+      dnsPolicy: {{ . }}
+      {{- end }}
+      {{- with .Values.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
       {{- with .Values.lifecycle.worker.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
+
+      {{- with .Values.extraInitContainers }}
+      initContainers:
+        {{- tpl (toYaml .) $ | nindent 8 }}
       {{- end }}
 
       containers:
@@ -218,13 +235,21 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
 
-      {{- with .Values.nodeSelector }}
-      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- $nodePlacement := .Values.nodePlacement | default dict }}
+      {{- $componentPlacement := $nodePlacement.worker | default dict }}
+      {{- if $componentPlacement.nodeSelector }}
+      nodeSelector: {{- toYaml $componentPlacement.nodeSelector | nindent 8 }}
+      {{- else if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations: {{- toYaml . | nindent 8 }}
+      {{- if $componentPlacement.tolerations }}
+      tolerations: {{- toYaml $componentPlacement.tolerations | nindent 8 }}
+      {{- else if .Values.tolerations }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
-      affinity: {{- toYaml . | nindent 8 }}
+      {{- if $componentPlacement.affinity }}
+      affinity: {{- toYaml $componentPlacement.affinity | nindent 8 }}
+      {{- else if .Values.affinity }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
       {{- end }}
 {{- end }}

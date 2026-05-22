@@ -50,7 +50,11 @@ jobs:
           version: "3.17.0"
 
       - name: Validate ${{ matrix.example }}
-        run: helm template test charts/n8n -f ${{ matrix.example }} --dry-run > /dev/null
+        run: helm template test charts/n8n -f ${{ matrix.example }} --dry-run=client > /dev/null
+
+      - name: Validate extraContainers (minimal + ci overlay)
+        if: matrix.example == 'charts/n8n/examples/minimal.yaml'
+        run: helm template test charts/n8n -f charts/n8n/examples/minimal.yaml -f charts/n8n/ci/extraContainers-values.yaml --dry-run=client > /dev/null
 
   install-test:
     runs-on: ubuntu-latest

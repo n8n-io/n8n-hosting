@@ -6,7 +6,7 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (No License Required)
 - **[standalone.yaml](./standalone.yaml)** - Single pod with SQLite, no external dependencies
-- **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis
+- **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis; includes `commonLabels` and `commonAnnotations` example
 - **[minimal-with-docker.yaml](./minimal-with-docker.yaml)** - Quick testing with Docker containers
 
 ### Community Examples (Task Runners)
@@ -14,6 +14,9 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (KEDA Autoscaling)
 - **[keda-autoscaling.yaml](./keda-autoscaling.yaml)** - Redis queue-length worker scaling with KEDA
+
+### Community Examples (Node Placement)
+- **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
 
 ### Enterprise Examples (License Required)
 - **[production-s3.yaml](./production-s3.yaml)** - Production setup with multi-main, webhooks, S3 storage, and autoscaling
