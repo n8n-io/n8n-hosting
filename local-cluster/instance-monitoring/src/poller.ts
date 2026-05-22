@@ -1,5 +1,5 @@
 import { mintJWT, buildClaims } from "./jwt.js";
-import { upsertExecution, getLatestFetchedAt } from "./db.js";
+import { upsertExecution } from "./db.js";
 
 export interface N8NInstance {
   id: string;
@@ -43,9 +43,9 @@ async function pollInstance(
 ): Promise<void> {
   const now = new Date();
   const day = now.toISOString().slice(0, 10);
-  const lastFetchedAt = getLatestFetchedAt(instance.id);
-  const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString();
-  const startDate = lastFetchedAt ? lastFetchedAt : oneYearAgo;
+  const startDate = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()
+  )).toISOString(); // today at 00:00:00.000Z
   const endDate = now.toISOString();
   console.log(`[${instance.id}] Polling insights from ${startDate} to ${endDate}...`);
   try {

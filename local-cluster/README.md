@@ -84,26 +84,6 @@ The following environment variables are set on every n8n pod:
 | `N8N_ENV_FEAT_TOKEN_EXCHANGE` | `true` |
 | `N8N_TOKEN_EXCHANGE_TRUSTED_KEYS` | JSON array with the generated public key, `kid: instance-monitoring-key`, `iss: https://instance-monitoring.local`, `allowedRoles: ["global:admin"]` |
 
-See [`Token Exchange for embedding partners guide.md`](Token%20Exchange%20for%20embedding%20partners%20guide.md) for full documentation on the token-exchange feature.
-
-### Testing token exchange manually
-
-The [`Token-exchange-test-scripts/`](Token-exchange-test-scripts/) directory contains shell scripts for manual testing. To test against a running instance:
-
-```bash
-# Source the generated key as TOKEN_EXCHANGE_PRIVATE_KEY
-export TOKEN_EXCHANGE_PRIVATE_KEY=.keys/private.pem
-
-# Edit 03-exchange.sh to set:
-#   KID="instance-monitoring-key"
-#   ISSUER="https://instance-monitoring.local"
-#   N8N_URL="http://localhost:5678"
-
-Token-exchange-test-scripts/03-exchange.sh
-```
-
----
-
 ## Instance Monitoring
 
 The [instance-monitoring](instance-monitoring/) service is a separate Node.js pod that **pulls** usage data from all three n8n instances every 5 minutes using token exchange. It does not require any push-based configuration on the n8n instances — the token exchange setup above is the only prerequisite.

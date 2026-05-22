@@ -11,7 +11,7 @@ db.exec(`
     total        INTEGER NOT NULL,
     failed       INTEGER NOT NULL,
     fetched_at   TEXT NOT NULL,
-    PRIMARY KEY (instance_id, fetched_at)
+    PRIMARY KEY (instance_id, day)
   )
 `);
 
@@ -29,17 +29,8 @@ const insertStmt = db.prepare(`
 `);
 
 const selectAllStmt = db.prepare(
-  "SELECT * FROM instance_executions ORDER BY instance_id ASC, fetched_at DESC"
+  "SELECT * FROM instance_executions ORDER BY instance_id ASC, day DESC"
 );
-
-const latestFetchedAtStmt = db.prepare(
-  "SELECT MAX(fetched_at) AS latest FROM instance_executions WHERE instance_id = ?"
-);
-
-export function getLatestFetchedAt(instanceId: string): string | null {
-  const row = latestFetchedAtStmt.get(instanceId) as { latest: string | null } | undefined;
-  return row?.latest ?? null;
-}
 
 export function upsertExecution(data: ExecutionRecord): void {
   insertStmt.run(data as unknown as Record<string, number | string>);
