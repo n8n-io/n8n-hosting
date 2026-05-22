@@ -69,6 +69,8 @@ Run from the `local-cluster/` directory:
 | `make unforward` | Stop background port-forwards |
 | `make wait` | Wait for all pods to become ready |
 | `make status` | Show pod status across all three namespaces |
+| `make pods` | List all pods and their containers across every namespace in the cluster |
+| `make logs <namespace>` | Stream logs from a namespace — `n8n-1`, `n8n-2`, `n8n-3`, or `monitoring` |
 
 ---
 
@@ -109,7 +111,7 @@ open http://localhost:5700/dashboard
 
 Stream live poller logs (from `local-cluster/`):
 ```bash
-kubectl --kubeconfig .kubeconfig logs -f -l app=instance-monitoring -n monitoring
+make logs monitoring
 ```
 
 See [instance-monitoring/README.md](instance-monitoring/README.md) for details.

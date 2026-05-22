@@ -10,6 +10,12 @@ export KUBECONFIG := $(CURDIR)/.kubeconfig
 
 .DEFAULT_GOAL := help
 
+# Support "make logs <namespace>" — treat the trailing word as a variable
+ifeq ($(firstword $(MAKECMDGOALS)),logs)
+  LOG_NS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(eval $(LOG_NS):;@:)
+endif
+
 .PHONY: help
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -163,3 +169,19 @@ status: ## Show pod status across all three namespaces
 		kubectl get pods -n $$ns 2>/dev/null || echo "  (namespace not found)"; \
 		echo ""; \
 	done
+
+pods: ## List all pods and their containers across every namespace in the cluster
+	@kubectl get pods -A -o custom-columns='NAMESPACE:.metadata.namespace,POD:.metadata.name,CONTAINERS:.spec.containers[*].name,STATUS:.status.phase,READY:.status.containerStatuses[*].ready'
+
+.PHONY: logs
+logs: ## Stream logs from a namespace: make logs <namespace>  (n8n-1 | n8n-2 | n8n-3 | monitoring)
+	@if [ -z "$(LOG_NS)" ]; then \
+		echo "Usage: make logs <namespace>"; \
+		echo "  Namespaces: n8n-1, n8n-2, n8n-3, monitoring"; \
+		exit 1; \
+	fi; \
+	case "$(LOG_NS)" in \
+		n8n-*) kubectl --kubeconfig .kubeconfig logs -f -l app.kubernetes.io/component=main -n $(LOG_NS) ;; \
+		monitoring) kubectl --kubeconfig .kubeconfig logs -f -l app=instance-monitoring -n $(LOG_NS) ;; \
+		*) echo "Unknown namespace: $(LOG_NS). Use n8n-1, n8n-2, n8n-3, or monitoring."; exit 1 ;; \
+	esac
