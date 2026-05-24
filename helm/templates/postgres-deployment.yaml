@@ -24,12 +24,12 @@ spec:
         - image: postgres:18
           name: postgres
           resources:
-            limits:
-              cpu: "4"
-              memory: 4Gi
             requests:
-              cpu: "1"
-              memory: 2Gi
+              cpu: {{ (((( .Values.postgres ).resources ).requests ).cpu ) | default "0.5" | quote }}
+              memory: {{ (((( .Values.postgres ).resources ).requests ).memory ) | default "0.5Gi" | quote }}
+            limits:
+              cpu: {{ (((( .Values.postgres ).resources ).limits ).cpu ) | default "4" | quote }}
+              memory: {{ (((( .Values.postgres ).resources ).limits ).memory ) | default "4Gi" | quote }}
           ports:
             - containerPort: 5432
           volumeMounts:
