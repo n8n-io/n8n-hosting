@@ -66,9 +66,58 @@ All three use the same n8n container image, differentiated by command/args.
 
 1. **Core secrets** (`secretRefs.existingSecret`): `N8N_ENCRYPTION_KEY`, `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL` — always required
 2. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
-3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
+3. **Database connection values** (`database.existingSecret`, `database.userSecret`): optional, for sourcing PostgreSQL host, port, database, and username from existing Kubernetes Secrets — queue mode only
+4. **Redis connection values** (`redis.existingSecret`, `redis.usernameSecret`): optional, for sourcing Redis host, port, cluster nodes, and username from existing Kubernetes Secrets — queue mode only
+5. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
 For production, use an external secrets operator (e.g., [External Secrets Operator](https://external-secrets.io/)) rather than storing secrets in values files.
+
+### External DB and Redis From Existing Secrets
+
+Queue mode supports mixing plain values and secret-backed values for PostgreSQL and Redis connection settings. A value is only read from a Secret when both the secret name and the specific key are configured for that field; otherwise the chart falls back to the plain value from `values.yaml`.
+
+```yaml
+database:
+  host: "postgres.default.svc"
+  port: 5432
+  database: "n8n"
+  user: "n8n"
+  existingSecret:
+    name: "n8n-db-config"
+    hostKey: "host"
+    portKey: "port"
+    databaseKey: "database"
+  userSecret:
+    name: "n8n-db-user"
+    key: "username"
+  passwordSecret:
+    name: "n8n-db-password"
+    key: "password"
+
+redis:
+  host: "redis.default.svc"
+  port: 6379
+  username: "default"
+  existingSecret:
+    name: "n8n-redis-config"
+    hostKey: "host"
+    portKey: "port"
+    clusterNodesKey: "clusterNodes"
+  usernameSecret:
+    name: "n8n-redis-user"
+    key: "username"
+  passwordSecret:
+    name: "n8n-redis-password"
+    key: "password"
+```
+
+Notes:
+
+- Use `database.existingSecret` for `host`, `port`, and `database`.
+- Use `database.userSecret` for the PostgreSQL username.
+- Use `redis.existingSecret` for `host`, `port`, or `clusterNodes`.
+- Use `redis.usernameSecret` for the Redis username.
+- Queue mode validation accepts either direct values or the corresponding secret references for these fields.
 
 ## ServiceAccount
 

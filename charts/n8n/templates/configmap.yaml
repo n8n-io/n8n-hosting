@@ -16,10 +16,18 @@ data:
   # Database configuration
   DB_TYPE: {{ .Values.database.type | quote }}
   {{- if .Values.database.useExternal }}
+  {{- if not (and .Values.database.existingSecret.name .Values.database.existingSecret.databaseKey) }}
   DB_POSTGRESDB_DATABASE: {{ .Values.database.database | quote }}
+  {{- end }}
+  {{- if not (and .Values.database.existingSecret.name .Values.database.existingSecret.hostKey) }}
   DB_POSTGRESDB_HOST: {{ .Values.database.host | quote }}
+  {{- end }}
+  {{- if not (and .Values.database.existingSecret.name .Values.database.existingSecret.portKey) }}
   DB_POSTGRESDB_PORT: "{{ .Values.database.port }}"
+  {{- end }}
+  {{- if not .Values.database.userSecret.name }}
   DB_POSTGRESDB_USER: {{ .Values.database.user | quote }}
+  {{- end }}
   {{- if .Values.database.schema }}
   DB_POSTGRESDB_SCHEMA: {{ .Values.database.schema | quote }}
   {{- end }}
@@ -63,13 +71,19 @@ data:
 
   {{- if .Values.queueMode.enabled }}
   # Redis configuration (queue mode only)
-  {{- if .Values.redis.clusterNodes }}
+  {{- if or .Values.redis.clusterNodes (and .Values.redis.existingSecret.name .Values.redis.existingSecret.clusterNodesKey) }}
+  {{- if not (and .Values.redis.existingSecret.name .Values.redis.existingSecret.clusterNodesKey) }}
   QUEUE_BULL_REDIS_CLUSTER_NODES: {{ .Values.redis.clusterNodes | quote }}
+  {{- end }}
   {{- else }}
+  {{- if not (and .Values.redis.existingSecret.name .Values.redis.existingSecret.hostKey) }}
   QUEUE_BULL_REDIS_HOST: {{ .Values.redis.host | quote }}
+  {{- end }}
+  {{- if not (and .Values.redis.existingSecret.name .Values.redis.existingSecret.portKey) }}
   QUEUE_BULL_REDIS_PORT: "{{ default 6379 .Values.redis.port }}"
   {{- end }}
-  {{- if .Values.redis.username }}
+  {{- end }}
+  {{- if and .Values.redis.username (not .Values.redis.usernameSecret.name) }}
   QUEUE_BULL_REDIS_USERNAME: {{ .Values.redis.username | quote }}
   {{- end }}
   {{- if and .Values.redis.database (ne (.Values.redis.database | int) 0) }}
