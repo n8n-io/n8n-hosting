@@ -12,7 +12,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if not .Values.hpa.worker.enabled }}
   replicas: {{ .Values.queueMode.workerReplicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:
