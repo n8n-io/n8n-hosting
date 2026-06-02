@@ -361,7 +361,10 @@ probes:
     failureThreshold: 6
   readiness:
     enabled: true
-    path: /healthz
+    # -- HTTP path used for the readiness probe.
+    # Use /healthz/readiness for a more accurate ready check (checks DB + queue connectivity).
+    # Use /healthz if you need the simpler liveness-style check for readiness as well.
+    path: /healthz/readiness # <-- this is the only line that changes
     initialDelaySeconds: 10
     periodSeconds: 10
     timeoutSeconds: 3
