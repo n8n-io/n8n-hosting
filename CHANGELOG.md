@@ -4,6 +4,18 @@
 
 * **chart:** add global chart metadata support ([#130](https://github.com/n8n-io/n8n-hosting/issues/130)) ([f25bbb4](https://github.com/n8n-io/n8n-hosting/commit/f25bbb4ff13b446da0e084fa26696fe632e478f7))
 
+## [1.9.0](https://github.com/n8n-io/n8n-hosting/compare/v1.8.0...v1.9.0) (2026-06-04)
+
+
+### Features
+
+* **chart:** add extraContainers for arbitrary sidecar injection ([#138](https://github.com/n8n-io/n8n-hosting/issues/138)) ([555704e](https://github.com/n8n-io/n8n-hosting/commit/555704ebceb1f0df974c0924a17ce86430263627))
+
+
+### Bug Fixes
+
+* **chart:** inject N8N_EDITOR_BASE_URL into containers ([#153](https://github.com/n8n-io/n8n-hosting/issues/153)) ([5f74f4a](https://github.com/n8n-io/n8n-hosting/commit/5f74f4aeefa4f528381af45d8dc468ba1cdaaa41))
+
 ## [1.7.0](https://github.com/n8n-io/n8n-hosting/compare/v1.6.1...v1.7.0) (2026-05-20)
 
 ### Features
