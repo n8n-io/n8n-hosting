@@ -100,12 +100,24 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `networkPolicy.enabled` | Network policies | `false` |
+| `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](./values.yaml) for the full list of configurable values.
+
+## Extra containers (sidecars)
+
+Use `extraContainers` to add arbitrary containers to **main**, **worker**, and **webhook-processor** pods (for example log shippers or local proxies). They are rendered after the main n8n container and after the optional [task runner](#task-runners) sidecar. Combine with `extraVolumes` and `extraVolumeMounts` when the sidecar needs shared storage. List entries are passed through Helm `tpl`, so you can reference `{{ .Release.Name }}` and other template variables in string fields.
+
+```yaml
+extraContainers:
+  - name: log-shipper
+    image: busybox:1.36
+    args: ["sh", "-c", "while true; do sleep 3600; done"]
+```
 
 ## Node Placement
 
