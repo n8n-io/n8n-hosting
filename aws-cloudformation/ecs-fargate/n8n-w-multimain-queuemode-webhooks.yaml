@@ -567,8 +567,6 @@ Resources:
   
   # directly attach bucket policy
   S3BucketPolicy:
-    DependsOn:
-      - N8nTaskRole
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref S3BinaryBucket
@@ -644,9 +642,16 @@ Resources:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
+    Metadata:
+      cfn-lint:
+        config:
+          # MasterUserPassword is a user-supplied stack parameter by design (see
+          # the deployment guide). Suppressing the "use dynamic references" hint.
+          ignore_checks:
+            - W1011
     Properties:
       Engine: postgres
-      EngineVersion: 16
+      EngineVersion: "16.9"
       DBInstanceClass: !Ref DBInstanceClass
       DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-db"
       AllocatedStorage: !Ref DBAllocatedStorage
@@ -670,8 +675,6 @@ Resources:
 
   # create secrets file for n8n to connect to RDS
   RDSSecrets:
-    DependsOn:
-      - PostgresDB
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: app-user/dbcredentials
@@ -736,11 +739,6 @@ Resources:
 
   # create elasticache replication group for redis
   Redis:
-    DependsOn:
-      - RedisParamGroup
-      - CacheSecurityGroup
-      - CacheSubnetGroup
-      - RedisPasswordSecret
     Type: AWS::ElastiCache::ReplicationGroup
     Properties:
       ReplicationGroupId: !Sub ${AWS::StackName}-redis
@@ -931,7 +929,6 @@ Resources:
       - PostgresDB
       - RDSSecrets
       - N8nLicenseSecret
-      - N8nEncryptionKey
     Properties:
       Family: n8n-main
       Cpu: "1024"
@@ -1305,7 +1302,6 @@ Resources:
   # auto scaling for worker service
   ECSServiceScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
-    DependsOn: ECSWorkerService
     Properties:
       ServiceNamespace: ecs
       ScalableDimension: ecs:service:DesiredCount
@@ -1355,7 +1351,6 @@ Resources:
       - PostgresDB
       - RDSSecrets
       - N8nLicenseSecret
-      - N8nEncryptionKey
     Properties:
       Family: n8n-webhook
       Cpu: "1024"
@@ -1539,7 +1534,6 @@ Resources:
   # auto scaling for webhook service
   ECSWebhookScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
-    DependsOn: ECSWebhookService
     Properties:
       ServiceNamespace: ecs
       ScalableDimension: ecs:service:DesiredCount
