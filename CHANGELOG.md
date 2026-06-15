@@ -4,6 +4,13 @@
 
 * **chart:** add global chart metadata support ([#130](https://github.com/n8n-io/n8n-hosting/issues/130)) ([f25bbb4](https://github.com/n8n-io/n8n-hosting/commit/f25bbb4ff13b446da0e084fa26696fe632e478f7))
 
+## [1.9.1](https://github.com/n8n-io/n8n-hosting/compare/v1.9.0...v1.9.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* default readiness probe to /healthz/readiness ([#149](https://github.com/n8n-io/n8n-hosting/issues/149)) ([d7d2988](https://github.com/n8n-io/n8n-hosting/commit/d7d2988a2aaa376e4d392208cd61e30141696be0))
+
 ## [1.9.0](https://github.com/n8n-io/n8n-hosting/compare/v1.8.0...v1.9.0) (2026-06-04)
 
 
