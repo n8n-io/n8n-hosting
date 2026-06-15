@@ -10,6 +10,8 @@
 ### Bug Fixes
 
 * default readiness probe to /healthz/readiness ([#149](https://github.com/n8n-io/n8n-hosting/issues/149)) ([d7d2988](https://github.com/n8n-io/n8n-hosting/commit/d7d2988a2aaa376e4d392208cd61e30141696be0))
+  * Pods now wait for DB connectivity and migrations before becoming Ready, instead of just for the process being alive.
+  * To restore the previous behavior, set `probes.readiness.path: /healthz` in your values overrides.
 
 ## [1.9.0](https://github.com/n8n-io/n8n-hosting/compare/v1.8.0...v1.9.0) (2026-06-04)
 
