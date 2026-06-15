@@ -73,14 +73,17 @@ Validate values — called once from deployment-main.yaml to fail fast on bad co
 {{- if not .Values.database.useExternal -}}
 {{- fail "database.useExternal must be true when queueMode.enabled=true. Queue mode requires external PostgreSQL." -}}
 {{- end -}}
-{{- if not .Values.database.host -}}
-{{- fail "database.host is required when queueMode.enabled=true. Set it to your PostgreSQL hostname." -}}
+{{- if and (not .Values.database.host) (not .Values.database.existingSecret.name) -}}
+{{- fail "database.host/database.port/database are missing and database.existingSecret.name is not set. Set those values directly, or set database.existingSecret.name." -}}
+{{- end -}}
+{{- if and (not .Values.database.user) (not .Values.database.userSecret.name) -}}
+{{- fail "database.user is missing and database.userSecret.name is not set. Set database.user directly, or set database.userSecret.name." -}}
 {{- end -}}
 {{- if not .Values.redis.enabled -}}
 {{- fail "redis.enabled must be true when queueMode.enabled=true. Queue mode requires Redis." -}}
 {{- end -}}
-{{- if not .Values.redis.host -}}
-{{- fail "redis.host is required when queueMode.enabled=true. Set it to your Redis hostname." -}}
+{{- if and (not .Values.redis.host) (not .Values.redis.clusterNodes) (not (and .Values.redis.existingSecret.name .Values.redis.existingSecret.hostKey)) (not (and .Values.redis.existingSecret.name .Values.redis.existingSecret.clusterNodesKey)) -}}
+{{- fail "redis.host is missing and redis.existingSecret.hostKey is not set. Set redis.host directly, or set redis.clusterNodes, or configure redis.existingSecret.name with either redis.existingSecret.hostKey or redis.existingSecret.clusterNodesKey." -}}
 {{- end -}}
 {{- end -}}
 

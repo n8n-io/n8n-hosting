@@ -591,6 +591,24 @@
         "port": { "type": "integer" },
         "database": { "type": "string" },
         "user": { "type": "string" },
+        "existingSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "hostKey": { "type": "string" },
+            "portKey": { "type": "string" },
+            "databaseKey": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "userSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "key": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
         "passwordSecret": {
           "type": "object",
           "properties": {
@@ -607,7 +625,25 @@
       "properties": {
         "host": { "type": "string" },
         "port": { "type": "integer" },
+        "existingSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "hostKey": { "type": "string" },
+            "portKey": { "type": "string" },
+            "clusterNodesKey": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
         "username": { "type": "string" },
+        "usernameSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "key": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
         "passwordSecret": {
           "type": ["object", "null"],
           "properties": {
@@ -748,25 +784,9 @@
         "properties": {
           "queueMode": {
             "required": ["workerReplicaCount"]
-          },
-          "redis": {
-            "type": "object",
-            "properties": {
-              "host": { "type": "string", "minLength": 1 },
-              "passwordSecret": {
-                "type": ["object", "null"],
-                "properties": {
-                  "name": { "type": ["string", "null"] },
-                  "key": { "type": ["string", "null"] }
-                },
-                "additionalProperties": false,
-                "default": null
-              }
-            },
-            "required": ["host"]
           }
         },
-        "errorMessage": "queueMode.enabled=true requires redis.host and queueMode.workerReplicaCount"
+        "errorMessage": "queueMode.enabled=true requires queueMode.workerReplicaCount"
       }
     },
     {
@@ -832,10 +852,50 @@
             "then": {
               "properties": {
                 "database": {
-                  "required": ["host", "port", "database", "user", "passwordSecret"]
+                  "allOf": [
+                    {
+                      "required": ["passwordSecret"]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "required": ["host", "port", "database"]
+                        },
+                        {
+                          "properties": {
+                            "existingSecret": {
+                              "type": "object",
+                              "properties": {
+                                "name": { "type": "string", "minLength": 1 }
+                              },
+                              "required": ["name"]
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "required": ["user"]
+                        },
+                        {
+                          "properties": {
+                            "userSecret": {
+                              "type": "object",
+                              "properties": {
+                                "name": { "type": "string", "minLength": 1 }
+                              },
+                              "required": ["name"]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               },
-              "errorMessage": "database.type=postgresdb & useExternal=true requires host, port, database, user and passwordSecret"
+              "errorMessage": "database.type=postgresdb & useExternal=true requires passwordSecret and either direct host/port/database values or database.existingSecret.name, plus either database.user or database.userSecret.name"
             }
           },
           {
