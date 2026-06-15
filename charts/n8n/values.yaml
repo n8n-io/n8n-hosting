@@ -376,7 +376,7 @@ probes:
     failureThreshold: 6
   readiness:
     enabled: true
-    path: /healthz
+    path: /healthz/readiness
     initialDelaySeconds: 10
     periodSeconds: 10
     timeoutSeconds: 3
