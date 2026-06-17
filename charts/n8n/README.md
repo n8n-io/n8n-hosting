@@ -61,6 +61,7 @@ All three use the same n8n container image, differentiated by command/args.
 | [task-runners.yaml](./examples/task-runners.yaml) | Queue mode with task runner sidecars |
 | [production-s3.yaml](./examples/production-s3.yaml) | Production with S3, HPA, multi-main |
 | [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
+| [https-ingress.yaml](./examples/https-ingress.yaml) | HTTPS Ingress with TLS and webhook processor routing |
 
 ## Secret Management
 
@@ -69,6 +70,35 @@ All three use the same n8n container image, differentiated by command/args.
 3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
 For production, use an external secrets operator (e.g., [External Secrets Operator](https://external-secrets.io/)) rather than storing secrets in values files.
+
+## Ingress and HTTPS
+
+Set `ingress.enabled=true` to create the main Ingress for the n8n UI, API, and test webhooks. Configure `ingress.className`, controller-specific `ingress.annotations`, and `ingress.tls` for HTTPS termination. For cert-manager, add the issuer annotation and set `ingress.tls[].secretName` to the certificate Secret cert-manager should create.
+
+When `webhookProcessor.enabled=true`, enable `ingress.webhookProcessor.enabled` to create a second Ingress for production webhook traffic. The webhook processor Ingress routes `/webhook/`, `/webhook-waiting/`, `/form/`, and `/form-waiting/` to webhook processor pods. Test webhook paths such as `/webhook-test/` stay on the main Ingress.
+
+Use `ingress.sticky.enabled=true` for nginx cookie affinity, or `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. Multi-main deployments require sticky sessions at the load-balancing layer.
+
+See [https-ingress.yaml](./examples/https-ingress.yaml) for a complete HTTPS example.
+
+## Ports and Health Checks
+
+| Component | Port | Health check |
+|---|---:|---|
+| main | `service.port` (default `5678`) | HTTP liveness `/healthz`; readiness `/healthz/readiness` |
+| webhook-processor | `service.port` (default `5678`) | HTTP liveness `/healthz`; readiness `/healthz/readiness` |
+| worker | no Service | exec probe checks the `n8n worker` process |
+| task runner broker | `taskRunners.broker.port` (default `5679`) | localhost broker used by task runner sidecars |
+
+Workers consume jobs from Redis and do not receive inbound HTTP traffic, so the chart intentionally does not create a Kubernetes Service for worker pods.
+
+## Scaling Guidance
+
+Scale execution throughput with `queueMode.workerReplicaCount` and `queueMode.workerConcurrency`. The built-in HPA can scale main, worker, and webhook processor deployments from CPU and optional memory utilization.
+
+For queue-based scaling, enable `keda.enabled=true` and configure Redis triggers for workers. KEDA creates `ScaledObject` resources for workers, and optionally webhook processors, instead of the built-in worker/webhook HPAs.
+
+Webhook processors are an optional scaling layer for high-volume production webhook traffic. Enable them when webhook load should be isolated from the UI/API main pods, and configure ingress or load-balancer routing as described above.
 
 ## ServiceAccount
 

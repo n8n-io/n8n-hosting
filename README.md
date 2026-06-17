@@ -21,6 +21,10 @@ See the [chart README](./charts/n8n/README.md) for full documentation and the [e
 | [docker-compose/subfolderWithSSL](./docker-compose/subfolderWithSSL/) | n8n behind SSL reverse proxy in subfolder |
 | [docker-caddy](./docker-caddy/) | n8n with Caddy reverse proxy |
 
+## AWS CloudFormation (ECS Fargate)
+
+See [`aws-cloudformation/ecs-fargate/`](./aws-cloudformation/ecs-fargate/) for an AWS ECS Fargate example with multi-main queue mode, RDS PostgreSQL, ElastiCache Redis, S3 binary storage, HTTPS through an Application Load Balancer, and worker autoscaling.
+
 ## Kubernetes (Raw Manifests)
 
 See [`kubernetes/`](./kubernetes/) for raw Kubernetes manifest examples used in cloud provider tutorials (AWS, Azure, GCP).
