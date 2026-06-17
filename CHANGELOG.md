@@ -4,6 +4,18 @@
 
 * **chart:** add global chart metadata support ([#130](https://github.com/n8n-io/n8n-hosting/issues/130)) ([f25bbb4](https://github.com/n8n-io/n8n-hosting/commit/f25bbb4ff13b446da0e084fa26696fe632e478f7))
 
+## [1.10.0](https://github.com/n8n-io/n8n-hosting/compare/v1.9.1...v1.10.0) (2026-06-17)
+
+
+### Features
+
+* **chart:** add podLabels for pod templates ([#158](https://github.com/n8n-io/n8n-hosting/issues/158)) ([f8c056c](https://github.com/n8n-io/n8n-hosting/commit/f8c056c4fd17a27ea89d9970c2bdad9cd624e477))
+
+
+### Documentation
+
+* improve deployment guidance ([#156](https://github.com/n8n-io/n8n-hosting/issues/156)) ([f561c73](https://github.com/n8n-io/n8n-hosting/commit/f561c732b94a51a12d967849b834968fd1a4a453))
+
 ## [1.9.1](https://github.com/n8n-io/n8n-hosting/compare/v1.9.0...v1.9.1) (2026-06-15)
 
 
