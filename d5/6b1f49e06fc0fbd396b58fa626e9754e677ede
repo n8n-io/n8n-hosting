@@ -1,0 +1,33 @@
+charts/n8n/examples/README.md
+  s_2299754a62e513::t_97530b50b2b3ee 18-20,166,202,209
+charts/n8n/README.md
+  s_2299754a62e513::t_97530b50b2b3ee 64,74-101
+.github/workflows/ci.yml
+  s_2299754a62e513::t_97530b50b2b3ee 44
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode.yaml
+  s_2299754a62e513::t_ecc2c6d23881de 116-172,208-219,1116,1178-1179,1306,1343-1344,1357-1359,1371-1373
+README.md
+  s_2299754a62e513::t_97530b50b2b3ee 24-27
+charts/n8n/examples/https-ingress.yaml
+  s_2299754a62e513::t_ffdbf802571577 1-67
+charts/n8n/values.yaml
+  s_2299754a62e513::t_ffdbf802571577 175-186
+aws-cloudformation/ecs-fargate/README.md
+  s_2299754a62e513::t_97530b50b2b3ee 1-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "d56b1f49e06fc0fbd396b58fa626e9754e677ede",
+  "prompts": {},
+  "sessions": {
+    "s_2299754a62e513": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ed622-91aa-79f3-abf0-c6ad2706a580",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}
