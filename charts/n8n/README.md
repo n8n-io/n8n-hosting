@@ -126,6 +126,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
 | `strategy` | Deployment update strategy | `{}` (k8s default) |
+| `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
 | `hpa.main.enabled` | HPA for main pods | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
