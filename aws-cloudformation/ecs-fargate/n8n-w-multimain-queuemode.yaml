@@ -113,6 +113,63 @@ Parameters:
     Default: 1
     AllowedPattern: '^[0-9]+$'
 
+# ECS scaling parameters
+  MainDesiredCount:
+    Type: Number
+    Description: Number of ECS Fargate tasks to run for the n8n main service.
+    Default: 2
+    MinValue: 1
+
+  WorkerDesiredCount:
+    Type: Number
+    Description: Initial number of ECS Fargate tasks to run for the n8n worker service. Keep this between WorkerMinCapacity and WorkerMaxCapacity.
+    Default: 3
+    MinValue: 1
+
+  WorkerMinCapacity:
+    Type: Number
+    Description: Minimum ECS worker task count for Application Auto Scaling.
+    Default: 2
+    MinValue: 1
+
+  WorkerMaxCapacity:
+    Type: Number
+    Description: Maximum ECS worker task count for Application Auto Scaling. Must be greater than or equal to WorkerMinCapacity.
+    Default: 10
+    MinValue: 1
+
+  WorkerConcurrency:
+    Type: Number
+    Description: Number of queue jobs each worker task may process concurrently. n8n recommends 5 or higher.
+    Default: 10
+    MinValue: 5
+
+  WorkerCpuTargetPercent:
+    Type: Number
+    Description: Target average CPU utilization percentage for ECS worker target tracking.
+    Default: 60
+    MinValue: 1
+    MaxValue: 100
+
+  WorkerMemoryTargetPercent:
+    Type: Number
+    Description: Target average memory utilization percentage for ECS worker target tracking.
+    Default: 70
+    MinValue: 1
+    MaxValue: 100
+
+  WorkerScaleInCooldownSeconds:
+    Type: Number
+    Description: Cooldown period, in seconds, before worker CPU or memory policies scale in.
+    Default: 60
+    MinValue: 0
+
+  WorkerScaleOutCooldownSeconds:
+    Type: Number
+    Description: Cooldown period, in seconds, before worker CPU or memory policies scale out.
+    Default: 60
+    MinValue: 0
+
 # labels to make everything easier to read during setup
 Metadata:
   AWS::CloudFormation::Interface:
@@ -148,6 +205,18 @@ Metadata:
         Parameters:
           - RedisInstanceClass
           - RedisPassword
+      - Label:
+          default: "ECS Scaling Config"
+        Parameters:
+          - MainDesiredCount
+          - WorkerDesiredCount
+          - WorkerMinCapacity
+          - WorkerMaxCapacity
+          - WorkerConcurrency
+          - WorkerCpuTargetPercent
+          - WorkerMemoryTargetPercent
+          - WorkerScaleInCooldownSeconds
+          - WorkerScaleOutCooldownSeconds
 
 Resources:
 
@@ -1044,7 +1113,7 @@ Resources:
             TargetGroupArn: !Ref HttpAppTargetGroup
             ContainerName: "n8n"
             ContainerPort: 5678
-        DesiredCount: 2
+        DesiredCount: !Ref MainDesiredCount
         TaskDefinition: !Ref N8nMainTaskDefinition
         DeploymentConfiguration: 
             MaximumPercent: 200
@@ -1106,6 +1175,8 @@ Resources:
             - "node"
             - "/usr/local/bin/n8n"
             - "worker"
+          Command:
+            - !Sub "--concurrency=${WorkerConcurrency}"
           Secrets:
             - Name: N8N_LICENSE_ACTIVATION_KEY
               ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:LicenseKey::"
@@ -1232,7 +1303,7 @@ Resources:
     Properties:
         ServiceName: !Sub "${AWS::StackName}-svc-worker"
         Cluster: !GetAtt ECSCluster.Arn
-        DesiredCount: 3
+        DesiredCount: !Ref WorkerDesiredCount
         TaskDefinition: !Ref N8nWorkerTaskDefinition
         DeploymentConfiguration: 
             MaximumPercent: 200
@@ -1269,8 +1340,8 @@ Resources:
       ResourceId: !Sub 
         - "service/${ClusterName}/${ServiceName}"
         - { ClusterName: !Ref ECSCluster, ServiceName: !GetAtt ECSWorkerService.Name }
-      MinCapacity: 2
-      MaxCapacity: 10
+      MinCapacity: !Ref WorkerMinCapacity
+      MaxCapacity: !Ref WorkerMaxCapacity
       RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
 
   # scaling rules for CPU
@@ -1283,9 +1354,9 @@ Resources:
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageCPUUtilization
-        TargetValue: 60
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 60
+        TargetValue: !Ref WorkerCpuTargetPercent
+        ScaleInCooldown: !Ref WorkerScaleInCooldownSeconds
+        ScaleOutCooldown: !Ref WorkerScaleOutCooldownSeconds
 
   # scaling rules for memory
   ECSServiceMemoryScalingPolicy:
@@ -1297,9 +1368,9 @@ Resources:
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageMemoryUtilization
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 60
+        TargetValue: !Ref WorkerMemoryTargetPercent
+        ScaleInCooldown: !Ref WorkerScaleInCooldownSeconds
+        ScaleOutCooldown: !Ref WorkerScaleOutCooldownSeconds
 
 # output useful information to make things easier to read.
 Outputs:

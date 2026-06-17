@@ -172,6 +172,18 @@ service:
 # ----- Ingress -----
 ingress:
   enabled: false
+  # IngressClass to use for the main n8n ingress. Examples: nginx, alb, traefik.
+  className: ""
+  # Controller-specific annotations. For cert-manager, set:
+  # cert-manager.io/cluster-issuer: letsencrypt-prod
+  annotations: {}
+  # TLS configuration for the main n8n ingress.
+  # Example:
+  # tls:
+  #   - secretName: n8n-tls
+  #     hosts:
+  #       - n8n.example.com
+  tls: []
   sticky:
     enabled: false
     cookieName: n8n_affinity
