@@ -324,7 +324,11 @@
       }
     },
     "podAnnotations": { "type": "object", "additionalProperties": true },
-    "podLabels": { "type": "object", "additionalProperties": true },
+    "podLabels": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
     "securityContext": {
       "type": "object",
       "properties": {

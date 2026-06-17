@@ -38,6 +38,32 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{/*
+Pod template labels. podLabels intentionally wins over commonLabels for
+user-defined keys on pods only; chart-managed selector/identity labels are
+always set by the chart.
+*/}}
+{{- define "n8n.podLabels" -}}
+{{- $root := .root -}}
+{{- $component := .component -}}
+{{- $labels := dict -}}
+{{- range $k, $v := ($root.Values.commonLabels | default dict) -}}
+{{- $_ := set $labels $k $v -}}
+{{- end -}}
+{{- $_ := set $labels "helm.sh/chart" (include "n8n.chart" $root) -}}
+{{- $_ := set $labels "app.kubernetes.io/name" (include "n8n.name" $root) -}}
+{{- $_ := set $labels "app.kubernetes.io/instance" $root.Release.Name -}}
+{{- if $root.Chart.AppVersion -}}
+{{- $_ := set $labels "app.kubernetes.io/version" $root.Chart.AppVersion -}}
+{{- end -}}
+{{- $_ := set $labels "app.kubernetes.io/managed-by" $root.Release.Service -}}
+{{- $_ := set $labels "app.kubernetes.io/component" $component -}}
+{{- range $k, $v := ($root.Values.podLabels | default dict) -}}
+{{- $_ := set $labels $k $v -}}
+{{- end -}}
+{{- toYaml $labels -}}
+{{- end -}}
+
+{{/*
 Selector labels
 */}}
 {{- define "n8n.selectorLabels" -}}
@@ -141,6 +167,17 @@ Validate values — called once from deployment-main.yaml to fail fast on bad co
 {{/* --- Service account --- */}}
 {{- if and (not .Values.serviceAccount.create) (eq .Values.serviceAccount.name "n8n") -}}
 {{- fail "serviceAccount.create=false but serviceAccount.name is still the chart default \"n8n\". Set serviceAccount.name to your pre-existing ServiceAccount, or to \"\" to use the namespace's default ServiceAccount." -}}
+{{- end -}}
+
+{{/* --- Pod labels --- */}}
+{{- $reservedPodLabels := list "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" "app.kubernetes.io/version" "app.kubernetes.io/managed-by" "helm.sh/chart" -}}
+{{- range $k, $v := (.Values.podLabels | default dict) -}}
+{{- if has $k $reservedPodLabels -}}
+{{- fail (printf "podLabels.%q is a chart-managed selector/identity label and cannot be overridden. Reserved keys: %s" $k (join ", " $reservedPodLabels)) -}}
+{{- end -}}
+{{- if not (kindIs "string" $v) -}}
+{{- fail (printf "podLabels.%q must be a string (got %s). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. %q: \"true\"." $k (kindOf $v) $k) -}}
+{{- end -}}
 {{- end -}}
 
 {{- end -}}

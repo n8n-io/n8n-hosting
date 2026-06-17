@@ -153,6 +153,16 @@ taskRunners:
 # to avoid Multi-Attach errors during upgrades.
 strategy: {}
 
+# ----- Pod Labels -----
+# Extra labels added to main / worker / webhook-processor pod templates.
+# When a key exists in both commonLabels and podLabels, podLabels wins on pod
+# templates only. Chart-managed labels cannot be overridden here.
+# Useful for opt-in admission webhooks and pod selectors, for example:
+# podLabels:
+#   azure.workload.identity/use: "true"
+#   sidecar.istio.io/inject: "true"
+podLabels: {}
+
 # ----- Main replicas (when multi-main is disabled) -----
 replicaCount: 1
 
