@@ -592,7 +592,11 @@ Resources:
     Properties:
       VersioningConfiguration:
         Status: Enabled
-      BucketName: !Sub "${AWS::StackName}-n8n-bin"
+      # BucketName intentionally omitted: CloudFormation auto-generates a
+      # globally-unique, length-safe, lowercase name. An explicit name like
+      # "${AWS::StackName}-n8n-bin" collides in S3's global namespace, can
+      # exceed the 63-char limit, and breaks on uppercase stack names.
+      # Everything references the bucket via !Ref S3BinaryBucket.
   
   # directly attach bucket policy
   S3BucketPolicy:
