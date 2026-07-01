@@ -11,10 +11,10 @@ confirm against the linked n8n docs for the release you're deploying.
 | Component | Supported / recommended | Notes |
 |---|---|---|
 | n8n | Latest stable release | Pin a specific image tag for production rather than relying on `stable`/`latest`. |
-| PostgreSQL | Actively-maintained releases; **13+** recommended for queue mode | Recommended database for production. |
+| PostgreSQL | Any actively-maintained release | Recommended database for production. n8n documents **13** as the queue-mode minimum, but prefer a still-supported major. |
 | SQLite | Bundled | Default when queue mode is off. Fine for development and small single-instance setups. |
 | MySQL / MariaDB | **Not supported** | Deprecated as the n8n backend in v1.0 and removed in v2.0 -- use PostgreSQL. (The MySQL *node* is unaffected.) |
-| Redis | **6+** recommended | Only needed for queue mode. Redis 6+ is required if you set a Redis username. |
+| Redis | **7+** recommended | Only needed for queue mode. Redis 6+ is required if you set a Redis username. |
 | Valkey | Redis-compatible drop-in for queue mode | Not separately version-guaranteed by n8n; verify against your n8n release. |
 
 For the authoritative details, see:

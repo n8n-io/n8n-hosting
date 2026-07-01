@@ -59,7 +59,7 @@ helm install n8n ./charts/n8n -f my-values.yaml
 For quick testing with Docker:
 ```bash
 # Start PostgreSQL
-docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:15
+docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:16
 
 # Start Redis
 docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
