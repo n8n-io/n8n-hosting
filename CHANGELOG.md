@@ -4,6 +4,19 @@
 
 * **chart:** add global chart metadata support ([#130](https://github.com/n8n-io/n8n-hosting/issues/130)) ([f25bbb4](https://github.com/n8n-io/n8n-hosting/commit/f25bbb4ff13b446da0e084fa26696fe632e478f7))
 
+## [1.10.1](https://github.com/n8n-io/n8n-hosting/compare/v1.10.0...v1.10.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **aws-cloudformation:** make S3 binary bucket name globally unique ([#164](https://github.com/n8n-io/n8n-hosting/issues/164)) ([926bfc7](https://github.com/n8n-io/n8n-hosting/commit/926bfc7230493bd3bf2ce8844eb601aa0e1da0b9))
+* **chart:** report actual database in NOTES.txt for standalone mode ([#162](https://github.com/n8n-io/n8n-hosting/issues/162)) ([16231e3](https://github.com/n8n-io/n8n-hosting/commit/16231e3660a5ee24e79ed90eb8b90a713262afa4))
+
+
+### Documentation
+
+* clarify supported infra versions and align example image tags ([#166](https://github.com/n8n-io/n8n-hosting/issues/166)) ([2ccf1b3](https://github.com/n8n-io/n8n-hosting/commit/2ccf1b3d7eaa7fdbc5b4b287bf3252a8f14f2608))
+
 ## [1.10.0](https://github.com/n8n-io/n8n-hosting/compare/v1.9.1...v1.10.0) (2026-06-17)
 
 
