@@ -5,7 +5,7 @@
 # You must set up these services before deploying n8n
 # 
 # For quick testing, you can use Docker:
-# docker run -d --name postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:15
+# docker run -d --name postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:16
 # docker run -d --name redis -p 6379:6379 redis:7-alpine
 #
 # Use this as a starting point for development or testing

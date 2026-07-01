@@ -3,7 +3,7 @@
 # Perfect for quick testing and development
 #
 # Prerequisites: Start external services with Docker
-# docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:15
+# docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:16
 # docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
 
 # Basic queue mode (minimum required)
@@ -85,7 +85,7 @@ serviceAccount:
 # Quick Setup Instructions:
 # 
 # 1. Start external services:
-#    docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:15
+#    docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:16
 #    docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
 #
 # 2. Create secrets:
