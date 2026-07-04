@@ -31,10 +31,22 @@ spec:
             - -c
             - sleep 5; n8n start
           env:
+          {{- range $key, $val := .Values.n8n.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+          {{- end }}
+            - name: N8N_SECURE_COOKIE
+              value: {{ if .Values.n8n.disableSecureCookie }}"false"{{ else }}"true"{{ end }}
+            - name: GENERIC_TIMEZONE
+              value: {{ .Values.n8n.timezone | default "Europe/Berlin" | quote }}
+            - name: N8N_HOST
+              value: {{ ( .Values.n8n ).host | default "localhost" | quote }}
+            - name: WEBHOOK_URL
+              value: {{ printf "https://%s/" ( ( .Values.n8n ).host | default "localhost" ) | quote }}
             - name: DB_TYPE
               value: postgresdb
             - name: DB_POSTGRESDB_HOST
-              value: postgres-service.n8n.svc.cluster.local
+              value: {{ printf "postgres-service.%s.svc.cluster.local" .Release.Namespace }}
             - name: DB_POSTGRESDB_PORT
               value: "5432"
             - name: DB_POSTGRESDB_DATABASE
@@ -53,15 +65,17 @@ spec:
               value: http
             - name: N8N_PORT
               value: "5678"
-          image: n8nio/n8n
+          image: n8nio/n8n:1.123.18
           name: n8n
           ports:
             - containerPort: 5678
           resources:
             requests:
-              memory: "250Mi"
+              cpu: {{ (((( .Values.n8n ).resources ).requests ).cpu ) | default "100m" | quote }}
+              memory: {{ (((( .Values.n8n ).resources ).requests ).memory ) | default "250Mi" | quote }}
             limits:
-              memory: "500Mi"
+              cpu: {{ (((( .Values.n8n ).resources ).limits ).cpu ) | default "500m" | quote }}
+              memory: {{ (((( .Values.n8n ).resources ).limits ).memory ) | default "1024Mi" | quote }}
           volumeMounts:
             - mountPath: /home/node/.n8n
               name: n8n-claim0

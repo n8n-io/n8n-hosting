@@ -6,7 +6,7 @@ metadata:
   name: n8n
   namespace: {{ .Release.Namespace }}
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     - name: "5678"
       port: 5678
