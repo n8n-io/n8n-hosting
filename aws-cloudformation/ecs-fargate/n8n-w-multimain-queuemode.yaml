@@ -1,5 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploys n8n with multi-main and queue mode configured. s3 is used for storage. 
+Description: >-
+  Deploys n8n with multi-main and queue mode configured. s3 is used for storage. For a dedicated
+  webhook-processor tier and queue-depth (Redis backlog) worker autoscaling, use the
+  n8n-w-multimain-queuemode-webhooks.yaml template in this folder; this base template scales
+  workers on CPU/memory only.
 
 Parameters:
 
@@ -50,9 +54,13 @@ Parameters:
 # postgres parameters
   DBInstanceClass:
     Type: String
-    Description: "Select instance class for n8n's PostgresDB"
+    Description: >-
+      PostgreSQL instance class. The DB is usually the first tier to bottleneck as request rate rises.
+      db.t4g.micro/small/medium are BURSTABLE (CPU-credit limited), fine for dev / light / bursty load
+      but they throttle under sustained load. For sustained throughput pick a non-burstable class:
+      db.m7g.large for ~250 req/s, db.m7g.xlarge/2xlarge for higher rps or heavier workflows.
     Default: db.t4g.small
-    AllowedValues: 
+    AllowedValues:
       - db.t4g.micro
       - db.t4g.small
       - db.t4g.medium
@@ -99,6 +107,12 @@ Parameters:
     Description: "Password for the Redis user 'default'. Must be 16 characters at least. IMPORTANT NOTE! Please change this from the default for optimal security."
     AllowedPattern: ".{16}.*"
     Default: "Myverysecureredispassword1!"
+  RedisReplicasPerNodeGroup:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 5
+    Description: "Redis read replicas per shard. >=1 enables Multi-AZ + automatic failover (HA, recommended for prod, adds a cache node and cost). Default 0 = single-node dev cache (SPOF, cheapest)."
 
 # license key parameters
   N8nLicenseKey:
@@ -200,11 +214,12 @@ Metadata:
           - MasterUserPassword
           - DBAllocatedStorage
           - DBName
-      - Label: 
+      - Label:
           default: "Redis Config"
         Parameters:
           - RedisInstanceClass
           - RedisPassword
+          - RedisReplicasPerNodeGroup
       - Label:
           default: "ECS Scaling Config"
         Parameters:
@@ -217,6 +232,10 @@ Metadata:
           - WorkerMemoryTargetPercent
           - WorkerScaleInCooldownSeconds
           - WorkerScaleOutCooldownSeconds
+
+Conditions:
+  # >=1 replica enables Multi-AZ + automatic failover
+  RedisHA: !Not [ !Equals [ !Ref RedisReplicasPerNodeGroup, 0 ] ]
 
 Resources:
 
@@ -538,10 +557,16 @@ Resources:
       HealthCheckTimeoutSeconds: 30
       HealthyThresholdCount: 8
       UnhealthyThresholdCount: 5
-      HealthCheckPath: /
+      # readiness (DB + Redis), not shallow liveness, so the ALB only routes to fully-ready tasks
+      HealthCheckPath: /healthz/readiness
       Matcher:
-        HttpCode: '200-399'
-  
+        HttpCode: '200'
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "30"
+        - Key: slow_start.duration_seconds
+          Value: "30"
+
   # Listeners
   ElasticLoadBalancingV2Listener2:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -600,8 +625,6 @@ Resources:
   
   # directly attach bucket policy
   S3BucketPolicy:
-    DependsOn:
-      - N8nTaskRole
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref S3BinaryBucket
@@ -677,9 +700,16 @@ Resources:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
+    Metadata:
+      cfn-lint:
+        config:
+          # MasterUserPassword is a user-supplied stack parameter by design (see
+          # the deployment guide). Suppressing the "use dynamic references" hint.
+          ignore_checks:
+            - W1011
     Properties:
       Engine: postgres
-      EngineVersion: 16
+      EngineVersion: "16.9"
       DBInstanceClass: !Ref DBInstanceClass
       DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-db"
       AllocatedStorage: !Ref DBAllocatedStorage
@@ -703,8 +733,6 @@ Resources:
 
   # create secrets file for n8n to connect to RDS
   RDSSecrets:
-    DependsOn:
-      - PostgresDB
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: app-user/dbcredentials
@@ -769,21 +797,16 @@ Resources:
 
   # create elasticache replication group for redis
   Redis:
-    DependsOn:
-      - RedisParamGroup
-      - CacheSecurityGroup
-      - CacheSubnetGroup
-      - RedisPasswordSecret
     Type: AWS::ElastiCache::ReplicationGroup
     Properties:
       ReplicationGroupId: !Sub ${AWS::StackName}-redis
-      ReplicationGroupDescription: Minimal single-node Redis
+      ReplicationGroupDescription: n8n Redis (queue + cache)
       Engine: redis
       CacheNodeType: !Ref RedisInstanceClass
       NumNodeGroups: 1
-      ReplicasPerNodeGroup: 0  # single primary, no replicas
-      MultiAZEnabled: false
-      AutomaticFailoverEnabled: false
+      ReplicasPerNodeGroup: !Ref RedisReplicasPerNodeGroup
+      MultiAZEnabled: !If [ RedisHA, true, false ]
+      AutomaticFailoverEnabled: !If [ RedisHA, true, false ]
       CacheSubnetGroupName: !Ref CacheSubnetGroup
       SecurityGroupIds: [ !Ref CacheSecurityGroup ]
       CacheParameterGroupName: !Ref RedisParamGroup
@@ -964,7 +987,6 @@ Resources:
       - PostgresDB
       - RDSSecrets
       - N8nLicenseSecret
-      - N8nEncryptionKey
     Properties:
       Family: n8n-main
       Cpu: "1024"
@@ -981,8 +1003,9 @@ Resources:
         - Name: certs
       ContainerDefinitions:
         - Name: n8n
-          Image: n8nio/n8n:latest
+          Image: n8nio/n8n:2.23.4
           Essential: true
+          StopTimeout: 120
           PortMappings:
             - ContainerPort: 5678
               HostPort: 5678
@@ -1035,6 +1058,18 @@ Resources:
               Value: /certs/rds-global-bundle.pem
             - Name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
               Value: false
+            # DB connection tuning for faster RDS failover recovery (n8n + TypeORM; no RDS Proxy)
+            - Name: DB_POSTGRESDB_KEEP_ALIVE
+              Value: true
+            - Name: DB_POSTGRESDB_KEEP_ALIVE_INITIAL_DELAY_MS
+              Value: 5000
+            - Name: DB_POSTGRESDB_CONNECTION_TIMEOUT
+              Value: 10000
+            - Name: DB_POSTGRESDB_IDLE_CONNECTION_TIMEOUT
+              Value: 10000
+            # finish in-flight executions on SIGTERM before exit (scale-in / deploy / task stop)
+            - Name: N8N_GRACEFUL_SHUTDOWN_TIMEOUT
+              Value: 90
             - Name: N8N_EXTERNAL_STORAGE_S3_HOST
               Value: !Sub "s3.${AWS::Region}.amazonaws.com"
             - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME
@@ -1167,8 +1202,9 @@ Resources:
         - Name: certs
       ContainerDefinitions:
         - Name: n8n
-          Image: n8nio/n8n:latest
+          Image: n8nio/n8n:2.23.4
           Essential: true
+          StopTimeout: 120
           PortMappings:
             - ContainerPort: 5678
               HostPort: 5678
@@ -1231,6 +1267,18 @@ Resources:
               Value: /certs/rds-global-bundle.pem
             - Name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
               Value: false
+            # DB connection tuning for faster RDS failover recovery (n8n + TypeORM; no RDS Proxy)
+            - Name: DB_POSTGRESDB_KEEP_ALIVE
+              Value: true
+            - Name: DB_POSTGRESDB_KEEP_ALIVE_INITIAL_DELAY_MS
+              Value: 5000
+            - Name: DB_POSTGRESDB_CONNECTION_TIMEOUT
+              Value: 10000
+            - Name: DB_POSTGRESDB_IDLE_CONNECTION_TIMEOUT
+              Value: 10000
+            # finish in-flight executions on SIGTERM before exit (scale-in / deploy / task stop)
+            - Name: N8N_GRACEFUL_SHUTDOWN_TIMEOUT
+              Value: 90
             - Name: N8N_EXTERNAL_STORAGE_S3_HOST
               Value: !Sub "s3.${AWS::Region}.amazonaws.com"
             - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME
@@ -1335,9 +1383,11 @@ Resources:
             Base: 0
 
   # auto scaling for worker service
+  # Worker autoscaling here is CPU/memory based. Note: CPU/memory can lag queue backlog for
+  # lightweight jobs (workers saturate concurrency without raising CPU past target). For
+  # queue-depth (Redis backlog) worker autoscaling, use n8n-w-multimain-queuemode-webhooks.yaml.
   ECSServiceScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
-    DependsOn: ECSWorkerService
     Properties:
       ServiceNamespace: ecs
       ScalableDimension: ecs:service:DesiredCount
