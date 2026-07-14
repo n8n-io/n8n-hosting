@@ -1,20 +1,34 @@
-# n8n on AWS ECS Fargate
+# n8n on AWS ECS Fargate 🚀
 
-This directory contains a CloudFormation example for running n8n on ECS Fargate with multi-main queue mode.
+Production-ready CloudFormation for running n8n in **queue mode with multi-main** on ECS Fargate. No Kubernetes to babysit, no control plane to pay for, just Fargate tasks, an ALB, and managed data stores that scale with your load.
+
+Three templates, one tier ladder. Start simple, step up when you actually need to.
+
+## Which template to use
+
+| Template | Reach for it when | EKS-module equivalent |
+|---|---|---|
+| `n8n-w-multimain-queuemode.yaml` | Dev, small, or cost-sensitive. Multi-main + queue mode on a single RDS instance. | Small (sized up = Medium) |
+| `n8n-w-multimain-queuemode-webhooks.yaml` | Production with real webhook load. Adds a dedicated webhook tier, queue-depth worker autoscaling, request-rate webhook autoscaling, and DB / Redis / graceful-shutdown / readiness hardening. | Medium |
+| `n8n-w-multimain-queuemode-webhooks-ha.yaml` | Failover-sensitive production. Aurora PostgreSQL (writer + reader, ~6s failover vs ~3 min on single RDS), Redis Multi-AZ, higher floors, larger tasks. | Large (architecture parity) |
+
+> Heads up: these templates use **Enterprise-licensed** n8n features (multi-main and S3 external storage), so the stack will not start without a valid `N8nLicenseKey`. The placeholder default is there for inspection only.
 
 ## Architecture
 
-The template deploys:
+Every template deploys:
 
-- An internet-facing Application Load Balancer with HTTPS listener and HTTP-to-HTTPS redirect.
+- An internet-facing Application Load Balancer with an HTTPS listener and HTTP-to-HTTPS redirect.
 - An ECS Fargate service for n8n main tasks behind the load balancer.
 - An ECS Fargate service for n8n worker tasks that consume jobs from Redis.
-- Amazon RDS PostgreSQL for the n8n database.
+- Amazon RDS PostgreSQL (or Aurora, on the HA tier) for the n8n database.
 - Amazon ElastiCache Redis for queue mode.
 - Amazon S3 for binary data storage.
-- Secrets Manager secrets for n8n license, encryption key, database credentials, and Redis password.
+- Secrets Manager secrets for the n8n license, encryption key, database credentials, and Redis password.
 
-Workers are not attached to the load balancer. They process queued executions from Redis and do not receive inbound HTTP requests.
+The `-webhooks` and `-ha` templates add a dedicated webhook service so production webhook traffic never competes with the editor and REST API on the main tasks.
+
+Workers are never attached to the load balancer. They quietly drain the queue from Redis and receive no inbound HTTP traffic.
 
 ## Deployment Inputs
 
@@ -29,7 +43,7 @@ The template includes placeholder defaults for some secrets so it is easy to ins
 
 ## Worker Scaling
 
-The worker ECS service uses Application Auto Scaling target tracking. By default it scales on ECS service average CPU and memory:
+The worker ECS service uses Application Auto Scaling target tracking. On the base template it scales on ECS service average CPU and memory (the `-webhooks` and `-ha` templates add queue-depth scaling on top, see below):
 
 - `WorkerCpuTargetPercent`, default `60`.
 - `WorkerMemoryTargetPercent`, default `70`.
@@ -54,16 +68,11 @@ n8n recommends worker concurrency of 5 or higher. Very low concurrency with many
 
 ## Queue-Depth Scaling
 
-Queue-depth scaling is useful for n8n queue mode, but this template does not implement it directly.
+Queue-depth scaling matters in queue mode: lightweight jobs can saturate worker concurrency without ever moving CPU, so a CPU-only policy watches the backlog grow and never reacts. The `-webhooks` and `-ha` templates solve this out of the box.
 
-ElastiCache publishes cache and node-level metrics, not the Bull queue backlog key (`bull:default:wait`) that n8n workers consume. The template enables `N8N_METRICS=true` and `N8N_METRICS_INCLUDE_QUEUE_METRICS=true`, so n8n can expose queue metrics such as `n8n_scaling_mode_queue_jobs_waiting` from `/metrics`.
+Those templates ship a 1-minute in-VPC Lambda that reads the Bull backlog key from Redis and publishes a `WorkerBacklogPerTask` custom metric, wired to an Application Auto Scaling target-tracking policy. The target is backlog **per worker** rather than raw depth, so scaling stays proportional to running capacity. CPU and memory policies remain as a safety net. Tune it with `WorkerMinTasks`, `WorkerMaxTasks`, `WorkerBacklogPerTask`, and `WorkerConcurrency`.
 
-To scale ECS workers from queue depth, publish a queue backlog metric to CloudWatch first. Common approaches are:
-
-- A Prometheus, OpenTelemetry, or CloudWatch agent pipeline that scrapes n8n `/metrics`.
-- A scheduled Lambda or small worker that reads the Redis queue length and publishes a custom CloudWatch metric.
-
-After that metric exists, add an Application Auto Scaling custom metric policy. Prefer a backlog-per-worker target instead of raw queue depth so scaling remains proportional to running capacity.
+The base template leaves this out (CPU/memory scaling only) to stay minimal. If you want to add it there, n8n already exposes queue metrics: the template sets `N8N_METRICS=true` and `N8N_METRICS_INCLUDE_QUEUE_METRICS=true`, so `n8n_scaling_mode_queue_jobs_waiting` is available from `/metrics`. Publish a backlog metric to CloudWatch (scrape `/metrics`, or read the Redis queue length from a small Lambda) and attach a custom-metric scaling policy, the same pattern the `-webhooks` template automates.
 
 ## Monitoring
 
