@@ -1,5 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploys n8n with multi-main and queue mode configured. s3 is used for storage. 
+Description: >-
+  n8n HA / scale tier: multi-main + queue mode + dedicated webhook tier on Aurora PostgreSQL
+  (writer + reader, fast failover) with Redis Multi-AZ and higher task floors. s3 is used for
+  storage. Higher-cost, production-grade variant of the webhooks template.
 
 Parameters:
 
@@ -47,30 +50,24 @@ Parameters:
 
   
 
-# postgres parameters
+# postgres (Aurora) parameters
   DBInstanceClass:
     Type: String
     Description: >-
-      PostgreSQL instance class. Sizing guidance (the DB becomes the bottleneck before the
-      worker/webhook tiers as request rate rises): db.t4g.micro/small/medium are BURSTABLE
-      (CPU-credit limited) and fine for dev / light / bursty load but throttle under sustained
-      load. For sustained throughput pick a non-burstable class, db.m7g.large for ~250 req/s,
-      db.m7g.xlarge/2xlarge for higher rps or heavier workflows. Past a single instance's
-      ceiling (~hundreds of req/s) the path is Aurora PostgreSQL I/O-Optimized + PgBouncer,
-      which is beyond this template.
-    Default: db.t4g.small
-    AllowedValues: 
-      - db.t4g.micro
-      - db.t4g.small
+      Aurora PostgreSQL instance class, applied to BOTH the writer and the reader. Sizing
+      guidance (the DB is the first tier to bottleneck as request rate rises): db.t4g.medium/large
+      are BURSTABLE (CPU-credit limited), fine for dev / light load but throttle under sustained
+      load. For sustained throughput pick a memory-optimized class, db.r6g.large for ~250-400 req/s,
+      db.r6g.xlarge / db.r7g.large+ for higher rps or heavier workflows. Aurora storage auto-scales
+      (no AllocatedStorage); the cluster uses I/O-Optimized storage for predictable cost at scale.
+    Default: db.r6g.large
+    AllowedValues:
       - db.t4g.medium
-      - db.m7g.large
-      - db.m7g.xlarge
-      - db.m7g.2xlarge
-  DBAllocatedStorage:
-    Type: Number
-    Default: 20
-    MinValue: 20
-    Description: Storage in GiB (minimum for RDS is typically 20 GiB)
+      - db.t4g.large
+      - db.r6g.large
+      - db.r6g.xlarge
+      - db.r7g.large
+      - db.r7g.xlarge
   MasterUsername:
     Type: String
     Default: postgres
@@ -91,8 +88,8 @@ Parameters:
 # redis parameters
   RedisInstanceClass:
     Type: String
-    Description: "Select instance class for n8n's Redis cache"
-    Default: cache.t4g.small
+    Description: "Select instance class for n8n's Redis cache. HA tier defaults one step up for headroom."
+    Default: cache.t4g.medium
     AllowedValues:
       - cache.t4g.micro
       - cache.t4g.small
@@ -129,12 +126,12 @@ Parameters:
 # worker autoscaling parameters (queue-depth driven, tuneable)
   WorkerMinTasks:
     Type: Number
-    Default: 2
+    Default: 4
     MinValue: 1
-    Description: "Minimum worker tasks (autoscaling floor, kept running even when the queue is empty)."
+    Description: "Minimum worker tasks (autoscaling floor, kept running even when the queue is empty). HA tier floor raised so backlog drains immediately without waiting on scale-out."
   WorkerMaxTasks:
     Type: Number
-    Default: 10
+    Default: 20
     MinValue: 1
     Description: "Maximum worker tasks the queue-depth autoscaler may scale out to."
   WorkerBacklogPerTask:
@@ -151,12 +148,12 @@ Parameters:
 # webhook autoscaling parameters (request-rate driven, tuneable)
   WebhookMinTasks:
     Type: Number
-    Default: 4
+    Default: 6
     MinValue: 1
-    Description: "Minimum webhook tasks (floor). Defaulted to 4 so the ingestion tier absorbs bursts during the ~3-5 min scale-out lag instead of throttling on cold start."
+    Description: "Minimum webhook tasks (floor). HA tier defaults to 6 so the ingestion tier absorbs larger bursts during the ~3-5 min scale-out lag instead of throttling on cold start."
   WebhookMaxTasks:
     Type: Number
-    Default: 10
+    Default: 20
     MinValue: 1
     Description: "Maximum webhook tasks the autoscaler may scale to."
   WebhookRequestsPerTask:
@@ -165,22 +162,22 @@ Parameters:
     MinValue: 1
     Description: "Scale target: average ALB requests per webhook task (ALBRequestCountPerTarget). Lower = more aggressive / lower latency, higher = cheaper."
 
-# execution-data retention (pruning) parameters, matched to the EKS module's Medium tier
+# execution-data retention (pruning) parameters, matched to the EKS module's Large tier
   ExecutionsDataMaxAge:
     Type: Number
-    Default: 168
+    Default: 24
     MinValue: 1
-    Description: "Max age (hours) of execution records to retain before pruning. EKS Medium = 168 (7 days). Maps to EXECUTIONS_DATA_MAX_AGE."
+    Description: "Max age (hours) of execution records to retain before pruning. EKS Large = 24 (1 day). Maps to EXECUTIONS_DATA_MAX_AGE."
   ExecutionsDataMaxCount:
     Type: Number
-    Default: 500000
+    Default: 5000000
     MinValue: 0
-    Description: "Max number of execution records to retain (0 = no count limit). EKS Medium = 500000. Maps to EXECUTIONS_DATA_PRUNE_MAX_COUNT."
+    Description: "Max number of execution records to retain (0 = no count limit). EKS Large = 5000000. Maps to EXECUTIONS_DATA_PRUNE_MAX_COUNT."
   ConcurrencyProductionLimit:
     Type: Number
-    Default: 200
+    Default: 2000
     MinValue: -1
-    Description: "Max concurrent production executions (-1 to disable). EKS Medium = 200. Maps to N8N_CONCURRENCY_PRODUCTION_LIMIT."
+    Description: "Max concurrent production executions (-1 to disable). EKS Large = 2000 (the default 100 throttles workers before infrastructure does). Maps to N8N_CONCURRENCY_PRODUCTION_LIMIT."
 
 # task runner parameters
   EnablePythonTaskRunner:
@@ -220,12 +217,11 @@ Metadata:
           - PrivateSubnet2Cidr
           - PrivateSubnet3Cidr
       - Label:
-          default: "Postgres DB Config"
+          default: "Aurora PostgreSQL Config"
         Parameters:
           - DBInstanceClass
           - MasterUsername
           - MasterUserPassword
-          - DBAllocatedStorage
           - DBName
       - Label:
           default: "Redis Config"
@@ -772,9 +768,13 @@ Resources:
       DBSubnetGroupDescription: Subnet group for RDS Postgres
       SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3]
 
-  # launch postgresdb instance
-  PostgresDB:
-    Type: AWS::RDS::DBInstance
+  # Aurora PostgreSQL cluster: writer + reader across AZs. Fast failover (~15-30s): on writer
+  # loss Aurora promotes the reader and the cluster (writer) endpoint re-points automatically,
+  # so n8n reconnects far quicker than the ~3-min stale-pool recovery seen on a single RDS
+  # instance. n8n connects to the WRITER endpoint (it is single-writer); the reader is a warm
+  # standby for failover. I/O-Optimized storage for predictable cost at sustained throughput.
+  AuroraDBCluster:
+    Type: AWS::RDS::DBCluster
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
     Metadata:
@@ -785,43 +785,67 @@ Resources:
           ignore_checks:
             - W1011
     Properties:
-      Engine: postgres
+      Engine: aurora-postgresql
       EngineVersion: "16.9"
-      DBInstanceClass: !Ref DBInstanceClass
-      DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-db"
-      AllocatedStorage: !Ref DBAllocatedStorage
-      StorageType: gp3
-      StorageEncrypted: true
-      PubliclyAccessible: false
-      MultiAZ: true
-      AutoMinorVersionUpgrade: true
-      BackupRetentionPeriod: 15
-      Port: 5432
+      DBClusterIdentifier: !Sub "${AWS::StackName}-pg-cluster"
+      DatabaseName: !Ref DBName
       MasterUsername: !Ref MasterUsername
       MasterUserPassword: !Ref MasterUserPassword
-      DBName: !Ref DBName
-      VPCSecurityGroups:
+      Port: 5432
+      StorageType: aurora-iopt1
+      StorageEncrypted: true
+      BackupRetentionPeriod: 15
+      CopyTagsToSnapshot: true
+      DeletionProtection: false
+      VpcSecurityGroupIds:
         - !GetAtt RDSSecurityGroup.GroupId
       DBSubnetGroupName: !Ref RDSSubnetGroup
-      DeletionProtection: false
+
+  # writer instance (PromotionTier 0 = preferred primary)
+  AuroraWriterInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref AuroraDBCluster
+      DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-writer"
+      DBInstanceClass: !Ref DBInstanceClass
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
       EnablePerformanceInsights: false
-      CopyTagsToSnapshot: true
+      PromotionTier: 0
+
+  # reader instance (warm failover target; PromotionTier 1)
+  AuroraReaderInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref AuroraDBCluster
+      DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-reader"
+      DBInstanceClass: !Ref DBInstanceClass
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
+      EnablePerformanceInsights: false
+      PromotionTier: 1
 
 
-  # create secrets file for n8n to connect to RDS
+  # create secrets file for n8n to connect to Aurora (cluster WRITER endpoint)
   RDSSecrets:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: app-user/dbcredentials
-      Description: Credentials for n8n to connect to postgres
+      Description: Credentials for n8n to connect to Aurora PostgreSQL
       SecretString: !Sub |
         {
           "user": "${MasterUsername}",
           "password": "${MasterUserPassword}",
-          "host": "${PostgresDB.Endpoint.Address}",
+          "host": "${AuroraDBCluster.Endpoint.Address}",
           "port": "5432",
           "database": "${DBName}"
-        }  
+        }
 
   # create subnet group for elasticache
   CacheSubnetGroup:
@@ -901,7 +925,7 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - S3BinaryBucket
     Properties:
         ClusterName: !Sub "${AWS::StackName}-cluster"
@@ -974,7 +998,7 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
     Properties:
       RoleName: !Sub "${AWS::StackName}-task-role"
       Path: /
@@ -1014,7 +1038,7 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - RedisPasswordSecret
     Properties:
       RoleName: !Sub "${AWS::StackName}-task-execution-role"
@@ -1061,13 +1085,13 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - RDSSecrets
       - N8nLicenseSecret
     Properties:
       Family: n8n-main
-      Cpu: "1024"
-      Memory: "3072"
+      Cpu: "2048"
+      Memory: "4096"
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -1297,17 +1321,17 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - Redis
     Properties:
         ServiceName: !Sub "${AWS::StackName}-svc-main"
         Cluster: !GetAtt ECSCluster.Arn
-        LoadBalancers: 
-          -  
+        LoadBalancers:
+          -
             TargetGroupArn: !Ref HttpAppTargetGroup
             ContainerName: "n8n"
             ContainerPort: 5678
-        DesiredCount: 2
+        DesiredCount: 3
         TaskDefinition: !Ref N8nMainTaskDefinition
         DeploymentConfiguration: 
             MaximumPercent: 200
@@ -1339,12 +1363,12 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - N8nLicenseSecret
     Properties:
       Family: n8n-worker
-      Cpu: "1024"
-      Memory: "3072"
+      Cpu: "2048"
+      Memory: "4096"
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -1565,12 +1589,12 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - Redis
     Properties:
         ServiceName: !Sub "${AWS::StackName}-svc-worker"
         Cluster: !GetAtt ECSCluster.Arn
-        DesiredCount: 3
+        DesiredCount: 4
         TaskDefinition: !Ref N8nWorkerTaskDefinition
         DeploymentConfiguration: 
             MaximumPercent: 200
@@ -1806,13 +1830,13 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - RDSSecrets
       - N8nLicenseSecret
     Properties:
       Family: n8n-webhook
-      Cpu: "1024"
-      Memory: "3072"
+      Cpu: "2048"
+      Memory: "4096"
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -1966,7 +1990,7 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - Redis
       - WebhookListenerRule
     Properties:
@@ -2085,8 +2109,8 @@ Outputs:
     Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/s3/buckets/${S3BinaryBucket}"
 
   PostgresDbUrl:
-    Description: Link to Postgres DB used for n8n
-    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/rds/home?region=${AWS::Region}#database:id=${PostgresDB}"
+    Description: Link to the Aurora PostgreSQL cluster used for n8n
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/rds/home?region=${AWS::Region}#database:id=${AuroraDBCluster};is-cluster=true"
   
   RedisUrl:
     Description: Link to Elasticache used for n8n
