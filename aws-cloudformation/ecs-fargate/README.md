@@ -1,12 +1,14 @@
 # n8n on AWS ECS Fargate 🚀
 
-Production-ready CloudFormation for running n8n in **queue mode with multi-main** on ECS Fargate, using an ALB and managed data stores that scale with your load. A serverless-container option alongside the EKS module for teams already standardized on ECS.
+Production-ready CloudFormation for running n8n in **queue mode with multi-main** on ECS Fargate, using an ALB and managed data stores that scale with your load. A serverless-container option for teams standardized on ECS, complementing the Kubernetes paths: the [Helm chart](../../charts/n8n) in this repo and the [`terraform-aws-n8n`](https://github.com/n8n-io/terraform-aws-n8n) EKS module.
 
 Three templates, one tier ladder. Start simple, step up when you actually need to.
 
 ## Which template to use
 
-| Template | Reach for it when | EKS-module equivalent |
+Tiers below map to the equivalent [`terraform-aws-n8n`](https://github.com/n8n-io/terraform-aws-n8n) EKS module sizing.
+
+| Template | Reach for it when | EKS module tier |
 |---|---|---|
 | `n8n-w-multimain-queuemode.yaml` | Dev, small, or cost-sensitive. Multi-main + queue mode on a single RDS instance. | Small (sized up = Medium) |
 | `n8n-w-multimain-queuemode-webhooks.yaml` | Production with real webhook load. Adds a dedicated webhook tier, queue-depth worker autoscaling, request-rate webhook autoscaling, and DB / Redis / graceful-shutdown / readiness hardening. | Medium |
