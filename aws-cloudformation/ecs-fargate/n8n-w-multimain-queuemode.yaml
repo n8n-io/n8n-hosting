@@ -80,8 +80,7 @@ Parameters:
   MasterUserPassword:
     Type: String
     NoEcho: true
-    Default: Password123!
-    Description: "Master (admin) password. IMPORTANT NOTE! Please change this from the default for optimal security."
+    Description: "Master (admin) password. IMPORTANT: required parameter, choose a strong, unique value."
     MinLength: 8
   DBName:
     Type: String
@@ -104,9 +103,8 @@ Parameters:
   RedisPassword:
     Type: String
     NoEcho: true
-    Description: "Password for the Redis user 'default'. Must be 16 characters at least. IMPORTANT NOTE! Please change this from the default for optimal security."
+    Description: "Password for the Redis user 'default'. Must be 16 characters at least. IMPORTANT: required parameter, choose a strong, unique value."
     AllowedPattern: ".{16}.*"
-    Default: "Myverysecureredispassword1!"
   RedisReplicasPerNodeGroup:
     Type: Number
     Default: 0
@@ -243,7 +241,7 @@ Resources:
   N8nLicenseSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: app-user/n8nlicense
+      Name: !Sub "${AWS::StackName}-app-user/n8nlicense"
       Description: Access keys for app-user created by CloudFormation
       SecretString: !Sub |
         {
@@ -255,7 +253,7 @@ Resources:
   N8nEncryptionKey:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: app-user/encryptionkey
+      Name: !Sub "${AWS::StackName}-app-user/encryptionkey"
       Description: Encryption key for queue mode
       SecretString: !Select
         - 2
@@ -381,6 +379,7 @@ Resources:
 
   NatGatewayAz1:
     Type: AWS::EC2::NatGateway
+    DependsOn: VPCGatewayAttachment
     Properties:
       AllocationId: !GetAtt NatEipAz1.AllocationId
       SubnetId: !Ref PublicSubnet1
@@ -395,6 +394,7 @@ Resources:
 
   NatGatewayAz2:
     Type: AWS::EC2::NatGateway
+    DependsOn: VPCGatewayAttachment
     Properties:
       AllocationId: !GetAtt NatEipAz2.AllocationId
       SubnetId: !Ref PublicSubnet2
@@ -735,7 +735,7 @@ Resources:
   RDSSecrets:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: app-user/dbcredentials
+      Name: !Sub "${AWS::StackName}-app-user/dbcredentials"
       Description: Credentials for n8n to connect to postgres
       SecretString: !Sub |
         {
@@ -791,7 +791,7 @@ Resources:
   RedisPasswordSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: app-user/redispassword
+      Name: !Sub "${AWS::StackName}-app-user/redispassword"
       Description: Password for n8n to connect to redis
       SecretString: !Ref RedisPassword
 
@@ -961,10 +961,10 @@ Resources:
                   - secretsmanager:GetSecretValue
                   - secretsmanager:DescribeSecret
                 Resource:
-                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials*"                  
-                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense*" 
-                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/redispassword*"
-                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/encryptionkey*"
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials*"                  
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/n8nlicense*" 
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/redispassword*"
+                  - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/encryptionkey*"
         # grant access to services to write logs to cloudwatch
         - PolicyName: cloudwatch-write-logs
           PolicyDocument:
@@ -1014,21 +1014,21 @@ Resources:
               AppProtocol: http
           Secrets:
             - Name: N8N_LICENSE_ACTIVATION_KEY
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:LicenseKey::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/n8nlicense:LicenseKey::"
             - Name: N8N_LICENSE_TENANT_ID
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:TenantId::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/n8nlicense:TenantId::"
             - Name: N8N_ENCRYPTION_KEY
               ValueFrom: !Ref N8nEncryptionKey
             - Name: DB_POSTGRESDB_HOST
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:host::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:host::"
             - Name: DB_POSTGRESDB_PORT
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:port::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:port::"
             - Name: DB_POSTGRESDB_DATABASE
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:database::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:database::"
             - Name: DB_POSTGRESDB_USER
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:user::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:user::"
             - Name: DB_POSTGRESDB_PASSWORD
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:password::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:password::"
             - Name: QUEUE_BULL_REDIS_PASSWORD
               ValueFrom: !Ref RedisPasswordSecret
           Environment:
@@ -1219,21 +1219,21 @@ Resources:
             - !Sub "--concurrency=${WorkerConcurrency}"
           Secrets:
             - Name: N8N_LICENSE_ACTIVATION_KEY
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:LicenseKey::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/n8nlicense:LicenseKey::"
             - Name: N8N_LICENSE_TENANT_ID
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/n8nlicense:TenantId::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/n8nlicense:TenantId::"
             - Name: N8N_ENCRYPTION_KEY
               ValueFrom: !Ref N8nEncryptionKey
             - Name: DB_POSTGRESDB_HOST
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:host::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:host::"
             - Name: DB_POSTGRESDB_PORT
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:port::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:port::"
             - Name: DB_POSTGRESDB_DATABASE
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:database::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:database::"
             - Name: DB_POSTGRESDB_USER
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:user::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:user::"
             - Name: DB_POSTGRESDB_PASSWORD
-              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:app-user/dbcredentials:password::"
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:password::"
             - Name: QUEUE_BULL_REDIS_PASSWORD
               ValueFrom: !Ref RedisPasswordSecret               
           Environment:
