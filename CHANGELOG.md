@@ -4,6 +4,40 @@
 
 * **chart:** add global chart metadata support ([#130](https://github.com/n8n-io/n8n-hosting/issues/130)) ([f25bbb4](https://github.com/n8n-io/n8n-hosting/commit/f25bbb4ff13b446da0e084fa26696fe632e478f7))
 
+## [1.10.1](https://github.com/n8n-io/n8n-hosting/compare/v1.10.0...v1.10.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **aws-cloudformation:** make S3 binary bucket name globally unique ([#164](https://github.com/n8n-io/n8n-hosting/issues/164)) ([926bfc7](https://github.com/n8n-io/n8n-hosting/commit/926bfc7230493bd3bf2ce8844eb601aa0e1da0b9))
+* **chart:** report actual database in NOTES.txt for standalone mode ([#162](https://github.com/n8n-io/n8n-hosting/issues/162)) ([16231e3](https://github.com/n8n-io/n8n-hosting/commit/16231e3660a5ee24e79ed90eb8b90a713262afa4))
+
+
+### Documentation
+
+* clarify supported infra versions and align example image tags ([#166](https://github.com/n8n-io/n8n-hosting/issues/166)) ([2ccf1b3](https://github.com/n8n-io/n8n-hosting/commit/2ccf1b3d7eaa7fdbc5b4b287bf3252a8f14f2608))
+
+## [1.10.0](https://github.com/n8n-io/n8n-hosting/compare/v1.9.1...v1.10.0) (2026-06-17)
+
+
+### Features
+
+* **chart:** add podLabels for pod templates ([#158](https://github.com/n8n-io/n8n-hosting/issues/158)) ([f8c056c](https://github.com/n8n-io/n8n-hosting/commit/f8c056c4fd17a27ea89d9970c2bdad9cd624e477))
+
+
+### Documentation
+
+* improve deployment guidance ([#156](https://github.com/n8n-io/n8n-hosting/issues/156)) ([f561c73](https://github.com/n8n-io/n8n-hosting/commit/f561c732b94a51a12d967849b834968fd1a4a453))
+
+## [1.9.1](https://github.com/n8n-io/n8n-hosting/compare/v1.9.0...v1.9.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* default readiness probe to /healthz/readiness ([#149](https://github.com/n8n-io/n8n-hosting/issues/149)) ([d7d2988](https://github.com/n8n-io/n8n-hosting/commit/d7d2988a2aaa376e4d392208cd61e30141696be0))
+  * Pods now wait for DB connectivity and migrations before becoming Ready, instead of just for the process being alive.
+  * To restore the previous behavior, set `probes.readiness.path: /healthz` in your values overrides.
+
 ## [1.9.0](https://github.com/n8n-io/n8n-hosting/compare/v1.8.0...v1.9.0) (2026-06-04)
 
 

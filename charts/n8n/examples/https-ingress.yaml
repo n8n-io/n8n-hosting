@@ -1,0 +1,67 @@
+# Example: HTTPS ingress with optional webhook processor routing.
+#
+# Prerequisites:
+# - An ingress controller installed in the cluster.
+# - A TLS Secret named n8n-tls in the release namespace, or cert-manager
+#   configured to create it from the annotations below.
+# - External PostgreSQL and Redis services for queue mode.
+
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+database:
+  useExternal: true
+  host: "postgres.example.internal"
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+redis:
+  enabled: true
+  useExternal: true
+  host: "redis.example.internal"
+  passwordSecret:
+    name: "n8n-redis-secret"
+    key: "password"
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 2
+  workerConcurrency: 10
+
+webhookProcessor:
+  enabled: true
+  replicaCount: 2
+  disableProductionWebhooksOnMainProcess: true
+
+webhook:
+  url: "https://n8n.example.com"
+
+# Dedicated webhook ingress routes production webhook and form paths to
+# webhook-processor pods. Test webhook paths continue to route to the main
+# ingress through the catch-all "/" path above.
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  sticky:
+    enabled: true
+  hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: n8n-tls
+      hosts:
+        - n8n.example.com
+  webhookProcessor:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls:
+      - secretName: n8n-tls
+        hosts:
+          - n8n.example.com

@@ -153,6 +153,16 @@ taskRunners:
 # to avoid Multi-Attach errors during upgrades.
 strategy: {}
 
+# ----- Pod Labels -----
+# Extra labels added to main / worker / webhook-processor pod templates.
+# When a key exists in both commonLabels and podLabels, podLabels wins on pod
+# templates only. Chart-managed labels cannot be overridden here.
+# Useful for opt-in admission webhooks and pod selectors, for example:
+# podLabels:
+#   azure.workload.identity/use: "true"
+#   sidecar.istio.io/inject: "true"
+podLabels: {}
+
 # ----- Main replicas (when multi-main is disabled) -----
 replicaCount: 1
 
@@ -172,6 +182,18 @@ service:
 # ----- Ingress -----
 ingress:
   enabled: false
+  # IngressClass to use for the main n8n ingress. Examples: nginx, alb, traefik.
+  className: ""
+  # Controller-specific annotations. For cert-manager, set:
+  # cert-manager.io/cluster-issuer: letsencrypt-prod
+  annotations: {}
+  # TLS configuration for the main n8n ingress.
+  # Example:
+  # tls:
+  #   - secretName: n8n-tls
+  #     hosts:
+  #       - n8n.example.com
+  tls: []
   sticky:
     enabled: false
     cookieName: n8n_affinity
@@ -376,7 +398,7 @@ probes:
     failureThreshold: 6
   readiness:
     enabled: true
-    path: /healthz
+    path: /healthz/readiness
     initialDelaySeconds: 10
     periodSeconds: 10
     timeoutSeconds: 3

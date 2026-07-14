@@ -25,8 +25,7 @@ spec:
       annotations:
         {{- toYaml $podAnns | nindent 8 }}
       labels:
-        {{- include "n8n.labels" . | nindent 8 }}
-        app.kubernetes.io/component: webhook-processor
+        {{- include "n8n.podLabels" (dict "root" . "component" "webhook-processor") | nindent 8 }}
     spec:
       {{- with include "n8n.serviceAccountName" . }}
       serviceAccountName: {{ . }}

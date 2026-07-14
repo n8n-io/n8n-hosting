@@ -15,6 +15,9 @@ This directory contains common configuration examples for different deployment s
 ### Community Examples (KEDA Autoscaling)
 - **[keda-autoscaling.yaml](./keda-autoscaling.yaml)** - Redis queue-length worker scaling with KEDA
 
+### Community Examples (Ingress)
+- **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress with TLS, sticky sessions, and webhook processor routing
+
 ### Community Examples (Node Placement)
 - **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
 
@@ -56,7 +59,7 @@ helm install n8n ./charts/n8n -f my-values.yaml
 For quick testing with Docker:
 ```bash
 # Start PostgreSQL
-docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:15
+docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:16
 
 # Start Redis
 docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
@@ -160,6 +163,7 @@ serviceAccount:
 
 **Connection issues:**
 - Enable session affinity: `service.sessionAffinity.enabled: true`
+- For nginx Ingress, enable cookie affinity: `ingress.sticky.enabled: true`
 - Check database SSL settings if using cloud databases
 
 **Storage issues:**
@@ -195,11 +199,14 @@ webhookProcessor:
 
 When `disableProductionWebhooksOnMainProcess: true`, configure your load balancer to route:
 - `/webhook/*` → webhook processor service (production webhooks)
+- `/webhook-waiting/*` → webhook processor service (waiting webhook responses)
 - `/form/*` → webhook processor service (production form triggers)
 - `/form-waiting/*` → webhook processor service (waiting form pages)
 - `/webhook-test/*` → main service (test webhooks)
 - `/form-test/*` → main service (test form triggers)
 - `/*` → main service (UI, API, everything else)
+
+The chart can create this split routing with `ingress.webhookProcessor.enabled=true`; see [https-ingress.yaml](./https-ingress.yaml).
 
 ### Testing
 ```bash
