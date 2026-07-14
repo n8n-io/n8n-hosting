@@ -1,6 +1,6 @@
 # n8n on AWS ECS Fargate 🚀
 
-Production-ready CloudFormation for running n8n in **queue mode with multi-main** on ECS Fargate. No Kubernetes to babysit, no control plane to pay for, just Fargate tasks, an ALB, and managed data stores that scale with your load.
+Production-ready CloudFormation for running n8n in **queue mode with multi-main** on ECS Fargate, using an ALB and managed data stores that scale with your load. A serverless-container option alongside the EKS module for teams already standardized on ECS.
 
 Three templates, one tier ladder. Start simple, step up when you actually need to.
 
