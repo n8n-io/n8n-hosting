@@ -1132,10 +1132,10 @@ Resources:
               Value: postgresdb
             - Name: DB_POSTGRESDB_SSL_ENABLED
               Value: true
-            - Name: DB_POSTGRESDB_SSL_CA
+            - Name: NODE_EXTRA_CA_CERTS
               Value: /certs/rds-global-bundle.pem
             - Name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-              Value: false
+              Value: true
             # DB connection tuning for faster RDS failover recovery (n8n + TypeORM; no RDS Proxy)
             - Name: DB_POSTGRESDB_KEEP_ALIVE
               Value: true
@@ -1417,10 +1417,10 @@ Resources:
               Value: postgresdb
             - Name: DB_POSTGRESDB_SSL_ENABLED
               Value: true
-            - Name: DB_POSTGRESDB_SSL_CA
+            - Name: NODE_EXTRA_CA_CERTS
               Value: /certs/rds-global-bundle.pem
             - Name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-              Value: false
+              Value: true
             # DB connection tuning for faster RDS failover recovery (n8n + TypeORM; no RDS Proxy)
             - Name: DB_POSTGRESDB_KEEP_ALIVE
               Value: true
@@ -1881,10 +1881,10 @@ Resources:
               Value: postgresdb
             - Name: DB_POSTGRESDB_SSL_ENABLED
               Value: true
-            - Name: DB_POSTGRESDB_SSL_CA
+            - Name: NODE_EXTRA_CA_CERTS
               Value: /certs/rds-global-bundle.pem
             - Name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-              Value: false
+              Value: true
             # DB connection tuning for faster RDS failover recovery (n8n + TypeORM; no RDS Proxy)
             - Name: DB_POSTGRESDB_KEEP_ALIVE
               Value: true
