@@ -42,6 +42,10 @@ See the [chart README](./charts/n8n/README.md) for full documentation and the [e
 | [docker-compose/subfolderWithSSL](./docker-compose/subfolderWithSSL/) | n8n behind SSL reverse proxy in subfolder |
 | [docker-caddy](./docker-caddy/) | n8n with Caddy reverse proxy |
 
+### AI Assistant (instance-ai)
+
+Every Docker Compose example above ships the AI Assistant sandbox (`sandbox-certs`, `sandbox-api`, and the privileged Docker-in-Docker `sandbox-runner-1`) behind an opt-in `ai-assistant` Compose profile. It's off by default, so a plain `docker compose up -d` is unchanged. To enable it, uncomment the AI Assistant block in that example's `.env` (model API key + sandbox secrets) and start with `docker compose --profile ai-assistant up -d`. See each folder's README for the setup steps and a security checklist — the runner is privileged and must never be exposed to the public internet.
+
 ## AWS CloudFormation (ECS Fargate)
 
 See [`aws-cloudformation/ecs-fargate/`](./aws-cloudformation/ecs-fargate/) for an AWS ECS Fargate example with multi-main queue mode, RDS PostgreSQL, ElastiCache Redis, S3 binary storage, HTTPS through an Application Load Balancer, and worker autoscaling.
