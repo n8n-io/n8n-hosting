@@ -1713,7 +1713,7 @@ Resources:
         ScaleOutCooldown: 60
 
   # ── Queue-depth based worker autoscaling (ECS equivalent of the EKS module's KEDA) ──
-  # A scheduled Lambda reads the Bull queue length (LLEN bull:default:wait) from Redis
+  # A scheduled Lambda reads the Bull queue length (LLEN bull:jobs:wait) from Redis
   # and publishes a CloudWatch "backlog per worker" metric. A target-tracking policy
   # holds that at WorkerBacklogPerTask, so worker count tracks queue demand, not CPU.
 
@@ -1819,7 +1819,7 @@ Resources:
               s = ctx.wrap_socket(raw, server_hostname=host)
               try:
                   _resp(s, "AUTH", token)
-                  return int(_resp(s, "LLEN", "bull:default:wait"))
+                  return int(_resp(s, "LLEN", "bull:jobs:wait"))
               finally:
                   s.close()
 

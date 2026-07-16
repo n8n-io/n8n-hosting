@@ -105,9 +105,9 @@ For production changes, create and review a CloudFormation change set in a non-p
 
 ## Upgrading existing stacks
 
-The templates pin the database engine and the n8n image so new stacks deploy on known-good versions. If you are updating a stack created from an earlier version of the base template, review the change set first, these pins can force a modify or a downgrade:
+The templates pin the database engine and the n8n image directly in the resource definitions (they are not stack parameters), so new stacks deploy on known-good versions. If you are updating a stack created from an earlier version of the base template, review the change set first, these pins can force a modify or a downgrade:
 
-- **RDS `EngineVersion` `16` -> `16.9`**: applying this forces an engine modify and reboot on the single RDS instance. If `AutoMinorVersionUpgrade` already moved the instance past `16.9`, CloudFormation cannot apply a lower version and the update rolls back. Set `EngineVersion` to the version the instance is actually on (or higher) before updating.
-- **n8n image `latest` -> a pinned tag**: a stack that already pulled a newer n8n and ran its database migrations will crash-loop if the pin resolves to an older image, because n8n does not down-migrate the schema. Pin to the version currently running (or newer), never older.
+- **RDS `EngineVersion` `16` -> `16.9`**: `EngineVersion` is a hardcoded property on the RDS resource in the template, not a stack parameter you can override at update time, so edit the value in the template before deploying the change set. Applying `16.9` forces an engine modify and reboot on the single RDS instance. If `AutoMinorVersionUpgrade` already moved the instance past `16.9`, CloudFormation cannot apply a lower version and the update rolls back, so set the template's `EngineVersion` to the version the instance is actually on (or higher) before updating.
+- **n8n image `latest` -> a pinned tag**: the image tag is likewise hardcoded in the container definitions, not a parameter. A stack that already pulled a newer n8n and ran its database migrations will crash-loop if the pin resolves to an older image, because n8n does not down-migrate the schema. Edit the tag to the version currently running (or newer), never older.
 
 New stacks are unaffected, they start directly on the pinned versions.
