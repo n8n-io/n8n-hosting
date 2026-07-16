@@ -37,9 +37,9 @@ webhookProcessor:
 webhook:
   url: "https://n8n.example.com"
 
-# Dedicated webhook ingress routes production webhook and form paths to
-# webhook-processor pods. Test webhook paths continue to route to the main
-# ingress through the catch-all "/" path above.
+# Dedicated webhook ingress routes production webhook, form, and MCP (/mcp)
+# paths to webhook-processor pods. Test paths (/webhook-test/, /mcp-test/)
+# continue to route to the main ingress through the catch-all "/" path above.
 ingress:
   enabled: true
   className: nginx

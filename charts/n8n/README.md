@@ -75,7 +75,11 @@ For production, use an external secrets operator (e.g., [External Secrets Operat
 
 Set `ingress.enabled=true` to create the main Ingress for the n8n UI, API, and test webhooks. Configure `ingress.className`, controller-specific `ingress.annotations`, and `ingress.tls` for HTTPS termination. For cert-manager, add the issuer annotation and set `ingress.tls[].secretName` to the certificate Secret cert-manager should create.
 
-When `webhookProcessor.enabled=true`, enable `ingress.webhookProcessor.enabled` to create a second Ingress for production webhook traffic. The webhook processor Ingress routes `/webhook/`, `/webhook-waiting/`, `/form/`, and `/form-waiting/` to webhook processor pods. Test webhook paths such as `/webhook-test/` stay on the main Ingress.
+When `webhookProcessor.enabled=true`, enable `ingress.webhookProcessor.enabled` to create a second Ingress for production webhook traffic. The webhook processor Ingress routes `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/`, and `/mcp/` to webhook processor pods. Test paths such as `/webhook-test/` and `/mcp-test/` stay on the main Ingress.
+
+### MCP Server Trigger with multiple webhook processors
+
+MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so scaling `webhookProcessor.replicaCount` (or its HPA/KEDA) scales MCP alongside regular webhooks — no dedicated single-replica pod or session affinity is required. This relies on n8n's queue-mode/multi-instance MCP support added in **n8n 2.8.0** ([n8n-io/n8n#25147](https://github.com/n8n-io/n8n/pull/25147)), which recreates MCP sessions from Redis and runs tool calls on workers.
 
 Use `ingress.sticky.enabled=true` for nginx cookie affinity, or `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. Multi-main deployments require sticky sessions at the load-balancing layer.
 
