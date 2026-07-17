@@ -1,0 +1,71 @@
+# Example: Scale the MCP Server Trigger across multiple webhook processors.
+#
+# n8n's MCP Server Trigger serves its endpoints under /mcp. The webhook
+# processor Ingress routes /mcp to the webhook-processor pods, so MCP scales
+# with `webhookProcessor.replicaCount` (or its HPA/KEDA) just like regular
+# webhook traffic — no dedicated single-replica pod or session affinity needed.
+#
+# REQUIRES n8n >= 2.8.0, which added MCP support in queue mode / across multiple
+# instances (MCP sessions are recreated from Redis, tool calls run on workers).
+# See https://github.com/n8n-io/n8n/pull/25147
+#
+# Prerequisites:
+# - An ingress controller installed in the cluster.
+# - External PostgreSQL and Redis services for queue mode.
+
+image:
+  # Must be >= 2.8.0 for multi-instance MCP. "stable" (current 2.x) satisfies this.
+  tag: "stable"
+
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+database:
+  useExternal: true
+  host: "postgres.example.internal"
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+redis:
+  enabled: true
+  useExternal: true
+  host: "redis.example.internal"
+  passwordSecret:
+    name: "n8n-redis-secret"
+    key: "password"
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 2
+  workerConcurrency: 10
+
+# Multiple webhook processors serving /webhook, /form, and /mcp. Scale freely.
+webhookProcessor:
+  enabled: true
+  replicaCount: 3
+  disableProductionWebhooksOnMainProcess: true
+
+webhook:
+  url: "https://n8n.example.com"
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # Dedicated ingress routes /webhook, /webhook-waiting, /form, /form-waiting,
+  # and /mcp to the webhook-processor pods.
+  webhookProcessor:
+    enabled: true
+    className: nginx
+    # MCP uses long-lived SSE / streamable-HTTP connections. On nginx, disable
+    # response buffering and raise the proxy timeouts so streamed events flow.
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-buffering: "off"
+      nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"

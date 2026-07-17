@@ -17,6 +17,7 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (Ingress)
 - **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress with TLS, sticky sessions, and webhook processor routing
+- **[mcp-server.yaml](./mcp-server.yaml)** - Scale the MCP Server Trigger (`/mcp`) across multiple webhook processors (requires n8n ≥ 2.8.0)
 
 ### Community Examples (Node Placement)
 - **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
