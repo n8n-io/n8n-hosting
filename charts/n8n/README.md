@@ -227,7 +227,7 @@ keda:
     triggers:
       - type: redis
         metadata:
-          listName: "bull:default:wait"
+          listName: "bull:jobs:wait"
           listLength: "5"
 ```
 

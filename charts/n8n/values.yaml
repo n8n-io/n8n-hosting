@@ -501,7 +501,7 @@ keda:
           # Redis address (auto-derived from redis.host:redis.port if empty)
           address: ""
           # Bull queue waiting list key
-          listName: "bull:default:wait"
+          listName: "bull:jobs:wait"
           # Target queue length per worker replica
           listLength: "5"
         authenticationRef:
