@@ -1,0 +1,24 @@
+charts/n8n/examples/keda-autoscaling.yaml
+  s_f2e5e4acea4b44::t_a5cfebbbfc8815 34-35
+charts/n8n/README.md
+  s_f2e5e4acea4b44::t_c7c20d34df0786 234-235
+charts/n8n/values.yaml
+  s_f2e5e4acea4b44::t_b8df153312a58e 503-504
+  s_f2e5e4acea4b44::t_eb2f2d53835841 642
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "ce6b743a102759474f48700e12a00e20fa04d4db",
+  "prompts": {},
+  "sessions": {
+    "s_f2e5e4acea4b44": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7815dcb-bae2-4750-b501-4ff23c968f94",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}
