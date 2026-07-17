@@ -1,6 +1,7 @@
 volumes:
   db_storage:
   n8n_storage:
+  sandbox-tls:
 
 services:
   postgres:
@@ -34,6 +35,15 @@ services:
       - N8N_RUNNERS_MODE=external
       - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
       - N8N_RUNNERS_BROKER_LISTEN_ADDRESS=0.0.0.0
+      # AI Assistant (instance-ai). Empty by default; set these in .env and start with
+      # `docker compose --profile ai-assistant up -d` to enable. See the README.
+      - N8N_ENABLED_MODULES=${N8N_ENABLED_MODULES:-}
+      - N8N_INSTANCE_AI_MODEL=${N8N_INSTANCE_AI_MODEL:-}
+      - N8N_INSTANCE_AI_SANDBOX_ENABLED=${N8N_INSTANCE_AI_SANDBOX_ENABLED:-false}
+      - N8N_INSTANCE_AI_SANDBOX_IMAGE=${N8N_INSTANCE_AI_SANDBOX_IMAGE:-}
+      - N8N_INSTANCE_AI_SANDBOX_API_URL=${N8N_INSTANCE_AI_SANDBOX_API_URL:-http://sandbox-api:8080}
+      - N8N_INSTANCE_AI_MODEL_API_KEY=${N8N_INSTANCE_AI_MODEL_API_KEY:-}
+      - N8N_INSTANCE_AI_SANDBOX_API_KEY=${N8N_INSTANCE_AI_SANDBOX_API_KEY:-}
     ports:
       - 5678:5678
     links:
@@ -52,3 +62,86 @@ services:
       - N8N_RUNNERS_TASK_BROKER_URI=http://n8n:5679
     depends_on:
       - n8n
+
+  # --- AI Assistant (instance-ai) sandbox — only started with `--profile ai-assistant` ---
+  # sandbox-runner-1 runs PRIVILEGED Docker-in-Docker: treat it as root on the host and never
+  # expose its ports to the public internet. Only n8n's 5678 should be internet-facing.
+  sandbox-certs:
+    profiles: ["ai-assistant"]
+    image: n8nio/n8n-sandbox-service-api:${SANDBOX_VERSION:-latest}
+    user: '0:0'
+    entrypoint: ['sh', '-c']
+    command:
+      - >
+        bootstrap-mtls.sh --out-dir /tls --api-san sandbox-api
+        --control-san-prefix sandbox-runner &&
+        chown -R sandbox-api:sandbox-api /tls/api
+    environment:
+      NUM_RUNNERS: '1'
+    volumes:
+      - sandbox-tls:/tls
+
+  sandbox-api:
+    profiles: ["ai-assistant"]
+    image: n8nio/n8n-sandbox-service-api:${SANDBOX_VERSION:-latest}
+    restart: always
+    depends_on:
+      sandbox-certs:
+        condition: service_completed_successfully
+    environment:
+      # Pass only the secrets the API needs (rather than env_file: .env) so n8n-only
+      # credentials — model/search API keys, DB password, encryption key — don't land here.
+      SANDBOX_API_KEYS: ${SANDBOX_API_KEYS:-}
+      SANDBOX_API_RUNNER_REGISTRATION_TOKEN: ${SANDBOX_API_RUNNER_REGISTRATION_TOKEN:-}
+      SANDBOX_API_RUNNER_API_KEY: ${SANDBOX_API_RUNNER_API_KEY:-}
+      SANDBOX_API_GRPC_TLS_CERT_FILE: /tls/api/grpc-server.crt
+      SANDBOX_API_GRPC_TLS_KEY_FILE: /tls/api/grpc-server.key
+      SANDBOX_API_GRPC_TLS_CLIENT_CA_FILE: /tls/api/ca.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_CA_FILE: /tls/api/ca.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_CERT_FILE: /tls/api/control-grpc-api-client.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_KEY_FILE: /tls/api/control-grpc-api-client.key
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_SERVER_NAME: sandbox-runner-1
+    volumes:
+      - sandbox-tls:/tls:ro
+    # Never publish 8080/9090 to the host on an internet-facing server. n8n reaches this
+    # container by service name over the default Compose network.
+    # The healthcheck assumes `wget` exists in the image; if it doesn't, swap it for `curl`
+    # or a TCP check (run `docker compose run sandbox-api which wget` to check first).
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  sandbox-runner-1:
+    profiles: ["ai-assistant"]
+    image: n8nio/n8n-sandbox-service-runner-dind:${SANDBOX_VERSION:-latest}
+    restart: always
+    privileged: true
+    depends_on:
+      sandbox-api:
+        condition: service_healthy
+    # No env_file: every value the runner needs is set explicitly below, so n8n-only
+    # secrets stay out of this privileged (host-root-equivalent) container.
+    environment:
+      SANDBOX_RUNNER_API_GRPC_ADDR: sandbox-api:9090
+      SANDBOX_RUNNER_HTTP_BASE_URL: http://sandbox-runner-1:8080
+      SANDBOX_RUNNER_CONTROL_GRPC_LISTEN_ADDR: ':9091'
+      SANDBOX_RUNNER_CONTROL_GRPC_ADVERTISE_ADDR: sandbox-runner-1:9091
+      SANDBOX_RUNNER_ID: runner-1
+      # Wired to the sandbox-api's runner secrets so the two sides can't drift: the runner must
+      # accept the key the API calls it with, and present the token the API expects to register.
+      SANDBOX_RUNNER_API_KEYS: ${SANDBOX_API_RUNNER_API_KEY:-}
+      SANDBOX_RUNNER_REGISTRATION_TOKEN: ${SANDBOX_API_RUNNER_REGISTRATION_TOKEN:-}
+      SANDBOX_RUNNER_DOCKER_SANDBOX_IMAGE: n8nio/n8n-sandbox-service-sandbox:${SANDBOX_VERSION:-latest}
+      SANDBOX_RUNNER_REGISTRATION_GRPC_CA_FILE: /tls/runner/ca.crt
+      SANDBOX_RUNNER_REGISTRATION_GRPC_CERT_FILE: /tls/runner/grpc-client.crt
+      SANDBOX_RUNNER_REGISTRATION_GRPC_KEY_FILE: /tls/runner/grpc-client.key
+      SANDBOX_RUNNER_REGISTRATION_GRPC_SERVER_NAME: sandbox-api
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_CERT_FILE: /tls/runner/control-grpc-server.crt
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_KEY_FILE: /tls/runner/control-grpc-server.key
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_CLIENT_CA_FILE: /tls/runner/ca.crt
+    volumes:
+      - sandbox-tls:/tls:ro
+    # Never expose this container's ports publicly — it runs privileged Docker-in-Docker.
