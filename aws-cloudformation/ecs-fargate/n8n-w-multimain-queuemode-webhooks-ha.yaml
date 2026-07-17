@@ -1,9 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-  Deploys n8n with multi-main and queue mode configured. s3 is used for storage. For a dedicated
-  webhook-processor tier and queue-depth (Redis backlog) worker autoscaling, use the
-  n8n-w-multimain-queuemode-webhooks.yaml template in this folder; this base template scales
-  workers on CPU/memory only.
+  n8n HA / scale tier: multi-main + queue mode + dedicated webhook tier on Aurora PostgreSQL
+  (writer + reader, fast failover) with Redis Multi-AZ and higher task floors. s3 is used for
+  storage. Higher-cost, production-grade variant of the webhooks template.
 
 Parameters:
 
@@ -51,27 +50,24 @@ Parameters:
 
   
 
-# postgres parameters
+# postgres (Aurora) parameters
   DBInstanceClass:
     Type: String
     Description: >-
-      PostgreSQL instance class. The DB is usually the first tier to bottleneck as request rate rises.
-      db.t4g.micro/small/medium are BURSTABLE (CPU-credit limited), fine for dev / light / bursty load
-      but they throttle under sustained load. For sustained throughput pick a non-burstable class:
-      db.m7g.large for ~250 req/s, db.m7g.xlarge/2xlarge for higher rps or heavier workflows.
-    Default: db.t4g.small
+      Aurora PostgreSQL instance class, applied to BOTH the writer and the reader. Sizing
+      guidance (the DB is the first tier to bottleneck as request rate rises): db.t4g.medium/large
+      are BURSTABLE (CPU-credit limited), fine for dev / light load but throttle under sustained
+      load. For sustained throughput pick a memory-optimized class, db.r6g.large for ~250-400 req/s,
+      db.r6g.xlarge / db.r7g.large+ for higher rps or heavier workflows. Aurora storage auto-scales
+      (no AllocatedStorage); the cluster uses I/O-Optimized storage for predictable cost at scale.
+    Default: db.r6g.large
     AllowedValues:
-      - db.t4g.micro
-      - db.t4g.small
       - db.t4g.medium
-      - db.m7g.large
-      - db.m7g.xlarge
-      - db.m7g.2xlarge
-  DBAllocatedStorage:
-    Type: Number
-    Default: 20
-    MinValue: 20
-    Description: Storage in GiB (minimum for RDS is typically 20 GiB)
+      - db.t4g.large
+      - db.r6g.large
+      - db.r6g.xlarge
+      - db.r7g.large
+      - db.r7g.xlarge
   MasterUsername:
     Type: String
     Default: postgres
@@ -91,8 +87,8 @@ Parameters:
 # redis parameters
   RedisInstanceClass:
     Type: String
-    Description: "Select instance class for n8n's Redis cache"
-    Default: cache.t4g.small
+    Description: "Select instance class for n8n's Redis cache. HA tier defaults one step up for headroom."
+    Default: cache.t4g.medium
     AllowedValues:
       - cache.t4g.micro
       - cache.t4g.small
@@ -107,10 +103,10 @@ Parameters:
     AllowedPattern: ".{16}.*"
   RedisReplicasPerNodeGroup:
     Type: Number
-    Default: 0
+    Default: 1
     MinValue: 0
     MaxValue: 5
-    Description: "Redis read replicas per shard. >=1 enables Multi-AZ + automatic failover (HA, recommended for prod, adds a cache node and cost). Default 0 = single-node dev cache (SPOF, cheapest)."
+    Description: "Redis read replicas per shard. >=1 enables Multi-AZ + automatic failover (HA, recommended for prod). Set 0 for a single-node dev cache (SPOF, cheaper)."
 
 # license key parameters
   N8nLicenseKey:
@@ -125,62 +121,76 @@ Parameters:
     Default: 1
     AllowedPattern: '^[0-9]+$'
 
-# ECS scaling parameters
-  MainDesiredCount:
+# worker autoscaling parameters (queue-depth driven, tuneable)
+  WorkerMinTasks:
     Type: Number
-    Description: Number of ECS Fargate tasks to run for the n8n main service.
-    Default: 2
+    Default: 4
     MinValue: 1
-
-  WorkerDesiredCount:
+    Description: "Minimum worker tasks (autoscaling floor, kept running even when the queue is empty). HA tier floor raised so backlog drains immediately without waiting on scale-out."
+  WorkerMaxTasks:
     Type: Number
-    Description: Initial number of ECS Fargate tasks to run for the n8n worker service. Keep this between WorkerMinCapacity and WorkerMaxCapacity.
-    Default: 3
+    Default: 20
     MinValue: 1
-
-  WorkerMinCapacity:
+    Description: "Maximum worker tasks the queue-depth autoscaler may scale out to."
+  WorkerBacklogPerTask:
     Type: Number
-    Description: Minimum ECS worker task count for Application Auto Scaling.
-    Default: 2
+    Default: 20
     MinValue: 1
-
-  WorkerMaxCapacity:
-    Type: Number
-    Description: Maximum ECS worker task count for Application Auto Scaling. Must be greater than or equal to WorkerMinCapacity.
-    Default: 10
-    MinValue: 1
-
+    Description: "Scale target: AWS keeps roughly this many waiting jobs per worker (analog of the EKS module's jobs_per_replica). Lower = more aggressive."
   WorkerConcurrency:
     Type: Number
-    Description: Number of queue jobs each worker task may process concurrently. n8n recommends 5 or higher.
     Default: 10
-    MinValue: 5
-
-  WorkerCpuTargetPercent:
-    Type: Number
-    Description: Target average CPU utilization percentage for ECS worker target tracking.
-    Default: 60
     MinValue: 1
-    MaxValue: 100
+    Description: "Jobs each worker processes in parallel (n8n N8N_CONCURRENCY)."
 
-  WorkerMemoryTargetPercent:
+# webhook autoscaling parameters (request-rate driven, tuneable)
+  WebhookMinTasks:
     Type: Number
-    Description: Target average memory utilization percentage for ECS worker target tracking.
-    Default: 70
+    Default: 6
     MinValue: 1
-    MaxValue: 100
-
-  WorkerScaleInCooldownSeconds:
+    Description: "Minimum webhook tasks (floor). HA tier defaults to 6 so the ingestion tier absorbs larger bursts during the ~3-5 min scale-out lag instead of throttling on cold start."
+  WebhookMaxTasks:
     Type: Number
-    Description: Cooldown period, in seconds, before worker CPU or memory policies scale in.
-    Default: 60
-    MinValue: 0
-
-  WorkerScaleOutCooldownSeconds:
+    Default: 20
+    MinValue: 1
+    Description: "Maximum webhook tasks the autoscaler may scale to."
+  WebhookRequestsPerTask:
     Type: Number
-    Description: Cooldown period, in seconds, before worker CPU or memory policies scale out.
-    Default: 60
+    Default: 1000
+    MinValue: 1
+    Description: "Scale target: average ALB requests per webhook task (ALBRequestCountPerTarget). Lower = more aggressive / lower latency, higher = cheaper."
+
+# execution-data retention (pruning) parameters, matched to the EKS module's Large tier
+  ExecutionsDataMaxAge:
+    Type: Number
+    Default: 24
+    MinValue: 1
+    Description: "Max age (hours) of execution records to retain before pruning. EKS Large = 24 (1 day). Maps to EXECUTIONS_DATA_MAX_AGE."
+  ExecutionsDataMaxCount:
+    Type: Number
+    Default: 5000000
     MinValue: 0
+    Description: "Max number of execution records to retain (0 = no count limit). EKS Large = 5000000. Maps to EXECUTIONS_DATA_PRUNE_MAX_COUNT."
+  ConcurrencyProductionLimit:
+    Type: Number
+    Default: 2000
+    MinValue: -1
+    Description: "Max concurrent production executions (-1 to disable). EKS Large = 2000 (the default 100 throttles workers before infrastructure does). Maps to N8N_CONCURRENCY_PRODUCTION_LIMIT."
+
+# task runner parameters
+  EnablePythonTaskRunner:
+    Type: String
+    Default: "false"
+    AllowedValues: [ "true", "false" ]
+    Description: "BETA. true = run an external n8nio/runners sidecar (JavaScript + native Python) on the main and worker tasks for Python Code node support, matching the EKS module. false (default) = JS-only internal runner, no sidecar, no extra cost. Validate with a test deploy before relying on it."
+  PythonStdlibAllow:
+    Type: String
+    Default: ""
+    Description: "Only used when EnablePythonTaskRunner=true. Python stdlib modules the runner may import (maps to N8N_RUNNERS_STDLIB_ALLOW). Comma-separated (e.g. json,math,datetime) or * for all. Empty (default) = no imports allowed (most secure; matches n8n default)."
+  PythonExternalAllow:
+    Type: String
+    Default: ""
+    Description: "Only used when EnablePythonTaskRunner=true. External (pip) packages the runner may import (maps to N8N_RUNNERS_EXTERNAL_ALLOW). Comma-separated or * for all. Empty (default) = none."
 
 # labels to make everything easier to read during setup
 Metadata:
@@ -205,35 +215,52 @@ Metadata:
           - PrivateSubnet2Cidr
           - PrivateSubnet3Cidr
       - Label:
-          default: "Postgres DB Config"
+          default: "Aurora PostgreSQL Config"
         Parameters:
           - DBInstanceClass
           - MasterUsername
           - MasterUserPassword
-          - DBAllocatedStorage
           - DBName
       - Label:
           default: "Redis Config"
         Parameters:
           - RedisInstanceClass
           - RedisPassword
+      - Label:
+          default: "Worker Autoscaling Config"
+        Parameters:
+          - WorkerMinTasks
+          - WorkerMaxTasks
+          - WorkerBacklogPerTask
+          - WorkerConcurrency
+      - Label:
+          default: "Webhook Autoscaling Config"
+        Parameters:
+          - WebhookMinTasks
+          - WebhookMaxTasks
+          - WebhookRequestsPerTask
+      - Label:
+          default: "Redis HA Config"
+        Parameters:
           - RedisReplicasPerNodeGroup
       - Label:
-          default: "ECS Scaling Config"
+          default: "Data Retention Config"
         Parameters:
-          - MainDesiredCount
-          - WorkerDesiredCount
-          - WorkerMinCapacity
-          - WorkerMaxCapacity
-          - WorkerConcurrency
-          - WorkerCpuTargetPercent
-          - WorkerMemoryTargetPercent
-          - WorkerScaleInCooldownSeconds
-          - WorkerScaleOutCooldownSeconds
+          - ExecutionsDataMaxAge
+          - ExecutionsDataMaxCount
+          - ConcurrencyProductionLimit
+      - Label:
+          default: "Task Runner Config"
+        Parameters:
+          - EnablePythonTaskRunner
+          - PythonStdlibAllow
+          - PythonExternalAllow
 
 Conditions:
   # >=1 replica enables Multi-AZ + automatic failover
   RedisHA: !Not [ !Equals [ !Ref RedisReplicasPerNodeGroup, 0 ] ]
+  # opt-in external task runner sidecar (JS + native Python)
+  PythonRunner: !Equals [ !Ref EnablePythonTaskRunner, "true" ]
 
 Resources:
 
@@ -343,6 +370,17 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-public-2"
 
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.12.0/24
+      AvailabilityZone: !Select [2, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-public-3"
+
   # route table for  allowing public access
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -369,6 +407,12 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet3
       RouteTableId: !Ref PublicRouteTable
   
   # Public NAT gateways, one per public subnet/AZ
@@ -402,6 +446,22 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-nat-az2"
 
+  # Third-AZ NAT so PrivateSubnet3 has its own egress path (no cross-AZ SPOF).
+  NatEipAz3:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGatewayAz3:
+    Type: AWS::EC2::NatGateway
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      AllocationId: !GetAtt NatEipAz3.AllocationId
+      SubnetId: !Ref PublicSubnet3
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-nat-az3"
+
   # private route tables configured per AZ
 
   PrivateRouteTableAz1:
@@ -434,6 +494,21 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref NatGatewayAz2
 
+  PrivateRouteTableAz3:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-rt-az3"
+
+  PrivateDefaultRouteViaNatAz3:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableAz3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayAz3
+
   PrivateSubnet1Association:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -450,7 +525,7 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet3
-      RouteTableId: !Ref PrivateRouteTableAz1
+      RouteTableId: !Ref PrivateRouteTableAz3
   
   # Security group for 443, 80, 5678 access over HTTPS
   ALBSecGroup:
@@ -567,6 +642,35 @@ Resources:
         - Key: slow_start.duration_seconds
           Value: "30"
 
+  # target group for the dedicated webhook service (webhook process serves /healthz, not /)
+  WebhookTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-wh-tg"
+      VpcId: !Ref VPC
+      Protocol: HTTP
+      Port: 5678
+      TargetType: ip
+      IpAddressType: ipv4
+      ProtocolVersion: HTTP1
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: 5678
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 5
+      # match the webhook container health check (/healthz); the webhook process serves
+      # /healthz reliably, so gating targets on it avoids all-webhook 503s on startup
+      HealthCheckPath: /healthz
+      Matcher:
+        HttpCode: '200'
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "30"
+        - Key: slow_start.duration_seconds
+          Value: "30"
+
   # Listeners
   ElasticLoadBalancingV2Listener2:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -597,7 +701,25 @@ Resources:
               Port: 443
               StatusCode: HTTP_301
 
-
+  # route production webhook + form paths to the webhook service; everything else
+  # (UI, REST API, and /webhook-test/* which needs the editor) stays on the mains
+  WebhookListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ElasticLoadBalancingV2Listener2
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /webhook/*
+              - /webhook-waiting/*
+              - /form/*
+              - /form-waiting/*
+      Actions:
+        - Order: 1
+          Type: forward
+          TargetGroupArn: !Ref WebhookTargetGroup
 
   # create A record in hosted zone
   N8nHostRecord:
@@ -658,6 +780,7 @@ Resources:
       RouteTableIds:
         - !Ref PrivateRouteTableAz1
         - !Ref PrivateRouteTableAz2
+        - !Ref PrivateRouteTableAz3
       VpcEndpointType: Gateway
 
   # security groups and subnet group for postgres
@@ -695,9 +818,13 @@ Resources:
       DBSubnetGroupDescription: Subnet group for RDS Postgres
       SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3]
 
-  # launch postgresdb instance
-  PostgresDB:
-    Type: AWS::RDS::DBInstance
+  # Aurora PostgreSQL cluster: writer + reader across AZs. Fast failover (~15-30s): on writer
+  # loss Aurora promotes the reader and the cluster (writer) endpoint re-points automatically,
+  # so n8n reconnects far quicker than the ~3-min stale-pool recovery seen on a single RDS
+  # instance. n8n connects to the WRITER endpoint (it is single-writer); the reader is a warm
+  # standby for failover. I/O-Optimized storage for predictable cost at sustained throughput.
+  AuroraDBCluster:
+    Type: AWS::RDS::DBCluster
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
     Metadata:
@@ -708,43 +835,67 @@ Resources:
           ignore_checks:
             - W1011
     Properties:
-      Engine: postgres
+      Engine: aurora-postgresql
       EngineVersion: "16.9"
-      DBInstanceClass: !Ref DBInstanceClass
-      DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-db"
-      AllocatedStorage: !Ref DBAllocatedStorage
-      StorageType: gp3
-      StorageEncrypted: true
-      PubliclyAccessible: false
-      MultiAZ: true
-      AutoMinorVersionUpgrade: true
-      BackupRetentionPeriod: 15
-      Port: 5432
+      DBClusterIdentifier: !Sub "${AWS::StackName}-pg-cluster"
+      DatabaseName: !Ref DBName
       MasterUsername: !Ref MasterUsername
       MasterUserPassword: !Ref MasterUserPassword
-      DBName: !Ref DBName
-      VPCSecurityGroups:
+      Port: 5432
+      StorageType: aurora-iopt1
+      StorageEncrypted: true
+      BackupRetentionPeriod: 15
+      CopyTagsToSnapshot: true
+      DeletionProtection: false
+      VpcSecurityGroupIds:
         - !GetAtt RDSSecurityGroup.GroupId
       DBSubnetGroupName: !Ref RDSSubnetGroup
-      DeletionProtection: false
+
+  # writer instance (PromotionTier 0 = preferred primary)
+  AuroraWriterInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref AuroraDBCluster
+      DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-writer"
+      DBInstanceClass: !Ref DBInstanceClass
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
       EnablePerformanceInsights: false
-      CopyTagsToSnapshot: true
+      PromotionTier: 0
+
+  # reader instance (warm failover target; PromotionTier 1)
+  AuroraReaderInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref AuroraDBCluster
+      DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-reader"
+      DBInstanceClass: !Ref DBInstanceClass
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
+      EnablePerformanceInsights: false
+      PromotionTier: 1
 
 
-  # create secrets file for n8n to connect to RDS
+  # create secrets file for n8n to connect to Aurora (cluster WRITER endpoint)
   RDSSecrets:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: !Sub "${AWS::StackName}-app-user/dbcredentials"
-      Description: Credentials for n8n to connect to postgres
+      Description: Credentials for n8n to connect to Aurora PostgreSQL
       SecretString: !Sub |
         {
           "user": "${MasterUsername}",
           "password": "${MasterUserPassword}",
-          "host": "${PostgresDB.Endpoint.Address}",
+          "host": "${AuroraDBCluster.Endpoint.Address}",
           "port": "5432",
           "database": "${DBName}"
-        }  
+        }
 
   # create subnet group for elasticache
   CacheSubnetGroup:
@@ -824,7 +975,7 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - S3BinaryBucket
     Properties:
         ClusterName: !Sub "${AWS::StackName}-cluster"
@@ -897,7 +1048,7 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
     Properties:
       RoleName: !Sub "${AWS::StackName}-task-role"
       Path: /
@@ -937,7 +1088,7 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - RedisPasswordSecret
     Properties:
       RoleName: !Sub "${AWS::StackName}-task-execution-role"
@@ -984,13 +1135,13 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - RDSSecrets
       - N8nLicenseSecret
     Properties:
       Family: n8n-main
-      Cpu: "1024"
-      Memory: "3072"
+      Cpu: "2048"
+      Memory: "4096"
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -1001,6 +1152,7 @@ Resources:
       ExecutionRoleArn: !GetAtt N8nTaskExecutionRole.Arn
       Volumes:
         - Name: certs
+        - Name: runner-cfg
       ContainerDefinitions:
         - Name: n8n
           Image: n8nio/n8n:2.23.4
@@ -1082,6 +1234,29 @@ Resources:
               Value: warn
             - Name: N8N_MULTI_MAIN_SETUP_ENABLED
               Value: true
+            # production webhooks are served by the dedicated webhook service, not the mains
+            - Name: N8N_DISABLE_PRODUCTION_MAIN_PROCESS
+              Value: true
+            # execution-data pruning (matched to the EKS module); runs on the leader main in queue mode
+            - Name: EXECUTIONS_DATA_PRUNE
+              Value: true
+            - Name: EXECUTIONS_DATA_MAX_AGE
+              Value: !Ref ExecutionsDataMaxAge
+            - Name: EXECUTIONS_DATA_PRUNE_MAX_COUNT
+              Value: !Ref ExecutionsDataMaxCount
+            - Name: EXECUTIONS_DATA_HARD_DELETE_BUFFER
+              Value: 1
+            - Name: EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL
+              Value: 15
+            - Name: EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL
+              Value: 60
+            - Name: N8N_CONCURRENCY_PRODUCTION_LIMIT
+              Value: !Ref ConcurrencyProductionLimit
+            # task runner: external when the Python sidecar is enabled, else internal (JS in-process)
+            - Name: N8N_RUNNERS_MODE
+              Value: !If [ PythonRunner, external, internal ]
+            - Name: N8N_RUNNERS_AUTH_TOKEN
+              Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
             - Name: QUEUE_HEALTH_CHECK_ACTIVE
               Value: true
             - Name: QUEUE_BULL_REDIS_TLS
@@ -1089,7 +1264,7 @@ Resources:
             - Name: QUEUE_BULL_REDIS_HOST
               Value: !GetAtt Redis.PrimaryEndPoint.Address
             - Name: QUEUE_BULL_REDIS_PORT
-              Value: !GetAtt Redis.PrimaryEndPoint.Port            
+              Value: !GetAtt Redis.PrimaryEndPoint.Port
             - Name: QUEUE_BULL_REDIS_USERNAME
               Value: default
             - Name: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
@@ -1135,6 +1310,60 @@ Resources:
           MountPoints:
             - SourceVolume: certs
               ContainerPath: /certs
+        # JS + native Python task runner (external mode); present only when EnablePythonTaskRunner=true.
+        # The stock n8nio/runners image hardcodes the Python import allowlist empty (env-overrides), so a
+        # root init container patches that config onto a shared volume from the PythonStdlibAllow /
+        # PythonExternalAllow params, and the runner reads it via N8N_RUNNERS_CONFIG_PATH. BETA.
+        - !If
+          - PythonRunner
+          - Name: runner-config-init
+            Image: n8nio/runners:2.23.4
+            Essential: false
+            User: "0"
+            EntryPoint: [ "/opt/runners/task-runner-python/.venv/bin/python", "-c" ]
+            Command:
+              - "import json,os;c=json.load(open('/etc/n8n-task-runners.json'));[r.setdefault('env-overrides',{}).update({'N8N_RUNNERS_STDLIB_ALLOW':os.environ.get('STDLIB_ALLOW',''),'N8N_RUNNERS_EXTERNAL_ALLOW':os.environ.get('EXTERNAL_ALLOW','')}) for r in c['task-runners'] if r.get('runner-type')=='python'];json.dump(c,open('/runner-cfg/n8n-task-runners.json','w'));print('runner config patched: stdlib=%r external=%r'%(os.environ.get('STDLIB_ALLOW',''),os.environ.get('EXTERNAL_ALLOW','')))"
+            Environment:
+              - Name: STDLIB_ALLOW
+                Value: !Ref PythonStdlibAllow
+              - Name: EXTERNAL_ALLOW
+                Value: !Ref PythonExternalAllow
+            MountPoints:
+              - SourceVolume: runner-cfg
+                ContainerPath: /runner-cfg
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Sub /ecs/${AWS::StackName}
+                awslogs-region: !Sub ${AWS::Region}
+                awslogs-stream-prefix: ecs
+          - !Ref "AWS::NoValue"
+        - !If
+          - PythonRunner
+          - Name: task-runner
+            Image: n8nio/runners:2.23.4
+            Essential: false
+            Command: [ "javascript", "python" ]
+            DependsOn:
+              - ContainerName: runner-config-init
+                Condition: SUCCESS
+            Environment:
+              - Name: N8N_RUNNERS_TASK_BROKER_URI
+                Value: http://127.0.0.1:5679
+              - Name: N8N_RUNNERS_AUTH_TOKEN
+                Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
+              - Name: N8N_RUNNERS_CONFIG_PATH
+                Value: /runner-cfg/n8n-task-runners.json
+            MountPoints:
+              - SourceVolume: runner-cfg
+                ContainerPath: /runner-cfg
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Sub /ecs/${AWS::StackName}
+                awslogs-region: !Sub ${AWS::Region}
+                awslogs-stream-prefix: ecs
+          - !Ref "AWS::NoValue"
 
   # Fargate Service for main
   ECSMainService:
@@ -1142,17 +1371,17 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - Redis
     Properties:
         ServiceName: !Sub "${AWS::StackName}-svc-main"
         Cluster: !GetAtt ECSCluster.Arn
-        LoadBalancers: 
-          -  
+        LoadBalancers:
+          -
             TargetGroupArn: !Ref HttpAppTargetGroup
             ContainerName: "n8n"
             ContainerPort: 5678
-        DesiredCount: !Ref MainDesiredCount
+        DesiredCount: 3
         TaskDefinition: !Ref N8nMainTaskDefinition
         DeploymentConfiguration: 
             MaximumPercent: 200
@@ -1184,12 +1413,12 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - N8nLicenseSecret
     Properties:
       Family: n8n-worker
-      Cpu: "1024"
-      Memory: "3072"
+      Cpu: "2048"
+      Memory: "4096"
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -1200,6 +1429,7 @@ Resources:
       ExecutionRoleArn: !GetAtt N8nTaskExecutionRole.Arn
       Volumes:
         - Name: certs
+        - Name: runner-cfg
       ContainerDefinitions:
         - Name: n8n
           Image: n8nio/n8n:2.23.4
@@ -1215,8 +1445,6 @@ Resources:
             - "node"
             - "/usr/local/bin/n8n"
             - "worker"
-          Command:
-            - !Sub "--concurrency=${WorkerConcurrency}"
           Secrets:
             - Name: N8N_LICENSE_ACTIVATION_KEY
               ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/n8nlicense:LicenseKey::"
@@ -1287,6 +1515,13 @@ Resources:
               Value: !Ref AWS::Region
             - Name: EXECUTIONS_MODE
               Value: queue
+            - Name: N8N_CONCURRENCY
+              Value: !Ref WorkerConcurrency
+            # task runner: external when the Python sidecar is enabled, else internal (JS in-process)
+            - Name: N8N_RUNNERS_MODE
+              Value: !If [ PythonRunner, external, internal ]
+            - Name: N8N_RUNNERS_AUTH_TOKEN
+              Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
             - Name: N8N_LOG_LEVEL
               Value: warn
             - Name: N8N_MULTI_MAIN_SETUP_ENABLED
@@ -1343,6 +1578,60 @@ Resources:
           MountPoints:
             - SourceVolume: certs
               ContainerPath: /certs
+        # JS + native Python task runner (external mode); present only when EnablePythonTaskRunner=true.
+        # The stock n8nio/runners image hardcodes the Python import allowlist empty (env-overrides), so a
+        # root init container patches that config onto a shared volume from the PythonStdlibAllow /
+        # PythonExternalAllow params, and the runner reads it via N8N_RUNNERS_CONFIG_PATH. BETA.
+        - !If
+          - PythonRunner
+          - Name: runner-config-init
+            Image: n8nio/runners:2.23.4
+            Essential: false
+            User: "0"
+            EntryPoint: [ "/opt/runners/task-runner-python/.venv/bin/python", "-c" ]
+            Command:
+              - "import json,os;c=json.load(open('/etc/n8n-task-runners.json'));[r.setdefault('env-overrides',{}).update({'N8N_RUNNERS_STDLIB_ALLOW':os.environ.get('STDLIB_ALLOW',''),'N8N_RUNNERS_EXTERNAL_ALLOW':os.environ.get('EXTERNAL_ALLOW','')}) for r in c['task-runners'] if r.get('runner-type')=='python'];json.dump(c,open('/runner-cfg/n8n-task-runners.json','w'));print('runner config patched: stdlib=%r external=%r'%(os.environ.get('STDLIB_ALLOW',''),os.environ.get('EXTERNAL_ALLOW','')))"
+            Environment:
+              - Name: STDLIB_ALLOW
+                Value: !Ref PythonStdlibAllow
+              - Name: EXTERNAL_ALLOW
+                Value: !Ref PythonExternalAllow
+            MountPoints:
+              - SourceVolume: runner-cfg
+                ContainerPath: /runner-cfg
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Sub /ecs/${AWS::StackName}
+                awslogs-region: !Sub ${AWS::Region}
+                awslogs-stream-prefix: ecs
+          - !Ref "AWS::NoValue"
+        - !If
+          - PythonRunner
+          - Name: task-runner
+            Image: n8nio/runners:2.23.4
+            Essential: false
+            Command: [ "javascript", "python" ]
+            DependsOn:
+              - ContainerName: runner-config-init
+                Condition: SUCCESS
+            Environment:
+              - Name: N8N_RUNNERS_TASK_BROKER_URI
+                Value: http://127.0.0.1:5679
+              - Name: N8N_RUNNERS_AUTH_TOKEN
+                Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
+              - Name: N8N_RUNNERS_CONFIG_PATH
+                Value: /runner-cfg/n8n-task-runners.json
+            MountPoints:
+              - SourceVolume: runner-cfg
+                ContainerPath: /runner-cfg
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Sub /ecs/${AWS::StackName}
+                awslogs-region: !Sub ${AWS::Region}
+                awslogs-stream-prefix: ecs
+          - !Ref "AWS::NoValue"
 
   # Fargate Service for workers
   ECSWorkerService:
@@ -1350,12 +1639,12 @@ Resources:
     DependsOn:
       - RDSSubnetGroup
       - RDSSecurityGroup
-      - PostgresDB
+      - AuroraWriterInstance
       - Redis
     Properties:
         ServiceName: !Sub "${AWS::StackName}-svc-worker"
         Cluster: !GetAtt ECSCluster.Arn
-        DesiredCount: !Ref WorkerDesiredCount
+        DesiredCount: !Ref WorkerMinTasks
         TaskDefinition: !Ref N8nWorkerTaskDefinition
         DeploymentConfiguration: 
             MaximumPercent: 200
@@ -1383,9 +1672,6 @@ Resources:
             Base: 0
 
   # auto scaling for worker service
-  # Worker autoscaling here is CPU/memory based. Note: CPU/memory can lag queue backlog for
-  # lightweight jobs (workers saturate concurrency without raising CPU past target). For
-  # queue-depth (Redis backlog) worker autoscaling, use n8n-w-multimain-queuemode-webhooks.yaml.
   ECSServiceScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
@@ -1394,8 +1680,8 @@ Resources:
       ResourceId: !Sub 
         - "service/${ClusterName}/${ServiceName}"
         - { ClusterName: !Ref ECSCluster, ServiceName: !GetAtt ECSWorkerService.Name }
-      MinCapacity: !Ref WorkerMinCapacity
-      MaxCapacity: !Ref WorkerMaxCapacity
+      MinCapacity: !Ref WorkerMinTasks
+      MaxCapacity: !Ref WorkerMaxTasks
       RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
 
   # scaling rules for CPU
@@ -1408,9 +1694,9 @@ Resources:
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageCPUUtilization
-        TargetValue: !Ref WorkerCpuTargetPercent
-        ScaleInCooldown: !Ref WorkerScaleInCooldownSeconds
-        ScaleOutCooldown: !Ref WorkerScaleOutCooldownSeconds
+        TargetValue: 60
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
 
   # scaling rules for memory
   ECSServiceMemoryScalingPolicy:
@@ -1422,9 +1708,427 @@ Resources:
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageMemoryUtilization
-        TargetValue: !Ref WorkerMemoryTargetPercent
-        ScaleInCooldown: !Ref WorkerScaleInCooldownSeconds
-        ScaleOutCooldown: !Ref WorkerScaleOutCooldownSeconds
+        TargetValue: 70
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+
+  # ── Queue-depth based worker autoscaling (ECS equivalent of the EKS module's KEDA) ──
+  # A scheduled Lambda reads the Bull queue length (LLEN bull:jobs:wait) from Redis
+  # and publishes a CloudWatch "backlog per worker" metric. A target-tracking policy
+  # holds that at WorkerBacklogPerTask, so worker count tracks queue demand, not CPU.
+
+  WorkerScalerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "n8n worker-autoscaler Lambda (reaches Redis 6379)"
+      VpcId: !Ref VPC
+
+  CacheSecGroupIngressScaler:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref CacheSecurityGroup
+      IpProtocol: tcp
+      FromPort: 6379
+      ToPort: 6379
+      SourceSecurityGroupId: !Ref WorkerScalerSecurityGroup
+
+  WorkerScalerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-worker-scaler-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: worker-scaler-inline
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [ "secretsmanager:GetSecretValue" ]
+                Resource: !Ref RedisPasswordSecret
+              - Effect: Allow
+                Action: [ "ecs:DescribeServices" ]
+                Resource: "*"
+              - Effect: Allow
+                Action: [ "cloudwatch:PutMetricData" ]
+                Resource: "*"
+
+  WorkerScalerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-worker-scaler"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      Role: !GetAtt WorkerScalerRole.Arn
+      VpcConfig:
+        SecurityGroupIds: [ !Ref WorkerScalerSecurityGroup ]
+        SubnetIds: [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]
+      Environment:
+        Variables:
+          REDIS_HOST: !GetAtt Redis.PrimaryEndPoint.Address
+          REDIS_PORT: !GetAtt Redis.PrimaryEndPoint.Port
+          REDIS_SECRET_ARN: !Ref RedisPasswordSecret
+          CLUSTER_NAME: !Sub "${AWS::StackName}-cluster"
+          WORKER_SERVICE: !Sub "${AWS::StackName}-svc-worker"
+          METRIC_NAMESPACE: !Sub "n8n/${AWS::StackName}"
+      Code:
+        ZipFile: |
+          import os, ssl, socket, boto3
+
+          cw = boto3.client("cloudwatch")
+          ecs = boto3.client("ecs")
+          _sm = boto3.client("secretsmanager")
+          _token = None
+
+          def _auth_token():
+              global _token
+              if _token is None:
+                  _token = _sm.get_secret_value(SecretId=os.environ["REDIS_SECRET_ARN"])["SecretString"]
+              return _token
+
+          def _resp(sock, *args):
+              # minimal RESP for AUTH (+OK) and LLEN (:int)
+              buf = b"*%d\r\n" % len(args)
+              for a in args:
+                  a = a.encode() if isinstance(a, str) else a
+                  buf += b"$%d\r\n%s\r\n" % (len(a), a)
+              sock.sendall(buf)
+              data = b""
+              while b"\r\n" not in data:
+                  chunk = sock.recv(4096)
+                  if not chunk:
+                      break
+                  data += chunk
+              line = data.split(b"\r\n", 1)[0]
+              if line[:1] == b"-":
+                  raise RuntimeError("redis: " + line[1:].decode())
+              if line[:1] == b":":
+                  return int(line[1:])
+              return line[1:].decode()
+
+          def _waiting(host, port, token):
+              ctx = ssl.create_default_context()
+              raw = socket.create_connection((host, int(port)), timeout=8)
+              s = ctx.wrap_socket(raw, server_hostname=host)
+              try:
+                  _resp(s, "AUTH", token)
+                  return int(_resp(s, "LLEN", "bull:jobs:wait"))
+              finally:
+                  s.close()
+
+          def handler(event, context):
+              waiting = _waiting(os.environ["REDIS_HOST"], os.environ["REDIS_PORT"], _auth_token())
+              svc = ecs.describe_services(cluster=os.environ["CLUSTER_NAME"],
+                                          services=[os.environ["WORKER_SERVICE"]])["services"][0]
+              running = max(svc.get("runningCount", 0), 1)
+              per_task = waiting / running
+              ns = os.environ["METRIC_NAMESPACE"]
+              cw.put_metric_data(Namespace=ns, MetricData=[
+                  {"MetricName": "WorkerQueueWaiting", "Value": waiting, "Unit": "Count"},
+                  {"MetricName": "WorkerBacklogPerTask", "Value": per_task, "Unit": "Count"},
+              ])
+              return {"waiting": waiting, "running": running, "per_task": per_task}
+
+  WorkerScalerSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${AWS::StackName}-worker-scaler-rate"
+      ScheduleExpression: "rate(1 minute)"
+      State: ENABLED
+      Targets:
+        - Id: worker-scaler
+          Arn: !GetAtt WorkerScalerFunction.Arn
+
+  WorkerScalerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WorkerScalerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt WorkerScalerSchedule.Arn
+
+  # target-tracking on the custom backlog-per-task metric (the KEDA-equivalent policy)
+  ECSWorkerQueueScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub "${AWS::StackName}-worker-queue-tt"
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ECSServiceScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: !Ref WorkerBacklogPerTask
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 30
+        CustomizedMetricSpecification:
+          MetricName: WorkerBacklogPerTask
+          Namespace: !Sub "n8n/${AWS::StackName}"
+          Statistic: Average
+
+  # Task Definition for the dedicated webhook service.
+  # Identical to the main task definition, except it runs `n8n webhook` and does
+  # not take part in multi-main leader election.
+  N8nWebhookTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - AuroraWriterInstance
+      - RDSSecrets
+      - N8nLicenseSecret
+    Properties:
+      Family: n8n-webhook
+      Cpu: "2048"
+      Memory: "4096"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      TaskRoleArn: !GetAtt N8nTaskRole.Arn
+      ExecutionRoleArn: !GetAtt N8nTaskExecutionRole.Arn
+      Volumes:
+        - Name: certs
+        - Name: runner-cfg
+      ContainerDefinitions:
+        - Name: n8n
+          Image: n8nio/n8n:2.23.4
+          Essential: true
+          StopTimeout: 120
+          EntryPoint:
+            - "node"
+            - "/usr/local/bin/n8n"
+            - "webhook"
+          PortMappings:
+            - ContainerPort: 5678
+              HostPort: 5678
+              Protocol: tcp
+              Name: n8n-5678-tcp
+              AppProtocol: http
+          Secrets:
+            - Name: N8N_LICENSE_ACTIVATION_KEY
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/n8nlicense:LicenseKey::"
+            - Name: N8N_LICENSE_TENANT_ID
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/n8nlicense:TenantId::"
+            - Name: N8N_ENCRYPTION_KEY
+              ValueFrom: !Ref N8nEncryptionKey
+            - Name: DB_POSTGRESDB_HOST
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:host::"
+            - Name: DB_POSTGRESDB_PORT
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:port::"
+            - Name: DB_POSTGRESDB_DATABASE
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:database::"
+            - Name: DB_POSTGRESDB_USER
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:user::"
+            - Name: DB_POSTGRESDB_PASSWORD
+              ValueFrom: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AWS::StackName}-app-user/dbcredentials:password::"
+            - Name: QUEUE_BULL_REDIS_PASSWORD
+              ValueFrom: !Ref RedisPasswordSecret
+          Environment:
+            - Name: N8N_HOST
+              Value: !Ref N8nHostRecord
+            - Name: N8N_PROTOCOL
+              Value: https
+            - Name: N8N_DEFAULT_BINARY_DATA_MODE
+              Value: s3
+            - Name: N8N_RUNNERS_ENABLED
+              Value: true
+            - Name: N8N_METRICS
+              Value: true
+            - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
+              Value: true
+            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
+              Value: filesystem,s3
+            - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
+              Value: true
+            - Name: N8N_SECURE_COOKIE
+              Value: true
+            - Name: DB_TYPE
+              Value: postgresdb
+            - Name: DB_POSTGRESDB_SSL_ENABLED
+              Value: true
+            - Name: NODE_EXTRA_CA_CERTS
+              Value: /certs/rds-global-bundle.pem
+            - Name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+              Value: true
+            # DB connection tuning for faster RDS failover recovery (n8n + TypeORM; no RDS Proxy)
+            - Name: DB_POSTGRESDB_KEEP_ALIVE
+              Value: true
+            - Name: DB_POSTGRESDB_KEEP_ALIVE_INITIAL_DELAY_MS
+              Value: 5000
+            - Name: DB_POSTGRESDB_CONNECTION_TIMEOUT
+              Value: 10000
+            - Name: DB_POSTGRESDB_IDLE_CONNECTION_TIMEOUT
+              Value: 10000
+            # finish in-flight executions on SIGTERM before exit (scale-in / deploy / task stop)
+            - Name: N8N_GRACEFUL_SHUTDOWN_TIMEOUT
+              Value: 90
+            - Name: N8N_EXTERNAL_STORAGE_S3_HOST
+              Value: !Sub "s3.${AWS::Region}.amazonaws.com"
+            - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME
+              Value: !Ref S3BinaryBucket
+            - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION
+              Value: !Ref AWS::Region
+            - Name: EXECUTIONS_MODE
+              Value: queue
+            - Name: N8N_LOG_LEVEL
+              Value: warn
+            - Name: QUEUE_HEALTH_CHECK_ACTIVE
+              Value: true
+            - Name: QUEUE_BULL_REDIS_TLS
+              Value: true
+            - Name: QUEUE_BULL_REDIS_HOST
+              Value: !GetAtt Redis.PrimaryEndPoint.Address
+            - Name: QUEUE_BULL_REDIS_PORT
+              Value: !GetAtt Redis.PrimaryEndPoint.Port
+            - Name: QUEUE_BULL_REDIS_USERNAME
+              Value: default
+            - Name: WEBHOOK_URL
+              Value: !Sub "https://${N8nHostRecord}/"
+
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub /ecs/${AWS::StackName}
+              awslogs-region: !Sub ${AWS::Region}
+              awslogs-stream-prefix: ecs
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -fsS http://127.0.0.1:5678/healthz || wget -qO- http://127.0.0.1:5678/healthz >/dev/null || exit 1
+            Interval: 15
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 90
+          DependsOn:
+            - ContainerName: rds-cert-fetcher
+              Condition: SUCCESS
+          MountPoints:
+            - SourceVolume: certs
+              ContainerPath: /certs
+        - Name: rds-cert-fetcher
+          Image: public.ecr.aws/amazonlinux/amazonlinux:2023
+          Essential: false
+          Command:
+            - /bin/sh
+            - -c
+            - >
+              set -euo pipefail;
+              dnf install -y gawk openssl;
+              mkdir -p /certs;
+              curl -fsSL --retry 5
+              https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+              -o /certs/rds-global-bundle.pem;
+              # (optional) basic sanity check:
+              awk 'BEGIN{c=0} /BEGIN CERTIFICATE/{c++} END{ if(c<1){exit 1} }' /certs/rds-global-bundle.pem
+          MountPoints:
+            - SourceVolume: certs
+              ContainerPath: /certs
+
+  # Fargate Service for webhook processors. Reuses TaskSecGroupMain, which already
+  # permits ALB ingress on 5678 and egress to RDS/Redis (and is allowed by both).
+  ECSWebhookService:
+    Type: "AWS::ECS::Service"
+    DependsOn:
+      - RDSSubnetGroup
+      - RDSSecurityGroup
+      - AuroraWriterInstance
+      - Redis
+      - WebhookListenerRule
+    Properties:
+        ServiceName: !Sub "${AWS::StackName}-svc-webhook"
+        Cluster: !GetAtt ECSCluster.Arn
+        LoadBalancers:
+          -
+            TargetGroupArn: !Ref WebhookTargetGroup
+            ContainerName: "n8n"
+            ContainerPort: 5678
+        DesiredCount: !Ref WebhookMinTasks
+        TaskDefinition: !Ref N8nWebhookTaskDefinition
+        DeploymentConfiguration:
+            MaximumPercent: 200
+            MinimumHealthyPercent: 100
+            DeploymentCircuitBreaker:
+                Enable: true
+                Rollback: true
+        NetworkConfiguration:
+            AwsvpcConfiguration:
+                AssignPublicIp: "DISABLED"
+                SecurityGroups:
+                  - !Ref TaskSecGroupMain
+                Subnets:
+                  - !Ref PrivateSubnet1
+                  - !Ref PrivateSubnet2
+        HealthCheckGracePeriodSeconds: 600
+        SchedulingStrategy: "REPLICA"
+        DeploymentController:
+            Type: "ECS"
+        CapacityProviderStrategy:
+          -
+            CapacityProvider: "FARGATE"
+            Weight: 1
+            Base: 0
+
+  # auto scaling for webhook service
+  ECSWebhookScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      ServiceNamespace: ecs
+      ScalableDimension: ecs:service:DesiredCount
+      ResourceId: !Sub
+        - "service/${ClusterName}/${ServiceName}"
+        - { ClusterName: !Ref ECSCluster, ServiceName: !GetAtt ECSWebhookService.Name }
+      MinCapacity: !Ref WebhookMinTasks
+      MaxCapacity: !Ref WebhookMaxTasks
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
+
+  ECSWebhookCPUScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub "${AWS::StackName}-wh-cpu-tt"
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ECSWebhookScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 60
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+
+  ECSWebhookMemoryScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub "${AWS::StackName}-wh-mem-tt"
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ECSWebhookScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageMemoryUtilization
+        TargetValue: 70
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+
+  # PRIMARY webhook policy: scale on ALB request rate per task (more responsive than CPU
+  # for an ingestion tier; avoids the CPU-feedback lag seen when webhook is the bottleneck).
+  ECSWebhookRequestScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub "${AWS::StackName}-wh-req-tt"
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ECSWebhookScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ALBRequestCountPerTarget
+          ResourceLabel: !Sub "${ElasticLoadBalancingV2LoadBalancer.LoadBalancerFullName}/${WebhookTargetGroup.TargetGroupFullName}"
+        TargetValue: !Ref WebhookRequestsPerTask
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 30
 
 # output useful information to make things easier to read.
 Outputs:
@@ -1444,13 +2148,17 @@ Outputs:
     Description: URL to reach n8n worker service in ECS
     Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/ecs/v2/clusters/${ECSCluster}/services/${ECSWorkerService.Name}/health?region=${AWS::Region}"
 
+  N8nWebhookServiceUrl:
+    Description: URL to reach n8n webhook service in ECS
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/ecs/v2/clusters/${ECSCluster}/services/${ECSWebhookService.Name}/health?region=${AWS::Region}"
+
   S3BucketUrl:
     Description: Link to S3 bucket used for binary data
     Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/s3/buckets/${S3BinaryBucket}"
 
   PostgresDbUrl:
-    Description: Link to Postgres DB used for n8n
-    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/rds/home?region=${AWS::Region}#database:id=${PostgresDB}"
+    Description: Link to the Aurora PostgreSQL cluster used for n8n
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/rds/home?region=${AWS::Region}#database:id=${AuroraDBCluster};is-cluster=true"
   
   RedisUrl:
     Description: Link to Elasticache used for n8n
