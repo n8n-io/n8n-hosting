@@ -500,8 +500,9 @@ keda:
         metadata:
           # Redis address (auto-derived from redis.host:redis.port if empty)
           address: ""
-          # Bull queue waiting list key
-          listName: "bull:default:wait"
+          # Bull queue waiting list key: "<prefix>:jobs:wait" (prefix defaults to
+          # "bull"). If you set redis.prefix, update this to match, e.g. "myprefix:jobs:wait".
+          listName: "bull:jobs:wait"
           # Target queue length per worker replica
           listLength: "5"
         authenticationRef:
@@ -638,7 +639,7 @@ redis:
   # Advanced Redis settings
   database: 0                                      # <-- Redis database number
   timeout: 10000                                   # <-- Redis timeout threshold (ms)
-  prefix: ""                                       # <-- Queue key prefix
+  prefix: ""                                       # <-- Queue key prefix (if set, update keda.worker.triggers listName to "<prefix>:jobs:wait")
   tls: false                                       # <-- Enable TLS (required for AWS ElastiCache and other managed Redis services)
   dualstack: false                                 # <-- Enable dual-stack (IPv4/IPv6)
   # Redis Cluster support (comma-separated list of host:port)

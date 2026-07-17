@@ -31,8 +31,9 @@ keda:
         metadata:
           # Leave empty to auto-derive from redis.host:redis.port
           address: ""
-          # Bull queue key for waiting jobs
-          listName: "bull:default:wait"
+          # Bull queue key for waiting jobs: "<prefix>:jobs:wait" (prefix defaults
+          # to "bull"). If you set redis.prefix, update this to "<prefix>:jobs:wait".
+          listName: "bull:jobs:wait"
           # Scale up when queue length exceeds 5 per replica
           listLength: "5"
         authenticationRef:
