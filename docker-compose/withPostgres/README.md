@@ -10,13 +10,13 @@ command in the current folder.
 **IMPORTANT:** But before you do that change the default users and passwords in the [`.env`](.env) file!
 
 ```
-docker-compose up -d
+docker compose up -d
 ```
 
 To stop it execute:
 
 ```
-docker-compose stop
+docker compose stop
 ```
 
 ## Configuration
