@@ -60,8 +60,8 @@ services:
     command:
       - >
         bootstrap-mtls.sh --out-dir /tls --api-san sandbox-api
-        --control-san-prefix sandbox-runner --world-readable &&
-        chown -R sandbox-api:sandbox-api /tls/api && chmod -R a+rX /tls
+        --control-san-prefix sandbox-runner &&
+        chown -R sandbox-api:sandbox-api /tls/api
     environment:
       NUM_RUNNERS: '1'
     volumes:
