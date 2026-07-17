@@ -4,6 +4,19 @@
 
 * **chart:** add global chart metadata support ([#130](https://github.com/n8n-io/n8n-hosting/issues/130)) ([f25bbb4](https://github.com/n8n-io/n8n-hosting/commit/f25bbb4ff13b446da0e084fa26696fe632e478f7))
 
+## [1.11.0](https://github.com/n8n-io/n8n-hosting/compare/v1.10.1...v1.11.0) (2026-07-17)
+
+
+### Features
+
+* **aws-cloudformation:** production-hardened ECS Fargate templates (dedicated webhook + HA tiers) ([#169](https://github.com/n8n-io/n8n-hosting/issues/169)) ([1790f0a](https://github.com/n8n-io/n8n-hosting/commit/1790f0ab75da5f69167a6dd3375ef0459fe9f5f3))
+* **chart:** route /mcp to webhook processors ([#171](https://github.com/n8n-io/n8n-hosting/issues/171)) ([96349ec](https://github.com/n8n-io/n8n-hosting/commit/96349ec608eb56bd11b82e40ac9652e4ae35ab53))
+
+
+### Bug Fixes
+
+* **chart:** use correct Bull queue key bull:jobs:wait in KEDA examples ([#174](https://github.com/n8n-io/n8n-hosting/issues/174)) ([7610e08](https://github.com/n8n-io/n8n-hosting/commit/7610e084ba3321739f1e5f399dc2b711a13ffc5f))
+
 ## [1.10.1](https://github.com/n8n-io/n8n-hosting/compare/v1.10.0...v1.10.1) (2026-07-01)
 
 
