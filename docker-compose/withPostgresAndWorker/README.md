@@ -38,6 +38,8 @@ To enable it:
    docker compose --profile ai-assistant up -d
    ```
 
+> **Enable both together.** The `.env` values and the `--profile ai-assistant` flag are independent switches. If you fill in `.env` but start without the profile, n8n loads the Assistant while the sandbox services stay down, so Assistant requests fail until you restart with `--profile ai-assistant`.
+
 `sandbox-certs` runs once to bootstrap the mTLS certificates the other services share, then exits; `sandbox-api` and `sandbox-runner-1` start after it. Once `sandbox-api` is healthy the runner registers itself and n8n can reach the sandbox. Open n8n at `http://localhost:5678`.
 
 ### Security checklist

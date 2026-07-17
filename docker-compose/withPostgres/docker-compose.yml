@@ -90,8 +90,12 @@ services:
     depends_on:
       sandbox-certs:
         condition: service_completed_successfully
-    env_file: .env
     environment:
+      # Pass only the secrets the API needs (rather than env_file: .env) so n8n-only
+      # credentials — model/search API keys, DB password, encryption key — don't land here.
+      SANDBOX_API_KEYS: ${SANDBOX_API_KEYS}
+      SANDBOX_API_RUNNER_REGISTRATION_TOKEN: ${SANDBOX_API_RUNNER_REGISTRATION_TOKEN}
+      SANDBOX_API_RUNNER_API_KEY: ${SANDBOX_API_RUNNER_API_KEY}
       SANDBOX_API_GRPC_TLS_CERT_FILE: /tls/api/grpc-server.crt
       SANDBOX_API_GRPC_TLS_KEY_FILE: /tls/api/grpc-server.key
       SANDBOX_API_GRPC_TLS_CLIENT_CA_FILE: /tls/api/ca.crt
@@ -120,7 +124,8 @@ services:
     depends_on:
       sandbox-api:
         condition: service_healthy
-    env_file: .env
+    # No env_file: every value the runner needs is set explicitly below, so n8n-only
+    # secrets stay out of this privileged (host-root-equivalent) container.
     environment:
       SANDBOX_RUNNER_API_GRPC_ADDR: sandbox-api:9090
       SANDBOX_RUNNER_HTTP_BASE_URL: http://sandbox-runner-1:8080
