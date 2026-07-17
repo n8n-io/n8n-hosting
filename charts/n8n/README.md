@@ -231,6 +231,8 @@ keda:
           listLength: "5"
 ```
 
+The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
+
 See [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) for a complete example.
 
 ## Upgrading
