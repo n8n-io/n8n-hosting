@@ -323,6 +323,20 @@
         }
       }
     },
+    "hostAliases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ip": { "type": "string" },
+          "hostnames": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["ip", "hostnames"]
+      }
+    },
     "podAnnotations": { "type": "object", "additionalProperties": true },
     "podLabels": {
       "type": "object",
