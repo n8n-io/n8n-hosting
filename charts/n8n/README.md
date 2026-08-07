@@ -99,6 +99,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `hpa.main.enabled` | HPA for main pods | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
+| `keda.worker.pause` | Pause worker autoscaling and scale to zero | `false` |
 | `networkPolicy.enabled` | Network policies | `false` |
 
 See [values.yaml](./values.yaml) for the full list of configurable values.
@@ -132,6 +133,8 @@ The built-in HPA scales workers based on CPU utilization. For queue-based worklo
 
 When `keda.enabled` is true, the chart creates KEDA `ScaledObject` resources instead of built-in HPAs for workers (and optionally webhook processors). KEDA must be installed in the cluster.
 
+Set `keda.worker.pause: true` to pause worker autoscaling and scale workers to zero (sets the `autoscaling.keda.sh/paused` and `autoscaling.keda.sh/paused-replicas: "0"` annotations on the ScaledObject).
+
 ```bash
 # Install KEDA
 helm install keda kedacore/keda --namespace keda-system --create-namespace
@@ -141,6 +144,7 @@ helm install keda kedacore/keda --namespace keda-system --create-namespace
 keda:
   enabled: true
   worker:
+    pause: false              # Set true to scale workers to zero and pause KEDA
     minReplicaCount: 2
     maxReplicaCount: 20
     triggers:
