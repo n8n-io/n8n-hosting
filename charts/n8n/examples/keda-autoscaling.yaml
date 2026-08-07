@@ -22,6 +22,8 @@ hpa:
 keda:
   enabled: true
   worker:
+    # Pause autoscaling and scale workers to zero
+    pause: false
     pollingInterval: 15       # How often KEDA checks the queue (seconds)
     cooldownPeriod: 300        # Wait time before scaling down (seconds)
     minReplicaCount: 2

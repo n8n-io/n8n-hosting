@@ -491,6 +491,9 @@ hpa:
 keda:
   enabled: false
   worker:
+    # Pause KEDA autoscaling and scale workers to zero
+    # Sets autoscaling.keda.sh/paused=true and autoscaling.keda.sh/paused-replicas=0
+    pause: false
     pollingInterval: 15
     cooldownPeriod: 300
     minReplicaCount: 2
