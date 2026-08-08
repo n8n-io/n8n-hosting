@@ -9,13 +9,12 @@ metadata:
     app.kubernetes.io/component: worker
   {{- if or .Values.commonAnnotations .Values.keda.worker.pause }}
   annotations:
-    {{- with .Values.commonAnnotations }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- $annotations := deepCopy (.Values.commonAnnotations | default dict) }}
     {{- if .Values.keda.worker.pause }}
-    autoscaling.keda.sh/paused: "true"
-    autoscaling.keda.sh/paused-replicas: "0"
+    {{- $_ := set $annotations "autoscaling.keda.sh/paused" "true" }}
+    {{- $_ := set $annotations "autoscaling.keda.sh/paused-replicas" "0" }}
     {{- end }}
+    {{- toYaml $annotations | nindent 4 }}
   {{- end }}
 spec:
   scaleTargetRef:
