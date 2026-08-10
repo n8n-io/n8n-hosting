@@ -79,7 +79,9 @@ multiMain:
 # ----- Task Runners (external mode with sidecar containers) -----
 taskRunners:
   # Enable task runners for executing user-provided JavaScript and Python code
-  # When enabled, a sidecar container (n8nio/runners) is added to main and worker pods
+  # When enabled, a sidecar container (n8nio/runners) is added to:
+  #   - worker pods in queue mode (main offloads manual executions to workers)
+  #   - main pods in standalone mode (queueMode.enabled=false)
   enabled: false
 
   # Task runner image configuration

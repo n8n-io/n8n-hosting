@@ -140,8 +140,10 @@ spec:
             # Core n8n secrets
             {{- include "n8n.coreSecretsEnv" . | nindent 12 }}
 
-            # Task Runners Configuration
+            # Task Runners Configuration (standalone mode only; queue mode offloads execution to workers)
+            {{- if include "n8n.mainTaskRunnersEnabled" . }}
             {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}
+            {{- end }}
 
             {{- with .Values.config.extraEnv }}
             {{- toYaml . | nindent 12 }}
@@ -197,7 +199,7 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
 
-        {{- if .Values.taskRunners.enabled }}
+        {{- if include "n8n.mainTaskRunnersEnabled" . }}
         # Task Runner sidecar container
         - name: task-runner
           image: "{{ .Values.taskRunners.image.repository }}:{{ default .Values.image.tag .Values.taskRunners.image.tag }}"
@@ -237,7 +239,7 @@ spec:
         - name: data
           emptyDir: {}
         {{- end }}
-        {{- if and .Values.taskRunners.enabled .Values.taskRunners.customConfig.enabled }}
+        {{- if and (include "n8n.mainTaskRunnersEnabled" .) .Values.taskRunners.customConfig.enabled }}
         - name: task-runner-config
           configMap:
             name: {{ .Values.taskRunners.customConfig.configMapName }}

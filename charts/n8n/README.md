@@ -186,7 +186,7 @@ See [`examples/node-placement.yaml`](./examples/node-placement.yaml) for a compl
 
 ## Task Runners
 
-Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, each main and worker pod gets a runner sidecar.
+Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, worker pods get a runner sidecar in queue mode (manual executions are offloaded to workers). In standalone mode (`queueMode.enabled=false`), the main pod gets a runner sidecar instead.
 
 **How it works:** The n8n container runs a task broker on port 5679. The runner sidecar connects to this broker over localhost to receive and execute code tasks.
 

@@ -181,3 +181,12 @@ Validate values — called once from deployment-main.yaml to fail fast on bad co
 {{- end -}}
 
 {{- end -}}
+
+{{/*
+Task runners on main pods: only in standalone mode.
+In queue mode, manual executions are offloaded to workers (OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS),
+so workers handle code execution and main pods do not need runner sidecars.
+*/}}
+{{- define "n8n.mainTaskRunnersEnabled" -}}
+{{- if and .Values.taskRunners.enabled (not .Values.queueMode.enabled) -}}true{{- end -}}
+{{- end -}}
