@@ -1,0 +1,45 @@
+docker-compose/subfolderWithSSL/.env
+  s_2ef706c295a0d1::t_0d96dc97a8c4ba 27-28
+docker-compose/withPostgres/docker-compose.yml
+  s_2ef706c295a0d1::t_c2a51b7d7d4548 94-98
+  s_2ef706c295a0d1::t_51aa3c3f818cc0 127-128
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_2ef706c295a0d1::t_82bde7dd7dc4a3 159-160
+  s_2ef706c295a0d1::t_c7e9193516aefb 126-130
+docker-compose/withPostgresAndWorker/.env
+  s_2ef706c295a0d1::t_7267e3deaf5be6 17-18
+docker-compose/withPostgres/.env
+  s_2ef706c295a0d1::t_5a529060e7b60f 14-15
+docker-compose/withPostgres/README.md
+  s_2ef706c295a0d1::t_3903b7b723017e 39-40
+docker-compose/withPostgresAndWorker/README.md
+  s_2ef706c295a0d1::t_9a52878927c0bf 41-42
+docker-caddy/README.md
+  s_2ef706c295a0d1::t_7ca6c223248398 34-35
+docker-caddy/.env
+  s_2ef706c295a0d1::t_74388029daef24 26-27
+docker-compose/subfolderWithSSL/README.md
+  s_2ef706c295a0d1::t_77b45edc6801a0 35-36
+docker-caddy/docker-compose.yml
+  s_2ef706c295a0d1::t_7a9cd6e89fd12e 109-110
+  s_2ef706c295a0d1::t_a3510db2ee05f1 78-82
+docker-compose/subfolderWithSSL/docker-compose.yml
+  s_2ef706c295a0d1::t_6da300f40114a3 140-141
+  s_2ef706c295a0d1::t_8005cd6b920ddf 109-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "9dc7ab3259e371f2fdb100243e8f21727a4edb9c",
+  "prompts": {},
+  "sessions": {
+    "s_2ef706c295a0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "385c834a-fa5c-4d47-bdd7-65563ed6404c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}

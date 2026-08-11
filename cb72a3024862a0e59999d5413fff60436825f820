@@ -1,0 +1,22 @@
+charts/n8n/examples/README.md
+  s_519302d3dc950a::t_7f9d762f5fb127 62
+README.md
+  s_519302d3dc950a::t_cbb8f2a300d0bb 17
+  s_519302d3dc950a::t_63e213a8b99577 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "cb72a3024862a0e59999d5413fff60436825f820",
+  "prompts": {},
+  "sessions": {
+    "s_519302d3dc950a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bba18ca8-d4e4-4a10-b00e-c8c83c9ff78f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}

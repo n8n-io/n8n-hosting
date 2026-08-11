@@ -1,0 +1,28 @@
+kubernetes/postgres-deployment.yaml
+  s_519302d3dc950a::t_3ed976e409b5f0 24
+charts/n8n/examples/minimal.yaml
+  s_519302d3dc950a::t_cc69b1f061a23f 8
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_519302d3dc950a::t_6b474a7dc399f3 58
+README.md
+  s_519302d3dc950a::t_ef9176c378ba07 5-25
+  s_519302d3dc950a::t_3f50823e65cea9 31
+charts/n8n/examples/minimal-with-docker.yaml
+  s_519302d3dc950a::t_539e7adb35845c 6,88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "1c04635c4eec966744c7a78e627502fabe484123",
+  "prompts": {},
+  "sessions": {
+    "s_519302d3dc950a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bba18ca8-d4e4-4a10-b00e-c8c83c9ff78f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}

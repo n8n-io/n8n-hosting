@@ -1,0 +1,29 @@
+charts/n8n/README.md
+  s_edd6ccd2709761::t_d93ed451a7ba25 78-81
+  s_edd6ccd2709761::t_d3d9e8ce678477 82
+charts/n8n/examples/mcp-server.yaml
+  s_edd6ccd2709761::t_2072ac6e058d95 8-10
+  s_edd6ccd2709761::t_631100395403e9 1-7,11-71
+charts/n8n/examples/README.md
+  s_edd6ccd2709761::t_b62e2e2934a7dd 20
+charts/n8n/templates/ingress-webhook.yaml
+  s_edd6ccd2709761::t_19674c283c0e98 52-58
+charts/n8n/examples/https-ingress.yaml
+  s_edd6ccd2709761::t_c0f0d11e5c88ea 40-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "eac4ead924a7a0417d9ac212e4153e06530136a7",
+  "prompts": {},
+  "sessions": {
+    "s_edd6ccd2709761": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6585b1cf-d562-4a33-b27d-eadc127d561f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}

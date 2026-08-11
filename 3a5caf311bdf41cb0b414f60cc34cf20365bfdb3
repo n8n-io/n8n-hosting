@@ -1,0 +1,54 @@
+docker-caddy/README.md
+  s_2ef706c295a0d1::t_e34d01802595ba 20-41
+docker-compose/subfolderWithSSL/README.md
+  s_2ef706c295a0d1::t_e49ad03cefcd4f 21-42
+README.md
+  s_2ef706c295a0d1::t_d816f42e70caa0 45-48
+docker-compose/withPostgres/docker-compose.yml
+  s_2ef706c295a0d1::t_6816c7e525e426 130-131
+  s_2ef706c295a0d1::t_2af947a083e19f 132-133
+  s_2ef706c295a0d1::t_ac484e1a0dc4df 6
+  s_2ef706c295a0d1::t_0aecc6e0b2824d 40-48,67-129,134-144
+docker-compose/withPostgresAndWorker/.env
+  s_2ef706c295a0d1::t_e6aea3e20615ed 13-34
+docker-compose/withPostgres/README.md
+  s_2ef706c295a0d1::t_3baec72e917616 25-46
+docker-caddy/docker-compose.yml
+  s_2ef706c295a0d1::t_cbe5efac4500b4 112-113
+  s_2ef706c295a0d1::t_85111d219dac0c 30-38,52-111,116-127,133-134
+  s_2ef706c295a0d1::t_e1185ce79a5e7b 114-115
+docker-compose/withPostgres/.env
+  s_2ef706c295a0d1::t_2aa2b328f2b05a 11-31
+docker-compose/withPostgresAndWorker/README.md
+  s_2ef706c295a0d1::t_90c8b546d57e91 27-48
+docker-compose/subfolderWithSSL/.env
+  s_2ef706c295a0d1::t_4c930b0f2a3d31 24-44
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_2ef706c295a0d1::t_b6ecdd4e5c710c 5
+  s_2ef706c295a0d1::t_a1cd1d4e5deb4c 99-161,166-176
+  s_2ef706c295a0d1::t_e98692118caafa 164-165
+  s_2ef706c295a0d1::t_b1f7e22aa5993d 162-163
+  s_2ef706c295a0d1::t_63ae0964dca456 71-74
+docker-compose/subfolderWithSSL/docker-compose.yml
+  s_2ef706c295a0d1::t_e7116a93ee0f8d 59-67,82-142,147-160
+  s_2ef706c295a0d1::t_ec09f2301a104c 145-146
+  s_2ef706c295a0d1::t_d54e12805592d3 143-144
+docker-caddy/.env
+  s_2ef706c295a0d1::t_f5c588f816c169 23-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "3a5caf311bdf41cb0b414f60cc34cf20365bfdb3",
+  "prompts": {},
+  "sessions": {
+    "s_2ef706c295a0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "385c834a-fa5c-4d47-bdd7-65563ed6404c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+charts/n8n/templates/deployment-webhook-processor.yaml
+  s_6d54d95de2bcf1::t_ff677c173dd9a7 28
+charts/n8n/values.schema.json
+  s_6d54d95de2bcf1::t_c9b0ff501d96cc 327-331
+charts/n8n/templates/deployment-worker.yaml
+  s_6d54d95de2bcf1::t_ff677c173dd9a7 28
+charts/n8n/README.md
+  s_6d54d95de2bcf1::t_c9b0ff501d96cc 129
+charts/n8n/templates/deployment-main.yaml
+  s_6d54d95de2bcf1::t_ff677c173dd9a7 32
+charts/n8n/values.yaml
+  s_6d54d95de2bcf1::t_c9b0ff501d96cc 156-165
+charts/n8n/templates/_helpers.tpl
+  s_6d54d95de2bcf1::t_994f93029dbf13 41-65,172-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "ea8045e8c04bcda2200a7964dc071e453411e5e5",
+  "prompts": {},
+  "sessions": {
+    "s_6d54d95de2bcf1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ed645-7240-7851-95f8-1b226d955ec2",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}

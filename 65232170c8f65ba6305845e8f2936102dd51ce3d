@@ -1,0 +1,25 @@
+docker-compose/subfolderWithSSL/docker-compose.yml
+  s_2ef706c295a0d1::t_2d40e66128ed75 94-95
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_2ef706c295a0d1::t_75e877f5bd53e3 111-112
+docker-compose/withPostgres/docker-compose.yml
+  s_2ef706c295a0d1::t_7a260678cc3a16 79-80
+docker-caddy/docker-compose.yml
+  s_2ef706c295a0d1::t_8b9e46383e8013 63-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "65232170c8f65ba6305845e8f2936102dd51ce3d",
+  "prompts": {},
+  "sessions": {
+    "s_2ef706c295a0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "385c834a-fa5c-4d47-bdd7-65563ed6404c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}

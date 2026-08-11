@@ -1,0 +1,29 @@
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_2ef706c295a0d1::t_72cff34d226f6e 128-130
+  s_2ef706c295a0d1::t_48c1089de08c02 169-170
+docker-compose/subfolderWithSSL/docker-compose.yml
+  s_2ef706c295a0d1::t_0d23dae6a49e35 111-113
+  s_2ef706c295a0d1::t_fee472c263b40d 150-151
+docker-compose/withPostgres/docker-compose.yml
+  s_2ef706c295a0d1::t_8ce424f12e2272 137-138
+  s_2ef706c295a0d1::t_67a9b0b7fcfeb4 96-98
+docker-caddy/docker-compose.yml
+  s_2ef706c295a0d1::t_85874e36b101a9 119-120
+  s_2ef706c295a0d1::t_5ae5420a7e29fc 80-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "30994759b9e31a50e9343bbf0b03660ddd9a2faa",
+  "prompts": {},
+  "sessions": {
+    "s_2ef706c295a0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "385c834a-fa5c-4d47-bdd7-65563ed6404c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}

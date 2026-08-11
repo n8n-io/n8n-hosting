@@ -1,0 +1,19 @@
+CHANGELOG.md
+  s_c605c9cca1d10c::t_734997a70c6892 13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "08433a44089d171eeca4c347b1cde17c7a42667e",
+  "prompts": {},
+  "sessions": {
+    "s_c605c9cca1d10c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6a877cfa-1ed7-4577-a3d5-3715069683d2",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Claire <claire.knight@krider.co.uk>"
+    }
+  }
+}
