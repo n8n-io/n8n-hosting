@@ -601,6 +601,9 @@ secretRefs:
   existingSecret: ""
   env:
     N8N_ENCRYPTION_KEY: "change-me-to-a-long-random-key"
+    # Set to an absolute path to use a mounted encryption key file instead.
+    # When set, N8N_ENCRYPTION_KEY is not injected into n8n containers.
+    N8N_ENCRYPTION_KEY_FILE: ""
     N8N_HOST: "n8n.example.com"  # <-- Change to your actual domain
     N8N_PORT: "5678"
     N8N_PROTOCOL: "http"
