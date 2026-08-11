@@ -65,11 +65,39 @@ All three use the same n8n container image, differentiated by command/args.
 
 ## Secret Management
 
-1. **Core secrets** (`secretRefs.existingSecret`): `N8N_ENCRYPTION_KEY`, `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL` — always required
+1. **Core secrets** (`secretRefs.existingSecret`): `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL`, plus `N8N_ENCRYPTION_KEY` in env mode. For file mode, mount the encryption key file and set its path in `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`
 2. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
 3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
 For production, use an external secrets operator (e.g., [External Secrets Operator](https://external-secrets.io/)) rather than storing secrets in values files.
+
+### Encryption key file
+
+By default, the chart injects `N8N_ENCRYPTION_KEY` from the core Secret. To use n8n's file-based configuration instead, set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE` to the absolute path of a mounted key file. A non-empty file path makes the chart inject `N8N_ENCRYPTION_KEY_FILE` and omit `N8N_ENCRYPTION_KEY` from every main, worker, and webhook-processor n8n container.
+
+The existing global `extraVolumes` and `extraVolumeMounts` values apply to all of these containers:
+
+```yaml
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+  env:
+    N8N_ENCRYPTION_KEY_FILE: "/run/secrets/n8n/encryption-key"
+
+extraVolumes:
+  - name: encryption-key
+    secret:
+      secretName: n8n-encryption-key
+      items:
+        - key: N8N_ENCRYPTION_KEY
+          path: encryption-key
+
+extraVolumeMounts:
+  - name: encryption-key
+    mountPath: /run/secrets/n8n
+    readOnly: true
+```
+
+In file mode, `n8n-core-secrets` only needs the other core keys (`N8N_HOST`, `N8N_PORT`, and `N8N_PROTOCOL`). The file path is taken from Helm values even when `secretRefs.existingSecret` is set; Helm cannot inspect an externally managed Secret to select the mode automatically. Global extra volume mounts are not added to task-runner or user-supplied sidecars, which do not need the n8n encryption key; declare sidecar mounts explicitly if needed.
 
 ## Ingress and HTTPS
 
@@ -135,6 +163,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `networkPolicy.enabled` | Network policies | `false` |
+| `extraVolumes` / `extraVolumeMounts` | Volumes and n8n-container mounts shared by main, worker, and webhook-processor pods | `[]` / `[]` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
