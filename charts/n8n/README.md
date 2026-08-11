@@ -163,6 +163,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `networkPolicy.enabled` | Network policies | `false` |
+| `extraObjects` | Additional Kubernetes objects rendered with the release | `[]` |
 | `extraVolumes` / `extraVolumeMounts` | Volumes and n8n-container mounts shared by main, worker, and webhook-processor pods | `[]` / `[]` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
@@ -171,6 +172,20 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](./values.yaml) for the full list of configurable values.
+
+## Extra objects
+
+Use `extraObjects` to deploy additional Kubernetes resources with the n8n release. Each list entry must be a structured Kubernetes object and is rendered as provided; values are not evaluated with Helm `tpl`.
+
+```yaml
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: n8n-extra-config
+    data:
+      example: value
+```
 
 ## Extra containers (sidecars)
 
