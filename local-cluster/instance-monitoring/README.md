@@ -76,18 +76,17 @@ Expected JSON payload:
 
 ```json
 {
-  "interval": {
-    "startTime": "2026-03-25T00:00:00.000Z",
-    "endTime": "2026-03-25T23:59:59.999Z"
-  },
-  "totalProdExecutions": 10,
-  "n8nVersion": "2.14.10",
   "instanceId": "your-instance-id",
-  "instanceIdentifier": "optional-human-readable-name"
+  "n8nVersion": "2.14.10",
+  "instanceIdentifier": "optional-human-readable-name",
+  "data": {
+    "rootExecutionsTotal": 10
+  }
 }
 ```
 
-Required fields: `instanceId`, `n8nVersion`, `totalProdExecutions`, `interval`.
+Required fields: `instanceId`, `n8nVersion`, `data.rootExecutionsTotal` (the instance's
+cumulative lifetime production execution count — not a delta since the last report).
 `instanceIdentifier` is optional and shown alongside the instance ID on the dashboard.
 
 ---
@@ -98,7 +97,7 @@ The service runs two HTTP servers in the same Node.js process:
 
 - **Port 5700 (ingest)** — exposed only as a `ClusterIP` service, so it is never reachable from outside the cluster. n8n instances use the cluster-internal DNS name to POST their daily report. Each report is stored in a SQLite database on a PersistentVolumeClaim mounted at `/data`.
 
-- **Port 5701 (dashboard)** — also a `ClusterIP` service, but `make forward` creates a `kubectl port-forward` mapping it to `localhost:5700` on your machine. The dashboard page renders all stored records grouped by `instanceId`, newest first, and auto-refreshes every 30 seconds.
+- **Port 5701 (dashboard)** — also a `ClusterIP` service, but `make forward` creates a `kubectl port-forward` mapping it to `localhost:5700` on your machine. The dashboard page renders all stored records grouped by `instanceId`, newest first, and auto-refreshes every 30 seconds. The "Download report for n8n" button (`GET /dashboard/report`) downloads `n8n-usage-report.json`, with one entry per instance: `{ id, reportingSince, lastReport, billableExecutions }`.
 
 Data persists across pod restarts via the PVC. It is removed when you run `make uninstall` (which deletes the PVC along with the other manifests).
 

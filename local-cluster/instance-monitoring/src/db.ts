@@ -11,8 +11,6 @@ db.exec(`
     instance_identifier   TEXT,
     n8n_version           TEXT,
     total_prod_executions INTEGER,
-    interval_start        TEXT,
-    interval_end          TEXT,
     received_at           TEXT NOT NULL DEFAULT (datetime('now'))
   )
 `);
@@ -23,16 +21,14 @@ export interface IngestRecord {
   instance_identifier: string | null;
   n8n_version: string | null;
   total_prod_executions: number | null;
-  interval_start: string | null;
-  interval_end: string | null;
   received_at: string;
 }
 
 const insertStmt = db.prepare(`
   INSERT INTO ingest_records
-    (instance_id, instance_identifier, n8n_version, total_prod_executions, interval_start, interval_end)
+    (instance_id, instance_identifier, n8n_version, total_prod_executions)
   VALUES
-    (@instance_id, @instance_identifier, @n8n_version, @total_prod_executions, @interval_start, @interval_end)
+    (@instance_id, @instance_identifier, @n8n_version, @total_prod_executions)
 `);
 
 const selectAllStmt = db.prepare(
@@ -44,8 +40,6 @@ export function insertRecord(data: {
   instance_identifier: string | null;
   n8n_version: string;
   total_prod_executions: number;
-  interval_start: string;
-  interval_end: string;
 }): void {
   insertStmt.run(data as Record<string, number | string | null>);
 }

@@ -40,6 +40,23 @@ function formatDate(iso: string): string {
   return iso.replace("T", " ").replace(".000Z", "").replace("Z", "");
 }
 
+function toDateOnly(receivedAt: string): string {
+  return receivedAt.slice(0, 10);
+}
+
+function buildUsageReport(groups: Map<string, IngestRecord[]>) {
+  return [...groups.values()].map((records) => {
+    const latest = records[0];
+    const earliest = records[records.length - 1];
+    return {
+      id: latest.instance_id,
+      reportingSince: toDateOnly(earliest.received_at),
+      lastReport: toDateOnly(latest.received_at),
+      billableExecutions: latest.total_prod_executions,
+    };
+  });
+}
+
 function renderHtml(groups: Map<string, IngestRecord[]>): string {
   const totals = computeTotals(groups);
   const summary = renderSummary(totals);
@@ -54,11 +71,9 @@ function renderHtml(groups: Map<string, IngestRecord[]>): string {
               .map(
                 (r) => `
               <tr>
-                <td>${r.received_at}</td>
+                <td>${formatDate(r.received_at)}</td>
                 <td>${r.n8n_version ?? ""}</td>
                 <td>${r.total_prod_executions ?? ""}</td>
-                <td>${r.interval_start ? formatDate(r.interval_start) : ""}</td>
-                <td>${r.interval_end ? formatDate(r.interval_end) : ""}</td>
               </tr>`
               )
               .join("");
@@ -72,8 +87,6 @@ function renderHtml(groups: Map<string, IngestRecord[]>): string {
                   <th>Received at</th>
                   <th>n8n version</th>
                   <th>Prod executions</th>
-                  <th>Interval start</th>
-                  <th>Interval end</th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
@@ -92,7 +105,10 @@ function renderHtml(groups: Map<string, IngestRecord[]>): string {
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, sans-serif; font-size: 14px; color: #1a1a1a; background: #f5f5f5; padding: 2rem; }
-    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    h1 { font-size: 1.4rem; }
+    .header-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.25rem; }
+    .download-button { display: inline-block; background: #ff6d5a; color: #fff; text-decoration: none; font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 6px; }
+    .download-button:hover { background: #e85a48; }
     .meta { color: #666; font-size: 0.85rem; margin-bottom: 2rem; }
     section { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1.25rem; margin-bottom: 1.5rem; }
     h2 { font-size: 1rem; margin-bottom: 1rem; word-break: break-all; }
@@ -108,7 +124,10 @@ function renderHtml(groups: Map<string, IngestRecord[]>): string {
   </style>
 </head>
 <body>
-  <h1>n8n Instance Monitoring</h1>
+  <div class="header-row">
+    <h1>n8n Instance Monitoring</h1>
+    <a class="download-button" href="/dashboard/report" download="n8n-usage-report.json">Download report for n8n</a>
+  </div>
   <p class="meta">Auto-refreshes every 30 seconds &nbsp;&bull;&nbsp; ${groups.size} instance${groups.size !== 1 ? "s" : ""}</p>
   ${summary}
   ${sections}
@@ -117,7 +136,7 @@ function renderHtml(groups: Map<string, IngestRecord[]>): string {
 }
 
 export function handleDashboard(req: IncomingMessage, res: ServerResponse): void {
-  if (req.url !== "/dashboard" && req.url !== "/") {
+  if (req.url !== "/dashboard" && req.url !== "/" && req.url !== "/dashboard/report") {
     res.writeHead(404, { "Content-Type": "text/plain" });
     res.end("Not found");
     return;
@@ -134,6 +153,17 @@ export function handleDashboard(req: IncomingMessage, res: ServerResponse): void
   }
 
   const groups = groupByInstanceId(records);
+
+  if (req.url === "/dashboard/report") {
+    const report = buildUsageReport(groups);
+    res.writeHead(200, {
+      "Content-Type": "application/json",
+      "Content-Disposition": 'attachment; filename="n8n-usage-report.json"',
+    });
+    res.end(JSON.stringify(report, null, 2));
+    return;
+  }
+
   const html = renderHtml(groups);
 
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });

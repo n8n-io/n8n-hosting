@@ -28,26 +28,24 @@ export function handleIngest(req: IncomingMessage, res: ServerResponse): void {
       payload === null ||
       typeof (payload as Record<string, unknown>).instanceId !== "string" ||
       typeof (payload as Record<string, unknown>).n8nVersion !== "string" ||
-      typeof (payload as Record<string, unknown>).totalProdExecutions !== "number" ||
-      typeof (payload as Record<string, unknown>).interval !== "object" ||
-      (payload as Record<string, unknown>).interval === null
+      typeof (payload as Record<string, unknown>).data !== "object" ||
+      (payload as Record<string, unknown>).data === null ||
+      typeof ((payload as Record<string, unknown>).data as Record<string, unknown>).rootExecutionsTotal !== "number"
     ) {
       res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Missing required fields: instanceId, n8nVersion, totalProdExecutions, interval" }));
+      res.end(JSON.stringify({ error: "Missing required fields: instanceId, n8nVersion, data.rootExecutionsTotal" }));
       return;
     }
 
     const p = payload as Record<string, unknown>;
-    const interval = p.interval as Record<string, unknown>;
+    const data = p.data as Record<string, unknown>;
 
     try {
       insertRecord({
         instance_id: p.instanceId as string,
         instance_identifier: typeof p.instanceIdentifier === "string" ? p.instanceIdentifier : null,
         n8n_version: p.n8nVersion as string,
-        total_prod_executions: p.totalProdExecutions as number,
-        interval_start: typeof interval.startTime === "string" ? interval.startTime : "",
-        interval_end: typeof interval.endTime === "string" ? interval.endTime : "",
+        total_prod_executions: data.rootExecutionsTotal as number,
       });
     } catch (err) {
       console.error("DB insert error:", err);
