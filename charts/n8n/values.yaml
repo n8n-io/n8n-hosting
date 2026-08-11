@@ -218,6 +218,11 @@ persistence:
   size: 10Gi
   storageClassName: ""
 
+# ----- Additional Kubernetes resources -----
+# Arbitrary Kubernetes objects rendered as part of this Helm release.
+# Objects are emitted as structured YAML and are not evaluated with tpl.
+extraObjects: []
+
 # ----- External Volumes -----
 extraVolumes: []
 # Examples:

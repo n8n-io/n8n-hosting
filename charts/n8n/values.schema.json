@@ -563,6 +563,11 @@
         }
       }
     },
+    "extraObjects": {
+      "type": "array",
+      "description": "Additional Kubernetes objects rendered as part of the Helm release",
+      "items": { "type": "object" }
+    },
     "extraVolumes": {
       "type": "array",
       "description": "Additional volumes for main, worker, and webhook-processor pods",
