@@ -1,0 +1,23 @@
+local-cluster/README.md
+  s_1f147a7ea39899::t_c8fb88f6ef8785 167
+  s_1f147a7ea39899::t_4298ee010b2514 7-9,36-38,168
+local-cluster/Makefile
+  s_1f147a7ea39899::t_4298ee010b2514 63-65,79-81,131-133
+  s_1f147a7ea39899::t_e0c243eb27fa3b 91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d28418f2e1d292275e1d118cf044b9df75edc6d4",
+  "prompts": {},
+  "sessions": {
+    "s_1f147a7ea39899": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "870916c0-47cb-4a02-bb6e-b8d3d61c0e3f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "konstantintieber <konstantin.tieber@n8n.io>"
+    }
+  }
+}
