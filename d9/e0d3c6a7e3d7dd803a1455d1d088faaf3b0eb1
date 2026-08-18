@@ -1,0 +1,49 @@
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode.yaml
+  s_0dab2f835c1bbc::t_60e5fc7b4a168b 712
+kubernetes/postgres-deployment.yaml
+  s_0dab2f835c1bbc::t_63c992777ac4ff 24
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks-ha.yaml
+  s_0dab2f835c1bbc::t_66c68986d7442d 839
+docker-compose/withPostgresAndWorker/README.md
+  s_0dab2f835c1bbc::t_7ee28b25f64cd6 27-29
+  s_0dab2f835c1bbc::t_3a0eeaeb25ec73 30-47
+charts/n8n/examples/minimal-with-docker.yaml
+  s_0dab2f835c1bbc::t_f8fdbc3b30c850 6,88
+charts/n8n/examples/minimal.yaml
+  s_0dab2f835c1bbc::t_df9d7fa3c604ea 8
+charts/n8n/examples/README.md
+  s_0dab2f835c1bbc::t_bed9e4ce6f80be 63
+kubernetes/README.md
+  s_0dab2f835c1bbc::t_10cecbd1985a82 24-39
+docker-compose/withPostgres/docker-compose.yml
+  s_0dab2f835c1bbc::t_981af44da1ea33 7
+  s_0dab2f835c1bbc::t_4fe2135ff5389e 16
+README.md
+  s_0dab2f835c1bbc::t_55f9e4669d80a1 14
+aws-cloudformation/ecs-fargate/README.md
+  s_0dab2f835c1bbc::t_a377b50ccbac0a 110
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_0dab2f835c1bbc::t_4bc86ec4bb5306 40
+  s_0dab2f835c1bbc::t_e6b04e46f35edb 49
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks.yaml
+  s_0dab2f835c1bbc::t_35e32296f7e287 790
+docker-compose/withPostgres/README.md
+  s_0dab2f835c1bbc::t_fb0c9b6957ac88 25-27
+  s_0dab2f835c1bbc::t_e0e44f01021cd7 28-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d9e0d3c6a7e3d7dd803a1455d1d088faaf3b0eb1",
+  "prompts": {},
+  "sessions": {
+    "s_0dab2f835c1bbc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "410e1778-4444-468d-911c-3b1b95235e6d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
