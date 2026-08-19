@@ -1,0 +1,31 @@
+docker-compose/withPostgres/README.md
+  s_0dab2f835c1bbc::t_d57bcdf34b8410 28-31,46-48,50-52,54-55,57-61,63,65-67,69-70,72-74,76-79,81-96
+docker-compose/withPostgresAndWorker/README.md
+  s_0dab2f835c1bbc::t_48d6f0476ca93f 30-33,48-50,52-54,56-57,59-63,65,67-69,71-72,74-76,78-81,83-98
+kubernetes/README.md
+  s_0dab2f835c1bbc::t_745151f5b229af 26-30,38-40,42-44,46-47,49-53,55,57-59,61-62,64-65,67-69,71,73,75-81
+.idea/.gitignore
+  s_0dab2f835c1bbc::t_a56cc5faa7eb0f 1-10
+.idea/modules.xml
+  s_0dab2f835c1bbc::t_68846a7eba2140 1-8
+.idea/n8n-hosting.iml
+  s_0dab2f835c1bbc::t_a0a30063b50d4e 1-8
+.idea/vcs.xml
+  s_0dab2f835c1bbc::t_5159cefc7901c1 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ddd29d894845e37650c863897b93903ee8a04076",
+  "prompts": {},
+  "sessions": {
+    "s_0dab2f835c1bbc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "410e1778-4444-468d-911c-3b1b95235e6d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
