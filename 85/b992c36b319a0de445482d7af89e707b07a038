@@ -1,0 +1,25 @@
+docker-compose/withPostgres/README.md
+  s_0dab2f835c1bbc::t_524c3f303a5f64 28,30-32,40-41,47,81,84
+docker-compose/withPostgres/docker-compose.yml
+  s_0dab2f835c1bbc::t_59672f421369c6 15-17,19
+docker-compose/withPostgresAndWorker/README.md
+  s_0dab2f835c1bbc::t_077d1ebca75d20 30,32-34,42-43,49,83-84,87
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_0dab2f835c1bbc::t_20467c43ad1980 48-50,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "85b992c36b319a0de445482d7af89e707b07a038",
+  "prompts": {},
+  "sessions": {
+    "s_0dab2f835c1bbc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "410e1778-4444-468d-911c-3b1b95235e6d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
