@@ -23,7 +23,9 @@ docker compose stop
 
 The default name of the database, user and password for PostgreSQL can be changed in the [`.env`](.env) file in the current directory.
 
-## PostgreSQL 18
+## Upgrade Considerations
+
+### PostgreSQL 18
 
 This example runs `postgres:18`.
 

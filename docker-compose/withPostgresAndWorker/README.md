@@ -25,7 +25,9 @@ The default name of the database, user and password for PostgreSQL can be change
 
 The `RUNNERS_AUTH_TOKEN` in the [`.env`](.env) file is a shared secret used for authentication between n8n and the task runner containers. Generate a secure random value for production use.
 
-## PostgreSQL 18
+## Upgrade Considerations
+
+### PostgreSQL 18
 
 This example runs `postgres:18`.
 
