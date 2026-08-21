@@ -12,9 +12,11 @@ Tiers below map to the equivalent [`terraform-aws-n8n`](https://github.com/n8n-i
 |---|---|---|
 | `n8n-w-multimain-queuemode.yaml` | Dev, small, or cost-sensitive. Multi-main + queue mode on a single RDS instance. | Small (sized up = Medium) |
 | `n8n-w-multimain-queuemode-webhooks.yaml` | Production with real webhook load. Adds a dedicated webhook tier, queue-depth worker autoscaling, request-rate webhook autoscaling, and DB / Redis / graceful-shutdown / readiness hardening. | Medium |
-| `n8n-w-multimain-queuemode-webhooks-ha.yaml` | Failover-sensitive production. Aurora PostgreSQL (writer + reader, ~6s failover vs ~3 min on single RDS), Redis Multi-AZ, higher floors, larger tasks. | Large (architecture parity) |
+| `n8n-w-multimain-queuemode-webhooks-ha.yaml` | Failover-sensitive production. Aurora PostgreSQL, **experimental**, see below (writer + reader, ~6s failover vs ~3 min on single RDS), Redis Multi-AZ, higher floors, larger tasks. | Large (architecture parity) |
 
 > Heads up: these templates use **Enterprise-licensed** n8n features (multi-main and S3 external storage), so the stack will not start without a valid `N8nLicenseKey`. The placeholder default is there for inspection only.
+
+> Aurora is experimental: the HA template runs Aurora PostgreSQL for its faster failover. Aurora is PostgreSQL-compatible rather than upstream PostgreSQL, so n8n does not test or certify it and the Postgres version policy does not cover it. The other two templates run RDS PostgreSQL, which does.
 
 ## Architecture
 
@@ -23,7 +25,7 @@ Every template deploys:
 - An internet-facing Application Load Balancer with an HTTPS listener and HTTP-to-HTTPS redirect.
 - An ECS Fargate service for n8n main tasks behind the load balancer.
 - An ECS Fargate service for n8n worker tasks that consume jobs from Redis.
-- Amazon RDS PostgreSQL (or Aurora, on the HA tier) for the n8n database.
+- Amazon RDS PostgreSQL for the n8n database, or Aurora PostgreSQL (experimental) on the HA tier.
 - Amazon ElastiCache Redis for queue mode.
 - Amazon S3 for binary data storage.
 - Secrets Manager secrets for the n8n license, encryption key, database credentials, and Redis password.
