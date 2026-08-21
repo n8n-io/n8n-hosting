@@ -1,0 +1,31 @@
+docker-compose/withPostgres/README.md
+  s_0dab2f835c1bbc::t_1259b07063d0b4 26-28
+docker-compose/withPostgresAndWorker/README.md
+  s_0dab2f835c1bbc::t_9ad9192dda5ec7 28-30
+kubernetes/README.md
+  s_208a7c96834666::t_ff9894d32a84cf 24-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "53accc20ed106361958dc62fb22acec01e9284e1",
+  "prompts": {},
+  "sessions": {
+    "s_0dab2f835c1bbc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "410e1778-4444-468d-911c-3b1b95235e6d",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    },
+    "s_208a7c96834666": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9996a3c5-7637-487a-99bb-db72780d34e4",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
