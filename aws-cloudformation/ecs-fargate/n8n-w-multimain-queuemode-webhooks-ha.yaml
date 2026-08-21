@@ -836,7 +836,7 @@ Resources:
             - W1011
     Properties:
       Engine: aurora-postgresql
-      EngineVersion: "16.9"
+      EngineVersion: "18.4"
       DBClusterIdentifier: !Sub "${AWS::StackName}-pg-cluster"
       DatabaseName: !Ref DBName
       MasterUsername: !Ref MasterUsername

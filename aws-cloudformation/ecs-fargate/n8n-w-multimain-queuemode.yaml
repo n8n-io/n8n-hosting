@@ -709,7 +709,7 @@ Resources:
             - W1011
     Properties:
       Engine: postgres
-      EngineVersion: "16.9"
+      EngineVersion: "18.4"
       DBInstanceClass: !Ref DBInstanceClass
       DBInstanceIdentifier: !Sub "${AWS::StackName}-pg-db"
       AllocatedStorage: !Ref DBAllocatedStorage
