@@ -793,6 +793,7 @@
                           "required": ["host", "port", "database"]
                         },
                         {
+                          "required": ["existingSecret"],
                           "properties": {
                             "existingSecret": {
                               "type": "object",
@@ -811,6 +812,7 @@
                           "required": ["user"]
                         },
                         {
+                          "required": ["userSecret"],
                           "properties": {
                             "userSecret": {
                               "type": "object",
