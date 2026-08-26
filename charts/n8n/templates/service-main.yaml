@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
-  {{- $merged := merge (deepCopy (.Values.service.main.annotations | default dict)) (.Values.service.annotations | default dict) }}
+  {{- $merged := merge (deepCopy (.Values.service.main.annotations | default dict)) (.Values.service.annotations | default dict) (.Values.commonAnnotations | default dict) }}
   {{- with $merged }}
   annotations:
     {{- toYaml . | nindent 4 }}

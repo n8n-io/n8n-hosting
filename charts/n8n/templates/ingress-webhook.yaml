@@ -7,7 +7,8 @@ metadata:
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: webhook-processor
-  {{- with (.Values.ingress.webhookProcessor).annotations }}
+  {{- $merged := merge (deepCopy ((.Values.ingress.webhookProcessor).annotations | default dict)) (.Values.commonAnnotations | default dict) }}
+  {{- with $merged }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -42,6 +43,13 @@ spec:
                 port:
                   number: {{ $.Values.service.port }}
           - path: /form-waiting/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "n8n.fullname" $ }}-webhook-processor
+                port:
+                  number: {{ $.Values.service.port }}
+          - path: /mcp/
             pathType: Prefix
             backend:
               service:

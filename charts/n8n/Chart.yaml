@@ -1,6 +1,6 @@
 apiVersion: v2
 name: n8n
-version: 1.5.0
+version: 1.11.0  # x-release-please-version
 kubeVersion: ">=1.25.0-0"
 icon: >-
   https://raw.githubusercontent.com/n8n-io/n8n/master/packages/editor-ui/public/images/n8n-logo.png
@@ -10,6 +10,8 @@ description: >-
   PDB, network policies, and S3 external storage.
 appVersion: "stable"
 type: application
+annotations:
+  artifacthub.io/license: MIT
 keywords:
   - n8n
   - workflow-automation

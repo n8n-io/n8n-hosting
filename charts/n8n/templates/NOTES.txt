@@ -39,15 +39,20 @@ Deployment Configuration:
 {{- if .Values.webhookProcessor.enabled }}
   - Webhook processors: {{ .Values.webhookProcessor.replicaCount }} pods
 {{- end }}
-  - Database: PostgreSQL ({{ .Values.database.host }})
+{{- else }}
+  - Mode: Standalone
+  - Main pods: {{ .Values.replicaCount }}
+{{- end }}
+{{- if .Values.database.useExternal }}
+  - Database: {{ if eq .Values.database.type "postgresdb" }}PostgreSQL{{ else }}{{ .Values.database.type }}{{ end }} ({{ .Values.database.host }})
+{{- else }}
+  - Database: SQLite (local storage)
+{{- end }}
+{{- if .Values.redis.enabled }}
   - Cache: Redis ({{ .Values.redis.host }})
+{{- end }}
 {{- if .Values.s3.enabled }}
   - Storage: S3 ({{ .Values.s3.bucket.name }})
-{{- end }}
-{{- else }}
-  - Mode: Standalone (SQLite)
-  - Main pods: {{ .Values.replicaCount }}
-  - Database: SQLite (local storage)
 {{- end }}
 
 Documentation: https://docs.n8n.io/

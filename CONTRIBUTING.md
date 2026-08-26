@@ -179,3 +179,7 @@ You can also let CI do this for you — add the `test-install` label to your PR 
 
 - Add the `test-install` label to PRs that change chart templates to trigger a full install test on a kind cluster
 - All PRs must pass lint and template validation checks
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the [MIT License](./LICENSE.md).

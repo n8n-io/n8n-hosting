@@ -1,0 +1,63 @@
+# Per-component node placement
+#
+# This example separates n8n's user-facing pods (main, webhook-processor) from
+# its background workers, so the two groups can be scheduled on different node
+# pools. A common reason to do this is to keep the UI/API on a stable pool
+# while letting workers run on a pool that scales aggressively or rotates nodes
+# (e.g. EKS auto-mode, GKE Autopilot, spot/preemptible pools), without
+# disruptions to the frontend.
+#
+# Assumes nodes are labelled (or tainted) along the lines of:
+#   pool=n8n-frontend  -> stable nodes for main + webhook-processor
+#   pool=n8n-workers   -> autoscaling / cheap nodes for worker pods
+#                         (optionally tainted: dedicated=n8n-workers:NoSchedule)
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 4
+
+webhookProcessor:
+  enabled: true
+  replicaCount: 2
+  disableProductionWebhooksOnMainProcess: true
+
+# Required external services (replace with your own)
+database:
+  type: postgresdb
+  useExternal: true
+  host: "your-postgres-host"
+  port: 5432
+  database: n8n
+  user: n8n
+  passwordSecret:
+    name: "n8n-db-password"
+    key: "password"
+
+redis:
+  enabled: true
+  useExternal: true
+  host: "your-redis-host"
+  port: 6379
+
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+# ----- Node placement -----
+# Per-component overrides. Any unset component would fall back to the global
+# `nodeSelector` / `tolerations` / `affinity` keys (not set here).
+nodePlacement:
+  main:
+    nodeSelector:
+      pool: n8n-frontend
+  webhookProcessor:
+    nodeSelector:
+      pool: n8n-frontend
+  worker:
+    nodeSelector:
+      pool: n8n-workers
+    # If the worker pool is tainted, tolerate it here.
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: n8n-workers
+        effect: NoSchedule
