@@ -53,15 +53,15 @@ spec:
               value: http
             - name: N8N_PORT
               value: "5678"
-          image: n8nio/n8n
+          image: n8nio/n8n:2.23.4
           name: n8n
           ports:
             - containerPort: 5678
           resources:
             requests:
-              memory: "250Mi"
+              memory: "512Mi"
             limits:
-              memory: "500Mi"
+              memory: "1Gi"
           volumeMounts:
             - mountPath: /home/node/.n8n
               name: n8n-claim0
