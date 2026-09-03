@@ -8,16 +8,12 @@ data:
     #!/bin/bash
     set -e;
     if [ -n "${POSTGRES_NON_ROOT_USER:-}" ] && [ -n "${POSTGRES_NON_ROOT_PASSWORD:-}" ]; then
-    	psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    		DO \$\$
-    		BEGIN
-    		IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${POSTGRES_NON_ROOT_USER}') THEN
-    		CREATE USER "${POSTGRES_NON_ROOT_USER}" WITH PASSWORD '${POSTGRES_NON_ROOT_PASSWORD}';
-    		END IF;
-    		END
-    		\$\$;
-    		GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO "${POSTGRES_NON_ROOT_USER}";
-    		GRANT ALL ON SCHEMA public TO "${POSTGRES_NON_ROOT_USER}";
+    	psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+    		-v n8n_user="$POSTGRES_NON_ROOT_USER" -v n8n_password="$POSTGRES_NON_ROOT_PASSWORD" -v n8n_db="$POSTGRES_DB" <<-'EOSQL'
+    		SELECT format('CREATE USER %I', :'n8n_user') WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'n8n_user') \gexec
+    		SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'n8n_user', :'n8n_password') \gexec
+    		SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', :'n8n_db', :'n8n_user') \gexec
+    		SELECT format('GRANT ALL ON SCHEMA public TO %I', :'n8n_user') \gexec
     	EOSQL
     else
     	echo "SETUP INFO: No Environment variables given!"
