@@ -50,7 +50,7 @@ jobs:
           BUILD: ${{ inputs.build }}
         run: |
           set -euo pipefail
-          if ! [[ "$BUILD" =~ ^[0-9]+$ ]]; then
+          if ! [[ "$BUILD" =~ ^[1-9][0-9]*$ ]]; then
             echo "::error::build must be a positive integer, got '$BUILD'"
             exit 1
           fi
