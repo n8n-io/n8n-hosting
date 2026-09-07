@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, preview/worker-pools]
   pull_request:
-    branches: [main]
+    branches: [main, preview/worker-pools]
 
 permissions:
   contents: read

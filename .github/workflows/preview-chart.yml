@@ -1,0 +1,106 @@
+# Publishes a one-off preview chart from the preview/worker-pools branch.
+#
+# Manual only, and never on a release path: release.yml runs release-please on
+# pushes to main and is untouched by this branch, so nothing here can cut a
+# real release or move the chart's version.
+#
+# The published version is the chart's current version with a prerelease
+# suffix, e.g. 1.11.0-preview.workerpools.1. Helm ignores prerelease versions
+# unless the caller passes --devel or names the version exactly, so a customer
+# running `helm install ... --version 1.11.x` will not pick this up.
+name: Preview chart
+
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "Build number for this preview (1, 2, 3, ...). Bump it for every publish; pushing an existing version fails."
+        required: true
+        default: "1"
+      repository:
+        description: "OCI repository to push to."
+        required: true
+        default: "oci://ghcr.io/n8n-io/n8n-helm-chart"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: preview-chart
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Only ever from the preview branch. workflow_dispatch lets the caller pick
+    # any ref, and a preview chart built from main would be a released chart
+    # wearing a preview version.
+    if: github.ref == 'refs/heads/preview/worker-pools'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.17.0"
+
+      - name: Resolve preview version
+        id: version
+        env:
+          BUILD: ${{ inputs.build }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$BUILD" =~ ^[0-9]+$ ]]; then
+            echo "::error::build must be a positive integer, got '$BUILD'"
+            exit 1
+          fi
+          BASE=$(helm show chart charts/n8n | awk '$1=="version:"{print $2}')
+          if [[ "$BASE" == *-* ]]; then
+            echo "::error::chart version '$BASE' is already a prerelease; expected a plain release version"
+            exit 1
+          fi
+          echo "version=${BASE}-preview.workerpools.${BUILD}" >> "$GITHUB_OUTPUT"
+
+      - name: Lint and render
+        run: |
+          set -euo pipefail
+          helm lint charts/n8n
+          for f in charts/n8n/examples/*.yaml; do
+            helm template preview charts/n8n -f "$f" --dry-run=client > /dev/null
+          done
+          helm template preview charts/n8n \
+            -f charts/n8n/examples/minimal.yaml \
+            -f charts/n8n/ci/workerGroups-values.yaml --dry-run=client > /dev/null
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Package and push
+        env:
+          CHART_VERSION: ${{ steps.version.outputs.version }}
+          OCI_REPOSITORY: ${{ inputs.repository }}
+        run: |
+          set -euo pipefail
+          helm package charts/n8n --version "$CHART_VERSION" --destination /tmp/chart-pkg/
+          helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" "$OCI_REPOSITORY"
+
+      - name: Summary
+        env:
+          CHART_VERSION: ${{ steps.version.outputs.version }}
+          OCI_REPOSITORY: ${{ inputs.repository }}
+        run: |
+          {
+            echo "### Preview chart published"
+            echo
+            echo "\`${CHART_VERSION}\` from \`${GITHUB_SHA:0:7}\`"
+            echo
+            echo "Worker pools are an experimental n8n feature and need n8n 2.39.0 or newer."
+            echo
+            echo '```'
+            echo "helm install n8n ${OCI_REPOSITORY}/n8n \\"
+            echo "  --version ${CHART_VERSION} \\"
+            echo "  -f worker-pools.yaml"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
