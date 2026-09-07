@@ -106,6 +106,15 @@ Webhook processors are an optional scaling layer for high-volume production webh
 
 ### Worker groups and worker pools
 
+> [!WARNING]
+> **Worker pools are a preview feature and are not supported for production use.**
+>
+> Worker pools ship behind an experimental flag from **n8n 2.39.0**, and the behaviour and UI may change significantly before release. Run this on non-production instances only.
+>
+> This chart lives on the `preview/worker-pools` branch and is published as a prerelease version, so it is deliberately outside the released chart. It is not covered by the upgrade guarantees of a released chart, and a future release may land a different shape for these values.
+>
+> `queueMode.workerGroups` without `poolName` is *not* a preview feature. A group with no pool is an ordinary worker deployment with its own sizing, and works on any n8n version the chart supports.
+
 `queueMode.workerGroups` adds worker deployments beyond the one above, each with its own replica count, concurrency, resources, environment and node placement. Their pods share this release's ConfigMap and Secrets, so they cannot drift from the default workers on connection, identity, storage or licence configuration.
 
 Use a group when some executions need different hardware or isolation: GPU nodes, a larger memory limit, or a team whose jobs should not share workers with everything else.
@@ -147,12 +156,14 @@ Group pods are labelled `app.kubernetes.io/component: worker-group`, not `worker
 
 A group's `ScaledObject` is named `<release>-n8n-worker-<group>`, and KEDA limits that to 54 characters because it also names the generated HPA `keda-hpa-<name>` and uses the name as a label value. A long release name leaves less room for the group name. The chart fails at render time with the overflow rather than installing a group that quietly never scales.
 
-Two things to know about pool names:
+Pool names must be 1 to 63 characters of lowercase letters, digits and hyphens, starting with a letter or digit. The chart's values schema rejects anything else, because n8n itself only logs a warning for an invalid name and then starts the worker on the default queue, which leaves a Ready pod quietly serving the wrong jobs.
 
-- They must be 1 to 63 characters of lowercase letters, digits and hyphens, starting with a letter or digit. The chart's values schema rejects anything else, because n8n itself only logs a warning for an invalid name and then starts the worker on the default queue, which leaves a Ready pod quietly serving the wrong jobs.
-- A project whose pool has no running workers falls back to the default queue rather than waiting.
+**A pool with no running workers does not fall back to the default queue.** Executions for a project pinned to that pool are enqueued on `jobs-<poolName>` and wait there until a worker for the pool comes online. This matters for how you size a pooled group:
 
-> **Note:** worker pools require an n8n version that supports them, and the feature is gated on a licence entitlement. A group without `poolName` is still useful on its own: it consumes the default queue like any other worker, just with its own sizing.
+- With a `ScaledObject` (the default for a pooled group when `keda.enabled` is true), `minReplicaCount: 0` is safe. KEDA watches the pool's own queue, so the first execution scales the group up. You pay a cold start, not a stall.
+- Without one, a pooled group parked at `replicaCount: 0`, or one whose `keda.enabled` is `false`, queues that project's executions indefinitely. Nothing else will pick them up.
+
+> **Note:** worker pools need **n8n 2.39.0** or newer with `N8N_WORKER_POOLS_ENABLED=true` on every main and worker, and the feature is gated on a licence entitlement. At the time of writing 2.39.0 is not yet released; the latest stable is 2.37.10.
 
 ## ServiceAccount
 

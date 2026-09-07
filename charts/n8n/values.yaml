@@ -50,6 +50,16 @@ queueMode:
   # Secrets, so they cannot drift on connection, identity, storage or licence
   # configuration.
   #
+  # ---------------------------------------------------------------------------
+  # Preview: setting `poolName` on a group opts into n8n worker pools, which
+  # are not supported for production use. They ship behind an experimental flag
+  # from n8n 2.39.0, and the behaviour and UI may change significantly.
+  # Non-production instances only.
+  #
+  # A group without `poolName` is not a preview feature: it is an ordinary
+  # worker deployment with its own sizing, on any supported n8n version.
+  # ---------------------------------------------------------------------------
+  #
   # Set `poolName` to pin a group to an n8n worker pool. Its pods then consume
   # the `jobs-<poolName>` queue instead of the default `jobs` queue, and only
   # executions from projects assigned to that pool run on them. Worker pools
@@ -65,6 +75,13 @@ queueMode:
   # hyphens, starting with a letter or digit. n8n only logs a warning for an
   # invalid name and then starts the worker on the default queue, so a typo
   # produces a Ready pod serving the wrong jobs.
+  #
+  # A pool with no live workers does not fall back to the default queue.
+  # Executions for a project pinned to it are enqueued on `jobs-<poolName>`
+  # and wait until a worker for that pool comes online. A pooled group with a
+  # ScaledObject can therefore sit at `minReplicaCount: 0` safely, since the
+  # first execution scales it up, but a pooled group with `keda.enabled: false`
+  # or `replicaCount: 0` queues that project's executions indefinitely.
   #
   # When keda.enabled is true a group with a `poolName` also gets its own
   # ScaledObject watching that group's queue, because the default worker's

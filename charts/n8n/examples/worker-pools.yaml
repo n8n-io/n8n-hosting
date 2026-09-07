@@ -1,4 +1,16 @@
 # Worker Groups and Worker Pools
+#
+# ############################################################################
+# # Preview feature. Not supported for production use.                       #
+# #                                                                          #
+# # Worker pools ship behind an experimental flag from n8n 2.39.0, and the   #
+# # behaviour and UI may change significantly. Run this on non-production    #
+# # instances only.                                                          #
+# #                                                                          #
+# # A workerGroups entry without poolName is not a preview feature: it is    #
+# # an ordinary worker deployment with its own sizing.                       #
+# ############################################################################
+#
 # This example runs extra worker deployments alongside the default one, each
 # sized for its own kind of work, and pins two of them to n8n worker pools.
 #
@@ -12,8 +24,9 @@
 #   - External PostgreSQL and Redis (queue mode)
 #   - KEDA installed in the cluster, for the per-group scalers:
 #       helm install keda kedacore/keda --namespace keda-system --create-namespace
-#   - An n8n version that supports worker pools, and a licence with the
-#     entitlement that gates them
+#   - n8n 2.39.0 or newer, and a licence with the entitlement that gates
+#     worker pools. At the time of writing 2.39.0 is not yet released; the
+#     latest stable is 2.37.10.
 #
 # Pool names are 1-63 characters of lowercase letters, digits and hyphens,
 # starting with a letter or digit. The values schema enforces this because n8n
@@ -84,9 +97,14 @@ queueMode:
         maxReplicaCount: 6
         jobsPerReplica: 5
 
-    # An isolated set for one team's projects. Scales to zero when idle; a
-    # project pinned to a pool with no live workers falls back to the default
-    # queue rather than waiting.
+    # An isolated set for one team's projects, scaled to zero when idle.
+    #
+    # A pool with no live workers does not fall back to the default queue:
+    # executions are enqueued on jobs-secteam and wait for a worker. That is
+    # safe here only because this group has a ScaledObject watching its own
+    # queue, so the first execution scales it up and the team pays a cold
+    # start. Set keda.enabled: false on a pooled group, or park it at
+    # replicaCount: 0, and its executions queue indefinitely instead.
     - name: secteam
       poolName: secteam
       keda:
