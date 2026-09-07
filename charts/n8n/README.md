@@ -242,3 +242,5 @@ Chart version bumps are automated via semantic-release. Check the [CHANGELOG](..
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml
 ```
+
+<!-- ci trigger check, delete me -->
