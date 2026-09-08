@@ -121,7 +121,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | Value | Description | Default |
 |---|---|---|
 | `image.repository` | n8n image | `docker.n8n.io/n8nio/n8n` |
-| `image.tag` | n8n version | `1.110.1` |
+| `image.tag` | n8n version | `""` (uses the chart's `appVersion`) |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
 | `queueMode.workerConcurrency` | Jobs per worker | `10` |
 | `multiMain.enabled` | Multi-main HA (Enterprise) | `false` |

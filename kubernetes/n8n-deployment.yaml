@@ -53,7 +53,7 @@ spec:
               value: http
             - name: N8N_PORT
               value: "5678"
-          image: n8nio/n8n
+          image: n8nio/n8n:2.38.1
           name: n8n
           ports:
             - containerPort: 5678
