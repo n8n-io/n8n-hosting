@@ -31,6 +31,9 @@ jobs:
       - name: Run chart-testing (lint)
         run: ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false
 
+      - name: Check for deprecated n8n env vars
+        run: ./scripts/check-deprecated-env.sh charts/n8n
+
   template-validation:
     runs-on: ubuntu-latest
     strategy:

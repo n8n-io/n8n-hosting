@@ -527,6 +527,8 @@ webhook:
   enabled: true
   # Custom webhook URL base domain (if not set, will use ingress host)
   # Format: https://your-domain.com (n8n adds /webhook path automatically)
+  # Rendered as N8N_WEBHOOK_URL, which sets the base URL for both test and
+  # production webhooks.
   url: ""
   # Timeout for webhook requests in milliseconds
   timeout: 120000

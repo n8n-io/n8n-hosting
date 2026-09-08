@@ -109,9 +109,9 @@ data:
   # ----- Main-only Configuration -----
   {{- if .Values.webhook.enabled }}
   {{- if .Values.webhook.url }}
-  WEBHOOK_URL: {{ .Values.webhook.url | quote }}
+  N8N_WEBHOOK_URL: {{ .Values.webhook.url | quote }}
   {{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) }}
-  WEBHOOK_URL: "https://{{ (index .Values.ingress.hosts 0).host }}"
+  N8N_WEBHOOK_URL: "https://{{ (index .Values.ingress.hosts 0).host }}"
   {{- end }}
   {{- if .Values.webhook.timeout }}
   N8N_WEBHOOK_TIMEOUT: "{{ .Values.webhook.timeout }}"
