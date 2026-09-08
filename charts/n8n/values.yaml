@@ -336,6 +336,18 @@ nodePlacement: {}
 #         value: n8n-workers
 #         effect: NoSchedule
 
+# ----- Host aliases -----
+# Adds entries to /etc/hosts on every pod (main, worker, webhook-processor).
+# Useful for pinning n8n's own public hostname (WEBHOOK_URL/N8N_HOST) to an
+# internal/private IP so that traffic n8n's own OAuth/MCP clients send to
+# themselves stays inside the cluster instead of hairpinning out through an
+# external load balancer or tunnel and back in.
+# hostAliases:
+#   - ip: "10.0.0.1"
+#     hostnames:
+#       - "n8n.example.com"
+hostAliases: []
+
 # ----- Security -----
 # Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
 # ~/.n8n/, /tmp/, and other paths at runtime. Enabling it would require
