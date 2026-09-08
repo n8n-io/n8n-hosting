@@ -563,6 +563,21 @@
         }
       }
     },
+    "extraObjects": {
+      "type": "array",
+      "description": "Additional Kubernetes objects rendered as part of the Helm release",
+      "items": { "type": "object" }
+    },
+    "extraVolumes": {
+      "type": "array",
+      "description": "Additional volumes for main, worker, and webhook-processor pods",
+      "items": { "type": "object" }
+    },
+    "extraVolumeMounts": {
+      "type": "array",
+      "description": "Additional volume mounts for the n8n container in main, worker, and webhook-processor pods",
+      "items": { "type": "object" }
+    },
     "extraContainers": {
       "type": "array",
       "description": "Additional containers (sidecars) for main, worker, and webhook-processor pods",

@@ -119,15 +119,28 @@ License Configuration environment variables
 {{- end }}
 
 {{/*
-Core n8n secrets environment variables
+Encryption key environment variable
 */}}
-{{- define "n8n.coreSecretsEnv" -}}
-# Core n8n secrets
+{{- define "n8n.encryptionKeyEnv" -}}
+{{- $encryptionKeyFile := .Values.secretRefs.env.N8N_ENCRYPTION_KEY_FILE | default "" -}}
+{{- if $encryptionKeyFile }}
+- name: N8N_ENCRYPTION_KEY_FILE
+  value: {{ $encryptionKeyFile | quote }}
+{{- else }}
 - name: N8N_ENCRYPTION_KEY
   valueFrom:
     secretKeyRef:
       name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
       key: N8N_ENCRYPTION_KEY
+{{- end }}
+{{- end }}
+
+{{/*
+Core n8n secrets environment variables
+*/}}
+{{- define "n8n.coreSecretsEnv" -}}
+# Core n8n secrets
+{{ include "n8n.encryptionKeyEnv" . }}
 - name: N8N_HOST
   valueFrom:
     secretKeyRef:

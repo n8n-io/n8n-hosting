@@ -131,11 +131,7 @@ spec:
             {{- include "n8n.licenseEnv" . | nindent 12 }}
 
             # N8N encryption key
-            - name: N8N_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_ENCRYPTION_KEY
+            {{- include "n8n.encryptionKeyEnv" . | nindent 12 }}
 
             # Task Runners Configuration
             {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}
