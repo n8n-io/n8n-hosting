@@ -16,6 +16,20 @@
       "required": ["repository", "tag"]
     },
     "replicaCount": { "type": "integer", "minimum": 1 },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "strategy": {
+      "type": "object",
+      "description": "Deployment strategy for the main n8n Deployment"
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "description": "Container-level security context for n8n containers"
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "description": "Pod-level security context for n8n pods"
+    },
     "commonLabels": {
       "type": "object",
       "additionalProperties": { "type": "string" },
@@ -147,6 +161,10 @@
             }
           }
         },
+        "containerSecurityContext": {
+          "type": "object",
+          "description": "Container-level security context for task runner sidecars"
+        },
         "extraEnv": {
           "type": "array",
           "items": { "type": "object" }
@@ -180,6 +198,14 @@
         "enabled": { "type": "boolean" },
         "replicaCount": { "type": "integer", "minimum": 1 },
         "disableProductionWebhooksOnMainProcess": { "type": "boolean" },
+        "podSecurityContext": {
+          "type": "object",
+          "description": "Pod-level security context for webhook-processor pods"
+        },
+        "containerSecurityContext": {
+          "type": "object",
+          "description": "Container-level security context for webhook-processor containers"
+        },
         "extraEnv": {
           "type": "array",
           "items": {
@@ -200,6 +226,18 @@
         "type": { "type": "string" },
         "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "annotations": { "type": "object", "additionalProperties": true },
+        "main": {
+          "type": "object",
+          "properties": {
+            "annotations": { "type": "object", "additionalProperties": true }
+          }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "properties": {
+            "annotations": { "type": "object", "additionalProperties": true }
+          }
+        },
         "sessionAffinity": {
           "type": "object",
           "properties": {
@@ -275,7 +313,8 @@
       "type": "object",
       "properties": {
         "main": { "type": "object" },
-        "worker": { "type": "object" }
+        "worker": { "type": "object" },
+        "webhookProcessor": { "type": "object" }
       }
     },
     "nodeSelector": {
@@ -329,22 +368,106 @@
       "additionalProperties": { "type": "string" },
       "default": {}
     },
-    "securityContext": {
-      "type": "object",
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "fsGroup": { "type": "integer", "minimum": 0 },
-        "runAsUser": { "type": "integer", "minimum": 0 },
-        "runAsGroup": { "type": "integer", "minimum": 0 }
-      }
-    },
     "serviceAccount": {
       "type": "object",
       "properties": {
         "create": { "type": "boolean" },
         "name": { "type": "string" },
+        "awsRoleArn": { "type": "string" },
         "annotations": { "type": "object", "additionalProperties": true },
         "automountServiceAccountToken": { "type": "boolean" }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "pdb": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minAvailable": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "properties": {
+        "main": {
+          "type": "object",
+          "properties": {
+            "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 },
+            "preStop": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "command": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 },
+            "preStop": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "command": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "properties": {
+            "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 },
+            "preStop": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "command": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "keda": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "pollingInterval": { "type": "integer", "minimum": 1 },
+            "cooldownPeriod": { "type": "integer", "minimum": 1 },
+            "minReplicaCount": { "type": "integer", "minimum": 0 },
+            "maxReplicaCount": { "type": "integer", "minimum": 1 },
+            "triggers": { "type": "array" }
+          }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "properties": {
+            "pollingInterval": { "type": "integer", "minimum": 1 },
+            "cooldownPeriod": { "type": "integer", "minimum": 1 },
+            "minReplicaCount": { "type": "integer", "minimum": 0 },
+            "maxReplicaCount": { "type": "integer", "minimum": 1 },
+            "triggers": { "type": "array" }
+          }
+        }
       }
     },
     "extraInitContainers": {
@@ -439,20 +562,43 @@
     "hpa": {
       "type": "object",
       "properties": {
-        "enabled": { "type": "boolean" },
-        "minReplicas": { "type": "integer", "minimum": 1 },
-        "maxReplicas": { "type": "integer", "minimum": 1 },
-        "targetCPUUtilizationPercentage": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
-        },
-        "targetMemoryUtilizationPercentage": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
+        "main": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minReplicas": { "type": "integer", "minimum": 1 },
+            "maxReplicas": { "type": "integer", "minimum": 1 },
+            "targetCPUUtilizationPercentage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "targetMemoryUtilizationPercentage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
         },
         "worker": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minReplicas": { "type": "integer", "minimum": 1 },
+            "maxReplicas": { "type": "integer", "minimum": 1 },
+            "targetCPUUtilizationPercentage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "targetMemoryUtilizationPercentage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "webhookProcessor": {
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean" },
@@ -594,6 +740,7 @@
         "host": { "type": "string" },
         "port": { "type": "integer" },
         "database": { "type": "string" },
+        "schema": { "type": "string" },
         "user": { "type": "string" },
         "passwordSecret": {
           "type": "object",
@@ -602,6 +749,16 @@
             "key": { "type": "string" }
           },
           "required": ["name", "key"]
+        },
+        "ssl": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "ca": { "type": "string" },
+            "cert": { "type": "string" },
+            "key": { "type": "string" },
+            "rejectUnauthorized": { "type": "boolean" }
+          }
         }
       },
       "additionalProperties": true
@@ -609,6 +766,8 @@
     "redis": {
       "type": "object",
       "properties": {
+        "enabled": { "type": "boolean" },
+        "useExternal": { "type": "boolean" },
         "host": { "type": "string" },
         "port": { "type": "integer" },
         "username": { "type": "string" },

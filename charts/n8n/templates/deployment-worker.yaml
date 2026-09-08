@@ -34,15 +34,8 @@ spec:
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
-      {{- if .Values.securityContext.enabled }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-      {{- end }}
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
 
       {{- with .Values.dnsPolicy }}
       dnsPolicy: {{ . }}
@@ -70,10 +63,7 @@ spec:
             - "worker"
             - "--concurrency={{ .Values.queueMode.workerConcurrency }}"
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
 
           {{- if .Values.lifecycle.worker.preStop.enabled }}
           lifecycle:
@@ -199,10 +189,7 @@ spec:
           image: "{{ .Values.taskRunners.image.repository }}:{{ default .Values.image.tag .Values.taskRunners.image.tag }}"
           imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- toYaml .Values.taskRunners.containerSecurityContext | nindent 12 }}
 
           env:
             {{- include "n8n.taskRunnerSidecarEnv" . | nindent 12 }}

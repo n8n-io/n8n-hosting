@@ -34,15 +34,8 @@ spec:
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
-      {{- if .Values.securityContext.enabled }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-      {{- end }}
+        {{- toYaml .Values.webhookProcessor.podSecurityContext | nindent 8 }}
 
       {{- with .Values.dnsPolicy }}
       dnsPolicy: {{ . }}
@@ -68,10 +61,7 @@ spec:
           command: ["n8n"]
           args: ["webhook"]
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- toYaml .Values.webhookProcessor.containerSecurityContext | nindent 12 }}
 
           {{- if .Values.lifecycle.webhookProcessor.preStop.enabled }}
           lifecycle:

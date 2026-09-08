@@ -60,6 +60,25 @@ webhookProcessor:
   #   - name: N8N_LOG_LEVEL
   #     value: "debug"
   extraEnv: []
+  # -- Security Context for the whole pod.
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Container Security Context.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: false
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
 
 # ----- Multi-main (optional, requires queue mode) -----
 multiMain:
@@ -140,6 +159,21 @@ taskRunners:
     limits:
       cpu: 500m
       memory: 512Mi
+
+  # -- Container Security Context.
+  # If you use a distroless image (tag with "x.xx.x-distroless")
+  # You may want to set runAsUser and runAsGroup to 65532
+  # Ref: https://docs.n8n.io/deploy/host-n8n/configure-n8n/security/harden-task-runners#use-the-distroless-image
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: false
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
 
   # Additional environment variables for task runners
   extraEnv: []
@@ -337,14 +371,29 @@ nodePlacement: {}
 #         effect: NoSchedule
 
 # ----- Security -----
-# Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
+# -- Container Security Context.
+# Note: readOnlyRootFilesystem is intentionally not set to true. n8n writes to
 # ~/.n8n/, /tmp/, and other paths at runtime. Enabling it would require
 # extensive volumeMount overrides and is not practical for this workload.
-securityContext:
-  enabled: true
-  fsGroup: 1000
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
   runAsUser: 1000
   runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Security Context for the whole pod.
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
 
 # ----- RBAC ServiceAccount & Network Policy -----
 rbac:
