@@ -12,13 +12,13 @@
     { "type": "refactor", "section": "Code Refactoring" }
   ],
   "packages": {
-    ".": {
+    "charts/n8n": {
       "release-type": "go",
       "package-name": "n8n",
       "extra-files": [
         {
           "type": "generic",
-          "path": "charts/n8n/Chart.yaml"
+          "path": "Chart.yaml"
         }
       ]
     }

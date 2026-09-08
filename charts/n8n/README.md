@@ -237,7 +237,7 @@ See [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) for a complete exa
 
 ## Upgrading
 
-Chart version bumps are automated via semantic-release. Check the [CHANGELOG](../../CHANGELOG.md) for breaking changes before upgrading.
+Chart version bumps are automated via Release Please. Check the [CHANGELOG](./CHANGELOG.md) for breaking changes before upgrading.
 
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml

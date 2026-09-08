@@ -173,7 +173,7 @@ You can also let CI do this for you — add the `test-install` label to your PR 
 
 ### Version Bumps
 
-**Do not manually edit `Chart.yaml` version.** Semantic-release bumps it automatically based on commit messages.
+**Do not manually edit `Chart.yaml` version.** Release Please bumps it automatically based on commit messages.
 
 ## Pull Requests
 
