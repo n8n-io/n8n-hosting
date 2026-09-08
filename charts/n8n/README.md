@@ -156,7 +156,7 @@ Group pods are labelled `app.kubernetes.io/component: worker-group`, not `worker
 
 A group's `ScaledObject` is named `<release>-n8n-worker-<group>`, and KEDA limits that to 54 characters because it also names the generated HPA `keda-hpa-<name>` and uses the name as a label value. A long release name leaves less room for the group name. The chart fails at render time with the overflow rather than installing a group that quietly never scales.
 
-Pool names must be 1 to 63 characters of lowercase letters, digits and hyphens, starting with a letter or digit. The chart's values schema rejects anything else, because n8n itself only logs a warning for an invalid name and then starts the worker on the default queue, which leaves a Ready pod quietly serving the wrong jobs.
+Pool names must be 1 to 63 characters of lowercase letters, digits and hyphens, starting and ending with a letter or digit. The chart's values schema rejects anything else, because n8n itself only logs a warning for an invalid name and then starts the worker on the default queue, which leaves a Ready pod quietly serving the wrong jobs.
 
 **A pool with no running workers does not fall back to the default queue.** Executions for a project pinned to that pool are enqueued on `jobs-<poolName>` and wait there until a worker for the pool comes online. This matters for how you size a pooled group:
 

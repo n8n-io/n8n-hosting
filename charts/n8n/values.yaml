@@ -81,7 +81,7 @@ queueMode:
   # and wait until a worker for that pool comes online. A pooled group with a
   # ScaledObject can therefore sit at `minReplicaCount: 0` safely, since the
   # first execution scales it up, but a pooled group with `keda.enabled: false`
-  # or `replicaCount: 0` queues that project's executions indefinitely.
+  # and `replicaCount: 0` queues that project's executions indefinitely.
   #
   # When keda.enabled is true a group with a `poolName` also gets its own
   # ScaledObject watching that group's queue, because the default worker's
