@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - "charts/**"
-      - "CHANGELOG.md"
       - "release-please-config.json"
       - ".release-please-manifest.json"
       - ".github/workflows/release.yml"

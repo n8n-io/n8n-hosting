@@ -45,8 +45,6 @@ If this includes breaking changes, describe what they are and provide migration 
 - 
 
 ## Documentation Updates
-- [ ] Updated Chart.yaml version (if needed)
-- [ ] Updated CHANGELOG.md
 - [ ] Updated README.md (if needed)
 - [ ] Updated examples (if needed)
 - [ ] Updated CONTRIBUTING.md (if needed)
