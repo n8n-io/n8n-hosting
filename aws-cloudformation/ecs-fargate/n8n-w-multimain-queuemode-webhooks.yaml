@@ -1283,6 +1283,9 @@ Resources:
           - Name: task-runner
             Image: !Sub "n8nio/runners:${N8nVersion}"
             Essential: false
+            # the launcher force-kills a runner at 50s (30s grace + 2x10s margin), so ECS's 30s
+            # default would cut a drain short; 90s clears it, within the n8n containers' 120s budget
+            StopTimeout: 90
             Command: [ "javascript", "python" ]
             DependsOn:
               - ContainerName: runner-config-init
@@ -1551,6 +1554,9 @@ Resources:
           - Name: task-runner
             Image: !Sub "n8nio/runners:${N8nVersion}"
             Essential: false
+            # the launcher force-kills a runner at 50s (30s grace + 2x10s margin), so ECS's 30s
+            # default would cut a drain short; 90s clears it, within the n8n containers' 120s budget
+            StopTimeout: 90
             Command: [ "javascript", "python" ]
             DependsOn:
               - ContainerName: runner-config-init
