@@ -15,6 +15,18 @@
       },
       "required": ["repository", "tag"]
     },
+    "imagePullSecrets": {
+      "type": "array",
+      "default": [],
+      "description": "Existing pull Secrets for private image repositories, referenced by every pod the chart creates",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 }
+        },
+        "required": ["name"]
+      }
+    },
     "replicaCount": { "type": "integer", "minimum": 1 },
     "commonLabels": {
       "type": "object",
