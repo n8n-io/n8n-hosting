@@ -1,0 +1,106 @@
+{{- /*
+One ScaledObject per worker group.
+
+The chart's own worker ScaledObject watches the default queue's keys
+(bull:jobs:wait / :active). A group pinned to a pool consumes jobs-<poolName>
+instead, which those triggers cannot see, so without a scaler of its own a
+pooled group would sit at a fixed replica count no matter how deep its queue
+got.
+
+Triggers default to the same two-list shape the chart uses for the default
+worker, pointed at this group's queue. A group can replace them wholesale with
+its own `keda.triggers` when it needs to scale on something else.
+*/ -}}
+{{- if and .Values.keda.enabled .Values.queueMode.enabled }}
+{{- range $group := .Values.queueMode.workerGroups }}
+{{- $keda := $group.keda | default dict }}
+{{- if include "n8n.workerGroupScaled" (dict "root" $ "group" $group) }}
+{{- $soName := printf "%s-worker-%s" (include "n8n.fullname" $) $group.name }}
+{{- /* KEDA uses the ScaledObject name as the value of its
+       scaledobject.keda.sh/name label and names the HPA it generates
+       keda-hpa-<name>. Both are capped at 63 characters, so the name itself has
+       to fit in 54. Over that, KEDA 2.20 and newer reject the object at
+       admission and older versions accept it, then fail reconciliation before
+       the HPA exists, leaving a group that looks installed and never scales.
+       Caught here rather than at apply time, and only for groups that actually
+       get a scaler: a Deployment name has 253 characters to play with. */}}
+{{- if gt (len $soName) 54 }}
+{{- fail (printf "queueMode.workerGroups[%q]: the ScaledObject for this group would be named %q, which is %d characters. KEDA limits it to 54, because it names the generated HPA keda-hpa-<name> and also uses the name as a label value, and Kubernetes caps both at 63. Shorten the group name or the release name by %d characters." $group.name $soName (len $soName) (sub (len $soName) 54)) }}
+{{- end }}
+{{- $queue := include "n8n.workerGroupQueueName" $group }}
+{{- $prefix := $.Values.redis.prefix | default "bull" }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $soName }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: worker-group
+    n8n.io/worker-group: {{ $group.name | quote }}
+    {{- with $group.poolName }}
+    n8n.io/worker-pool: {{ . | quote }}
+    {{- end }}
+  {{- with $.Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    name: {{ $soName }}
+  {{- /* hasKey, not `default`, wherever 0 is a legal value: sprig's default
+         treats 0 as empty, so `default 300 0` is 300 and an explicit zero
+         would be silently replaced. minReplicaCount 0 in particular is the
+         documented way to scale a pool to nothing.
+
+         Timings fall back to keda.worker.*, because how fast the autoscaler
+         reacts is a property of the release and an operator tunes it once.
+         Replica bounds do not: a group exists to run somewhere different from
+         the default fleet, often on scarcer or more expensive nodes, so
+         inheriting the fleet's ceiling would size the group against hardware
+         it does not run on. Group bounds default to 1 and 5 instead. */}}
+  pollingInterval: {{ if hasKey $keda "pollingInterval" }}{{ $keda.pollingInterval }}{{ else }}{{ $.Values.keda.worker.pollingInterval }}{{ end }}
+  cooldownPeriod: {{ if hasKey $keda "cooldownPeriod" }}{{ $keda.cooldownPeriod }}{{ else }}{{ $.Values.keda.worker.cooldownPeriod }}{{ end }}
+  minReplicaCount: {{ if hasKey $keda "minReplicaCount" }}{{ $keda.minReplicaCount }}{{ else }}1{{ end }}
+  maxReplicaCount: {{ if hasKey $keda "maxReplicaCount" }}{{ $keda.maxReplicaCount }}{{ else }}5{{ end }}
+  triggers:
+    {{- if $keda.triggers }}
+    {{- range $keda.triggers }}
+    - type: {{ .type }}
+      metadata:
+        {{- $address := .metadata.address }}
+        {{- if and (eq .type "redis") (eq (default "" $address) "") }}
+        address: "{{ $.Values.redis.host }}:{{ $.Values.redis.port }}"
+        {{- else }}
+        address: {{ $address | quote }}
+        {{- end }}
+        {{- range $key, $value := .metadata }}
+        {{- if ne $key "address" }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+      {{- if and .authenticationRef .authenticationRef.name }}
+      authenticationRef:
+        name: {{ .authenticationRef.name }}
+      {{- end }}
+    {{- end }}
+    {{- else }}
+    {{- range $queueState := list "wait" "active" }}
+    - type: redis
+      metadata:
+        address: "{{ $.Values.redis.host }}:{{ $.Values.redis.port }}"
+        listName: "{{ $prefix }}:{{ $queue }}:{{ $queueState }}"
+        listLength: {{ $keda.jobsPerReplica | default 5 | quote }}
+        {{- with $keda.triggerMetadata }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- if and $keda.authenticationRef $keda.authenticationRef.name }}
+      authenticationRef:
+        name: {{ $keda.authenticationRef.name }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

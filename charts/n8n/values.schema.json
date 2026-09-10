@@ -171,6 +171,71 @@
             },
             "required": ["name"]
           }
+        },
+        "workerGroups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+                "minLength": 1,
+                "maxLength": 53,
+                "description": "Deployment name suffix for this group; must be a DNS label."
+              },
+              "poolName": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+                "maxLength": 63,
+                "description": "n8n worker pool to pin this group to. Sets N8N_WORKER_POOL_NAME, moving the group onto the jobs-<poolName> queue. Lowercase letters, digits and hyphens, 1-63 characters, starting and ending alphanumeric; n8n only warns on an invalid name and then falls back to the default queue. Stricter than n8n's own pattern, which permits a trailing hyphen, because the value is also emitted as the n8n.io/worker-pool label and Kubernetes rejects a label value that does not end alphanumeric."
+              },
+              "replicaCount": { "type": "integer", "minimum": 0 },
+              "concurrency": { "type": "integer", "minimum": 1 },
+              "resources": {
+                "type": "object",
+                "properties": {
+                  "requests": { "type": "object" },
+                  "limits": { "type": "object" }
+                }
+              },
+              "extraEnv": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string", "minLength": 1 },
+                    "value": { "type": "string" },
+                    "valueFrom": { "type": "object" }
+                  },
+                  "required": ["name"]
+                }
+              },
+              "nodeSelector": { "type": "object" },
+              "tolerations": { "type": "array" },
+              "affinity": { "type": "object" },
+              "keda": {
+                "type": "object",
+                "description": "Per-group autoscaling. Rendered only when the release-wide keda.enabled is true, and only for a group with a poolName or its own triggers. pollingInterval and cooldownPeriod fall back to keda.worker.*; minReplicaCount and maxReplicaCount do not, and default to 1 and 5, because a group runs on different hardware from the default fleet and should not inherit its ceiling.",
+                "properties": {
+                  "enabled": { "type": "boolean", "description": "Opt out of KEDA for this group and hold replicaCount instead. A group cannot opt in while the release-wide keda.enabled is false; the chart rejects that." },
+                  "minReplicaCount": { "type": "integer", "minimum": 0, "description": "Floor for this group. Defaults to 1, not keda.worker.minReplicaCount. 0 scales the group to nothing when its queue is empty." },
+                  "maxReplicaCount": { "type": "integer", "minimum": 1, "description": "Ceiling for this group. Defaults to 5, not keda.worker.maxReplicaCount." },
+                  "pollingInterval": { "type": "integer", "minimum": 1, "description": "Seconds between queue checks. Defaults to keda.worker.pollingInterval." },
+                  "cooldownPeriod": { "type": "integer", "minimum": 0, "description": "Seconds to wait before scaling down. Defaults to keda.worker.cooldownPeriod." },
+                  "jobsPerReplica": { "type": "integer", "minimum": 1, "description": "Queued jobs per replica for the default Redis triggers (KEDA listLength). Ignored when triggers is set." },
+                  "triggerMetadata": { "type": "object", "description": "Extra metadata merged into the default Redis triggers. Ignored when triggers is set." },
+                  "authenticationRef": {
+                    "type": "object",
+                    "properties": { "name": { "type": "string", "minLength": 1 } },
+                    "description": "TriggerAuthentication for this group's default Redis triggers. Same shape as keda.worker.triggers[].authenticationRef. Ignored when triggers is set; give each trigger its own authenticationRef there."
+                  },
+                  "triggers": { "type": "array", "description": "Replaces this group's default Redis triggers wholesale. Setting it also gives a group with no poolName a scaler of its own, which the chart otherwise withholds." }
+                }
+              }
+            },
+            "required": ["name"]
+          }
         }
       }
     },

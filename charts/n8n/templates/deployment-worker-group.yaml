@@ -1,0 +1,81 @@
+{{- /*
+One Deployment per queueMode.workerGroups entry.
+
+A group is an additional worker deployment with its own replica count,
+concurrency, resources and node placement. Setting `poolName` on a group also
+sets N8N_WORKER_POOL_NAME on its pods, which moves them off the default `jobs`
+queue and onto `jobs-<poolName>` so a project pinned to that pool runs only
+here.
+
+The pod itself comes from the same template as the chart's default worker
+deployment, so a group cannot drift from it on connection, identity, storage or
+licence configuration.
+*/ -}}
+{{- if .Values.queueMode.enabled }}
+{{- /* Each group owns a Deployment and a ScaledObject named after it, so two
+       groups sharing a name silently collide: helm template renders both, and
+       whichever applies last wins. JSON Schema cannot express uniqueness on a
+       property, so it is checked here instead. */}}
+{{- $seen := dict }}
+{{- range $group := .Values.queueMode.workerGroups }}
+{{- if hasKey $seen $group.name }}
+{{- fail (printf "queueMode.workerGroups: duplicate group name %q. Each group renders its own Deployment and ScaledObject, so names must be unique." $group.name) }}
+{{- end }}
+{{- $_ := set $seen $group.name true }}
+{{- end }}
+{{- /* keda.enabled picks the autoscaler for the whole release: with it off the
+       chart renders HPAs, and the group ScaledObject template does not render at
+       all. A group asking for KEDA from under that would get no scaler and, since
+       the Deployment below omits `replicas` whenever a scaler owns the count, no
+       replica count either. Rejected here rather than silently ignored, because
+       the group would otherwise come up at Kubernetes' default of one pod while
+       its own replicaCount and KEDA bounds sat unread in the values file. */}}
+{{- if not .Values.keda.enabled }}
+{{- range $group := .Values.queueMode.workerGroups }}
+{{- $keda := $group.keda | default dict }}
+{{- if and (hasKey $keda "enabled") $keda.enabled }}
+{{- fail (printf "queueMode.workerGroups[%q].keda.enabled is true but the release-wide keda.enabled is false. keda.enabled selects the autoscaler for the whole release, so a group can opt out of KEDA but not into it. Either set keda.enabled: true at the top level, or drop keda.enabled from this group and size it with replicaCount." $group.name) }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- range $group := .Values.queueMode.workerGroups }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "n8n.fullname" $ }}-worker-{{ $group.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: worker-group
+    n8n.io/worker-group: {{ $group.name | quote }}
+    {{- with $group.poolName }}
+    n8n.io/worker-pool: {{ . | quote }}
+    {{- end }}
+  {{- with $.Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- /* KEDA owns the replica count once a scaler exists for this group, so the
+         chart must not reset it on every upgrade. Same helper the ScaledObject
+         uses, so the two cannot disagree and leave a group with neither. */}}
+  {{- if not (include "n8n.workerGroupScaled" (dict "root" $ "group" $group)) }}
+  {{- /* hasKey again: replicaCount 0 is a legal way to park a static group. */}}
+  replicas: {{ if hasKey $group "replicaCount" }}{{ $group.replicaCount }}{{ else }}1{{ end }}
+  {{- end }}
+  revisionHistoryLimit: 3
+  {{- /* component is worker-group, not worker: the default worker Deployment
+         selects {name, instance, component: worker} and its selector is
+         immutable, so a group pod labelled `worker` would match that
+         Deployment's selector as well as this one. */}}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "n8n.name" $ }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/component: worker-group
+      n8n.io/worker-group: {{ $group.name | quote }}
+  template:
+    {{- include "n8n.workerPodTemplate" (dict "root" $ "group" $group) | nindent 4 }}
+{{- end }}
+{{- end }}

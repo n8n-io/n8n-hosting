@@ -43,6 +43,7 @@ jobs:
           - charts/n8n/examples/keda-autoscaling.yaml
           - charts/n8n/examples/https-ingress.yaml
           - charts/n8n/examples/production-s3.yaml
+          - charts/n8n/examples/worker-pools.yaml
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +57,10 @@ jobs:
       - name: Validate extraContainers (minimal + ci overlay)
         if: matrix.example == 'charts/n8n/examples/minimal.yaml'
         run: helm template test charts/n8n -f charts/n8n/examples/minimal.yaml -f charts/n8n/ci/extraContainers-values.yaml --dry-run=client > /dev/null
+
+      - name: Validate workerGroups (minimal + ci overlay)
+        if: matrix.example == 'charts/n8n/examples/minimal.yaml'
+        run: helm template test charts/n8n -f charts/n8n/examples/minimal.yaml -f charts/n8n/ci/workerGroups-values.yaml --dry-run=client > /dev/null
 
   install-test:
     runs-on: ubuntu-latest

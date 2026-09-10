@@ -44,6 +44,99 @@ queueMode:
   #     value: "10"
   workerExtraEnv: []
 
+  # Additional worker deployments, each with its own replica count,
+  # concurrency, resources, env and node placement. The pods are otherwise
+  # identical to the workers above: they share this release's ConfigMap and
+  # Secrets, so they cannot drift on connection, identity, storage or licence
+  # configuration.
+  #
+  # ---------------------------------------------------------------------------
+  # Preview: setting `poolName` on a group opts into n8n worker pools, which
+  # are not supported for production use. They ship behind an experimental flag
+  # from n8n 2.39.0, and the behaviour and UI may change significantly.
+  # Non-production instances only.
+  #
+  # A group without `poolName` is not a preview feature: it is an ordinary
+  # worker deployment with its own sizing, on any supported n8n version.
+  # ---------------------------------------------------------------------------
+  #
+  # Set `poolName` to pin a group to an n8n worker pool. Its pods then consume
+  # the `jobs-<poolName>` queue instead of the default `jobs` queue, and only
+  # executions from projects assigned to that pool run on them. Worker pools
+  # additionally require the feature to be switched on for the whole instance,
+  # which the mains need too:
+  #
+  #   config:
+  #     extraEnv:
+  #       - name: N8N_WORKER_POOLS_ENABLED
+  #         value: "true"
+  #
+  # Pool names must be 1-63 characters of lowercase letters, digits and
+  # hyphens, starting with a letter or digit. n8n only logs a warning for an
+  # invalid name and then starts the worker on the default queue, so a typo
+  # produces a Ready pod serving the wrong jobs.
+  #
+  # A pool with no live workers does not fall back to the default queue.
+  # Executions for a project pinned to it are enqueued on `jobs-<poolName>`
+  # and wait until a worker for that pool comes online. A pooled group with a
+  # ScaledObject can therefore sit at `minReplicaCount: 0` safely, since the
+  # first execution scales it up, but a pooled group with `keda.enabled: false`
+  # and `replicaCount: 0` queues that project's executions indefinitely.
+  #
+  # When keda.enabled is true a group with a `poolName` also gets its own
+  # ScaledObject watching that group's queue, because the default worker's
+  # triggers only watch `<prefix>:jobs:*` and cannot see a pool's backlog.
+  #
+  # A group with no `poolName` stays on the default `jobs` queue, which the
+  # chart's own worker scaler already watches. A second scaler on that same
+  # backlog would scale to cover the same jobs twice, so the chart does not
+  # generate one: a poolless group holds the static `replicaCount` below.
+  # Set `keda.triggers` on the group to scale it on something else instead.
+  #
+  # A group's own `keda.enabled` is an opt-out only. The release-wide
+  # keda.enabled above picks the autoscaler for the whole chart (HPAs when it is
+  # off), so a group cannot turn KEDA on for itself while the release is in HPA
+  # mode; the chart rejects that rather than render a group with neither a
+  # replica count nor a scaler. With the release-wide switch off, a group's
+  # other `keda` settings are inert and it runs at its `replicaCount`.
+  #
+  # A group's `keda` block takes `enabled`, `minReplicaCount`,
+  # `maxReplicaCount`, `pollingInterval`, `cooldownPeriod`, `jobsPerReplica`,
+  # `triggerMetadata`, `authenticationRef` (an object with a `name`, the same
+  # shape as under `keda.worker` below) and `triggers`. `pollingInterval` and
+  # `cooldownPeriod` fall back to `keda.worker.*`, because how fast the
+  # autoscaler reacts is a property of the release. The replica bounds
+  # deliberately do not: a group exists to run somewhere different from the
+  # default fleet, so inheriting the fleet's ceiling would size it against
+  # hardware it never lands on. Left unset they are 1 and 5.
+  #
+  # Group pods carry `app.kubernetes.io/component: worker-group`, not `worker`.
+  # The default worker Deployment selects on `component: worker` and a
+  # Deployment's selector is immutable, so group pods have to sit outside it;
+  # otherwise the worker HPA would average CPU over pods it does not scale.
+  # Select a group's pods with `n8n.io/worker-group: <name>`.
+  #
+  # Example:
+  # workerGroups:
+  #   - name: gpu
+  #     poolName: gpu
+  #     concurrency: 5
+  #     resources:
+  #       requests: { cpu: "1", memory: 2Gi }
+  #       limits: { cpu: "2", memory: 4Gi }
+  #     nodeSelector:
+  #       node.kubernetes.io/instance-type: g5.xlarge
+  #     keda:
+  #       minReplicaCount: 1
+  #       maxReplicaCount: 6
+  #       jobsPerReplica: 5
+  #   - name: secteam
+  #     poolName: secteam
+  #     replicaCount: 2      # used only when keda is disabled for the group
+  #     keda:
+  #       enabled: false
+  workerGroups: []
+
 # ----- Webhook processors (optional scaling layer) -----
 webhookProcessor:
   # Enable dedicated webhook processing pods for high-throughput webhook scenarios

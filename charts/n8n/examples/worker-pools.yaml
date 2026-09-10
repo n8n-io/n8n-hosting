@@ -1,0 +1,121 @@
+# Worker Groups and Worker Pools
+#
+# ############################################################################
+# # Preview feature. Not supported for production use.                       #
+# #                                                                          #
+# # Worker pools ship behind an experimental flag from n8n 2.39.0, and the   #
+# # behaviour and UI may change significantly. Run this on non-production    #
+# # instances only.                                                          #
+# #                                                                          #
+# # A workerGroups entry without poolName is not a preview feature: it is    #
+# # an ordinary worker deployment with its own sizing.                       #
+# ############################################################################
+#
+# This example runs extra worker deployments alongside the default one, each
+# sized for its own kind of work, and pins two of them to n8n worker pools.
+#
+# A worker group is just another worker deployment with its own replicas,
+# concurrency, resources and node placement. Give it a poolName and its pods
+# consume the jobs-<poolName> queue instead of the default jobs queue, so only
+# executions from projects assigned to that pool run there. Assign a project to
+# a pool in the n8n UI under Project, Settings, Worker Pools.
+#
+# Prerequisites:
+#   - External PostgreSQL and Redis (queue mode)
+#   - KEDA installed in the cluster, for the per-group scalers:
+#       helm install keda kedacore/keda --namespace keda-system --create-namespace
+#   - n8n 2.39.0 or newer, and a licence with the entitlement that gates
+#     worker pools. At the time of writing 2.39.0 is not yet released; the
+#     latest stable is 2.37.10.
+#
+# Pool names are 1-63 characters of lowercase letters, digits and hyphens,
+# starting with a letter or digit. The values schema enforces this because n8n
+# itself only logs a warning for a bad name and then starts the worker on the
+# default queue, which leaves a Ready pod quietly serving the wrong jobs.
+#
+# Group pods are labelled app.kubernetes.io/component: worker-group, so that
+# they stay outside the default worker Deployment's selector. Find them with
+# kubectl get pods -l n8n.io/worker-group=gpu, or -l
+# app.kubernetes.io/component=worker-group for every group at once.
+
+database:
+  type: postgresdb
+  useExternal: true
+  host: "your-postgres-host.com"
+  port: 5432
+  database: n8n
+  schema: "public"
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+redis:
+  host: "your-redis-host.com"
+  port: 6379
+
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+config:
+  extraEnv:
+    # Required instance-wide, not just on the workers: the main pods resolve a
+    # project's pool and enqueue to it.
+    - name: N8N_WORKER_POOLS_ENABLED
+      value: "true"
+
+hpa:
+  worker:
+    enabled: false
+
+keda:
+  enabled: true
+
+queueMode:
+  enabled: true
+
+  # The default, unlabelled workers. These keep serving the jobs queue for
+  # every project that is not pinned to a pool.
+  workerReplicaCount: 2
+  workerConcurrency: 10
+
+  workerGroups:
+    # Long-running or memory-hungry executions, pinned to bigger nodes.
+    - name: gpu
+      poolName: gpu
+      concurrency: 5
+      resources:
+        requests:
+          cpu: "1"
+          memory: 2Gi
+        limits:
+          cpu: "2"
+          memory: 4Gi
+      nodeSelector:
+        node.kubernetes.io/instance-type: g5.xlarge
+      keda:
+        minReplicaCount: 1
+        maxReplicaCount: 6
+        jobsPerReplica: 5
+
+    # An isolated set for one team's projects, scaled to zero when idle.
+    #
+    # A pool with no live workers does not fall back to the default queue:
+    # executions are enqueued on jobs-secteam and wait for a worker. That is
+    # safe here only because this group has a ScaledObject watching its own
+    # queue, so the first execution scales it up and the team pays a cold
+    # start. Set keda.enabled: false on a pooled group, or park it at
+    # replicaCount: 0, and its executions queue indefinitely instead.
+    - name: secteam
+      poolName: secteam
+      keda:
+        minReplicaCount: 0
+        maxReplicaCount: 3
+
+    # A group with no poolName consumes the default jobs queue like any other
+    # worker, just with its own sizing. The default worker's ScaledObject
+    # already watches that queue, so the chart does not build a second scaler
+    # for this group: it holds replicaCount. Useful for a fixed block of
+    # capacity underneath the autoscaled default workers.
+    - name: batch
+      replicaCount: 2
+      concurrency: 20
