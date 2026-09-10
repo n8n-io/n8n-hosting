@@ -1107,7 +1107,7 @@ Resources:
               Value: default
             - Name: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
               Value: true
-            - Name: WEBHOOK_URL
+            - Name: N8N_WEBHOOK_URL
               Value: !Sub "https://${N8nHostRecord}/"
 
           LogConfiguration:
@@ -1316,7 +1316,7 @@ Resources:
               Value: !GetAtt Redis.PrimaryEndPoint.Port  
             - Name: QUEUE_BULL_REDIS_USERNAME
               Value: default              
-            - Name: WEBHOOK_URL
+            - Name: N8N_WEBHOOK_URL
               Value: !Sub "https://${N8nHostRecord}/"
 
           LogConfiguration:
