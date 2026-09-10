@@ -7,6 +7,15 @@ Description: >-
 
 Parameters:
 
+# n8n image parameters
+
+  N8nVersion:
+    Type: String
+    Default: "2.38.5"
+    Description: "n8n version to deploy. Never move this below the version a running stack has already migrated to, n8n does not down-migrate the schema."
+    AllowedPattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+    ConstraintDescription: "Must be a concrete n8n version such as 2.38.5, not a floating tag like stable or latest."
+
 # n8n host parameters
 
   N8nHostedZone:
@@ -186,6 +195,10 @@ Parameters:
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
+      - Label:
+          default: "n8n Image Config"
+        Parameters:
+          - N8nVersion
       - Label:
           default: "n8n License Config"
         Parameters:
@@ -1003,7 +1016,7 @@ Resources:
         - Name: certs
       ContainerDefinitions:
         - Name: n8n
-          Image: n8nio/n8n:2.23.4
+          Image: !Sub "n8nio/n8n:${N8nVersion}"
           Essential: true
           StopTimeout: 120
           PortMappings:
@@ -1202,7 +1215,7 @@ Resources:
         - Name: certs
       ContainerDefinitions:
         - Name: n8n
-          Image: n8nio/n8n:2.23.4
+          Image: !Sub "n8nio/n8n:${N8nVersion}"
           Essential: true
           StopTimeout: 120
           PortMappings:
