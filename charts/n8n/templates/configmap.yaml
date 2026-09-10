@@ -24,7 +24,7 @@ data:
   DB_POSTGRESDB_SCHEMA: {{ .Values.database.schema | quote }}
   {{- end }}
   {{- if .Values.database.ssl.enabled }}
-  DB_POSTGRESDB_SSL: "true"
+  DB_POSTGRESDB_SSL_ENABLED: "true"
   {{- if .Values.database.ssl.ca }}
   DB_POSTGRESDB_SSL_CA: {{ .Values.database.ssl.ca | quote }}
   {{- end }}
