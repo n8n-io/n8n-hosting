@@ -1,0 +1,34 @@
+# Default values for n8n-self-hosted.
+# This is a YAML-formatted file.
+
+global: 
+  secretName: n8n-secrets
+
+n8n: 
+  host: "localhost"
+  timezone: "Europe/Berlin"
+  disableSecureCookie: true
+  extraEnv: {}
+  resources: {}
+
+postgres: 
+  size: 5Gi
+  resources: {}
+
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
