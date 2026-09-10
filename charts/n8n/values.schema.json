@@ -472,6 +472,23 @@
         }
       }
     },
+    "keda": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "pause": { "type": "boolean" },
+            "pausedReplicaCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Replica count to maintain while KEDA autoscaling is paused (autoscaling.keda.sh/paused-replicas)"
+            }
+          }
+        }
+      }
+    },
     "webhook": {
       "type": "object",
       "properties": {
