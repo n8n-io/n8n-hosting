@@ -1089,6 +1089,9 @@ Resources:
               Value: !Ref S3BinaryBucket
             - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION
               Value: !Ref AWS::Region
+            # n8n 2.38.0 aborts the startup S3 HeadBucket check at 10s; a cold NAT or VPC endpoint path can exceed that
+            - Name: N8N_EXTERNAL_STORAGE_S3_STARTUP_TIMEOUT_MS
+              Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
             - Name: N8N_LOG_LEVEL
@@ -1298,6 +1301,9 @@ Resources:
               Value: !Ref S3BinaryBucket
             - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION
               Value: !Ref AWS::Region
+            # n8n 2.38.0 aborts the startup S3 HeadBucket check at 10s; a cold NAT or VPC endpoint path can exceed that
+            - Name: N8N_EXTERNAL_STORAGE_S3_STARTUP_TIMEOUT_MS
+              Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
             - Name: N8N_LOG_LEVEL
