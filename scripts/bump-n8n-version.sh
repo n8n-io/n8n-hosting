@@ -23,7 +23,7 @@ if [[ -z "$version" ]]; then
   exit 64
 fi
 
-if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
   echo "error: '$version' is not a concrete n8n version such as 2.38.6" >&2
   exit 64
 fi

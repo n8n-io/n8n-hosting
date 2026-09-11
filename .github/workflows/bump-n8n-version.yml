@@ -60,7 +60,7 @@ jobs:
           fi
 
           current=$(awk '$1 == "appVersion:" { gsub(/"/, "", $2); print $2 }' charts/n8n/Chart.yaml)
-          if [[ ! "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$current" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "::error::charts/n8n/Chart.yaml appVersion is '$current', not a concrete version, so there is nothing to compare against."
             exit 1
           fi
@@ -87,7 +87,7 @@ jobs:
             source="n8n's stable release"
           fi
 
-          if [[ ! "$target" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$target" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "::error::$source resolved to '$target', which is not a concrete version."
             exit 1
           fi
@@ -95,6 +95,8 @@ jobs:
           IFS=. read -r cur_major cur_minor cur_patch <<< "$CURRENT"
           IFS=. read -r new_major new_minor new_patch <<< "$target"
 
+          # A string compare is exact here because the format check above
+          # rejects a zero-padded field, so 2 and 02 cannot both reach this.
           if [[ "$new_major" != "$cur_major" ]]; then
             echo "::error::$source is $target, which crosses a major from $CURRENT. An n8n major needs chart changes of its own, so this job will not do it."
             exit 1
@@ -106,7 +108,8 @@ jobs:
             exit 0
           fi
 
-          # 10# because a zero-padded field would otherwise be read as octal.
+          # 10# in case the format check is ever loosened: without it a
+          # zero-padded field would be read as octal, and 08 is not valid octal.
           if (( 10#$new_minor < 10#$cur_minor ||
                 (10#$new_minor == 10#$cur_minor && 10#$new_patch < 10#$cur_patch) )); then
             echo "::error::$source is $target, which is behind $CURRENT. This job only moves forwards; run scripts/bump-n8n-version.sh by hand for a rollback."
@@ -208,13 +211,21 @@ jobs:
           EOF
           )
 
-          pr=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          # --head matches on branch name alone, so a fork PR whose head branch
+          # is also called automated/bump-n8n would come back here and get
+          # retitled, relabelled and handed auto-merge. Only ever act on a PR
+          # from this repository. Qualifying --head as owner:branch does not
+          # work, it matches nothing at all, so filter on the PR instead.
+          pr=$(gh pr list --head "$BRANCH" --base main --state open \
+            --json number,isCrossRepository \
+            --jq 'map(select(.isCrossRepository == false)) | .[0].number // empty')
 
           if [[ -z "$pr" ]]; then
-            # The label has to be on the opened event: ci.yml's pull_request
-            # trigger declares no types, so labelling later re-triggers nothing.
             # gh prints the new PR's URL, which the merge step takes as readily
             # as a number and avoids listing again to find out what we just made.
+            # The label is for humans reading the PR: gh applies labels after
+            # the PR exists, so it is not in the `opened` event and does not by
+            # itself make install-test run. ci.yml's branch-name gate does that.
             pr=$(gh pr create --base main --head "$BRANCH" --title "$title" --body "$body" --label test-install)
           else
             gh pr edit "$pr" --title "$title" --body "$body" --add-label test-install
