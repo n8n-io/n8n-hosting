@@ -169,7 +169,9 @@ kubectl delete namespace n8n-test
 kind delete cluster --name n8n-test
 ```
 
-You can also let CI do this for you — add the `test-install` label to your PR and the install-test job will run automatically.
+You can also let CI do this for you: add the `test-install` label to your PR and the install-test job runs straight away, no push needed. A maintainer has to add it, and it is not required for your PR to merge.
+
+It runs on its own, without a label, for the version bump PR and for Release Please's PRs, and it has to pass before either can merge.
 
 ### Version Bumps
 
