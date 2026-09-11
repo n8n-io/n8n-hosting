@@ -6,6 +6,15 @@ Description: >-
 
 Parameters:
 
+# n8n image parameters
+
+  N8nVersion:
+    Type: String
+    Default: "2.38.5"
+    Description: "n8n version to deploy. Drives both the n8nio/n8n and n8nio/runners images, which are released together and must match. Never move this below the version a running stack has already migrated to, n8n does not down-migrate the schema."
+    AllowedPattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+    ConstraintDescription: "Must be a concrete n8n version such as 2.38.5, not a floating tag like stable or latest."
+
 # n8n host parameters
 
   N8nHostedZone:
@@ -196,6 +205,10 @@ Parameters:
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
+      - Label:
+          default: "n8n Image Config"
+        Parameters:
+          - N8nVersion
       - Label:
           default: "n8n License Config"
         Parameters:
@@ -1155,7 +1168,7 @@ Resources:
         - Name: runner-cfg
       ContainerDefinitions:
         - Name: n8n
-          Image: n8nio/n8n:2.23.4
+          Image: !Sub "n8nio/n8n:${N8nVersion}"
           Essential: true
           StopTimeout: 120
           PortMappings:
@@ -1228,6 +1241,9 @@ Resources:
               Value: !Ref S3BinaryBucket
             - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION
               Value: !Ref AWS::Region
+            # n8n 2.38.0 aborts the startup S3 HeadBucket check at 10s; a cold NAT or VPC endpoint path can exceed that
+            - Name: N8N_EXTERNAL_STORAGE_S3_STARTUP_TIMEOUT_MS
+              Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
             - Name: N8N_LOG_LEVEL
@@ -1269,7 +1285,7 @@ Resources:
               Value: default
             - Name: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
               Value: true
-            - Name: WEBHOOK_URL
+            - Name: N8N_WEBHOOK_URL
               Value: !Sub "https://${N8nHostRecord}/"
 
           LogConfiguration:
@@ -1317,7 +1333,7 @@ Resources:
         - !If
           - PythonRunner
           - Name: runner-config-init
-            Image: n8nio/runners:2.23.4
+            Image: !Sub "n8nio/runners:${N8nVersion}"
             Essential: false
             User: "0"
             EntryPoint: [ "/opt/runners/task-runner-python/.venv/bin/python", "-c" ]
@@ -1341,8 +1357,11 @@ Resources:
         - !If
           - PythonRunner
           - Name: task-runner
-            Image: n8nio/runners:2.23.4
+            Image: !Sub "n8nio/runners:${N8nVersion}"
             Essential: false
+            # the launcher force-kills a runner at 50s (30s grace + 2x10s margin), so ECS's 30s
+            # default would cut a drain short; 90s clears it, within the n8n containers' 120s budget
+            StopTimeout: 90
             Command: [ "javascript", "python" ]
             DependsOn:
               - ContainerName: runner-config-init
@@ -1432,7 +1451,7 @@ Resources:
         - Name: runner-cfg
       ContainerDefinitions:
         - Name: n8n
-          Image: n8nio/n8n:2.23.4
+          Image: !Sub "n8nio/n8n:${N8nVersion}"
           Essential: true
           StopTimeout: 120
           PortMappings:
@@ -1513,6 +1532,9 @@ Resources:
               Value: !Ref S3BinaryBucket
             - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION
               Value: !Ref AWS::Region
+            # n8n 2.38.0 aborts the startup S3 HeadBucket check at 10s; a cold NAT or VPC endpoint path can exceed that
+            - Name: N8N_EXTERNAL_STORAGE_S3_STARTUP_TIMEOUT_MS
+              Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
             - Name: N8N_CONCURRENCY
@@ -1538,7 +1560,7 @@ Resources:
               Value: !GetAtt Redis.PrimaryEndPoint.Port  
             - Name: QUEUE_BULL_REDIS_USERNAME
               Value: default              
-            - Name: WEBHOOK_URL
+            - Name: N8N_WEBHOOK_URL
               Value: !Sub "https://${N8nHostRecord}/"
 
           LogConfiguration:
@@ -1585,7 +1607,7 @@ Resources:
         - !If
           - PythonRunner
           - Name: runner-config-init
-            Image: n8nio/runners:2.23.4
+            Image: !Sub "n8nio/runners:${N8nVersion}"
             Essential: false
             User: "0"
             EntryPoint: [ "/opt/runners/task-runner-python/.venv/bin/python", "-c" ]
@@ -1609,8 +1631,11 @@ Resources:
         - !If
           - PythonRunner
           - Name: task-runner
-            Image: n8nio/runners:2.23.4
+            Image: !Sub "n8nio/runners:${N8nVersion}"
             Essential: false
+            # the launcher force-kills a runner at 50s (30s grace + 2x10s margin), so ECS's 30s
+            # default would cut a drain short; 90s clears it, within the n8n containers' 120s budget
+            StopTimeout: 90
             Command: [ "javascript", "python" ]
             DependsOn:
               - ContainerName: runner-config-init
@@ -1898,7 +1923,7 @@ Resources:
         - Name: runner-cfg
       ContainerDefinitions:
         - Name: n8n
-          Image: n8nio/n8n:2.23.4
+          Image: !Sub "n8nio/n8n:${N8nVersion}"
           Essential: true
           StopTimeout: 120
           EntryPoint:
@@ -1975,6 +2000,9 @@ Resources:
               Value: !Ref S3BinaryBucket
             - Name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION
               Value: !Ref AWS::Region
+            # n8n 2.38.0 aborts the startup S3 HeadBucket check at 10s; a cold NAT or VPC endpoint path can exceed that
+            - Name: N8N_EXTERNAL_STORAGE_S3_STARTUP_TIMEOUT_MS
+              Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
             - Name: N8N_LOG_LEVEL
@@ -1989,7 +2017,7 @@ Resources:
               Value: !GetAtt Redis.PrimaryEndPoint.Port
             - Name: QUEUE_BULL_REDIS_USERNAME
               Value: default
-            - Name: WEBHOOK_URL
+            - Name: N8N_WEBHOOK_URL
               Value: !Sub "https://${N8nHostRecord}/"
 
           LogConfiguration:

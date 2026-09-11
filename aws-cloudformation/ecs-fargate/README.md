@@ -43,6 +43,8 @@ Before deploying, provide:
 - An ACM certificate ARN in the same AWS Region as the stack.
 - Production-grade database, Redis, license, and password values.
 
+`N8nVersion` sets the n8n version to deploy, and defaults to a concrete version, currently `2.38.5`, rather than a floating tag. On the `-webhooks` and `-ha` templates it drives both the `n8nio/n8n` and `n8nio/runners` images, which are released together, so the two can never drift apart. Only concrete versions are accepted, `stable` and `latest` are rejected by the parameter's own pattern.
+
 The template includes placeholder defaults for some secrets so it is easy to inspect, but those values should be replaced before using the stack for a real deployment.
 
 ## Worker Scaling
@@ -107,9 +109,13 @@ For production changes, create and review a CloudFormation change set in a non-p
 
 ## Upgrading existing stacks
 
-The templates pin the database engine and the n8n image directly in the resource definitions (they are not stack parameters), so new stacks deploy on known-good versions. If you are updating a stack created from an earlier version of the base template, review the change set first, these pins can force a modify or a downgrade:
+The templates pin the database engine directly in the resource definitions (it is not a stack parameter) and the n8n image through the `N8nVersion` parameter, so new stacks deploy on known-good versions. If you are updating a stack created from an earlier version of the base template, review the change set first, these pins can force a modify or a downgrade:
 
 - **RDS / Aurora `EngineVersion` `16.x` -> `18.4`**: a **major** engine upgrade, so follow the AWS guide, [RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.PostgreSQL.html) or [Aurora](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_UpgradeDBInstance.PostgreSQL.html) for the HA tier. `16.9` upgrades directly to `18.4` on both, no intermediate version. Two things that guide cannot tell you: `EngineVersion` is a hardcoded property here rather than a stack parameter, so edit it in the template before deploying the change set, and CloudFormation cannot apply a version below the one the instance is already on, so if `AutoMinorVersionUpgrade` moved it past the pin the update rolls back. To stay put, pin `17.x` or `16.x`, both are within n8n's compatibility range.
-- **n8n image `latest` -> a pinned tag**: the image tag is likewise hardcoded in the container definitions, not a parameter. A stack that already pulled a newer n8n and ran its database migrations will crash-loop if the pin resolves to an older image, because n8n does not down-migrate the schema. Edit the tag to the version currently running (or newer), never older.
+- **n8n image `latest` -> a pinned version**: the image tag comes from the `N8nVersion` parameter. A stack that already pulled a newer n8n and ran its database migrations will crash-loop if the version resolves to an older image, because n8n does not down-migrate the schema. Pass `N8nVersion` set to the version currently running (or newer), never older.
+
+  The first update is the exception. A stack created before `N8nVersion` existed has no stored value for it, so CloudFormation applies the default and moves the stack to that version, exactly as taking a newer template did when the tag was hardcoded. If you need to stay where you are, pass `N8nVersion` explicitly on that update, and review the change set as above.
+
+  After that the stack keeps whatever value it holds: a console update, or `--use-previous-value`, retains it, so a newer default in this repository does not move a running stack on its own. That is deliberate, no stack changes n8n version unless you ask it to, but it does mean upgrading is an explicit act. Pass the parameter, or set it in the console, to move.
 
 New stacks are unaffected, they start directly on the pinned versions.
