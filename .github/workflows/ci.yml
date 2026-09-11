@@ -5,12 +5,53 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # The first three are the defaults, respelled because naming any type
+    # replaces them. `labeled` is what makes adding test-install to an open PR
+    # actually run install-test, which previously did nothing until the next
+    # push. Every label change triggers a run, not just that one.
+    types: [opened, synchronize, reopened, labeled]
 
 permissions:
   contents: read
   security-events: write
 
 jobs:
+  # Where the install-test policy lives, in one place, so that the job's
+  # condition and the ci-ok check below cannot drift apart.
+  #
+  # It runs automatically for the version bump PR and for release-please's PRs,
+  # both of which auto-merge or release off the back of it, and on demand for
+  # anything else a maintainer labels. Only write access can add a label, and
+  # the branch names are only honoured on a branch in this repository, so a
+  # fork PR cannot name its way into a kind cluster.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      install-test: ${{ steps.decide.outputs.install-test }}
+    steps:
+      - name: Decide whether install-test runs
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'test-install') }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          run=false
+          if [[ "$EVENT" == "pull_request" ]]; then
+            if [[ "$LABELLED" == "true" ]]; then
+              run=true
+            elif [[ "$SAME_REPO" == "true" ]] &&
+                 [[ "$HEAD_REF" == "automated/bump-n8n" || "$HEAD_REF" == release-please--* ]]; then
+              run=true
+            fi
+          fi
+
+          echo "install-test=$run" >> "$GITHUB_OUTPUT"
+          echo "install-test on this event: $run"
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +100,8 @@ jobs:
 
   install-test:
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'test-install')
+    needs: gate
+    if: needs.gate.outputs.install-test == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -138,3 +180,46 @@ jobs:
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           sarif_file: trivy-results.sarif
+
+  # The single check to require on main. It exists for two reasons: a skipped
+  # job reports success to required status checks, so requiring install-test
+  # directly would let a bump PR merge untested if its condition ever stopped
+  # matching, and template-validation is a seven leg matrix that would
+  # otherwise need all seven names listing in the ruleset.
+  ci-ok:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [gate, lint, template-validation, install-test, security-scan]
+    steps:
+      - name: Check the other jobs
+        env:
+          GATE: ${{ needs.gate.result }}
+          LINT: ${{ needs.lint.result }}
+          TEMPLATES: ${{ needs['template-validation'].result }}
+          SECURITY: ${{ needs['security-scan'].result }}
+          INSTALL: ${{ needs['install-test'].result }}
+          INSTALL_REQUIRED: ${{ needs.gate.outputs.install-test }}
+        run: |
+          set -euo pipefail
+
+          failed=0
+
+          for job in "gate:$GATE" "lint:$LINT" "template-validation:$TEMPLATES" "security-scan:$SECURITY"; do
+            if [[ "${job#*:}" != "success" ]]; then
+              echo "::error::${job%%:*} did not pass, it was ${job#*:}."
+              failed=1
+            fi
+          done
+
+          # install-test is allowed to be skipped, but only where the gate said
+          # it was not needed. Skipped on a PR that needed it is a failure.
+          if [[ "$INSTALL_REQUIRED" == "true" && "$INSTALL" != "success" ]]; then
+            echo "::error::install-test had to pass on this pull request, but it was $INSTALL."
+            failed=1
+          fi
+
+          if [[ "$failed" == "1" ]]; then
+            exit 1
+          fi
+
+          echo "All required jobs passed (install-test: $INSTALL, required: ${INSTALL_REQUIRED:-false})."
