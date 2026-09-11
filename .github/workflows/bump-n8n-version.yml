@@ -225,7 +225,8 @@ jobs:
             # as a number and avoids listing again to find out what we just made.
             # The label is for humans reading the PR: gh applies labels after
             # the PR exists, so it is not in the `opened` event and does not by
-            # itself make install-test run. ci.yml's branch-name gate does that.
+            # itself make install-test run. ci.yml's gate job does that, off the
+            # branch name, so install-test runs from the opened event onwards.
             pr=$(gh pr create --base main --head "$BRANCH" --title "$title" --body "$body" --label test-install)
           else
             gh pr edit "$pr" --title "$title" --body "$body" --add-label test-install
