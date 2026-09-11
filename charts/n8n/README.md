@@ -186,9 +186,11 @@ See [`examples/node-placement.yaml`](./examples/node-placement.yaml) for a compl
 
 ## Task Runners
 
-Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, each main and worker pod gets a runner sidecar.
+Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, worker pods get a runner sidecar in queue mode (manual executions are offloaded to workers). In standalone mode (`queueMode.enabled=false`), the main pod gets a runner sidecar instead.
 
-**How it works:** The n8n container runs a task broker on port 5679. The runner sidecar connects to this broker over localhost to receive and execute code tasks.
+**How it works:** The n8n process that executes workflows runs a task broker on port 5679, and its runner sidecar connects to that broker over localhost to receive and execute code tasks. In queue mode the executing process is the worker, so only worker pods run a broker and get a sidecar. n8n does not start a broker on main pods when manual executions are offloaded to workers, which the chart always enables in queue mode.
+
+**Requires n8n 2.13.0 or later.** Earlier versions also run a broker on main pods, and 1.108.0 to 2.12.x need a runner there for the MCP Server Trigger, so pinning `image.tag` below 2.13.0 leaves those executions without a runner. The chart's `appVersion` is always above this floor.
 
 **Enable task runners:**
 ```yaml

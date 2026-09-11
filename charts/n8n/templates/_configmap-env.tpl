@@ -84,23 +84,6 @@ Environment variables from ConfigMap for all components
       name: {{ include "n8n.fullname" . }}
       key: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
 {{- end }}
-{{- if .Values.taskRunners.enabled }}
-- name: N8N_RUNNERS_MODE
-  valueFrom:
-    configMapKeyRef:
-      name: {{ include "n8n.fullname" . }}
-      key: N8N_RUNNERS_MODE
-- name: N8N_RUNNERS_AUTH_TOKEN
-  valueFrom:
-    secretKeyRef:
-      {{- if .Values.taskRunners.authToken.existingSecret }}
-      name: {{ .Values.taskRunners.authToken.existingSecret }}
-      key: {{ .Values.taskRunners.authToken.existingSecretKey | default "N8N_RUNNERS_AUTH_TOKEN" }}
-      {{- else }}
-      name: {{ include "n8n.fullname" . }}-task-runners
-      key: N8N_RUNNERS_AUTH_TOKEN
-      {{- end }}
-{{- end }}
 {{- if .Values.queueMode.enabled }}
 {{- if .Values.redis.clusterNodes }}
 - name: QUEUE_BULL_REDIS_CLUSTER_NODES
@@ -253,6 +236,9 @@ Environment variables from ConfigMap for main pods only
       name: {{ include "n8n.fullname" . }}
       key: N8N_DISABLE_PRODUCTION_MAIN_PROCESS
 {{- end }}
+{{- if include "n8n.mainTaskRunnersEnabled" . }}
+{{- include "n8n.taskRunnerConfigMapEnv" . | nindent 0 }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -304,10 +290,34 @@ Environment variables from ConfigMap for worker pods (webhook URL for resume/wai
       name: {{ include "n8n.fullname" . }}
       key: N8N_EDITOR_BASE_URL
 {{- end }}
+{{- if .Values.taskRunners.enabled }}
+{{- include "n8n.taskRunnerConfigMapEnv" . | nindent 0 }}
+{{- end }}
 {{- end }}
 
 {{/*
-Task Runners environment variables for n8n broker (main and worker pods)
+Task runner ConfigMap-backed environment variables (main in standalone mode, workers in queue mode)
+*/}}
+{{- define "n8n.taskRunnerConfigMapEnv" -}}
+- name: N8N_RUNNERS_MODE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ include "n8n.fullname" . }}
+      key: N8N_RUNNERS_MODE
+- name: N8N_RUNNERS_AUTH_TOKEN
+  valueFrom:
+    secretKeyRef:
+      {{- if .Values.taskRunners.authToken.existingSecret }}
+      name: {{ .Values.taskRunners.authToken.existingSecret }}
+      key: {{ .Values.taskRunners.authToken.existingSecretKey | default "N8N_RUNNERS_AUTH_TOKEN" }}
+      {{- else }}
+      name: {{ include "n8n.fullname" . }}-task-runners
+      key: N8N_RUNNERS_AUTH_TOKEN
+      {{- end }}
+{{- end }}
+
+{{/*
+Task Runners environment variables for n8n broker (main in standalone mode, workers in queue mode)
 */}}
 {{- define "n8n.taskRunnerBrokerEnv" -}}
 {{- if .Values.taskRunners.enabled }}
