@@ -134,8 +134,8 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `hpa.main.enabled` | HPA for main pods | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
-| `keda.worker.pause` | Pause worker KEDA autoscaling | `false` |
-| `keda.worker.pausedReplicaCount` | Worker replica count while paused (`autoscaling.keda.sh/paused-replicas`); only when `pause=true` | `0` |
+| `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
+| `keda.worker.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `networkPolicy.enabled` | Network policies | `false` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
@@ -234,14 +234,18 @@ keda:
           listLength: "5"
 ```
 
-Set `keda.worker.pause: true` to pause worker autoscaling. This adds `autoscaling.keda.sh/paused: "true"` to the worker ScaledObject. By default, workers scale to zero (`pausedReplicaCount: 0`). To pause autoscaling while keeping the current replica count (for example while troubleshooting a scaling issue), set `pausedReplicaCount` to the desired count:
+Set `keda.worker.pause: true` to pause worker autoscaling. This adds `autoscaling.keda.sh/paused: "true"` to the worker ScaledObject, and KEDA holds the workers at whatever replica count they are currently running, which is what you want whilst troubleshooting a scaling issue.
+
+To pause and hold a specific count instead, set `pausedReplicaCount`. Setting it to `0` scales workers down entirely:
 
 ```yaml
 keda:
   worker:
     pause: true
-    pausedReplicaCount: 5
+    pausedReplicaCount: 0
 ```
+
+`pausedReplicaCount` is only applied when `pause: true`, and leaving it unset is what gives you the freeze-at-current behaviour. With both annotations set KEDA scales the workers to the count first, then pauses autoscaling.
 
 The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
 

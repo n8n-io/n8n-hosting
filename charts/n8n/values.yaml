@@ -491,11 +491,13 @@ hpa:
 keda:
   enabled: false
   worker:
-    # Pause KEDA autoscaling (sets autoscaling.keda.sh/paused=true)
+    # Pause KEDA autoscaling, freezing workers at their current replica count
+    # (sets autoscaling.keda.sh/paused=true)
     pause: false
-    # Replica count to maintain while paused (sets autoscaling.keda.sh/paused-replicas)
-    # Only applied when pause=true. Defaults to 0 (scale workers down).
-    pausedReplicaCount: 0
+    # Optional replica count to hold while paused (sets autoscaling.keda.sh/paused-replicas).
+    # Only applied when pause=true. Leave unset to freeze at the current count;
+    # set 0 to scale workers down to zero, e.g. to drain the queue before a migration.
+    pausedReplicaCount: null
     pollingInterval: 15
     cooldownPeriod: 300
     minReplicaCount: 2

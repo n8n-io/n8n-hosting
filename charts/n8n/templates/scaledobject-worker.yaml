@@ -12,7 +12,9 @@ metadata:
     {{- $annotations := deepCopy (.Values.commonAnnotations | default dict) }}
     {{- if .Values.keda.worker.pause }}
     {{- $_ := set $annotations "autoscaling.keda.sh/paused" "true" }}
+    {{- if not (kindIs "invalid" .Values.keda.worker.pausedReplicaCount) }}
     {{- $_ := set $annotations "autoscaling.keda.sh/paused-replicas" (.Values.keda.worker.pausedReplicaCount | toString) }}
+    {{- end }}
     {{- end }}
     {{- toYaml $annotations | nindent 4 }}
   {{- end }}

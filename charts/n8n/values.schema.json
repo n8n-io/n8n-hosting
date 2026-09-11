@@ -481,9 +481,9 @@
           "properties": {
             "pause": { "type": "boolean" },
             "pausedReplicaCount": {
-              "type": "integer",
+              "type": ["integer", "null"],
               "minimum": 0,
-              "description": "Replica count to maintain while KEDA autoscaling is paused (autoscaling.keda.sh/paused-replicas)"
+              "description": "Optional replica count to hold while KEDA autoscaling is paused (autoscaling.keda.sh/paused-replicas). Unset freezes workers at their current count."
             }
           }
         }
