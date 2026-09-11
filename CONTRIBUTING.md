@@ -169,21 +169,19 @@ kubectl delete namespace n8n-test
 kind delete cluster --name n8n-test
 ```
 
-You can also let CI do this for you: add the `test-install` label to your PR and the install-test job runs straight away, no push needed. A maintainer has to add it, and it is not required for your PR to merge.
-
-It runs on its own, without a label, for the version bump PR and for Release Please's PRs, and it has to pass before either can merge.
+Maintainers can label PRs with `test-install` to run the tests with CI.
 
 ### Version Bumps
 
 **Do not manually edit `Chart.yaml` version.** Release Please bumps it automatically based on commit messages.
 
-The n8n version is a separate thing from the chart version, and it is pinned in nine files: `appVersion` in `charts/n8n/Chart.yaml`, the four Compose and Caddy `.env` files, `kubernetes/n8n-deployment.yaml` and the `N8nVersion` default in the three ECS Fargate templates. Move them together, with the script:
+The n8n version is a separate thing to the chart version. It is pinned in multiple files across the various deployment artefacts.
+
+The `bump-n8n-version` workflow runs this script every Wednesday to follow n8n's `stable` release cadence. If you do need to bump the versions by hand, you can do so by running:
 
 ```bash
 scripts/bump-n8n-version.sh 2.38.6
 ```
-
-The `bump-n8n-version` workflow runs the same script every Wednesday to follow n8n's `stable` release, so running it by hand is only for a rollback or for crossing an n8n major, neither of which the workflow will do on its own.
 
 ## Pull Requests
 
