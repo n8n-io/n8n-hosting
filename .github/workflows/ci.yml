@@ -8,8 +8,11 @@ on:
     # The first three are the defaults, respelled because naming any type
     # replaces them. `labeled` is what makes adding test-install to an open PR
     # actually run install-test, which previously did nothing until the next
-    # push. Every label change triggers a run, not just that one.
-    types: [opened, synchronize, reopened, labeled]
+    # push. `unlabeled` is its counterpart: without it, taking the label off a
+    # PR whose install-test failed would leave the red ci-ok standing and block
+    # a PR that never needed the test. Any label change triggers a run, not
+    # just that one.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
