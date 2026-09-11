@@ -21,12 +21,33 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      # Mapped here because the `secrets` context is not available to a step's
+      # `if`, and the step below has to be able to tell whether the App exists.
+      RELEASE_APP_ID: ${{ secrets.RELEASE_APP_ID }}
     steps:
+      # A PR opened under GITHUB_TOKEN gets no pull_request event, so
+      # release-please's PRs get no CI at all: #182 sat for weeks with zero
+      # checks. Opening them as the App fixes that, and it is what lets
+      # ci.yml's gate run install-test on a release-please-- branch.
+      #
+      # Skipped while the App's secrets are absent, with release-please falling
+      # back to GITHUB_TOKEN, so releases keep working exactly as they do now
+      # and switch over on their own once the secrets land.
+      - name: Mint bot token
+        id: app-token
+        if: env.RELEASE_APP_ID != ''
+        # SHA pinned because this one is handed a private key.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Run Release Please
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
