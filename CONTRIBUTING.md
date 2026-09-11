@@ -175,6 +175,14 @@ You can also let CI do this for you — add the `test-install` label to your PR 
 
 **Do not manually edit `Chart.yaml` version.** Release Please bumps it automatically based on commit messages.
 
+The n8n version is a separate thing from the chart version, and it is pinned in nine files: `appVersion` in `charts/n8n/Chart.yaml`, the four Compose and Caddy `.env` files, `kubernetes/n8n-deployment.yaml` and the `N8nVersion` default in the three ECS Fargate templates. Move them together, with the script:
+
+```bash
+scripts/bump-n8n-version.sh 2.38.6
+```
+
+The `bump-n8n-version` workflow runs the same script every Wednesday to follow n8n's `stable` release, so running it by hand is only for a rollback or for crossing an n8n major, neither of which the workflow will do on its own.
+
 ## Pull Requests
 
 - Add the `test-install` label to PRs that change chart templates to trigger a full install test on a kind cluster
