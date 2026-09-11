@@ -696,10 +696,6 @@
               "enum": ["filesystem", "s3"],
               "description": "Binary data storage mode"
             },
-            "availableModes": {
-              "type": "string",
-              "description": "Available binary data modes (comma-separated)"
-            },
             "forcePathStyle": { "type": "boolean" },
             "extraEnv": {
               "type": "array",

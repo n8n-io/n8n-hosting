@@ -6,8 +6,6 @@ S3 External Storage environment variables
 # S3 External Storage Configuration
 - name: N8N_DEFAULT_BINARY_DATA_MODE
   value: {{ .Values.s3.storage.mode | quote }}
-- name: N8N_AVAILABLE_BINARY_DATA_MODES
-  value: {{ .Values.s3.storage.availableModes | quote }}
 - name: N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME
   value: {{ .Values.s3.bucket.name | quote }}
 - name: N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION

@@ -680,8 +680,6 @@ s3:
   storage:
     # Binary data storage mode (filesystem or s3 (filesystem))
     mode: "filesystem"
-    # Available binary data modes (comma-separated ex: filesystem,s3)
-    availableModes: "filesystem"              # <-- Available storage modes for n8n
     # S3 specific settings
     forcePathStyle: false                      # <-- Force path-style URLs (for S3-compatible providers)
     # Additional S3 environment variables
