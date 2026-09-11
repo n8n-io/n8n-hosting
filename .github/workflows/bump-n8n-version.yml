@@ -1,0 +1,247 @@
+# Opens the weekly n8n version bump PR.
+#
+# Every Wednesday this resolves what n8n's `stable` release points at and, if it
+# has moved, rewrites the nine version pins through scripts/bump-n8n-version.sh
+# and opens one auto-merging PR. Release-please then cuts the chart release from
+# the squashed commit, so the weekly chart release also picks up whatever chart
+# work merged during the week.
+#
+# The repo squashes with PR_TITLE and PR_BODY, so the PR title is the exact
+# conventional commit subject release-please parses for the chart increment, and
+# the PR body becomes the commit body on main. Both are kept accordingly.
+#
+# The job only ever moves forwards within the current n8n major. A rollback, or
+# crossing a major, is a hand-written PR calling the script directly.
+name: Bump n8n version
+
+on:
+  schedule:
+    # Wednesday 09:00 UTC, the day after the n8n release.
+    - cron: "0 9 * * 3"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "n8n version to bump to, for example 2.38.6. Leave empty to resolve stable."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-n8n-version
+  cancel-in-progress: false
+
+env:
+  BRANCH: automated/bump-n8n
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The push below uses the App token, not this job's GITHUB_TOKEN, so
+          # there is nothing to gain from leaving credentials in the checkout.
+          persist-credentials: false
+
+      - name: Resolve current version
+        id: current
+        run: |
+          set -euo pipefail
+
+          # Only from the default branch. workflow_dispatch lets the caller pick
+          # any ref, and a bump PR built from an arbitrary branch's script is not
+          # something to hand auto-merge. Loud rather than a job-level `if`,
+          # which would skip a mistaken dispatch green and say nothing.
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::this job only runs from main, but $GITHUB_REF was dispatched."
+            exit 1
+          fi
+
+          current=$(awk '$1 == "appVersion:" { gsub(/"/, "", $2); print $2 }' charts/n8n/Chart.yaml)
+          if [[ ! "$current" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::charts/n8n/Chart.yaml appVersion is '$current', not a concrete version, so there is nothing to compare against."
+            exit 1
+          fi
+          echo "version=$current" >> "$GITHUB_OUTPUT"
+          echo "Current: $current"
+
+      - name: Resolve target version
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.version }}
+          CURRENT: ${{ steps.current.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${REQUESTED:-}" ]]; then
+            target=$REQUESTED
+            source="the version input"
+          else
+            # The git tag refs/tags/stable is a different object and points at a
+            # prerelease. The stable release's target_commitish is the release
+            # branch, for example release/2.38.6.
+            target=$(gh api repos/n8n-io/n8n/releases/tags/stable --jq .target_commitish | sed 's|^release/||')
+            source="n8n's stable release"
+          fi
+
+          if [[ ! "$target" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::$source resolved to '$target', which is not a concrete version."
+            exit 1
+          fi
+
+          IFS=. read -r cur_major cur_minor cur_patch <<< "$CURRENT"
+          IFS=. read -r new_major new_minor new_patch <<< "$target"
+
+          # A string compare is exact here because the format check above
+          # rejects a zero-padded field, so 2 and 02 cannot both reach this.
+          if [[ "$new_major" != "$cur_major" ]]; then
+            echo "::error::$source is $target, which crosses a major from $CURRENT. An n8n major needs chart changes of its own, so this job will not do it."
+            exit 1
+          fi
+
+          if [[ "$target" == "$CURRENT" ]]; then
+            echo "Already on $CURRENT, nothing to do."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 10# in case the format check is ever loosened: without it a
+          # zero-padded field would be read as octal, and 08 is not valid octal.
+          if (( 10#$new_minor < 10#$cur_minor ||
+                (10#$new_minor == 10#$cur_minor && 10#$new_patch < 10#$cur_patch) )); then
+            echo "::error::$source is $target, which is behind $CURRENT. This job only moves forwards; run scripts/bump-n8n-version.sh by hand for a rollback."
+            exit 1
+          fi
+
+          # release-please takes the chart increment from the commit type, so it
+          # follows the size of the n8n move.
+          if (( 10#$new_minor > 10#$cur_minor )); then
+            type=feat
+          else
+            type=fix
+          fi
+
+          {
+            echo "version=$target"
+            echo "type=$type"
+            echo "changed=true"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Bumping $CURRENT to $target as $type(chart)"
+
+      - name: Rewrite version pins
+        id: rewrite
+        if: steps.target.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.target.outputs.version }}
+        run: |
+          set -euo pipefail
+          scripts/bump-n8n-version.sh "$VERSION"
+          git --no-pager diff --stat
+          # The PR body lists what actually moved rather than a prose list that
+          # would go stale the moment the set of pinned files changes. The
+          # checkout above is clean, so this and the commit below both see the
+          # script's rewrites and nothing else.
+          {
+            echo "files<<PINNED_FILES"
+            git diff --name-only
+            echo "PINNED_FILES"
+          } >> "$GITHUB_OUTPUT"
+
+      # Minted here rather than at the top of the job so every guard above can
+      # be exercised by a workflow_dispatch run without it, and so nothing holds
+      # a write token while running the steps that do not need one.
+      - name: Mint bot token
+        id: app-token
+        if: steps.target.outputs.changed == 'true'
+        # SHA pinned, not tag pinned: this is the one action in the repo handed
+        # a private key, same as ci.yml does for trivy-action.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Push bump branch
+        if: steps.target.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          VERSION: ${{ steps.target.outputs.version }}
+          TYPE: ${{ steps.target.outputs.type }}
+        run: |
+          set -euo pipefail
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
+          git commit --all --message "$TYPE(chart): bump n8n to $VERSION"
+          # A fixed branch, force pushed, so a stale open bump PR is updated
+          # rather than a second one opened alongside it. The branch belongs to
+          # this job: it is rebuilt from main every run, so anything pushed onto
+          # it by hand is discarded next Wednesday. Fix a red bump PR on its own
+          # branch, not on this one. No --force-with-lease for the same reason,
+          # a lease would stall the weekly bump on someone else's commit.
+          git push --force "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY" "HEAD:refs/heads/$BRANCH"
+
+      - name: Open or update PR
+        id: pr
+        if: steps.target.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          CURRENT: ${{ steps.current.outputs.version }}
+          VERSION: ${{ steps.target.outputs.version }}
+          TYPE: ${{ steps.target.outputs.type }}
+          FILES: ${{ steps.rewrite.outputs.files }}
+        run: |
+          set -euo pipefail
+
+          title="$TYPE(chart): bump n8n to $VERSION"
+
+          # This lands on main as the squash commit body, so it stays to the
+          # facts. Nothing in it is footer shaped, which would otherwise let the
+          # body override the increment the title asks for.
+          body=$(cat <<EOF
+          Moves the pinned n8n version from $CURRENT to $VERSION.
+
+          Updated:
+          $FILES
+
+          Release notes for $VERSION: https://github.com/n8n-io/n8n/releases/tag/n8n%40$VERSION
+          EOF
+          )
+
+          # --head matches on branch name alone, so a fork PR whose head branch
+          # is also called automated/bump-n8n would come back here and get
+          # retitled, relabelled and handed auto-merge. Only ever act on a PR
+          # from this repository. Qualifying --head as owner:branch does not
+          # work, it matches nothing at all, so filter on the PR instead.
+          pr=$(gh pr list --head "$BRANCH" --base main --state open \
+            --json number,isCrossRepository \
+            --jq 'map(select(.isCrossRepository == false)) | .[0].number // empty')
+
+          if [[ -z "$pr" ]]; then
+            # gh prints the new PR's URL, which the merge step takes as readily
+            # as a number and avoids listing again to find out what we just made.
+            # The label is for humans reading the PR: gh applies labels after
+            # the PR exists, so it is not in the `opened` event and does not by
+            # itself make install-test run. ci.yml's gate job does that, off the
+            # branch name, so install-test runs from the opened event onwards.
+            pr=$(gh pr create --base main --head "$BRANCH" --title "$title" --body "$body" --label test-install)
+          else
+            gh pr edit "$pr" --title "$title" --body "$body" --add-label test-install
+          fi
+
+          if [[ -z "$pr" ]]; then
+            echo "::error::the PR was neither found nor created, so there is nothing to auto-merge."
+            exit 1
+          fi
+
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge
+        if: steps.target.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ steps.pr.outputs.pr }}
+        run: gh pr merge --auto --squash "$PR"

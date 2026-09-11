@@ -169,11 +169,19 @@ kubectl delete namespace n8n-test
 kind delete cluster --name n8n-test
 ```
 
-You can also let CI do this for you — add the `test-install` label to your PR and the install-test job will run automatically.
+Maintainers can label PRs with `test-install` to run the tests with CI.
 
 ### Version Bumps
 
 **Do not manually edit `Chart.yaml` version.** Release Please bumps it automatically based on commit messages.
+
+The n8n version is a separate thing to the chart version. It is pinned in multiple files across the various deployment artefacts.
+
+The `bump-n8n-version` workflow runs this script every Wednesday to follow n8n's `stable` release cadence. If you do need to bump the versions by hand, you can do so by running:
+
+```bash
+scripts/bump-n8n-version.sh 2.38.6
+```
 
 ## Pull Requests
 
