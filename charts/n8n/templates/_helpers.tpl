@@ -79,6 +79,22 @@ Chart name and version
 {{- end -}}
 
 {{/*
+n8n image tag. Falls back to the chart's appVersion when image.tag is unset,
+so a chart release always pins the n8n version it was built against.
+*/}}
+{{- define "n8n.imageTag" -}}
+{{- default .Chart.AppVersion .Values.image.tag -}}
+{{- end -}}
+
+{{/*
+Task runner image tag. Resolves taskRunners.image.tag, then image.tag, then
+appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
+*/}}
+{{- define "n8n.taskRunnerImageTag" -}}
+{{- default (include "n8n.imageTag" .) .Values.taskRunners.image.tag -}}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "n8n.serviceAccountName" -}}

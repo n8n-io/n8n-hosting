@@ -43,9 +43,9 @@ LICENSE
 examples/
 docs/
 
-# Testing files
-test/
-tests/
+# Testing files (anchored to the chart root so templates/tests/ still ships)
+/test/
+/tests/
 *_test.go
 *.test
 

@@ -63,7 +63,7 @@ spec:
 
       containers:
         - name: n8n-webhook-processor
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["n8n"]
           args: ["webhook"]

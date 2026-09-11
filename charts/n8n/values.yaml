@@ -1,7 +1,10 @@
 # ----- Image -----
 image:
   repository: docker.n8n.io/n8nio/n8n
-  tag: "stable"
+  # Leave empty to use the chart's appVersion, which is the n8n version this
+  # chart release was built and tested against.
+  # Set explicitly to run a different n8n version.
+  tag: ""
   pullPolicy: IfNotPresent
 
 # ----- Names -----
