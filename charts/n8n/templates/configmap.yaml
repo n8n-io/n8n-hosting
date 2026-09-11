@@ -51,6 +51,10 @@ data:
   # Queue configuration
   {{- if .Values.queueMode.enabled }}
   EXECUTIONS_MODE: "queue"
+  # Always "true", and "n8n.mainTaskRunnersEnabled" depends on it: n8n skips
+  # task runner startup on main when offloading is on, so the chart drops the
+  # main-pod sidecar. If this ever becomes configurable, that helper must read
+  # it rather than queueMode.enabled.
   OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
   {{- end }}
   # Task runner configuration (only emitted when sidecars are enabled,
