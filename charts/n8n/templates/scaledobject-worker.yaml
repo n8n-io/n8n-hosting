@@ -7,9 +7,16 @@ metadata:
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: worker
-  {{- with .Values.commonAnnotations }}
+  {{- if or .Values.commonAnnotations .Values.keda.worker.pause }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- $annotations := deepCopy (.Values.commonAnnotations | default dict) }}
+    {{- if .Values.keda.worker.pause }}
+    {{- $_ := set $annotations "autoscaling.keda.sh/paused" "true" }}
+    {{- if not (kindIs "invalid" .Values.keda.worker.pausedReplicaCount) }}
+    {{- $_ := set $annotations "autoscaling.keda.sh/paused-replicas" (.Values.keda.worker.pausedReplicaCount | toString) }}
+    {{- end }}
+    {{- end }}
+    {{- toYaml $annotations | nindent 4 }}
   {{- end }}
 spec:
   scaleTargetRef:
