@@ -130,26 +130,7 @@ spec:
             {{- end }}
 
             # ----------------- Core n8n secrets -----------------
-            - name: N8N_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_ENCRYPTION_KEY
-            - name: N8N_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_HOST
-            - name: N8N_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_PORT
-            - name: N8N_PROTOCOL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_PROTOCOL
+            {{- include "n8n.coreSecretsEnv" . | nindent 12 }}
 
             # S3 External Storage
             {{- include "n8n.s3Env" . | nindent 12 }}
