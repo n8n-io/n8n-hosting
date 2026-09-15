@@ -4,6 +4,19 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.12.0](https://github.com/n8n-io/n8n-hosting/compare/v1.11.0...v1.12.0) (2026-09-15)
+
+
+### Features
+
+* **chart:** Allow workers to be paused and scaled to zero ([#177](https://github.com/n8n-io/n8n-hosting/issues/177)) ([f017a9f](https://github.com/n8n-io/n8n-hosting/commit/f017a9f83b63c6f59ffa226286502aeddfc905ed))
+* **chart:** pin n8n to appVersion ([#193](https://github.com/n8n-io/n8n-hosting/issues/193)) ([7fbc10f](https://github.com/n8n-io/n8n-hosting/commit/7fbc10fcfd8d334e3dc3eb88e1be6b3076706727))
+
+
+### Bug Fixes
+
+* align Postgres to the newest supported major (18) ([#181](https://github.com/n8n-io/n8n-hosting/issues/181)) ([6b78193](https://github.com/n8n-io/n8n-hosting/commit/6b78193475d84ae190622d8a8e9ba8598e89b7d1))
+
 ## [1.11.0](https://github.com/n8n-io/n8n-hosting/compare/v1.10.1...v1.11.0) (2026-07-17)
 
 
