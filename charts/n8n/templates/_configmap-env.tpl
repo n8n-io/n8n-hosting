@@ -187,11 +187,11 @@ Environment variables from ConfigMap for main pods only
 {{- define "n8n.mainConfigMapEnv" -}}
 {{- if .Values.webhook.enabled }}
 {{- if or .Values.webhook.url (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) }}
-- name: WEBHOOK_URL
+- name: N8N_WEBHOOK_URL
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: WEBHOOK_URL
+      key: N8N_WEBHOOK_URL
 {{- end }}
 {{- if .Values.webhook.timeout }}
 - name: N8N_WEBHOOK_TIMEOUT
@@ -247,11 +247,11 @@ Environment variables from ConfigMap for webhook processor pods (similar to main
 {{- define "n8n.webhookProcessorConfigMapEnv" -}}
 {{- if .Values.webhook.enabled }}
 {{- if or .Values.webhook.url (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) }}
-- name: WEBHOOK_URL
+- name: N8N_WEBHOOK_URL
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: WEBHOOK_URL
+      key: N8N_WEBHOOK_URL
 {{- end }}
 {{- if .Values.webhook.timeout }}
 - name: N8N_WEBHOOK_TIMEOUT
@@ -276,11 +276,11 @@ Environment variables from ConfigMap for worker pods (webhook URL for resume/wai
 {{- define "n8n.workerConfigMapEnv" -}}
 {{- if .Values.webhook.enabled }}
 {{- if or .Values.webhook.url (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) }}
-- name: WEBHOOK_URL
+- name: N8N_WEBHOOK_URL
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: WEBHOOK_URL
+      key: N8N_WEBHOOK_URL
 {{- end }}
 {{- end }}
 {{- if or (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) (and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString))) }}
