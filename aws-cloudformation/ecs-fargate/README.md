@@ -43,7 +43,7 @@ Before deploying, provide:
 - An ACM certificate ARN in the same AWS Region as the stack.
 - Production-grade database, Redis, license, and password values.
 
-`N8nVersion` sets the n8n version to deploy, and defaults to a concrete version, currently `2.38.5`, rather than a floating tag. On the `-webhooks` and `-ha` templates it drives both the `n8nio/n8n` and `n8nio/runners` images, which are released together, so the two can never drift apart. Only concrete versions are accepted, `stable` and `latest` are rejected by the parameter's own pattern.
+`N8nVersion` sets the n8n version to deploy. The default is updated weekly on a Wednesday, to the latest stable version of n8n at that time. On the `-webhooks` and `-ha` templates it drives both the `n8nio/n8n` and `n8nio/runners` images, which are released together, so the two can never drift apart. Only concrete versions are accepted, `stable` and `latest` are rejected by the parameter's own pattern.
 
 The template includes placeholder defaults for some secrets so it is easy to inspect, but those values should be replaced before using the stack for a real deployment.
 
@@ -116,6 +116,6 @@ The templates pin the database engine directly in the resource definitions (it i
 
   The first update is the exception. A stack created before `N8nVersion` existed has no stored value for it, so CloudFormation applies the default and moves the stack to that version, exactly as taking a newer template did when the tag was hardcoded. If you need to stay where you are, pass `N8nVersion` explicitly on that update, and review the change set as above.
 
-  After that the stack keeps whatever value it holds: a console update, or `--use-previous-value`, retains it, so a newer default in this repository does not move a running stack on its own. That is deliberate, no stack changes n8n version unless you ask it to, but it does mean upgrading is an explicit act. Pass the parameter, or set it in the console, to move.
+  After that, what happens depends on how you run the update. The console, and `--use-previous-value`, keep the stored value, so a newer default in this repository does not move a running stack. A plain `aws cloudformation update-stack` that does not mention `N8nVersion` applies the template default instead, which will move the version if this repository has bumped it since. So if you script stack updates, pass `ParameterKey=N8nVersion,UsePreviousValue=true` unless you actually intend to upgrade n8n, otherwise an unrelated change can carry a version bump and its migrations along with it.
 
 New stacks are unaffected, they start directly on the pinned versions.
