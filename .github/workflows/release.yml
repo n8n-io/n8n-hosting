@@ -51,24 +51,26 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      # release-please prefixes its outputs with the package path from
+      # release-please-config.json, so these are charts/n8n--*.
       - uses: azure/setup-helm@v4
-        if: steps.release.outputs.release_created == 'true'
+        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         with:
           version: "3.17.0"
 
       - uses: actions/checkout@v4
-        if: steps.release.outputs.release_created == 'true'
+        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
 
       - name: Log in to GHCR
-        if: steps.release.outputs.release_created == 'true'
+        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Package and push to GHCR
-        if: steps.release.outputs.release_created == 'true'
+        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         env:
-          CHART_VERSION: ${{ steps.release.outputs.version }}
+          CHART_VERSION: ${{ steps.release.outputs['charts/n8n--version'] }}
         run: |
           helm package charts/n8n --destination /tmp/chart-pkg/
           helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io/n8n-helm-chart
