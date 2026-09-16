@@ -11,7 +11,7 @@ Parameters:
 
   N8nVersion:
     Type: String
-    Default: "2.38.5"
+    Default: "2.39.6"
     Description: "n8n version to deploy. Never move this below the version a running stack has already migrated to, n8n does not down-migrate the schema."
     AllowedPattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     ConstraintDescription: "Must be a concrete n8n version such as 2.38.5, not a floating tag like stable or latest."
