@@ -1,0 +1,45 @@
+{{- $externalSecret := (lookup "v1" "Secret" .Release.Namespace .Values.global.secretName) -}}
+
+===============================================================================
+  🚀 n8n has been successfully deployed to namespace "{{ .Release.Namespace }}"!
+===============================================================================
+
+{{- if not $externalSecret }}
+[WARNING] ⚠️  SECURITY ALERT ⚠️
+-------------------------------------------------------------------------------
+The global secret "{{ .Values.global.secretName }}" was NOT found.
+n8n is currently using DEFAULT/FALLBACK settings for database credentials.
+
+To fix this:
+1. Create the secret:
+   kubectl create secret generic {{ .Values.global.secretName }} \
+     --namespace {{ .Release.Namespace }} \
+     --from-literal=POSTGRES_USER=yourUser \
+     --from-literal=POSTGRES_PASSWORD=yourSecurePassword
+
+2. Trigger a rollout to apply changes:
+   kubectl rollout restart deployment n8n --namespace {{ .Release.Namespace }}
+-------------------------------------------------------------------------------
+{{- else }}
+[INFO] ✅ Success: Database credentials loaded from "{{ .Values.global.secretName }}".
+{{- end }}
+
+CONFIGURATION SUMMARY:
+-------------------------------------------------------------------------------
+Host:         http://{{ ( .Values.n8n ).host | default "localhost" }}
+Webhook-URL:  https://{{ ( .Values.n8n ).host | default "localhost" }}/
+Timezone:     {{ ( .Values.n8n ).timezone | default "Europe/Berlin" }}
+
+USEFUL COMMANDS:
+-------------------------------------------------------------------------------
+# Check pod status:
+kubectl get pods -n {{ .Release.Namespace }} -l service=n8n
+
+# Stream n8n logs:
+kubectl logs -f deployment/n8n -n {{ .Release.Namespace }}
+
+# Local access (if no Ingress is configured):
+kubectl port-forward svc/n8n 5678:5678 -n {{ .Release.Namespace }}
+-------------------------------------------------------------------------------
+
+Happy Automating!
