@@ -142,6 +142,9 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
 | `keda.worker.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
+| `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods | `false` |
+| `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
+| `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `networkPolicy.enabled` | Network policies | `false` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
@@ -254,6 +257,18 @@ keda:
 ```
 
 `pausedReplicaCount` is only applied when `pause: true`, and leaving it unset is what gives you the freeze-at-current behaviour. With both annotations set KEDA scales the workers to the count first, then pauses autoscaling.
+
+Webhook processors have the same pair under `keda.webhookProcessor`, and they behave identically. Pausing them stops n8n accepting webhook traffic on those pods, so `pausedReplicaCount: 0` is a maintenance-window setting rather than a troubleshooting one:
+
+```yaml
+keda:
+  webhookProcessor:
+    enabled: true
+    pause: true
+    pausedReplicaCount: 0
+```
+
+Either component merges these annotations with anything you set in `commonAnnotations`. The chart-managed keys win on a collision, so you cannot end up with the same annotation twice.
 
 The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
 
