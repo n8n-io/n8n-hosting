@@ -1,0 +1,28 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; font-size: 14px; color: #1a1a1a; background: #f5f5f5; padding: 2rem; max-width: 800px; margin-inline: auto; }
+h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+.meta { color: #666; font-size: 0.85rem; margin-bottom: 1.5rem; }
+.layout { display: flex; gap: 1.5rem; align-items: flex-start; }
+.list-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; min-width: 280px; overflow: hidden; }
+.list-item { display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 1rem; border-bottom: 1px solid #f0f0f0; cursor: pointer; user-select: none; }
+.list-item:last-child { border-bottom: none; }
+.list-item:hover { background: #f9f9f9; }
+.list-item.selected { background: #f0f7ff; }
+.list-item .name { font-weight: 500; }
+.list-item .count { font-variant-numeric: tabular-nums; color: #444; }
+.detail-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1.25rem; min-width: 320px; flex: 1; position: relative; }
+.detail-panel h2 { font-size: 1rem; margin-bottom: 1rem; }
+.close-btn { position: absolute; top: 0.75rem; right: 0.75rem; background: none; border: none; cursor: pointer; color: #999; font-size: 1rem; line-height: 1; padding: 0.25rem; }
+.close-btn:hover { color: #333; }
+dl { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 1.5rem; margin-bottom: 1.5rem; }
+dt { color: #666; }
+dd { font-variant-numeric: tabular-nums; text-align: right; }
+.detail-panel h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: #666; padding-bottom: 0.4rem; border-bottom: 2px solid #e0e0e0; margin-bottom: 0.5rem; }
+table { width: 100%; border-collapse: collapse; }
+td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #f0f0f0; font-variant-numeric: tabular-nums; }
+td:first-child { color: #444; }
+td:not(:first-child) { text-align: right; width: 80px; }
+tr:last-child td { border-bottom: none; }
+.success { color: #16a34a; }
+.error { color: #dc2626; }
+.empty { color: #888; font-style: italic; padding: 1rem; }
