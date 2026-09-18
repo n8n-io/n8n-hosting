@@ -12,7 +12,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if not .Values.hpa.main.enabled }}
   replicas: {{ ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled }}
+  {{- end }}
   revisionHistoryLimit: 3
   {{- with .Values.strategy }}
   strategy:
