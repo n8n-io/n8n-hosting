@@ -258,15 +258,16 @@ keda:
 
 `pausedReplicaCount` is only applied when `pause: true`, and leaving it unset is what gives you the freeze-at-current behaviour. With both annotations set KEDA scales the workers to the count first, then pauses autoscaling.
 
-Webhook processors have the same pair under `keda.webhookProcessor`, and they behave identically. Pausing them stops n8n accepting webhook traffic on those pods, so `pausedReplicaCount: 0` is a maintenance-window setting rather than a troubleshooting one:
+Webhook processors have the same pair under `keda.webhookProcessor`, and `pause` on its own freezes them at their current count just as it does for workers. Taking them to zero stops those pods accepting webhook traffic, so treat `pausedReplicaCount: 0` here as a maintenance-window setting rather than the troubleshooting one it is for workers:
 
 ```yaml
 keda:
   webhookProcessor:
-    enabled: true
     pause: true
     pausedReplicaCount: 0
 ```
+
+Scaling webhook processors at all needs `keda.webhookProcessor.enabled` and at least one trigger of their own. `keda.webhookProcessor.triggers` is empty by default and KEDA requires `spec.triggers`, so a ScaledObject built from the defaults is rejected on apply.
 
 Either component merges these annotations with anything you set in `commonAnnotations`. The chart-managed keys win on a collision, so you cannot end up with the same annotation twice.
 
