@@ -7,8 +7,9 @@ metadata:
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: worker
-  {{- with (include "n8n.kedaAnnotations" (dict "context" $ "component" .Values.keda.worker)) }}
-  {{- . | nindent 2 }}
+  {{- with (include "n8n.kedaAnnotations" (dict "root" . "componentValues" .Values.keda.worker)) }}
+  annotations:
+    {{- . | nindent 4 }}
   {{- end }}
 spec:
   scaleTargetRef:

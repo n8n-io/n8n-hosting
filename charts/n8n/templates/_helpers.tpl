@@ -208,25 +208,26 @@ so workers handle code execution and main pods do not need runner sidecars.
 {{- end -}}
 
 {{/*
-Annotations for a KEDA ScaledObject: commonAnnotations with the chart-managed
-pause annotations set over the top, so a user key can never render twice.
-Renders nothing when there is neither a common annotation nor a pause.
+Annotation mapping for a KEDA ScaledObject: commonAnnotations with the
+chart-managed pause annotations set over the top, so a user key can never
+render twice. Renders nothing when there is nothing to annotate, so the
+caller wraps it in `with` and writes the `annotations:` key itself.
 
 Call with the root context and the keda.<component> values, e.g.
-  {{- include "n8n.kedaAnnotations" (dict "context" $ "component" .Values.keda.worker) }}
+  (dict "root" . "componentValues" .Values.keda.worker)
 */}}
 {{- define "n8n.kedaAnnotations" -}}
-{{- $component := .component -}}
-{{- $annotations := deepCopy (.context.Values.commonAnnotations | default dict) -}}
-{{- if $component.pause -}}
+{{- $root := .root -}}
+{{- $componentValues := .componentValues -}}
+{{- $annotations := deepCopy ($root.Values.commonAnnotations | default dict) -}}
+{{- if $componentValues.pause -}}
 {{- $_ := set $annotations "autoscaling.keda.sh/paused" "true" -}}
 {{/* 0 is falsy in Go templates, so unset has to be tested for by kind. */}}
-{{- if not (kindIs "invalid" $component.pausedReplicaCount) -}}
-{{- $_ := set $annotations "autoscaling.keda.sh/paused-replicas" ($component.pausedReplicaCount | toString) -}}
+{{- if not (kindIs "invalid" $componentValues.pausedReplicaCount) -}}
+{{- $_ := set $annotations "autoscaling.keda.sh/paused-replicas" ($componentValues.pausedReplicaCount | toString) -}}
 {{- end -}}
 {{- end -}}
 {{- if $annotations -}}
-annotations:
-{{ toYaml $annotations | indent 2 }}
+{{- toYaml $annotations -}}
 {{- end -}}
 {{- end -}}

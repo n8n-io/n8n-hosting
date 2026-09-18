@@ -482,7 +482,6 @@
         "worker": {
           "type": "object",
           "properties": {
-            "enabled": { "type": "boolean" },
             "pause": {
               "type": "boolean",
               "description": "Pause KEDA autoscaling, freezing workers at their current replica count (autoscaling.keda.sh/paused)."
@@ -513,8 +512,7 @@
                   "metadata": { "type": "object", "additionalProperties": true },
                   "authenticationRef": {
                     "type": "object",
-                    "properties": { "name": { "type": "string" } },
-                    "additionalProperties": false
+                    "properties": { "name": { "type": "string" } }
                   }
                 },
                 "required": ["type"]
@@ -556,8 +554,7 @@
                   "metadata": { "type": "object", "additionalProperties": true },
                   "authenticationRef": {
                     "type": "object",
-                    "properties": { "name": { "type": "string" } },
-                    "additionalProperties": false
+                    "properties": { "name": { "type": "string" } }
                   }
                 },
                 "required": ["type"]
