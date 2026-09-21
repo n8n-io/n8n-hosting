@@ -208,6 +208,27 @@ so workers handle code execution and main pods do not need runner sidecars.
 {{- end -}}
 
 {{/*
+Whether KEDA will actually scale a component, and so whether a ScaledObject
+renders for it. Empty triggers mean no scaler: KEDA requires spec.triggers and
+rejects an object without them, so the chart renders none and the component
+keeps the replica count it was given. That makes an empty trigger list the way
+to run KEDA for one component and not the other.
+
+Call with the root context and the component name, e.g.
+  (dict "root" . "component" "worker")
+*/}}
+{{- define "n8n.kedaScalerEnabled" -}}
+{{- $root := .root -}}
+{{- if and $root.Values.keda.enabled $root.Values.queueMode.enabled -}}
+{{- if eq .component "worker" -}}
+{{- if and $root.Values.keda.worker.triggers (gt (int $root.Values.queueMode.workerReplicaCount) 0) -}}true{{- end -}}
+{{- else if eq .component "webhook-processor" -}}
+{{- if and $root.Values.keda.webhookProcessor.enabled $root.Values.webhookProcessor.enabled $root.Values.keda.webhookProcessor.triggers -}}true{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Annotation mapping for a KEDA ScaledObject: commonAnnotations with the
 chart-managed pause annotations set over the top, so a user key can never
 render twice. Renders nothing when there is nothing to annotate, so the

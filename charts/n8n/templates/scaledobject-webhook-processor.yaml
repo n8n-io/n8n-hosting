@@ -1,4 +1,4 @@
-{{- if and .Values.keda.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled .Values.queueMode.enabled }}
+{{- if include "n8n.kedaScalerEnabled" (dict "root" . "component" "webhook-processor") }}
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
