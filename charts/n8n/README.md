@@ -102,6 +102,8 @@ Scale execution throughput with `queueMode.workerReplicaCount` and `queueMode.wo
 
 For queue-based scaling, enable `keda.enabled=true` and configure Redis triggers for workers. KEDA creates `ScaledObject` resources for workers, and optionally webhook processors, instead of the built-in worker/webhook HPAs.
 
+Once an autoscaler is enabled for workers or webhook processors, the chart stops setting that Deployment's `replicas` and leaves the count to the HPA or the `ScaledObject`. Kubernetes defaults the field to 1 on first create and the autoscaler takes over from there, so the chart does not reset the count on every `helm upgrade` or show as drift on a GitOps sync. `queueMode.workerReplicaCount` and `webhookProcessor.replicaCount` still size the Deployments where no autoscaler is enabled for that component, and `queueMode.workerReplicaCount: 0` still removes the worker Deployment altogether.
+
 Webhook processors are an optional scaling layer for high-volume production webhook traffic. Enable them when webhook load should be isolated from the UI/API main pods, and configure ingress or load-balancer routing as described above.
 
 ## ServiceAccount
