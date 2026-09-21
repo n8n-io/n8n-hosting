@@ -12,11 +12,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- /* Whatever autoscaler renders for this component owns the replica count,
-         so the chart must not set the field and reset it on every upgrade.
-         keda.enabled renders the ScaledObject and suppresses the built-in HPA,
-         and KEDA rejects a ScaledObject that carries no triggers, so neither
-         flag on its own makes the count someone else's. */}}
+  {{- /* Only set replicas when nothing else will scale this component: KEDA
+         needs triggers to scale, and keda.enabled suppresses the built-in
+         HPA. */}}
   {{- $kedaOwned := and .Values.keda.enabled .Values.keda.worker.triggers }}
   {{- $hpaOwned := and .Values.hpa.worker.enabled (not .Values.keda.enabled) }}
   {{- if not (or $kedaOwned $hpaOwned) }}

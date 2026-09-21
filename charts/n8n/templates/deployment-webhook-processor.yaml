@@ -12,11 +12,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- /* Same rule as deployment-worker.yaml. KEDA has to be enabled for webhook
-         processors specifically, so with keda.enabled on and
-         keda.webhookProcessor.enabled off there is no ScaledObject, and
-         keda.enabled has already suppressed the built-in HPA, which leaves the
-         count with the chart. */}}
+  {{- /* Only set replicas when nothing else will scale this component: KEDA
+         needs enabling for webhook processors and given triggers, and
+         keda.enabled suppresses the built-in HPA. */}}
   {{- $kedaOwned := and .Values.keda.enabled .Values.keda.webhookProcessor.enabled .Values.keda.webhookProcessor.triggers }}
   {{- $hpaOwned := and .Values.hpa.webhookProcessor.enabled (not .Values.keda.enabled) }}
   {{- if not (or $kedaOwned $hpaOwned) }}
