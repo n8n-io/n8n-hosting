@@ -38,10 +38,6 @@ A value that doesn't do what it appears to do is a bug, not a documentation gap.
 `helm template` and Argo CD produce the same output as `helm install`. No `lookup`, no generated secrets, no random values. Anything unique to an install (the encryption key, the task-runner token) is supplied by the user or read from an existing Secret, and the chart fails without it.
 *How we check it:* two consecutive `helm template` runs diff clean.
 
-**Every supported configuration is a file the chart tests.**
-
-The `examples/` directory is the supported surface: one values file per topology and size, each installed and upgraded in CI on every change. If a configuration isn't an example, it isn't supported; if it's an example, it's tested.
-
 **Upgrades are in place, across majors included.**
 
 Resource names, labels and selectors are stable across versions, so `helm upgrade` rolls pods and does nothing else. A major may change values keys; when it does, retired keys fail with the replacement named, and CI proves the upgrade from the last minor of the previous major on every example.
