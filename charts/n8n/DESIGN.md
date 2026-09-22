@@ -26,12 +26,12 @@ The chart ships every Kubernetes primitive n8n needs to run well (Ingress, HPA, 
 **One place to set anything, and a defined winner.**
 
 Every setting has exactly one home in values. Where a user override can meet a chart-managed setting, the precedence is documented; where two user inputs would set the same thing, the chart refuses to render rather than picking silently.
-*How we check it:* the schema rejects unknown keys, and a unit test covers the duplicate-key refusal.
+*How we check it (from 2.0):* the schema rejects unknown keys, and a unit test covers the duplicate-key refusal.
 
 **Fail loudly, never silently.**
 
 A value that doesn't do what it appears to do is a bug, not a documentation gap. Misconfigurations are caught at render time with a message that names the fix. S3 enabled but binary data on local disk, or multi-main without a licence, are the cases this principle exists to prevent.
-*How we check it:* every `fail` in the validation helper has a unit test.
+*How we check it (from 2.0):* every `fail` in the validation helper has a unit test.
 
 **Renders deterministically without a cluster.**
 
