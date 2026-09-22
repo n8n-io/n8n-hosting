@@ -515,7 +515,7 @@
                     "properties": { "name": { "type": "string" } }
                   }
                 },
-                "required": ["type"]
+                "required": ["type", "metadata"]
               }
             }
           }
@@ -557,7 +557,7 @@
                     "properties": { "name": { "type": "string" } }
                   }
                 },
-                "required": ["type"]
+                "required": ["type", "metadata"]
               }
             }
           }
