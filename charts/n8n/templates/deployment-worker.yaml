@@ -12,7 +12,14 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- /* Only set replicas when nothing else will scale this component: KEDA
+         needs triggers to scale, and keda.enabled suppresses the built-in
+         HPA. */}}
+  {{- $kedaOwned := and .Values.keda.enabled .Values.keda.worker.triggers }}
+  {{- $hpaOwned := and .Values.hpa.worker.enabled (not .Values.keda.enabled) }}
+  {{- if not (or $kedaOwned $hpaOwned) }}
   replicas: {{ .Values.queueMode.workerReplicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:

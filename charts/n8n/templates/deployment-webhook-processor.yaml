@@ -12,7 +12,14 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- /* Only set replicas when nothing else will scale this component: KEDA
+         needs enabling for webhook processors and given triggers, and
+         keda.enabled suppresses the built-in HPA. */}}
+  {{- $kedaOwned := and .Values.keda.enabled .Values.keda.webhookProcessor.enabled .Values.keda.webhookProcessor.triggers }}
+  {{- $hpaOwned := and .Values.hpa.webhookProcessor.enabled (not .Values.keda.enabled) }}
+  {{- if not (or $kedaOwned $hpaOwned) }}
   replicas: {{ .Values.webhookProcessor.replicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:
