@@ -36,10 +36,10 @@ Thumbs.db
 .travis.yml
 .circleci/
 
-# Documentation and examples (keep only essential docs)
+# Documentation and examples.
 CHANGELOG.md
+DESIGN.md
 LICENSE
-*.md
 examples/
 docs/
 
