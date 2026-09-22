@@ -267,7 +267,7 @@ keda:
     pausedReplicaCount: 0
 ```
 
-Webhook processors only autoscale in queue mode, with `keda.enabled`, `webhookProcessor.enabled` and `keda.webhookProcessor.enabled` all set, and at least one trigger of their own. `keda.webhookProcessor.triggers` is empty by default, and with no triggers the chart renders no `ScaledObject` at all, so nothing autoscales the component and the pause settings do nothing. That also makes an empty trigger list the way to run KEDA for workers whilst leaving webhook processors on a fixed count.
+Webhook processors only autoscale in queue mode, with `keda.enabled`, `webhookProcessor.enabled` and `keda.webhookProcessor.enabled` all set, and at least one trigger of their own. `keda.webhookProcessor.triggers` is empty by default, and the chart fails the install rather than leave you with webhook processors that look autoscaled and are not. That also makes an empty trigger list the way to run KEDA for workers whilst leaving webhook processors on a fixed count.
 
 Either component merges these annotations with anything you set in `commonAnnotations`. The chart-managed keys win on a collision, so you cannot end up with the same annotation twice.
 

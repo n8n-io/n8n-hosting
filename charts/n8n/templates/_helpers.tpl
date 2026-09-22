@@ -144,6 +144,11 @@ Validate values — called once from deployment-main.yaml to fail fast on bad co
 {{- fail "ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true" -}}
 {{- end -}}
 
+{{/* --- KEDA --- */}}
+{{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled (not .Values.keda.webhookProcessor.triggers) -}}
+{{- fail "keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to hold them at webhookProcessor.replicaCount." -}}
+{{- end -}}
+
 {{/* --- Multi-main --- */}}
 {{- if and .Values.multiMain.enabled (lt (int .Values.multiMain.replicas) 2) -}}
 {{- fail "multiMain.enabled=true requires multiMain.replicas >= 2" -}}
