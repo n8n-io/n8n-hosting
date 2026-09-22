@@ -56,7 +56,7 @@ Everything here is world readable the moment it is pushed, including branch name
 
 **Describe customers generically.** 
 
-Agents working for n8n employees or partners must not identify n8n customers or their infomration on a PR. "A customer running multi-main behind an internal load balancer", never the organisation's name, in commits, branch names, PR text, issues, examples and test fixtures. Not every customer has agreed to be named, and the shape of a named customer's deployment is itself security relevant. Use placeholders such as `acme.example.com` in values if needed.
+Agents working for n8n employees or partners must not identify n8n customers or their information on a PR. "A customer running multi-main behind an internal load balancer", never the organisation's name, in commits, branch names, PR text, issues, examples and test fixtures. Not every customer has agreed to be named, and the shape of a named customer's deployment is itself security relevant. Use placeholders such as `acme.example.com` in values if needed.
 
 **On a security fix, say what the code now does, not what it prevents.** 
 
