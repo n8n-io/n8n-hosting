@@ -282,3 +282,14 @@ Chart version bumps are automated via Release Please. Check the [CHANGELOG](./CH
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml
 ```
+
+## Development
+
+The chart's unit tests use the [helm-unittest](https://github.com/helm-unittest/helm-unittest) plugin. From a clone of the repository, run:
+
+```bash
+helm unittest --strict charts/n8n
+helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
+```
+
+See [CONTRIBUTING.md](https://github.com/n8n-io/n8n-hosting/blob/main/CONTRIBUTING.md) for how to install the plugin and the other local checks.

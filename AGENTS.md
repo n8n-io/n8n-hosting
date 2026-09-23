@@ -24,7 +24,7 @@ Most work here is a chart change. Take it in this order:
 3. Render before and after, and read the diff. Anything in it you did not mean to change is a defect in the change, so fix it before opening the PR.
 4. Keep existing installs rendering exactly as they do today. A new value needs a default that changes nothing, unless the change is a deliberate break landing on a major.
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.
-6. Cover the rendered behaviour with a `helm-unittest` case once `charts/n8n/tests/` exists.
+6. Cover the rendered behaviour with a `helm-unittest` case in `charts/n8n/tests/`. A new `fail` in `n8n.validate` gets a `failedTemplate` case and a passing case for the valid shape.
 7. Leave `Chart.yaml` `version` alone. release-please owns it.
 
 Ask when the compatibility impact of a change is not something you can work out from the values, the examples and the design principles. Infer the rest.
@@ -34,11 +34,13 @@ CI is `.github/workflows/ci.yml`. Run the cheap parts locally before pushing:
 ```bash
 helm lint charts/n8n
 for f in charts/n8n/examples/*.yaml; do helm template test charts/n8n -f "$f" --dry-run=client > /dev/null || echo "FAIL $f"; done
+helm unittest --strict charts/n8n
+helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
 ```
 
 `ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false` matches the CI lint job if `ct` is installed. The kind install test runs in CI only, on labelled PRs and the automated bump and release PRs.
 
-`helm-unittest` is being introduced. Tests will live in `charts/n8n/tests/` (the directory does not exist yet); when it does, `helm unittest charts/n8n` is part of the local checks.
+The unit tests need the `helm-unittest` plugin at the version CI pins in the `unittest` job. Where `values.schema.json` rejects an input before the templates render, assert the schema error in the main suite and the `fail` message in `tests/without-schema/`. `tests/default-render_test.yaml` snapshots the default output. When a change alters that output on purpose, run `helm unittest -u charts/n8n` and commit the updated snapshot with the change.
 
 ## Commits and releases
 
