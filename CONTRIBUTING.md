@@ -31,7 +31,7 @@ docs: update README with OCI install instructions
 
 - [Helm](https://helm.sh/docs/intro/install/) 3.12+
 - [chart-testing (ct)](https://github.com/helm/chart-testing) for linting
-- [helm-unittest](https://github.com/helm-unittest/helm-unittest) 1.1+ for unit tests
+- [helm-unittest](https://github.com/helm-unittest/helm-unittest) 1.1+ for unit tests, which needs Helm 3.18+
 
 ### Local Linting
 
