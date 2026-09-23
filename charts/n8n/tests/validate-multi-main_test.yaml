@@ -1,0 +1,25 @@
+suite: 'validate: multi-main'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders multi-main with two replicas
+    template: templates/deployment-main.yaml
+    set:
+      multiMain.enabled: true
+      multiMain.replicas: 2
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects multi-main with one replica
+    template: templates/deployment-main.yaml
+    set:
+      multiMain.enabled: true
+      multiMain.replicas: 1
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/multiMain/replicas': minimum"

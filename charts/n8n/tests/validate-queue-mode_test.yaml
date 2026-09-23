@@ -1,0 +1,46 @@
+suite: 'validate: queue mode'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders the default queue mode shape
+    template: templates/deployment-main.yaml
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects queue mode without an external database
+    template: templates/deployment-main.yaml
+    set:
+      database.useExternal: false
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/queueMode/enabled': value must be false"
+
+  - it: requires database.host
+    template: templates/deployment-main.yaml
+    set:
+      database.host: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.host is required when queueMode.enabled=true. Set it to your PostgreSQL hostname.'
+
+  - it: requires redis.enabled
+    template: templates/deployment-main.yaml
+    set:
+      redis.enabled: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'redis.enabled must be true when queueMode.enabled=true. Queue mode requires Redis.'
+
+  - it: rejects an empty redis.host
+    template: templates/deployment-main.yaml
+    set:
+      redis.host: ""
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/redis/host': minLength"

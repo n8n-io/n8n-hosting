@@ -1,0 +1,34 @@
+suite: 'validate: pod labels'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders a custom string label
+    template: templates/deployment-main.yaml
+    set:
+      podLabels:
+        team: automation
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects a chart-managed label
+    template: templates/deployment-main.yaml
+    set:
+      podLabels:
+        app.kubernetes.io/name: other
+    asserts:
+      - failedTemplate:
+          errorMessage: 'podLabels."app.kubernetes.io/name" is a chart-managed selector/identity label and cannot be overridden. Reserved keys: app.kubernetes.io/name, app.kubernetes.io/instance, app.kubernetes.io/component, app.kubernetes.io/version, app.kubernetes.io/managed-by, helm.sh/chart'
+
+  - it: rejects a non-string label value
+    template: templates/deployment-main.yaml
+    set:
+      podLabels:
+        enabled: true
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/podLabels/enabled': got boolean, want string"

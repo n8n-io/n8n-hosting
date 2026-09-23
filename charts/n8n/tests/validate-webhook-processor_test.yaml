@@ -1,0 +1,48 @@
+suite: 'validate: webhook processors'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders the webhook ingress with webhook processors enabled
+    template: templates/deployment-main.yaml
+    set:
+      webhookProcessor.enabled: true
+      ingress.webhookProcessor.enabled: true
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: requires webhook processors for the webhook ingress
+    template: templates/deployment-main.yaml
+    set:
+      ingress.webhookProcessor.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true'
+
+  - it: renders KEDA for webhook processors with a trigger
+    template: templates/deployment-main.yaml
+    set:
+      keda.enabled: true
+      webhookProcessor.enabled: true
+      keda.webhookProcessor.enabled: true
+      keda.webhookProcessor.triggers:
+        - type: cpu
+          metricType: Utilization
+          metadata:
+            value: "70"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: requires a KEDA trigger for webhook processors
+    template: templates/deployment-main.yaml
+    set:
+      keda.enabled: true
+      webhookProcessor.enabled: true
+      keda.webhookProcessor.enabled: true
+      keda.webhookProcessor.triggers: []
+    asserts:
+      - failedTemplate:
+          errorMessage: 'keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to hold them at webhookProcessor.replicaCount.'

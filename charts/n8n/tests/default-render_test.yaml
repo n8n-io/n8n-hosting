@@ -1,0 +1,15 @@
+# Snapshots the smallest values that render, so any change to the default
+# output shows up in review. The chart version and appVersion are pinned so
+# release and n8n bumps don't rewrite the snapshot. The task-runner token is
+# set because the chart otherwise generates a random one on every render.
+suite: 'default render'
+chart:
+  version: 0.0.0
+  appVersion: 0.0.0
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.value: snapshot-test-token
+tests:
+  - it: matches the snapshot
+    asserts:
+      - matchSnapshot: {}

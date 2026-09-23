@@ -1,0 +1,48 @@
+suite: 'validate: standalone mode'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders standalone with persistence
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      database.useExternal: false
+      database.type: sqlite
+      persistence.enabled: true
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: requires persistence without an external database
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      database.useExternal: false
+      database.type: sqlite
+      persistence.enabled: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'persistence.enabled must be true when queueMode.enabled=false and database.useExternal=false. Standalone mode requires persistent storage when no external database.'
+
+  - it: rejects multi-main outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      multiMain.enabled: true
+      multiMain.replicas: 2
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/queueMode/enabled': value must be true"
+
+  - it: rejects webhook processors outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      webhookProcessor.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'webhookProcessor.enabled=true requires queueMode.enabled=true'

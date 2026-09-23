@@ -1,0 +1,23 @@
+suite: 'validate: encryption key'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders with an inline encryption key
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: a-long-random-key-for-tests
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects the placeholder encryption key
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.existingSecret: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret'

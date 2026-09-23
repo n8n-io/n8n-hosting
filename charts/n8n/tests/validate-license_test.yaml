@@ -1,0 +1,25 @@
+suite: 'validate: licence'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders a licence from an existing Secret
+    template: templates/deployment-main.yaml
+    set:
+      license.enabled: true
+      license.existingSecret.name: n8n-license
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects an activation key and an existing Secret together
+    template: templates/deployment-main.yaml
+    set:
+      license.enabled: true
+      license.activationKey: example-key
+      license.existingSecret.name: n8n-license
+    asserts:
+      - failedTemplate:
+          errorMessage: 'license.activationKey and license.existingSecret.name are mutually exclusive. Use one or the other.'
