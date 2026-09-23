@@ -142,6 +142,9 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
 | `keda.worker.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
+| `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods | `false` |
+| `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
+| `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `networkPolicy.enabled` | Network policies | `false` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
@@ -254,6 +257,19 @@ keda:
 ```
 
 `pausedReplicaCount` is only applied when `pause: true`, and leaving it unset is what gives you the freeze-at-current behaviour. With both annotations set KEDA scales the workers to the count first, then pauses autoscaling.
+
+Webhook processors have the same pair under `keda.webhookProcessor`, and `pause` on its own freezes them at their current count just as it does for workers. Taking them to zero stops those pods accepting webhook traffic, so treat `pausedReplicaCount: 0` here as a maintenance-window setting rather than the troubleshooting one it is for workers:
+
+```yaml
+keda:
+  webhookProcessor:
+    pause: true
+    pausedReplicaCount: 0
+```
+
+Webhook processors only autoscale in queue mode, with `keda.enabled`, `webhookProcessor.enabled` and `keda.webhookProcessor.enabled` all set, and at least one trigger of their own. `keda.webhookProcessor.triggers` is empty by default, and the chart fails the install rather than leave you with webhook processors that look autoscaled and are not. To run KEDA for workers alone, leave `keda.webhookProcessor.enabled` off, which is the default. To run it for webhook processors alone, empty `keda.worker.triggers`, since workers have no enabled flag of their own.
+
+Either component merges these annotations with anything you set in `commonAnnotations`. The chart-managed keys win on a collision, so you cannot end up with the same annotation twice.
 
 The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
 

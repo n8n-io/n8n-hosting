@@ -44,6 +44,12 @@ keda:
           # Reference a TriggerAuthentication if Redis requires auth
           # See: https://keda.sh/docs/latest/concepts/authentication/
           name: ""
+  webhookProcessor:
+    enabled: false
+    # Pause autoscaling, holding webhook processors at their current count
+    pause: false
+    # Uncomment to pause at a specific count instead; 0 scales webhook processors down entirely
+    # pausedReplicaCount: 0
 
 # External database
 database:
