@@ -5,13 +5,13 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/000
 
 ## Context
 
-Chart 2.0 changes values keys and defaults, and it ships alongside n8n 3.0. Every merge to `main` can go out in the next weekly 1.x release, so the breaking work cannot land there. It still needs CI, and people need a way to try it before it ships.
+Chart 2.0 changes values keys and defaults. Every merge to `main` can go out in the next weekly 1.x release, so the breaking work cannot land there. It still needs CI, and people need a way to try it before it ships.
 
 ## Decision
 
 Chart 2.0 is built on the `chart-v2` branch. release-please runs on that branch with its own config and manifest. Each release from it is a pre-release, `2.0.0-rc.1`, `2.0.0-rc.2` and so on, and goes to the same `oci://ghcr.io/n8n-io/n8n-helm-chart` repository as the 1.x releases. This follows "Versioned with n8n, not by n8n": each line has its own version sequence in one repository.
 
-`main` is merged into `chart-v2` regularly, so each release candidate includes the 1.x fixes. When 2.0.0 ships, `chart-v2` merges into `main` and the branch is retired.
+`main` is merged into `chart-v2` regularly, so each release candidate includes the 1.x fixes. When 2.0.0 is released, `chart-v2` merges into `main` and the branch is retired. The 1.x line then continues on a maintenance branch of its own.
 
 ## Consequences
 
