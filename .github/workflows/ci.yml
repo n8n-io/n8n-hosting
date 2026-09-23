@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, chart-v2]
   pull_request:
-    branches: [main]
+    branches: [main, chart-v2]
     # The first three are the defaults, respelled because naming any type
     # replaces them. `labeled` is what makes adding test-install to an open PR
     # actually run install-test, which previously did nothing until the next
