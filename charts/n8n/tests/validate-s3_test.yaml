@@ -5,13 +5,13 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  s3.enabled: true
+  s3.bucket.name: n8n-data
+  s3.bucket.region: eu-west-1
 tests:
   - it: renders S3 with an access key
     template: templates/deployment-main.yaml
     set:
-      s3.enabled: true
-      s3.bucket.name: n8n-data
-      s3.bucket.region: eu-west-1
       s3.auth.accessKeyId: AKIAEXAMPLE
       s3.auth.secretAccessKeySecret.name: n8n-s3
       s3.auth.secretAccessKeySecret.key: secret-access-key
@@ -21,9 +21,6 @@ tests:
   - it: renders S3 with IRSA
     template: templates/deployment-main.yaml
     set:
-      s3.enabled: true
-      s3.bucket.name: n8n-data
-      s3.bucket.region: eu-west-1
       s3.auth.autoDetect: true
       serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
     asserts:
@@ -32,9 +29,7 @@ tests:
   - it: requires s3.bucket.name
     template: templates/deployment-main.yaml
     set:
-      s3.enabled: true
       s3.bucket.name: ""
-      s3.bucket.region: eu-west-1
       s3.auth.autoDetect: true
       serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
     asserts:
@@ -44,8 +39,6 @@ tests:
   - it: requires s3.bucket.region
     template: templates/deployment-main.yaml
     set:
-      s3.enabled: true
-      s3.bucket.name: n8n-data
       s3.bucket.region: ""
       s3.auth.autoDetect: true
       serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
@@ -55,10 +48,6 @@ tests:
 
   - it: requires an access key when autoDetect is off
     template: templates/deployment-main.yaml
-    set:
-      s3.enabled: true
-      s3.bucket.name: n8n-data
-      s3.bucket.region: eu-west-1
     asserts:
       - failedTemplate:
           errorMessage: 's3.auth.accessKeyId is required when s3.enabled=true and s3.auth.autoDetect=false'
@@ -66,9 +55,6 @@ tests:
   - it: requires serviceAccount.awsRoleArn when autoDetect is on
     template: templates/deployment-main.yaml
     set:
-      s3.enabled: true
-      s3.bucket.name: n8n-data
-      s3.bucket.region: eu-west-1
       s3.auth.autoDetect: true
     asserts:
       - failedTemplate:
