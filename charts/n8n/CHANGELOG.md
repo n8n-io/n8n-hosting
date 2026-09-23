@@ -4,6 +4,25 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.13.0](https://github.com/n8n-io/n8n-hosting/compare/v1.12.0...v1.13.0) (2026-09-23)
+
+
+### Features
+
+* **chart:** allow webhook processors to be paused and scaled to zero ([#202](https://github.com/n8n-io/n8n-hosting/issues/202)) ([65e517e](https://github.com/n8n-io/n8n-hosting/commit/65e517e05330e316c72ee14ee1c4042193302c63))
+* **chart:** bump n8n to 2.40.5 ([#206](https://github.com/n8n-io/n8n-hosting/issues/206)) ([5bcae91](https://github.com/n8n-io/n8n-hosting/commit/5bcae91bf00f1814794f32f4be7ff938bd2ba8d4))
+
+
+### Bug Fixes
+
+* **chart:** leave worker and webhook-processor replicas to the autoscaler ([#201](https://github.com/n8n-io/n8n-hosting/issues/201)) ([a344ca3](https://github.com/n8n-io/n8n-hosting/commit/a344ca3ae804a7c92df6f7608a1b20688368c6e4))
+* **chart:** ship README.md inside the packaged chart ([#205](https://github.com/n8n-io/n8n-hosting/issues/205)) ([0cbe882](https://github.com/n8n-io/n8n-hosting/commit/0cbe88280454f7d7fc9f37ff1c458fb3da546a2a))
+
+
+### Documentation
+
+* **chart:** add design principles, decisions and an AGENTS.md ([#204](https://github.com/n8n-io/n8n-hosting/issues/204)) ([05ca169](https://github.com/n8n-io/n8n-hosting/commit/05ca169d5a0940853a7dae2d2af3936e63d5d4ba))
+
 ## [1.12.0](https://github.com/n8n-io/n8n-hosting/compare/v1.11.0...v1.12.0) (2026-09-16)
 
 
