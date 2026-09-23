@@ -1,5 +1,3 @@
-# Pull Request
-
 ## Description
 Brief description of the changes and their purpose.
 
@@ -15,17 +13,8 @@ Brief description of the changes and their purpose.
 Fixes # (issue)
 Relates to # (issue)
 
-## Changes Made
-- 
-- 
-- 
 
 ## Testing Performed
-
-### Chart Validation
-- [ ] `helm lint charts/n8n` passes
-- [ ] `./scripts/validate-examples.sh` passes
-- [ ] Template rendering works with all examples
 
 ### Deployment Testing (if applicable)
 - [ ] Tested with minimal configuration
@@ -44,21 +33,10 @@ If this includes breaking changes, describe what they are and provide migration 
 - 
 - 
 
-## Documentation Updates
-- [ ] Updated README.md (if needed)
-- [ ] Updated examples (if needed)
-- [ ] Updated CONTRIBUTING.md (if needed)
-
 ## Checklist
 - [ ] My code follows the project's style guidelines
 - [ ] I have performed a self-review of my own code
-- [ ] I have made corresponding changes to the documentation
+- [ ] I have made corresponding changes to the documentation, README.md, examples
 - [ ] My changes generate no new warnings or errors
 - [ ] I have added examples that demonstrate the changes (if applicable)
 - [ ] All new and existing tests pass
-
-## Screenshots (if applicable)
-Add screenshots to help explain your changes.
-
-## Additional Notes
-Any additional information that reviewers should know.
