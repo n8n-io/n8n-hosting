@@ -96,8 +96,7 @@ jobs:
       - name: Run unit tests without schema validation
         run: helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
 
-  # Renders every example in the directory, so a new example is covered
-  # without anyone having to list it here.
+  # Renders every file in examples/, new ones included.
   template-validation:
     runs-on: ubuntu-latest
     steps:
@@ -126,7 +125,7 @@ jobs:
         run: helm template test charts/n8n -f charts/n8n/examples/minimal.yaml -f charts/n8n/ci/extraContainers-values.yaml --dry-run=client > /dev/null
 
   # Installs examples as a customer would, overriding only the placeholder
-  # hosts and Secret name. Postgres and Redis are plain manifests on the
+  # hosts, the Secret name and the worker count. Postgres and Redis are plain manifests on the
   # official images, so the test depends on no third-party chart repository.
   install-test:
     name: install-test (${{ matrix.example }})
