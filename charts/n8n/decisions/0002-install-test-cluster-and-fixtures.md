@@ -19,4 +19,4 @@ Each install leg installs an example file with an overlay from `ci/install/`, wh
 
 ## Consequences
 
-The install test depends on no third-party chart repository. A render break in any example fails `template-validation` on the pull request that caused it. An install break in `minimal.yaml`, `standalone.yaml` or `task-runners.yaml` fails `install-test` on labelled, bump and release pull requests. The other examples need a licence, KEDA, an ingress controller or labelled nodes, so CI renders them but does not install them. The fixture image versions in `ci/fixtures/` are pinned and move by hand.
+The install test depends on no third-party chart repository. A render break in any example fails `template-validation` on the pull request that caused it. An install break in `minimal.yaml`, `standalone.yaml` or `task-runners.yaml` fails `install-test` on labelled, bump and release pull requests. The other examples are rendered but not installed until they have an overlay. Most of them need a licence, S3, KEDA, an ingress controller or labelled nodes first. The fixture image versions in `ci/fixtures/` are pinned and move by hand.
