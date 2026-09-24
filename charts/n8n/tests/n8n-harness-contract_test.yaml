@@ -1,0 +1,92 @@
+# The Helm E2E suite in n8n-io/n8n installs this chart from main with the
+# examples below and these overrides, then reaches n8n by patching the
+# n8n-main Service to a NodePort and finds pods by app.kubernetes.io/name.
+# See packages/testing/containers/helm-stack.ts in that repository. A change
+# that breaks a case here breaks that suite too.
+suite: 'n8n e2e harness contract'
+release:
+  name: n8n
+set:
+  image.repository: ghcr.io/n8n-io/n8n
+  image.tag: ci-0
+  config.extraEnv:
+    - name: N8N_DIAGNOSTICS_ENABLED
+      value: 'false'
+    - name: N8N_DYNAMIC_BANNERS_ENABLED
+      value: 'false'
+    - name: WEBHOOK_URL
+      value: http://localhost:30080
+tests:
+  - it: exposes n8n-main on 5678 for queue mode
+    template: templates/service-main.yaml
+    values:
+      - ../examples/minimal.yaml
+    set:
+      database.host: postgresql
+      redis.host: redis-master
+      secretRefs.existingSecret: n8n-secrets
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: n8n-main
+      - equal:
+          path: spec.ports[0].port
+          value: 5678
+
+  - it: labels and configures the main pod for queue mode
+    template: templates/deployment-main.yaml
+    values:
+      - ../examples/minimal.yaml
+    set:
+      database.host: postgresql
+      redis.host: redis-master
+      secretRefs.existingSecret: n8n-secrets
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: n8n
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/n8n-io/n8n:ci-0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEBHOOK_URL
+            value: http://localhost:30080
+
+  - it: exposes n8n-main on 5678 for standalone mode
+    template: templates/service-main.yaml
+    values:
+      - ../examples/standalone.yaml
+    set:
+      persistence.size: 1Gi
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: n8n-main
+      - equal:
+          path: spec.ports[0].port
+          value: 5678
+
+  - it: labels and configures the main pod for standalone mode
+    template: templates/deployment-main.yaml
+    values:
+      - ../examples/standalone.yaml
+    set:
+      persistence.size: 1Gi
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: n8n
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/n8n-io/n8n:ci-0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEBHOOK_URL
+            value: http://localhost:30080
