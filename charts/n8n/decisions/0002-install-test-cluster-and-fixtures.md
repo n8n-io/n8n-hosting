@@ -15,7 +15,7 @@ More comprehensive end-to-end tests will be developed in n8n's own test suite or
 
 The install test runs on kind, which runs the standard Kubernetes control plane without bundled extras and can pin a Kubernetes version per node image. k3s starts a little faster, but it bundles Traefik, ServiceLB and kine, and moving to it would not give us any code to share with n8n's suite.
 
-Each install leg installs an example file. Only the placeholder hosts, the Secret name and the worker count are overridden. Postgres and Redis come from plain manifests in `ci/fixtures/` on the official `postgres` and `redis` images. This follows "State is external and reached through a contract": the chart needs a hostname and an existing Secret, and nothing more. The fixtures are test scaffolding, not a recommendation for running either datastore.
+Each install leg installs an example file with an overlay from `ci/install/`, which replaces only the example's placeholders. An example gets a leg by having an overlay. Postgres and Redis come from plain manifests in `ci/fixtures/` on the official `postgres` and `redis` images. This follows "State is external and reached through a contract": the chart needs a hostname and an existing Secret, and nothing more. The fixtures are test scaffolding, not a recommendation for running either datastore.
 
 ## Consequences
 
