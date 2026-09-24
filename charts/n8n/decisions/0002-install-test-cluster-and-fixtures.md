@@ -11,7 +11,9 @@ The Helm E2E suite in `n8n-io/n8n` also installs this chart. It installs the cha
 
 ## Decision
 
-n8n's suite tests an n8n build against the chart. This repository tests a chart change against the pinned `appVersion`. The install test runs on kind, which runs the standard Kubernetes control plane without bundled extras and can pin a Kubernetes version per node image. k3s starts a little faster, but it bundles Traefik, ServiceLB and kine, and moving to it would not give us any code to share with n8n's suite.
+More comprehensive end-to-end tests will be developed in n8n's own test suite or in another location. Those tests check an n8n build against the chart. The install test here checks chart changes against the pinned `appVersion`. Its job is good coverage of chart changes, so it does not need a more complex install.
+
+The install test runs on kind, which runs the standard Kubernetes control plane without bundled extras and can pin a Kubernetes version per node image. k3s starts a little faster, but it bundles Traefik, ServiceLB and kine, and moving to it would not give us any code to share with n8n's suite.
 
 Each install leg installs an example file. Only the placeholder hosts, the Secret name and the worker count are overridden. Postgres and Redis come from plain manifests in `ci/fixtures/` on the official `postgres` and `redis` images. This follows "State is external and reached through a contract": the chart needs a hostname and an existing Secret, and nothing more. The fixtures are test scaffolding, not a recommendation for running either datastore. `tests/n8n-harness-contract_test.yaml` covers the names and values n8n's suite relies on, which "Upgrades are in place, across majors included" already requires to be stable.
 
