@@ -73,7 +73,7 @@ jobs:
       - uses: helm/chart-testing-action@v2.7.0
 
       - name: Run chart-testing (lint)
-        run: ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false --check-version-increment=false  # release-please owns the chart version, so no PR carries a bump
+        run: ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false --check-version-increment=false  # release-please bumps the chart version in its own PR, so other PRs carry no bump
 
   unittest:
     runs-on: ubuntu-latest
