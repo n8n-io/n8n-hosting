@@ -1,0 +1,63 @@
+# The schema rejects these inputs before the templates render, so the fail
+# calls behind them only run under --skip-schema-validation. CI runs this
+# directory with that flag to keep them covered.
+suite: 'validate: fail calls the schema also guards'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: requires an external database in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      database.useExternal: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.useExternal must be true when queueMode.enabled=true. Queue mode requires external PostgreSQL.'
+
+  - it: requires redis.host in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      redis.host: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: 'redis.host is required when queueMode.enabled=true. Set it to your Redis hostname.'
+
+  - it: rejects multi-main outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      multiMain.enabled: true
+      multiMain.replicas: 2
+    asserts:
+      - failedTemplate:
+          errorMessage: 'multiMain.enabled=true requires queueMode.enabled=true'
+
+  - it: rejects multi-main with one replica
+    template: templates/deployment-main.yaml
+    set:
+      multiMain.enabled: true
+      multiMain.replicas: 1
+    asserts:
+      - failedTemplate:
+          errorMessage: 'multiMain.enabled=true requires multiMain.replicas >= 2'
+
+  - it: rejects any task runner mode other than external
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.mode: internal
+    asserts:
+      - failedTemplate:
+          errorMessage: 'taskRunners.mode must be ''external''. This chart only supports external task runner sidecars.'
+
+  - it: rejects a non-string pod label value
+    template: templates/deployment-main.yaml
+    set:
+      podLabels:
+        enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'podLabels."enabled" must be a string (got bool). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. "enabled": "true".'

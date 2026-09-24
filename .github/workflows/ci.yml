@@ -75,6 +75,27 @@ jobs:
       - name: Run chart-testing (lint)
         run: ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false
 
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned apart from the other jobs: helm-unittest 1.1 does not load on
+      # Helm 3.17, and 1.0 has no --skip-schema-validation.
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.22.0"
+
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.1.2
+
+      - name: Run unit tests
+        run: helm unittest --strict charts/n8n
+
+      # These cases cover fail calls that values.schema.json reaches first.
+      - name: Run unit tests without schema validation
+        run: helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
+
   template-validation:
     runs-on: ubuntu-latest
     strategy:
@@ -192,12 +213,13 @@ jobs:
   ci-ok:
     runs-on: ubuntu-latest
     if: always()
-    needs: [gate, lint, template-validation, install-test, security-scan]
+    needs: [gate, lint, unittest, template-validation, install-test, security-scan]
     steps:
       - name: Check the other jobs
         env:
           GATE: ${{ needs.gate.result }}
           LINT: ${{ needs.lint.result }}
+          UNITTEST: ${{ needs.unittest.result }}
           TEMPLATES: ${{ needs['template-validation'].result }}
           SECURITY: ${{ needs['security-scan'].result }}
           INSTALL: ${{ needs['install-test'].result }}
@@ -207,7 +229,7 @@ jobs:
 
           failed=0
 
-          for job in "gate:$GATE" "lint:$LINT" "template-validation:$TEMPLATES" "security-scan:$SECURITY"; do
+          for job in "gate:$GATE" "lint:$LINT" "unittest:$UNITTEST" "template-validation:$TEMPLATES" "security-scan:$SECURITY"; do
             if [[ "${job#*:}" != "success" ]]; then
               echo "::error::${job%%:*} did not pass, it was ${job#*:}."
               failed=1
