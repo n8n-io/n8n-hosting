@@ -47,6 +47,7 @@ docs/
 /test/
 /tests/
 /ci/fixtures/
+/ci/install/
 *_test.go
 *.test
 
