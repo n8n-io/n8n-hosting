@@ -1,0 +1,21 @@
+charts/n8n/ci/validation-errors.yaml
+  s_f09c0a34942a87::t_dee8213f2263fc 1-28
+.github/workflows/ci.yml
+  s_f09c0a34942a87::t_0855e96ac90d51 104-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a3a6d1606f9244a45a3b233b91ab04932cc811e8",
+  "prompts": {},
+  "sessions": {
+    "s_f09c0a34942a87": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d6827a54-4bcd-4c2d-befb-0625ef3ee34a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
