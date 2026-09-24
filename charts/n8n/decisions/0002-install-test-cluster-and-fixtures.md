@@ -11,12 +11,12 @@ The Helm E2E suite in `n8n-io/n8n` also installs this chart. It installs the cha
 
 ## Decision
 
-More comprehensive end-to-end tests will be developed in n8n's own test suite or in another location. Those tests check an n8n build against the chart. The install test here checks chart changes against the pinned `appVersion`. Its job is good coverage of chart changes, so it does not need a more complex install.
+Fuller end-to-end tests against an n8n build belong in n8n's own test suite or elsewhere. The install test here checks chart changes against the pinned `appVersion`. Its job is good coverage of chart changes, so it does not need a more complex install.
 
 The install test runs on kind, which runs the standard Kubernetes control plane without bundled extras and can pin a Kubernetes version per node image. k3s starts a little faster, but it bundles Traefik, ServiceLB and kine, and moving to it would not give us any code to share with n8n's suite.
 
-Each install leg installs an example file with an overlay from `ci/install/`, which replaces only the example's placeholders. An example gets a leg by having an overlay. Postgres and Redis come from plain manifests in `ci/fixtures/` on the official `postgres` and `redis` images. This follows "State is external and reached through a contract": the chart needs a hostname and an existing Secret, and nothing more. The fixtures are test scaffolding, not a recommendation for running either datastore.
+Each install leg installs an example file with an overlay from `ci/install/`, which replaces the example's placeholders and scales it down to fit a hosted runner. An example gets a leg by having an overlay. Postgres and Redis come from plain manifests in `ci/fixtures/` on the official `postgres` and `redis` images. This follows "State is external and reached through a contract": the chart needs a hostname and an existing Secret, and nothing more. The fixtures are test scaffolding, not a recommendation for running either datastore.
 
 ## Consequences
 
-The install test depends on no third-party chart repository, and a broken `minimal.yaml`, `standalone.yaml` or `task-runners.yaml` fails CI on the pull request that broke it. The other examples need a licence, KEDA, an ingress controller or labelled nodes, so CI renders them but does not install them. The fixture image versions in `ci/fixtures/` are pinned and move by hand.
+The install test depends on no third-party chart repository. A render break in any example fails `template-validation` on the pull request that caused it. An install break in `minimal.yaml`, `standalone.yaml` or `task-runners.yaml` fails `install-test` on labelled, bump and release pull requests. The other examples need a licence, KEDA, an ingress controller or labelled nodes, so CI renders them but does not install them. The fixture image versions in `ci/fixtures/` are pinned and move by hand.
