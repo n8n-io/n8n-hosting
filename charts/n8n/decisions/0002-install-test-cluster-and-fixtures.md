@@ -7,7 +7,7 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/000
 
 The chart's install test installed the chart defaults, not an example. It took Postgres and Redis from the Bitnami chart repository. Bitnami moved its versioned images to `bitnamilegacy` in August 2025 and is expected to withdraw the chart repository too. A test that depends on that repository would then stop running.
 
-The Helm E2E suite in `n8n-io/n8n` also installs this chart. It installs the chart from `main` on k3s with `examples/minimal.yaml` or `examples/standalone.yaml`, then runs part of n8n's Playwright suite. It reaches n8n through the `n8n-main` Service and finds pods by the `app.kubernetes.io/name` label.
+The Helm E2E suite in `n8n-io/n8n` also installs this chart. It installs the chart from `main` on k3s with `examples/minimal.yaml` or `examples/standalone.yaml`, then runs part of n8n's Playwright suite.
 
 ## Decision
 
@@ -15,8 +15,8 @@ More comprehensive end-to-end tests will be developed in n8n's own test suite or
 
 The install test runs on kind, which runs the standard Kubernetes control plane without bundled extras and can pin a Kubernetes version per node image. k3s starts a little faster, but it bundles Traefik, ServiceLB and kine, and moving to it would not give us any code to share with n8n's suite.
 
-Each install leg installs an example file. Only the placeholder hosts, the Secret name and the worker count are overridden. Postgres and Redis come from plain manifests in `ci/fixtures/` on the official `postgres` and `redis` images. This follows "State is external and reached through a contract": the chart needs a hostname and an existing Secret, and nothing more. The fixtures are test scaffolding, not a recommendation for running either datastore. `tests/n8n-harness-contract_test.yaml` covers the names and values n8n's suite relies on, which "Upgrades are in place, across majors included" already requires to be stable.
+Each install leg installs an example file. Only the placeholder hosts, the Secret name and the worker count are overridden. Postgres and Redis come from plain manifests in `ci/fixtures/` on the official `postgres` and `redis` images. This follows "State is external and reached through a contract": the chart needs a hostname and an existing Secret, and nothing more. The fixtures are test scaffolding, not a recommendation for running either datastore.
 
 ## Consequences
 
-The install test depends on no third-party chart repository, and a broken `minimal.yaml`, `standalone.yaml` or `task-runners.yaml` fails CI on the pull request that broke it. The other examples need a licence, KEDA, an ingress controller or labelled nodes, so CI renders them but does not install them. A change that renames `n8n-main`, changes the name label or moves either example n8n's suite uses fails the contract test. The fixture image versions in `ci/fixtures/` are pinned and move by hand.
+The install test depends on no third-party chart repository, and a broken `minimal.yaml`, `standalone.yaml` or `task-runners.yaml` fails CI on the pull request that broke it. The other examples need a licence, KEDA, an ingress controller or labelled nodes, so CI renders them but does not install them. The fixture image versions in `ci/fixtures/` are pinned and move by hand.
