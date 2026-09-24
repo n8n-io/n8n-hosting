@@ -70,6 +70,8 @@ A `--set` argument stays in shell history and in the release secret, so `helm ge
 
 ## Tickets and pull requests
 
+Write the PR description in the sections of `.github/pull_request_template.md`. Tick only the boxes you have checked.
+
 For n8n contributors, Linear is the tracker and the `DEP` project holds this work. Reference the ticket in the PR description as `https://linear.app/n8n/issue/[TICKET-ID]`, and link the GitHub issue too when the ticket names one.
 
 Post a PR comment or review only once a person has read the text. The same goes for anything written on someone else's behalf.
