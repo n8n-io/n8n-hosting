@@ -1,7 +1,7 @@
 # 0002. Chart 2.0 is built on its own branch and ships release candidates
 
 Date: 2026-09-23
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/208
 
 ## Context
 
