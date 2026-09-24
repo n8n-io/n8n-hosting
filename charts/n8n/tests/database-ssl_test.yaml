@@ -48,10 +48,22 @@ tests:
             name: DB_POSTGRESDB_SSL
           any: true
 
-  - it: sets no SSL flag when SSL is disabled
+  - it: sets no SSL flag in the ConfigMap when SSL is disabled
     template: templates/configmap.yaml
     asserts:
       - notExists:
           path: data.DB_POSTGRESDB_SSL_ENABLED
       - notExists:
           path: data.DB_POSTGRESDB_SSL
+
+  - it: passes no SSL flag to any n8n container when SSL is disabled
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_POSTGRESDB_SSL_ENABLED
+          any: true
