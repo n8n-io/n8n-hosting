@@ -46,8 +46,7 @@ docs/
 # Testing files (anchored to the chart root so templates/tests/ still ships)
 /test/
 /tests/
-/ci/fixtures/
-/ci/install/
+/ci/
 *_test.go
 *.test
 
