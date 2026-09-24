@@ -2,5 +2,5 @@ remote: origin
 target-branch: main
 chart-dirs:
   - charts
-check-version-increment: true
+check-version-increment: false
 validate-maintainers: false
