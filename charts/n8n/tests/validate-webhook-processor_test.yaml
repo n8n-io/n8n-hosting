@@ -6,7 +6,7 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: renders the webhook ingress with webhook processors enabled
+  - it: accepts the webhook ingress with webhook processors enabled
     template: templates/deployment-main.yaml
     set:
       webhookProcessor.enabled: true
@@ -22,7 +22,7 @@ tests:
       - failedTemplate:
           errorMessage: 'ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true'
 
-  - it: renders KEDA for webhook processors with a trigger
+  - it: accepts KEDA for webhook processors with a trigger
     template: templates/deployment-main.yaml
     set:
       keda.enabled: true

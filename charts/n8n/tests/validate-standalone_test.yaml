@@ -6,7 +6,7 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: renders standalone with persistence
+  - it: accepts standalone with persistence
     template: templates/deployment-main.yaml
     set:
       queueMode.enabled: false

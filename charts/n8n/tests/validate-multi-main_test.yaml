@@ -6,7 +6,7 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: renders multi-main with two replicas
+  - it: accepts multi-main with two replicas
     template: templates/deployment-main.yaml
     set:
       multiMain.enabled: true

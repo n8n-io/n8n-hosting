@@ -6,7 +6,7 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: renders external task runners
+  - it: accepts external task runners
     template: templates/deployment-main.yaml
     set:
       taskRunners.enabled: true

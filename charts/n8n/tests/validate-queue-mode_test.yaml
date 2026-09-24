@@ -6,7 +6,7 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: renders the default queue mode shape
+  - it: accepts the default queue mode shape
     template: templates/deployment-main.yaml
     asserts:
       - notFailedTemplate: {}

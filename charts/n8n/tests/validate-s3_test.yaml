@@ -9,7 +9,7 @@ set:
   s3.bucket.name: n8n-data
   s3.bucket.region: eu-west-1
 tests:
-  - it: renders S3 with an access key
+  - it: accepts S3 with an access key
     template: templates/deployment-main.yaml
     set:
       s3.auth.accessKeyId: AKIAEXAMPLE
@@ -18,7 +18,7 @@ tests:
     asserts:
       - notFailedTemplate: {}
 
-  - it: renders S3 with IRSA
+  - it: accepts S3 with IRSA
     template: templates/deployment-main.yaml
     set:
       s3.auth.autoDetect: true

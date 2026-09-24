@@ -6,7 +6,7 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: renders a custom string label
+  - it: accepts a custom string label
     template: templates/deployment-main.yaml
     set:
       podLabels:
