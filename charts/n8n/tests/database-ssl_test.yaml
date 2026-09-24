@@ -1,0 +1,57 @@
+# n8n enables Postgres TLS from DB_POSTGRESDB_SSL_ENABLED. It does not read
+# DB_POSTGRESDB_SSL, so these cases pin the name n8n reads on every component.
+suite: 'database: SSL'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  database.type: postgresdb
+  database.useExternal: true
+  database.host: postgres.example.com
+  queueMode.enabled: true
+  webhookProcessor.enabled: true
+tests:
+  - it: sets DB_POSTGRESDB_SSL_ENABLED in the ConfigMap when SSL is enabled
+    template: templates/configmap.yaml
+    set:
+      database.ssl.enabled: true
+    asserts:
+      - equal:
+          path: data.DB_POSTGRESDB_SSL_ENABLED
+          value: "true"
+      - notExists:
+          path: data.DB_POSTGRESDB_SSL
+
+  - it: passes DB_POSTGRESDB_SSL_ENABLED to every n8n container when SSL is enabled
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      database.ssl.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_POSTGRESDB_SSL_ENABLED
+            valueFrom:
+              configMapKeyRef:
+                name: RELEASE-NAME-n8n
+                key: DB_POSTGRESDB_SSL_ENABLED
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_POSTGRESDB_SSL
+          any: true
+
+  - it: sets no SSL flag when SSL is disabled
+    template: templates/configmap.yaml
+    asserts:
+      - notExists:
+          path: data.DB_POSTGRESDB_SSL_ENABLED
+      - notExists:
+          path: data.DB_POSTGRESDB_SSL
