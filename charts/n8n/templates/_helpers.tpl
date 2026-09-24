@@ -205,7 +205,7 @@ per mistake.
 {{- end -}}
 {{- end -}}
 
-{{/* A single problem keeps today's exact message, so anything matching on it still matches. */}}
+{{/* A single problem is reported as-is, so its message reads the same as the check wrote it. */}}
 {{- if eq (len $errs) 1 -}}
 {{- fail (first $errs) -}}
 {{- else if $errs -}}
