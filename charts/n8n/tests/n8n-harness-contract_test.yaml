@@ -1,9 +1,10 @@
 # The Helm E2E suite in n8n-io/n8n installs this chart from main with the
-# examples below and these overrides, then reaches n8n by patching the
-# n8n-main Service to a NodePort and finds pods by app.kubernetes.io/name.
-# See packages/testing/containers/helm-stack.ts in that repository. A change
-# that breaks a case here breaks that suite too.
-suite: 'n8n e2e harness contract'
+# examples below and these overrides. It creates only the n8n-secrets Secret,
+# patches the n8n-main Service to a NodePort with a numeric targetPort of 5678,
+# and finds pods by app.kubernetes.io/name. See
+# packages/testing/containers/helm-stack.ts in that repository. A change that
+# breaks a case here breaks that suite too.
+suite: 'contract: n8n Helm E2E suite'
 release:
   name: n8n
 set:
@@ -55,6 +56,19 @@ tests:
           content:
             name: WEBHOOK_URL
             value: http://localhost:30080
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 5678
+            name: http
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: n8n-secrets
+                key: N8N_ENCRYPTION_KEY
 
   - it: exposes n8n-main on 5678 for standalone mode
     template: templates/service-main.yaml
@@ -90,3 +104,16 @@ tests:
           content:
             name: WEBHOOK_URL
             value: http://localhost:30080
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 5678
+            name: http
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: n8n-secrets
+                key: N8N_ENCRYPTION_KEY
