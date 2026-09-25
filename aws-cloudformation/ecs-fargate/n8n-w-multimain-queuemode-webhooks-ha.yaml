@@ -1209,8 +1209,6 @@ Resources:
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
               Value: true
-            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
-              Value: filesystem,s3
             - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
               Value: true
             - Name: N8N_SECURE_COOKIE
@@ -1500,8 +1498,6 @@ Resources:
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
               Value: true
-            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
-              Value: filesystem,s3
             - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
               Value: true
             - Name: N8N_SECURE_COOKIE
@@ -1968,8 +1964,6 @@ Resources:
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
               Value: true
-            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
-              Value: filesystem,s3
             - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
               Value: true
             - Name: N8N_SECURE_COOKIE
