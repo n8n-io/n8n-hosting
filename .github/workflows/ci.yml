@@ -38,13 +38,27 @@ jobs:
           sparse-checkout: charts/n8n/ci/install
 
       # An example gets an install leg by having an overlay in ci/install/.
+      # Overlays that read the n8n-license Secret need the licence repo
+      # secrets, which fork pull requests do not receive, so those legs are
+      # left out when the secrets are missing.
       - name: List the examples install-test covers
         id: examples
+        env:
+          HAS_LICENCE: ${{ secrets.N8N_LICENSE_ACTIVATION_KEY != '' && secrets.N8N_LICENSE_TENANT_ID != '' }}
         run: |
           set -euo pipefail
-          examples=$(find charts/n8n/ci/install -name '*.yaml' -exec basename {} .yaml \; | sort | jq -R . | jq -sc .)
-          echo "examples=$examples" >> "$GITHUB_OUTPUT"
-          echo "install-test examples: $examples"
+          examples=()
+          for overlay in charts/n8n/ci/install/*.yaml; do
+            example=$(basename "$overlay" .yaml)
+            if [[ "$HAS_LICENCE" != "true" ]] && grep -q 'n8n-license' "$overlay"; then
+              echo "::notice::Skipping the ${example} install leg: the licence secrets are not available."
+              continue
+            fi
+            examples+=("$example")
+          done
+          json=$(printf '%s\n' "${examples[@]}" | jq -R . | jq -sc .)
+          echo "examples=$json" >> "$GITHUB_OUTPUT"
+          echo "install-test examples: $json"
 
       - name: Decide whether install-test runs
         id: decide
@@ -256,6 +270,29 @@ jobs:
           # The fixture Redis has no password, and Redis accepts one anyway.
           kubectl create secret generic n8n-redis-secret \
             --from-literal=password=unused
+          # The S3 mock accepts any credentials.
+          kubectl create secret generic n8n-s3-secret \
+            --from-literal=secret-access-key=unused
+
+      # Written to files rather than passed as arguments, so the key never
+      # appears in a process list.
+      - name: Create the licence Secret
+        env:
+          ACTIVATION_KEY: ${{ secrets.N8N_LICENSE_ACTIVATION_KEY }}
+          TENANT_ID: ${{ secrets.N8N_LICENSE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$ACTIVATION_KEY" || -z "$TENANT_ID" ]]; then
+            echo "No licence secrets on this run."
+            exit 0
+          fi
+          dir=$(mktemp -d)
+          printf '%s' "$ACTIVATION_KEY" > "$dir/license-key"
+          printf '%s' "$TENANT_ID" > "$dir/tenant-id"
+          kubectl create secret generic n8n-license \
+            --from-file=license-key="$dir/license-key" \
+            --from-file=tenant-id="$dir/tenant-id"
+          rm -rf "$dir"
 
       # Every leg gets them, so an overlay only has to name the hosts.
       - name: Start Postgres and Redis

@@ -1,0 +1,44 @@
+# Throwaway S3 for the install legs that store binary data in S3. Not a
+# recommendation for production. Legs that need it apply it from their
+# pre-install hook, since kubectl apply on ../ does not recurse into this
+# directory. It accepts any credentials and starts with the n8n-ci bucket.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s3mock
+  labels:
+    app: s3mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: s3mock
+  template:
+    metadata:
+      labels:
+        app: s3mock
+    spec:
+      containers:
+        - name: s3mock
+          image: adobe/s3mock:5.2.3
+          ports:
+            - containerPort: 9090
+          env:
+            - name: COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS
+              value: n8n-ci
+          readinessProbe:
+            httpGet:
+              path: /n8n-ci
+              port: 9090
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s3mock
+spec:
+  selector:
+    app: s3mock
+  ports:
+    - port: 9090
+      targetPort: 9090
