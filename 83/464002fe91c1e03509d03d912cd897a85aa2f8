@@ -1,0 +1,19 @@
+charts/n8n/templates/_helpers.tpl
+  s_f09c0a34942a87::t_ee76c5f07aa910 208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "83464002fe91c1e03509d03d912cd897a85aa2f8",
+  "prompts": {},
+  "sessions": {
+    "s_f09c0a34942a87": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d6827a54-4bcd-4c2d-befb-0625ef3ee34a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
