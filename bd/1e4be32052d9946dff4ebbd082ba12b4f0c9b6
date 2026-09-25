@@ -1,0 +1,19 @@
+charts/n8n/tests/validate-multiple-errors_test.yaml
+  s_381b2735e3af47::t_c67efc426aff0d 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bd1e4be32052d9946dff4ebbd082ba12b4f0c9b6",
+  "prompts": {},
+  "sessions": {
+    "s_381b2735e3af47": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9d4c28e9-dd09-4f11-8265-eb48387b28a4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
