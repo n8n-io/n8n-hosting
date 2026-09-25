@@ -1,0 +1,6 @@
+# Overlay for installing examples/minimal-with-docker.yaml on kind. It points
+# the Docker host placeholders at the fixtures in ../fixtures/.
+database:
+  host: postgres
+redis:
+  host: redis
