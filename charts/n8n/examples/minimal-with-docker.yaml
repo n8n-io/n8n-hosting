@@ -73,7 +73,7 @@ config:
     - name: N8N_LOG_LEVEL
       value: "debug"
     - name: N8N_WEBHOOK_URL
-      value: "http://localhost:8080/webhook"
+      value: "http://localhost:8080"
     - name: N8N_EDITOR_BASE_URL
       value: "http://localhost:8080"
 
