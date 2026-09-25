@@ -31,7 +31,21 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       install-test: ${{ steps.decide.outputs.install-test }}
+      install-examples: ${{ steps.examples.outputs.examples }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: charts/n8n/ci/install
+
+      # An example gets an install leg by having an overlay in ci/install/.
+      - name: List the examples install-test covers
+        id: examples
+        run: |
+          set -euo pipefail
+          examples=$(find charts/n8n/ci/install -name '*.yaml' -exec basename {} .yaml \; | sort | jq -R . | jq -sc .)
+          echo "examples=$examples" >> "$GITHUB_OUTPUT"
+          echo "install-test examples: $examples"
+
       - name: Decide whether install-test runs
         id: decide
         env:
@@ -96,18 +110,9 @@ jobs:
       - name: Run unit tests without schema validation
         run: helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
 
+  # Renders every file in examples/, new ones included.
   template-validation:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        example:
-          - charts/n8n/examples/minimal.yaml
-          - charts/n8n/examples/minimal-with-docker.yaml
-          - charts/n8n/examples/multi-main-queue.yaml
-          - charts/n8n/examples/task-runners.yaml
-          - charts/n8n/examples/keda-autoscaling.yaml
-          - charts/n8n/examples/https-ingress.yaml
-          - charts/n8n/examples/production-s3.yaml
     steps:
       - uses: actions/checkout@v4
 
@@ -115,50 +120,46 @@ jobs:
         with:
           version: "3.17.0"
 
-      - name: Validate ${{ matrix.example }}
-        run: helm template test charts/n8n -f ${{ matrix.example }} --dry-run=client > /dev/null
+      - name: Render every example
+        run: |
+          set -euo pipefail
+
+          failed=0
+          for f in charts/n8n/examples/*.yaml; do
+            echo "Rendering $f"
+            if ! helm template test charts/n8n -f "$f" --dry-run=client > /dev/null; then
+              echo "::error file=$f::$f does not render."
+              failed=1
+            fi
+          done
+
+          exit "$failed"
 
       - name: Validate extraContainers (minimal + ci overlay)
-        if: matrix.example == 'charts/n8n/examples/minimal.yaml'
         run: helm template test charts/n8n -f charts/n8n/examples/minimal.yaml -f charts/n8n/ci/extraContainers-values.yaml --dry-run=client > /dev/null
 
+  # Installs each example as a customer would, with an overlay from
+  # ci/install/ that replaces its placeholders and scales it down to fit a
+  # hosted runner. Postgres and Redis are plain manifests on the official
+  # images, so the test depends on no third-party chart repository.
   install-test:
+    name: install-test (${{ matrix.example }})
     runs-on: ubuntu-latest
     needs: gate
     if: needs.gate.outputs.install-test == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        example: ${{ fromJSON(needs.gate.outputs.install-examples) }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: azure/setup-helm@v4
         with:
           version: "3.17.0"
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - uses: helm/chart-testing-action@v2.7.0
-
       - name: Create kind cluster
         uses: helm/kind-action@v1.10.0
-
-      - name: Install PostgreSQL
-        run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
-          helm install postgres bitnami/postgresql \
-            --set auth.database=n8n \
-            --set auth.username=n8n \
-            --set auth.password=n8n-test-password \
-            --wait --timeout 120s
-
-      - name: Install Redis
-        run: |
-          helm install redis bitnami/redis \
-            --set auth.enabled=false \
-            --wait --timeout 120s
 
       - name: Create required secrets
         run: |
@@ -169,22 +170,34 @@ jobs:
             --from-literal=N8N_HOST=localhost \
             --from-literal=N8N_PORT=5678 \
             --from-literal=N8N_PROTOCOL=http
+          kubectl create secret generic n8n-runner-token \
+            --from-literal=auth-token="$(openssl rand -base64 32)"
 
-      - name: Install chart
+      # Every leg gets them, so an overlay only has to name the hosts.
+      - name: Start Postgres and Redis
+        run: |
+          kubectl apply -f charts/n8n/ci/fixtures/
+          kubectl rollout status deployment/postgres --timeout=120s
+          kubectl rollout status deployment/redis --timeout=120s
+
+      - name: Install chart with ${{ matrix.example }}.yaml
+        env:
+          EXAMPLE: ${{ matrix.example }}
         run: |
           helm install n8n charts/n8n \
-            --set database.host=postgres-postgresql \
-            --set database.passwordSecret.name=n8n-db-secret \
-            --set database.passwordSecret.key=password \
-            --set redis.host=redis-master \
-            --set secretRefs.existingSecret=n8n-core-secrets \
-            --set queueMode.workerReplicaCount=1 \
-            --set hpa.main.enabled=false \
-            --set hpa.worker.enabled=false \
+            -f "charts/n8n/examples/${EXAMPLE}.yaml" \
+            -f "charts/n8n/ci/install/${EXAMPLE}.yaml" \
             --wait --timeout 300s
 
       - name: Run helm test
         run: helm test n8n
+
+      - name: Show cluster state
+        if: failure()
+        run: |
+          kubectl get pods -o wide
+          kubectl get events --sort-by=.lastTimestamp | tail -30
+          kubectl logs -l app.kubernetes.io/name=n8n --all-containers --tail=100 || true
 
   security-scan:
     runs-on: ubuntu-latest
@@ -208,8 +221,8 @@ jobs:
   # The single check to require on main. It exists for two reasons: a skipped
   # job reports success to required status checks, so requiring install-test
   # directly would let a bump PR merge untested if its condition ever stopped
-  # matching, and template-validation is a seven leg matrix that would
-  # otherwise need all seven names listing in the ruleset.
+  # matching, and install-test is a matrix whose leg names would otherwise
+  # all need listing in the ruleset.
   ci-ok:
     runs-on: ubuntu-latest
     if: always()

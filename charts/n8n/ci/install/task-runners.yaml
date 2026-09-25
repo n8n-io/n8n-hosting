@@ -1,0 +1,11 @@
+# Overlay for installing examples/task-runners.yaml on kind. It replaces the
+# placeholders with the fixtures in ../fixtures/ and the Secrets CI creates.
+# One worker is enough to prove queue mode and fits a hosted runner.
+queueMode:
+  workerReplicaCount: 1
+database:
+  host: postgres
+redis:
+  host: redis
+secretRefs:
+  existingSecret: n8n-core-secrets
