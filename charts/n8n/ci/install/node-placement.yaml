@@ -1,0 +1,14 @@
+# Overlay for installing examples/node-placement.yaml on the three-node
+# cluster in ../kind/node-placement.yaml. It replaces the placeholders with
+# the fixtures in ../fixtures/ and scales the example down to fit a hosted
+# runner.
+queueMode:
+  workerReplicaCount: 1
+webhookProcessor:
+  replicaCount: 1
+database:
+  host: postgres
+  passwordSecret:
+    name: n8n-db-secret
+redis:
+  host: redis
