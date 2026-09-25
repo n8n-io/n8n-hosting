@@ -1,12 +1,15 @@
 name: Release
 
+# main releases the current chart major. chart-v2 is where the next major is
+# built, and releases 2.0.0-rc.N pre-releases from its own config and manifest
+# so the two lines never share a version.
 on:
   push:
-    branches: [main]
+    branches: [main, chart-v2]
     paths:
       - "charts/**"
-      - "release-please-config.json"
-      - ".release-please-manifest.json"
+      - "release-please-config*.json"
+      - ".release-please-manifest*.json"
       - ".github/workflows/release.yml"
 
 permissions:
@@ -14,8 +17,11 @@ permissions:
   packages: write
   pull-requests: write
 
+# One group per branch. A group keeps a single pending run and cancels the one
+# it replaces, so a shared group would let a chart-v2 push cancel a main
+# release that was waiting its turn.
 concurrency:
-  group: release
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -48,8 +54,9 @@ jobs:
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          target-branch: ${{ github.ref_name }}
+          config-file: ${{ github.ref_name == 'chart-v2' && 'release-please-config.chart-v2.json' || 'release-please-config.json' }}
+          manifest-file: ${{ github.ref_name == 'chart-v2' && '.release-please-manifest.chart-v2.json' || '.release-please-manifest.json' }}
 
       # release-please prefixes its outputs with the package path from
       # release-please-config.json, so these are charts/n8n--*.
