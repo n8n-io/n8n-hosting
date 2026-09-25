@@ -77,7 +77,6 @@ s3:
   
   storage:
     mode: "s3"
-    availableModes: "filesystem,s3"
 
 # Service Account with AWS IAM Role
 serviceAccount:
