@@ -2,5 +2,6 @@ remote: origin
 target-branch: main
 chart-dirs:
   - charts
+# release-please bumps the chart version in its own PR, so other PRs carry no bump.
 check-version-increment: false
 validate-maintainers: false
