@@ -4,6 +4,13 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.14.0](https://github.com/n8n-io/n8n-hosting/compare/v1.13.0...v1.14.0) (2026-09-25)
+
+
+### Features
+
+* **chart:** report every validation failure in one render ([#209](https://github.com/n8n-io/n8n-hosting/issues/209)) ([6bdbd01](https://github.com/n8n-io/n8n-hosting/commit/6bdbd012d8e9017258d25ede5c3450c3792e6d75))
+
 ## [1.13.0](https://github.com/n8n-io/n8n-hosting/compare/v1.12.0...v1.13.0) (2026-09-23)
 
 
