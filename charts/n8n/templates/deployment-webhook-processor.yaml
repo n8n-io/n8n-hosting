@@ -12,7 +12,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if not (include "n8n.autoscalerOwnsReplicas" (dict "root" . "component" "webhook-processor")) }}
   replicas: {{ .Values.webhookProcessor.replicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -63,7 +65,7 @@ spec:
 
       containers:
         - name: n8n-webhook-processor
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["n8n"]
           args: ["webhook"]

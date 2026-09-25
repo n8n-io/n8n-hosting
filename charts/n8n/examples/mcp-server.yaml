@@ -13,10 +13,6 @@
 # - An ingress controller installed in the cluster.
 # - External PostgreSQL and Redis services for queue mode.
 
-image:
-  # Must be >= 2.8.0 for multi-instance MCP. "stable" (current 2.x) satisfies this.
-  tag: "stable"
-
 secretRefs:
   existingSecret: "n8n-core-secrets"
 
