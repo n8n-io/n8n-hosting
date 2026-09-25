@@ -15,7 +15,7 @@ set:
   s3.auth.autoDetect: true
   serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
 tests:
-  - it: sets the binary data mode on main
+  - it: sets the binary data mode and not the available modes on main
     template: templates/deployment-main.yaml
     asserts:
       - contains:
@@ -29,7 +29,7 @@ tests:
             name: N8N_AVAILABLE_BINARY_DATA_MODES
           any: true
 
-  - it: sets the binary data mode on workers
+  - it: sets the binary data mode and not the available modes on workers
     template: templates/deployment-worker.yaml
     asserts:
       - contains:
@@ -43,7 +43,7 @@ tests:
             name: N8N_AVAILABLE_BINARY_DATA_MODES
           any: true
 
-  - it: sets the binary data mode on webhook processors
+  - it: sets the binary data mode and not the available modes on webhook processors
     template: templates/deployment-webhook-processor.yaml
     asserts:
       - contains:
