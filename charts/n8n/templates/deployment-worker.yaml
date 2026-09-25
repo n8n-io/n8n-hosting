@@ -12,7 +12,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if not (include "n8n.autoscalerOwnsReplicas" (dict "root" . "component" "worker")) }}
   replicas: {{ .Values.queueMode.workerReplicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:
@@ -63,7 +65,7 @@ spec:
 
       containers:
         - name: n8n-worker
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["n8n"]
           args:
@@ -196,7 +198,7 @@ spec:
         {{- if .Values.taskRunners.enabled }}
         # Task Runner sidecar container
         - name: task-runner
-          image: "{{ .Values.taskRunners.image.repository }}:{{ default .Values.image.tag .Values.taskRunners.image.tag }}"
+          image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
           imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false

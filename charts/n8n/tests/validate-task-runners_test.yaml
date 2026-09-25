@@ -1,0 +1,25 @@
+suite: 'validate: task runners'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: accepts external task runners
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.mode: external
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects any mode other than external
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.mode: internal
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/taskRunners/mode': value must be 'external'"

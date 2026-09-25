@@ -1,6 +1,6 @@
 apiVersion: v2
 name: n8n
-version: 1.11.0  # x-release-please-version
+version: 1.13.0  # x-release-please-version
 kubeVersion: ">=1.25.0-0"
 icon: >-
   https://raw.githubusercontent.com/n8n-io/n8n/master/packages/editor-ui/public/images/n8n-logo.png
@@ -8,7 +8,7 @@ description: >-
   Production-grade Helm chart for n8n, the workflow automation platform.
   Supports queue mode, multi-main HA, webhook processors, task runners, HPA,
   PDB, network policies, and S3 external storage.
-appVersion: "stable"
+appVersion: "2.40.5"
 type: application
 annotations:
   artifacthub.io/license: MIT

@@ -79,6 +79,22 @@ Chart name and version
 {{- end -}}
 
 {{/*
+n8n image tag. Falls back to the chart's appVersion when image.tag is unset,
+so a chart release always pins the n8n version it was built against.
+*/}}
+{{- define "n8n.imageTag" -}}
+{{- default .Chart.AppVersion .Values.image.tag -}}
+{{- end -}}
+
+{{/*
+Task runner image tag. Resolves taskRunners.image.tag, then image.tag, then
+appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
+*/}}
+{{- define "n8n.taskRunnerImageTag" -}}
+{{- default (include "n8n.imageTag" .) .Values.taskRunners.image.tag -}}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "n8n.serviceAccountName" -}}
@@ -90,94 +106,181 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
-Validate values — called once from deployment-main.yaml to fail fast on bad config.
+Validate values. Called once from deployment-main.yaml to fail on bad config.
+Every check adds its message to $errs instead of failing on the spot, so one
+render reports every problem rather than making the user fix and re-run once
+per mistake.
 */}}
 {{- define "n8n.validate" -}}
+{{- $errs := list -}}
 
 {{/* --- Queue mode infrastructure --- */}}
 {{- if .Values.queueMode.enabled -}}
 {{- if not .Values.database.useExternal -}}
-{{- fail "database.useExternal must be true when queueMode.enabled=true. Queue mode requires external PostgreSQL." -}}
+{{- $errs = append $errs "database.useExternal must be true when queueMode.enabled=true. Queue mode requires external PostgreSQL." -}}
 {{- end -}}
 {{- if not .Values.database.host -}}
-{{- fail "database.host is required when queueMode.enabled=true. Set it to your PostgreSQL hostname." -}}
+{{- $errs = append $errs "database.host is required when queueMode.enabled=true. Set it to your PostgreSQL hostname." -}}
 {{- end -}}
 {{- if not .Values.redis.enabled -}}
-{{- fail "redis.enabled must be true when queueMode.enabled=true. Queue mode requires Redis." -}}
+{{- $errs = append $errs "redis.enabled must be true when queueMode.enabled=true. Queue mode requires Redis." -}}
 {{- end -}}
 {{- if not .Values.redis.host -}}
-{{- fail "redis.host is required when queueMode.enabled=true. Set it to your Redis hostname." -}}
+{{- $errs = append $errs "redis.host is required when queueMode.enabled=true. Set it to your Redis hostname." -}}
 {{- end -}}
 {{- end -}}
 
 {{/* --- Standalone mode constraints --- */}}
 {{- if not .Values.queueMode.enabled -}}
 {{- if and (not .Values.persistence.enabled) (not .Values.database.useExternal) -}}
-{{- fail "persistence.enabled must be true when queueMode.enabled=false and database.useExternal=false. Standalone mode requires persistent storage when no external database." -}}
+{{- $errs = append $errs "persistence.enabled must be true when queueMode.enabled=false and database.useExternal=false. Standalone mode requires persistent storage when no external database." -}}
 {{- end -}}
 {{- if .Values.multiMain.enabled -}}
-{{- fail "multiMain.enabled=true requires queueMode.enabled=true" -}}
+{{- $errs = append $errs "multiMain.enabled=true requires queueMode.enabled=true" -}}
 {{- end -}}
 {{- if .Values.webhookProcessor.enabled -}}
-{{- fail "webhookProcessor.enabled=true requires queueMode.enabled=true" -}}
+{{- $errs = append $errs "webhookProcessor.enabled=true requires queueMode.enabled=true" -}}
 {{- end -}}
 {{- end -}}
 
 {{/* --- Webhook processor --- */}}
 {{- if and .Values.ingress.webhookProcessor.enabled (not .Values.webhookProcessor.enabled) -}}
-{{- fail "ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true" -}}
+{{- $errs = append $errs "ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true" -}}
+{{- end -}}
+
+{{/* --- KEDA --- */}}
+{{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled (not .Values.keda.webhookProcessor.triggers) -}}
+{{- $errs = append $errs "keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to hold them at webhookProcessor.replicaCount." -}}
 {{- end -}}
 
 {{/* --- Multi-main --- */}}
 {{- if and .Values.multiMain.enabled (lt (int .Values.multiMain.replicas) 2) -}}
-{{- fail "multiMain.enabled=true requires multiMain.replicas >= 2" -}}
+{{- $errs = append $errs "multiMain.enabled=true requires multiMain.replicas >= 2" -}}
 {{- end -}}
 
 {{/* --- Task runners --- */}}
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
-{{- fail "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
+{{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
 {{- end -}}
 
 {{/* --- S3 --- */}}
 {{- if .Values.s3.enabled -}}
 {{- if not .Values.s3.bucket.name -}}
-{{- fail "s3.bucket.name is required when s3.enabled=true" -}}
+{{- $errs = append $errs "s3.bucket.name is required when s3.enabled=true" -}}
 {{- end -}}
 {{- if not .Values.s3.bucket.region -}}
-{{- fail "s3.bucket.region is required when s3.enabled=true" -}}
+{{- $errs = append $errs "s3.bucket.region is required when s3.enabled=true" -}}
 {{- end -}}
 {{- if and (not .Values.s3.auth.autoDetect) (not .Values.s3.auth.accessKeyId) -}}
-{{- fail "s3.auth.accessKeyId is required when s3.enabled=true and s3.auth.autoDetect=false" -}}
+{{- $errs = append $errs "s3.auth.accessKeyId is required when s3.enabled=true and s3.auth.autoDetect=false" -}}
 {{- end -}}
 {{- if and .Values.s3.auth.autoDetect (not .Values.serviceAccount.awsRoleArn) -}}
-{{- fail "serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)" -}}
+{{- $errs = append $errs "serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)" -}}
 {{- end -}}
 {{- end -}}
 
 {{/* --- License --- */}}
 {{- if and .Values.license.enabled .Values.license.activationKey .Values.license.existingSecret.name -}}
-{{- fail "license.activationKey and license.existingSecret.name are mutually exclusive. Use one or the other." -}}
+{{- $errs = append $errs "license.activationKey and license.existingSecret.name are mutually exclusive. Use one or the other." -}}
 {{- end -}}
 
 {{/* --- Encryption key --- */}}
 {{- if and (not .Values.secretRefs.existingSecret) (eq .Values.secretRefs.env.N8N_ENCRYPTION_KEY "change-me-to-a-long-random-key") -}}
-{{- fail "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret" -}}
+{{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret" -}}
 {{- end -}}
 
 {{/* --- Service account --- */}}
 {{- if and (not .Values.serviceAccount.create) (eq .Values.serviceAccount.name "n8n") -}}
-{{- fail "serviceAccount.create=false but serviceAccount.name is still the chart default \"n8n\". Set serviceAccount.name to your pre-existing ServiceAccount, or to \"\" to use the namespace's default ServiceAccount." -}}
+{{- $errs = append $errs "serviceAccount.create=false but serviceAccount.name is still the chart default \"n8n\". Set serviceAccount.name to your pre-existing ServiceAccount, or to \"\" to use the namespace's default ServiceAccount." -}}
 {{- end -}}
 
 {{/* --- Pod labels --- */}}
 {{- $reservedPodLabels := list "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" "app.kubernetes.io/version" "app.kubernetes.io/managed-by" "helm.sh/chart" -}}
 {{- range $k, $v := (.Values.podLabels | default dict) -}}
 {{- if has $k $reservedPodLabels -}}
-{{- fail (printf "podLabels.%q is a chart-managed selector/identity label and cannot be overridden. Reserved keys: %s" $k (join ", " $reservedPodLabels)) -}}
+{{- $errs = append $errs (printf "podLabels.%q is a chart-managed selector/identity label and cannot be overridden. Reserved keys: %s" $k (join ", " $reservedPodLabels)) -}}
 {{- end -}}
 {{- if not (kindIs "string" $v) -}}
-{{- fail (printf "podLabels.%q must be a string (got %s). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. %q: \"true\"." $k (kindOf $v) $k) -}}
+{{- $errs = append $errs (printf "podLabels.%q must be a string (got %s). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. %q: \"true\"." $k (kindOf $v) $k) -}}
 {{- end -}}
 {{- end -}}
 
+{{/* A single problem is reported as-is, so its message reads the same as the check wrote it. */}}
+{{- if eq (len $errs) 1 -}}
+{{- fail (first $errs) -}}
+{{- else if $errs -}}
+{{- fail (printf "%d problems in your values:\n- %s" (len $errs) (join "\n- " $errs)) -}}
+{{- end -}}
+
+{{- end -}}
+
+{{/*
+Task runners on main pods: only in standalone mode.
+In queue mode, manual executions are offloaded to workers (OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS),
+so workers handle code execution and main pods do not need runner sidecars.
+*/}}
+{{- define "n8n.mainTaskRunnersEnabled" -}}
+{{- if and .Values.taskRunners.enabled (not .Values.queueMode.enabled) -}}true{{- end -}}
+{{- end -}}
+
+{{/*
+Whether KEDA will actually scale a component, and so whether a ScaledObject
+renders for it. Empty triggers mean no scaler: KEDA requires spec.triggers and
+rejects an object without them, so the chart renders none and the component
+keeps the replica count it was given. That makes an empty trigger list the way
+to run KEDA for one component and not the other.
+
+Call with the root context and the component name, e.g.
+  (dict "root" . "component" "worker")
+*/}}
+{{- define "n8n.kedaScalerEnabled" -}}
+{{- $root := .root -}}
+{{- if and $root.Values.keda.enabled $root.Values.queueMode.enabled -}}
+{{- if eq .component "worker" -}}
+{{- if and $root.Values.keda.worker.triggers (gt (int $root.Values.queueMode.workerReplicaCount) 0) -}}true{{- end -}}
+{{- else if eq .component "webhook-processor" -}}
+{{- if and $root.Values.keda.webhookProcessor.enabled $root.Values.webhookProcessor.enabled $root.Values.keda.webhookProcessor.triggers -}}true{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Whether an autoscaler owns a component's replica count, and so whether the
+chart leaves spec.replicas off its Deployment and lets Kubernetes default it
+to 1 on first create. KEDA owns the count wherever a ScaledObject renders,
+and the built-in HPA owns it only whilst KEDA is off, since keda.enabled
+replaces the worker and webhook HPAs.
+
+Call with the root context and the component name, e.g.
+  (dict "root" . "component" "worker")
+*/}}
+{{- define "n8n.autoscalerOwnsReplicas" -}}
+{{- $root := .root -}}
+{{- $hpaEnabled := ternary $root.Values.hpa.worker.enabled $root.Values.hpa.webhookProcessor.enabled (eq .component "worker") -}}
+{{- if or (include "n8n.kedaScalerEnabled" .) (and $hpaEnabled (not $root.Values.keda.enabled)) -}}true{{- end -}}
+{{- end -}}
+
+{{/*
+Annotation mapping for a KEDA ScaledObject: commonAnnotations with the
+chart-managed pause annotations set over the top, so a user key can never
+render twice. Renders nothing when there is nothing to annotate, so the
+caller wraps it in `with` and writes the `annotations:` key itself.
+
+Call with the root context and the keda.<component> values, e.g.
+  (dict "root" . "componentValues" .Values.keda.worker)
+*/}}
+{{- define "n8n.kedaAnnotations" -}}
+{{- $root := .root -}}
+{{- $componentValues := .componentValues -}}
+{{- $annotations := deepCopy ($root.Values.commonAnnotations | default dict) -}}
+{{- if $componentValues.pause -}}
+{{- $_ := set $annotations "autoscaling.keda.sh/paused" "true" -}}
+{{/* 0 is falsy in Go templates, so unset has to be tested for by kind. */}}
+{{- if not (kindIs "invalid" $componentValues.pausedReplicaCount) -}}
+{{- $_ := set $annotations "autoscaling.keda.sh/paused-replicas" ($componentValues.pausedReplicaCount | toString) -}}
+{{- end -}}
+{{- end -}}
+{{- if $annotations -}}
+{{- toYaml $annotations -}}
+{{- end -}}
 {{- end -}}

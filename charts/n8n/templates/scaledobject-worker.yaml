@@ -1,4 +1,4 @@
-{{- if and .Values.keda.enabled .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) }}
+{{- if include "n8n.kedaScalerEnabled" (dict "root" . "component" "worker") }}
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -7,9 +7,9 @@ metadata:
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: worker
-  {{- with .Values.commonAnnotations }}
+  {{- with (include "n8n.kedaAnnotations" (dict "root" . "componentValues" .Values.keda.worker)) }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- . | nindent 4 }}
   {{- end }}
 spec:
   scaleTargetRef:
