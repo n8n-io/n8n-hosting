@@ -236,8 +236,11 @@ jobs:
         with:
           version: "3.17.0"
 
+      # A leg that needs more than one node brings its own kind config.
       - name: Create kind cluster
         uses: helm/kind-action@v1.10.0
+        with:
+          config: ${{ hashFiles(format('charts/n8n/ci/kind/{0}.yaml', matrix.example)) != '' && format('charts/n8n/ci/kind/{0}.yaml', matrix.example) || '' }}
 
       - name: Create required secrets
         run: |
@@ -250,6 +253,9 @@ jobs:
             --from-literal=N8N_PROTOCOL=http
           kubectl create secret generic n8n-runner-token \
             --from-literal=auth-token="$(openssl rand -base64 32)"
+          # The fixture Redis has no password, and Redis accepts one anyway.
+          kubectl create secret generic n8n-redis-secret \
+            --from-literal=password=unused
 
       # Every leg gets them, so an overlay only has to name the hosts.
       - name: Start Postgres and Redis
@@ -257,6 +263,12 @@ jobs:
           kubectl apply -f charts/n8n/ci/fixtures/
           kubectl rollout status deployment/postgres --timeout=120s
           kubectl rollout status deployment/redis --timeout=120s
+
+      # <example>.pre.sh installs what the example expects the cluster to
+      # provide, and <example>.post.sh checks it works with the chart.
+      - name: Prepare the cluster for ${{ matrix.example }}.yaml
+        if: hashFiles(format('charts/n8n/ci/install/{0}.pre.sh', matrix.example)) != ''
+        run: bash "charts/n8n/ci/install/${{ matrix.example }}.pre.sh"
 
       - name: Install chart with ${{ matrix.example }}.yaml
         env:
@@ -269,6 +281,10 @@ jobs:
 
       - name: Run helm test
         run: helm test n8n
+
+      - name: Check ${{ matrix.example }}.yaml against the cluster
+        if: hashFiles(format('charts/n8n/ci/install/{0}.post.sh', matrix.example)) != ''
+        run: bash "charts/n8n/ci/install/${{ matrix.example }}.post.sh"
 
       - name: Show cluster state
         if: failure()
