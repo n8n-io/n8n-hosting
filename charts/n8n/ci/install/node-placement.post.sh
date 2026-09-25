@@ -11,6 +11,16 @@ check() {
     echo "::error::No ${component} pods found."
     exit 1
   fi
+  # A pod that lost its nodeSelector can still land in the right pool by
+  # chance, so check the selector itself as well as the node.
+  selectors=$(kubectl get pods -l "app.kubernetes.io/component=${component}" \
+    -o jsonpath='{range .items[*]}{.spec.nodeSelector.pool}{"\n"}{end}')
+  while read -r selector; do
+    if [[ "$selector" != "$pool" ]]; then
+      echo "::error::A ${component} pod selects pool '${selector}', expected '${pool}'."
+      exit 1
+    fi
+  done <<< "$selectors"
   while read -r node; do
     actual=$(kubectl get node "$node" -o jsonpath='{.metadata.labels.pool}')
     if [[ "$actual" != "$pool" ]]; then
