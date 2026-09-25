@@ -640,8 +640,8 @@ database:
   # SSL configuration
   ssl:
     enabled: false                   # <-- Enable SSL connection
-    ca: ""                           # <-- Path to CA certificate file
-    cert: ""                         # <-- Path to client certificate file
+    ca: ""                           # <-- CA certificate as PEM contents, not a file path
+    cert: ""                         # <-- Client certificate as PEM contents, not a file path
     key: ""                          # <-- Path to client key file
     rejectUnauthorized: true         # <-- Reject unauthorized SSL connections
 

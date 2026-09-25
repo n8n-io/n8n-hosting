@@ -52,6 +52,9 @@ database:
   passwordSecret:
     name: "n8n-db-secret"
     key: "password"
+  ssl:
+    enabled: true
+    rejectUnauthorized: true           # Set to false only for self-signed certs (not recommended for production)
 
 redis:
   enabled: true
@@ -128,11 +131,6 @@ config:
     # Security settings
     - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
       value: "true"
-    
-    - name: DB_POSTGRESDB_SSL_ENABLED
-      value: "true"
-    - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-      value: "true"  # Set to "false" only if using self-signed certs (not recommended for production)
     
     - name: N8N_LOG_LEVEL
       value: "info"
