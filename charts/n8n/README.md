@@ -102,6 +102,12 @@ Scale execution throughput with `queueMode.workerReplicaCount` and `queueMode.wo
 
 For queue-based scaling, enable `keda.enabled=true` and configure Redis triggers for workers. KEDA creates `ScaledObject` resources for workers, and optionally webhook processors, instead of the built-in worker/webhook HPAs.
 
+Once something will actually scale a worker or webhook-processor Deployment, the chart stops setting that Deployment's `replicas` and leaves the count to the HPA or the `ScaledObject`. That means KEDA with triggers configured for the component, or the built-in HPA with `keda.enabled` off, since `keda.enabled` replaces the worker and webhook HPAs. Kubernetes defaults the field to 1 on first create and the autoscaler takes over from there, so later upgrades neither reset the count nor show as drift on a GitOps sync.
+
+On the first upgrade from a chart version that set `replicas`, Helm removes the field it used to manage, so an autoscaled Deployment drops to 1 replica once before the autoscaler scales it back up.
+
+`queueMode.workerReplicaCount` and `webhookProcessor.replicaCount` still size the Deployments where nothing else will, and `queueMode.workerReplicaCount: 0` still removes the worker Deployment altogether.
+
 Webhook processors are an optional scaling layer for high-volume production webhook traffic. Enable them when webhook load should be isolated from the UI/API main pods, and configure ingress or load-balancer routing as described above.
 
 ## ServiceAccount
@@ -121,7 +127,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | Value | Description | Default |
 |---|---|---|
 | `image.repository` | n8n image | `docker.n8n.io/n8nio/n8n` |
-| `image.tag` | n8n version | `1.110.1` |
+| `image.tag` | n8n version | `""` (uses the chart's `appVersion`) |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
 | `queueMode.workerConcurrency` | Jobs per worker | `10` |
 | `multiMain.enabled` | Multi-main HA (Enterprise) | `false` |
@@ -134,6 +140,11 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `hpa.main.enabled` | HPA for main pods | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
+| `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
+| `keda.worker.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
+| `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods | `false` |
+| `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
+| `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `networkPolicy.enabled` | Network policies | `false` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
@@ -186,9 +197,11 @@ See [`examples/node-placement.yaml`](./examples/node-placement.yaml) for a compl
 
 ## Task Runners
 
-Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, each main and worker pod gets a runner sidecar.
+Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, worker pods get a runner sidecar in queue mode (manual executions are offloaded to workers). In standalone mode (`queueMode.enabled=false`), the main pod gets a runner sidecar instead.
 
-**How it works:** The n8n container runs a task broker on port 5679. The runner sidecar connects to this broker over localhost to receive and execute code tasks.
+**How it works:** The n8n process that executes workflows runs a task broker on port 5679, and its runner sidecar connects to that broker over localhost to receive and execute code tasks. In queue mode the executing process is the worker, so only worker pods run a broker and get a sidecar. n8n does not start a broker on main pods when manual executions are offloaded to workers, which the chart always enables in queue mode.
+
+**Requires n8n 2.13.0 or later.** Earlier versions also run a broker on main pods, and 1.108.0 to 2.12.x need a runner there for the MCP Server Trigger, so pinning `image.tag` below 2.13.0 leaves those executions without a runner. The chart does not enforce this version floor when `image.tag` is overridden.
 
 **Enable task runners:**
 ```yaml
@@ -222,6 +235,7 @@ helm install keda kedacore/keda --namespace keda-system --create-namespace
 keda:
   enabled: true
   worker:
+    pause: false
     minReplicaCount: 2
     maxReplicaCount: 20
     triggers:
@@ -231,14 +245,51 @@ keda:
           listLength: "5"
 ```
 
+Set `keda.worker.pause: true` to pause worker autoscaling. This adds `autoscaling.keda.sh/paused: "true"` to the worker ScaledObject, and KEDA holds the workers at whatever replica count they are currently running, which is what you want whilst troubleshooting a scaling issue.
+
+To pause and hold a specific count instead, set `pausedReplicaCount`. Setting it to `0` scales workers down entirely:
+
+```yaml
+keda:
+  worker:
+    pause: true
+    pausedReplicaCount: 0
+```
+
+`pausedReplicaCount` is only applied when `pause: true`, and leaving it unset is what gives you the freeze-at-current behaviour. With both annotations set KEDA scales the workers to the count first, then pauses autoscaling.
+
+Webhook processors have the same pair under `keda.webhookProcessor`, and `pause` on its own freezes them at their current count just as it does for workers. Taking them to zero stops those pods accepting webhook traffic, so treat `pausedReplicaCount: 0` here as a maintenance-window setting rather than the troubleshooting one it is for workers:
+
+```yaml
+keda:
+  webhookProcessor:
+    pause: true
+    pausedReplicaCount: 0
+```
+
+Webhook processors only autoscale in queue mode, with `keda.enabled`, `webhookProcessor.enabled` and `keda.webhookProcessor.enabled` all set, and at least one trigger of their own. `keda.webhookProcessor.triggers` is empty by default, and the chart fails the install rather than leave you with webhook processors that look autoscaled and are not. To run KEDA for workers alone, leave `keda.webhookProcessor.enabled` off, which is the default. To run it for webhook processors alone, empty `keda.worker.triggers`, since workers have no enabled flag of their own.
+
+Either component merges these annotations with anything you set in `commonAnnotations`. The chart-managed keys win on a collision, so you cannot end up with the same annotation twice.
+
 The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
 
 See [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) for a complete example.
 
 ## Upgrading
 
-Chart version bumps are automated via semantic-release. Check the [CHANGELOG](../../CHANGELOG.md) for breaking changes before upgrading.
+Chart version bumps are automated via Release Please. Check the [CHANGELOG](./CHANGELOG.md) for breaking changes before upgrading.
 
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml
 ```
+
+## Development
+
+The chart's unit tests use the [helm-unittest](https://github.com/helm-unittest/helm-unittest) plugin. From a clone of the repository, run:
+
+```bash
+helm unittest --strict charts/n8n
+helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
+```
+
+See [CONTRIBUTING.md](https://github.com/n8n-io/n8n-hosting/blob/main/CONTRIBUTING.md) for how to install the plugin and the other local checks.

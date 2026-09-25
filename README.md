@@ -11,7 +11,8 @@ confirm against the linked n8n docs for the release you're deploying.
 | Component | Supported / recommended | Notes |
 |---|---|---|
 | n8n | Latest stable release | Pin a specific image tag for production rather than relying on `stable`/`latest`. |
-| PostgreSQL | Any actively-maintained release | Recommended database for production. n8n documents **13** as the queue-mode minimum, but prefer a still-supported major. |
+| PostgreSQL | **17** or **18**; **16** for compatibility | Recommended database for production. n8n supports the latest two actively-maintained majors, plus one older major for compatibility. Run the latest minor of your major. The templates here deploy **18**. |
+| Amazon Aurora PostgreSQL | **Experimental** | Offered by the HA CloudFormation template for its faster failover. PostgreSQL-compatible rather than upstream PostgreSQL, so n8n doesn't test or certify it and the version policy above doesn't cover it. |
 | SQLite | Bundled | Default when queue mode is off. Fine for development and small single-instance setups. |
 | MySQL / MariaDB | **Not supported** | Deprecated as the n8n backend in v1.0 and removed in v2.0 -- use PostgreSQL. (The MySQL *node* is unaffected.) |
 | Redis | **7+** recommended | Only needed for queue mode. Redis 6+ is required if you set a Redis username. |
