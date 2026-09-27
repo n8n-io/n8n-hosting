@@ -64,7 +64,6 @@ s3:
     autoDetect: true  # Using IRSA
   storage:
     mode: "s3"
-    availableModes: "filesystem,s3"
 
 # Service account with enterprise IAM role
 serviceAccount:

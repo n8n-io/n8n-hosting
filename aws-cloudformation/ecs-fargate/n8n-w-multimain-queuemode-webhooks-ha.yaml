@@ -11,7 +11,7 @@ Parameters:
   N8nVersion:
     Type: String
     Default: "2.40.5"
-    Description: "n8n version to deploy. Drives both the n8nio/n8n and n8nio/runners images, which are released together and must match. Never move this below the version a running stack has already migrated to, n8n does not down-migrate the schema."
+    Description: "n8n version to deploy. Drives both the n8nio/n8n and n8nio/runners images, which are released together and must match. Never move this below the version a running stack has already migrated to, n8n does not down-migrate the schema. Must be 2.0.0 or later: this template stopped setting N8N_AVAILABLE_BINARY_DATA_MODES, which n8n 1.x still requires to enable S3 binary storage (it fails startup with \"External storage selected but unavailable\" without it). n8n only made N8N_DEFAULT_BINARY_DATA_MODE sufficient on its own starting at the 2.0 release that removed the variable."
     AllowedPattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     ConstraintDescription: "Must be a concrete n8n version such as 2.38.5, not a floating tag like stable or latest."
 
@@ -1209,8 +1209,6 @@ Resources:
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
               Value: true
-            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
-              Value: filesystem,s3
             - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
               Value: true
             - Name: N8N_SECURE_COOKIE
@@ -1500,8 +1498,6 @@ Resources:
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
               Value: true
-            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
-              Value: filesystem,s3
             - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
               Value: true
             - Name: N8N_SECURE_COOKIE
@@ -1968,8 +1964,6 @@ Resources:
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
               Value: true
-            - Name: N8N_AVAILABLE_BINARY_DATA_MODES
-              Value: filesystem,s3
             - Name: N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
               Value: true
             - Name: N8N_SECURE_COOKIE
