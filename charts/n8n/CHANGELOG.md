@@ -4,6 +4,19 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.14.0](https://github.com/n8n-io/n8n-hosting/compare/v1.13.0...v1.14.0) (2026-09-30)
+
+
+### Features
+
+* **chart:** bump n8n to 2.41.4 ([#213](https://github.com/n8n-io/n8n-hosting/issues/213)) ([00ff1a6](https://github.com/n8n-io/n8n-hosting/commit/00ff1a670972475459ff9b4808af0084fdd3dd21))
+* **chart:** report every validation failure in one render ([#209](https://github.com/n8n-io/n8n-hosting/issues/209)) ([6bdbd01](https://github.com/n8n-io/n8n-hosting/commit/6bdbd012d8e9017258d25ede5c3450c3792e6d75))
+
+
+### Bug Fixes
+
+* **chart:** drop deprecated N8N_AVAILABLE_BINARY_DATA_MODES ([#185](https://github.com/n8n-io/n8n-hosting/issues/185)) ([bb5e9a6](https://github.com/n8n-io/n8n-hosting/commit/bb5e9a64f7f854c3947666a60ddfd8c793a3f76e))
+
 ## [1.13.0](https://github.com/n8n-io/n8n-hosting/compare/v1.12.0...v1.13.0) (2026-09-23)
 
 
