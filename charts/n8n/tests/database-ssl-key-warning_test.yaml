@@ -1,0 +1,20 @@
+# The chart does not read database.ssl.key. Until 2.0 makes it fail the render,
+# NOTES.txt warns and names the replacement (decisions/0002).
+suite: 'database: SSL key warning'
+templates:
+  - templates/NOTES.txt
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  database.ssl.enabled: true
+tests:
+  - it: warns when database.ssl.key is set
+    set:
+      database.ssl.key: "-----BEGIN PRIVATE KEY-----"
+    asserts:
+      - matchRegexRaw:
+          pattern: 'WARNING: database\.ssl\.key is set, but the chart does not read it'
+
+  - it: does not warn when database.ssl.key is empty
+    asserts:
+      - notMatchRegexRaw:
+          pattern: 'database\.ssl\.key'
