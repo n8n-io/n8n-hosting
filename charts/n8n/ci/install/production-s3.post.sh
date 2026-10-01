@@ -10,8 +10,11 @@ if [[ -z "$pods" ]]; then
   echo "::error::No n8n-main pods found."
   exit 1
 fi
+# Logs are read into a variable first: piping kubectl into grep -q can end
+# the pipeline with SIGPIPE, which pipefail reports as a failure.
 for pod in $pods; do
-  if ! kubectl logs "$pod" --all-containers | grep -q 'S3 binary storage configured: endpoint=http://s3mock:9090'; then
+  logs=$(kubectl logs "$pod" --all-containers)
+  if ! grep -q 'S3 binary storage configured: endpoint=http://s3mock:9090' <<< "$logs"; then
     echo "::error::${pod} did not configure S3 binary storage against the mock."
     exit 1
   fi
