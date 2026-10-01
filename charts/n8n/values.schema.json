@@ -694,6 +694,21 @@
             "key": { "type": "string" }
           },
           "required": ["name", "key"]
+        },
+        "ssl": {
+          "type": "object",
+          "properties": {
+            "existingSecret": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "caKey": { "type": "string" },
+                "certKey": { "type": "string" },
+                "keyKey": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
         }
       },
       "additionalProperties": true
