@@ -9,13 +9,9 @@ on:
       - ".release-please-manifest.json"
       - ".github/workflows/release.yml"
 
-permissions:
-  contents: write
-  packages: write
-  pull-requests: write
-  # Lets cosign request this run's OIDC token, which is the identity the chart
-  # is signed with. There is no signing key to store or rotate.
-  id-token: write
+# Granted per job below, so that only the publish job can request the OIDC
+# token the chart is signed with.
+permissions: {}
 
 concurrency:
   group: release
@@ -24,6 +20,14 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      # release-please prefixes its outputs with the package path from
+      # release-please-config.json, so these are charts/n8n--*.
+      release_created: ${{ steps.release.outputs['charts/n8n--release_created'] }}
+      version: ${{ steps.release.outputs['charts/n8n--version'] }}
     env:
       # Mapped here because the `secrets` context is not available to a step's
       # `if`, and the step below has to be able to tell whether the App exists.
@@ -54,25 +58,32 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # release-please prefixes its outputs with the package path from
-      # release-please-config.json, so these are charts/n8n--*.
+  # A job of its own because it holds id-token: write. Every step that can mint
+  # the OIDC token can produce a signature that passes our own verification,
+  # so the token is kept away from release-please and its tag-referenced
+  # actions.
+  publish:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
       - uses: azure/setup-helm@v4
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         with:
           version: "3.17.0"
 
       - uses: actions/checkout@v4
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
 
       # SHA pinned because the binary it installs is handed this run's OIDC
       # token, and a signature made with that token says this workflow built
       # the chart.
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
 
       # Helm and cosign keep separate credential stores, so each logs in.
       - name: Log in to GHCR
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -81,9 +92,8 @@ jobs:
 
       - name: Package and push to GHCR
         id: push
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         env:
-          CHART_VERSION: ${{ steps.release.outputs['charts/n8n--version'] }}
+          CHART_VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
 
@@ -102,17 +112,16 @@ jobs:
       # helm push appends the chart name, so the chart lives one level below
       # the push target above.
       - name: Sign the chart
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         env:
           CHART: ghcr.io/n8n-io/n8n-helm-chart/n8n@${{ steps.push.outputs.digest }}
         run: cosign sign --yes "$CHART"
 
-      # Checked here with the same command the README gives users, so a release
-      # whose signature they could not verify fails instead of shipping.
+      # The command the README gives users, by version tag as they run it. This
+      # checks the tag resolves to the signed digest as well as the signature,
+      # and fails the release if either is wrong.
       - name: Verify the signature
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         env:
-          CHART: ghcr.io/n8n-io/n8n-helm-chart/n8n@${{ steps.push.outputs.digest }}
+          CHART: ghcr.io/n8n-io/n8n-helm-chart/n8n:${{ needs.release.outputs.version }}
         run: |
           cosign verify "$CHART" \
             --certificate-identity "https://github.com/n8n-io/n8n-hosting/.github/workflows/release.yml@refs/heads/main" \

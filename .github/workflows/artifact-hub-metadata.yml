@@ -38,7 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oras-project/setup-oras@v1
+      # SHA pinned because the binary it installs is handed a token that can
+      # write to the chart's registry.
+      - uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
 
       - name: Check the repository ID is set
         run: |
