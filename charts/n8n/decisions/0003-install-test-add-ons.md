@@ -1,7 +1,7 @@
 # 0003. Every example installs in CI, with the add-ons it expects
 
 Date: 2026-09-25
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/215
 
 ## Context
 
