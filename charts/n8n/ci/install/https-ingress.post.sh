@@ -32,7 +32,8 @@ if [[ "$status" != "200" ]]; then
   exit 1
 fi
 
-if ! request -o /dev/null -D - https://n8n.example.com:8443/ | grep -qi '^set-cookie: n8n_affinity='; then
+headers=$(request -o /dev/null -D - https://n8n.example.com:8443/)
+if ! grep -qi '^set-cookie: n8n_affinity=' <<< "$headers"; then
   echo "::error::The main ingress did not set the n8n_affinity sticky-session cookie."
   exit 1
 fi
@@ -40,12 +41,14 @@ fi
 request -o /dev/null https://n8n.example.com:8443/webhook/ci-routing-check || true
 
 # ingress-nginx logs the upstream it chose for each request as
-# [<namespace>-<service>-<port>]. The log line can lag the response.
+# [<namespace>-<service>-<port>]. The log line can lag the response, and the
+# logs are read into a variable so grep -q cannot SIGPIPE kubectl.
 routed_to() {
   local path=$1 upstream=$2
+  local logs
   for _ in $(seq 1 15); do
-    if kubectl logs -n ingress-nginx deploy/ingress-nginx-controller \
-      | grep -q "GET ${path} .*\[${upstream}\]"; then
+    logs=$(kubectl logs -n ingress-nginx deploy/ingress-nginx-controller)
+    if grep -q "GET ${path} .*\[${upstream}\]" <<< "$logs"; then
       return 0
     fi
     sleep 1

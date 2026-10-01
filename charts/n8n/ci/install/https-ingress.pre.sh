@@ -53,7 +53,7 @@ ISSUERS
     break
   fi
   if [[ "$attempt" == 30 ]]; then
-    echo "::error::cert-manager did not accept the CI issuers."
+    echo "::error::kubectl apply kept failing for the CI issuers. The errors above say why."
     exit 1
   fi
   sleep 2
