@@ -17,6 +17,22 @@ Production-grade Helm chart for [n8n](https://n8n.io), the workflow automation p
 helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-values.yaml
 ```
 
+### Verify the chart
+
+Each release is signed with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) keyless signing. The signature records that the chart was built by this repository's release workflow on `main`. No key is involved, so there is nothing for you to download first.
+
+To check a version before you install it, run:
+
+```bash
+cosign verify ghcr.io/n8n-io/n8n-helm-chart/n8n:<version> \
+  --certificate-identity "https://github.com/n8n-io/n8n-hosting/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+The command fails if the chart is unsigned, if it was signed by anything other than that workflow, or if the chart changed after it was signed.
+
+Versions released before signing was introduced have no signature, so the command fails for them.
+
 ## Quick Start
 
 1. **Set up external services** — PostgreSQL and Redis for queue mode (not needed for standalone mode)
