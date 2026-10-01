@@ -4,14 +4,14 @@
 #
 #   scripts/bump-n8n-version.sh 2.38.6
 #
-# Deliberately mechanical: it validates the version format, rewrites nine
+# Deliberately mechanical: it validates the version format, rewrites eleven
 # lines and does nothing else. It never resolves `stable`, compares versions
 # or touches git, so it is safe to run by hand, including to roll back to an
 # older version. Those decisions belong to the job that calls it,
 # .github/workflows/bump-n8n-version.yml.
 #
-# Every pin has to match exactly one line, and all nine are checked before any
-# are written, so a file whose shape has changed fails the run instead of
+# Every pin has to match exactly one line, and all eleven are checked before
+# any are written, so a file whose shape has changed fails the run instead of
 # being quietly skipped or leaving the tree half rewritten.
 
 set -euo pipefail
@@ -41,9 +41,32 @@ pin() {
 }
 
 # The chart's appVersion. image.tag and taskRunners.image.tag both fall back to
-# it through the n8n.imageTag helpers, so this is the chart's only pin.
+# it through the n8n.imageTag helpers, so it governs every image the chart runs.
 pin charts/n8n/Chart.yaml '
   /^appVersion:/ { print "appVersion: \"" version "\""; hits++; next }
+  { print }
+  END { exit(hits == 1 ? 0 : 1) }
+'
+
+# The same two images again, named in the artifacthub.io/images annotation so
+# that Artifact Hub scans them. An annotation is a plain string Helm never
+# templates, so these tags cannot follow appVersion by themselves. Each pattern
+# carries its full repository, which is what keeps the n8n pin off the runners
+# line and vice versa.
+pin charts/n8n/Chart.yaml '
+  /^[[:space:]]*image: docker\.n8n\.io\/n8nio\/n8n:/ {
+    sub(/:[^:]*$/, ":" version)
+    hits++
+  }
+  { print }
+  END { exit(hits == 1 ? 0 : 1) }
+'
+
+pin charts/n8n/Chart.yaml '
+  /^[[:space:]]*image: n8nio\/runners:/ {
+    sub(/:[^:]*$/, ":" version)
+    hits++
+  }
   { print }
   END { exit(hits == 1 ? 0 : 1) }
 '
@@ -112,11 +135,19 @@ done
 # maintainer's Mac. Copying the temp file back keeps the original's mode.
 echo "Pinning n8n $version in:"
 
+# Chart.yaml holds three of the pins, so it comes round three times here and is
+# listed once.
+listed=""
+
 for i in "${!files[@]}"; do
   file=${files[$i]}
   tmp=$(mktemp)
   awk -v version="$version" "${programs[$i]}" "$file" >"$tmp"
   cat "$tmp" >"$file"
   rm -f "$tmp"
-  echo "  $file"
+
+  if [[ " $listed " != *" $file "* ]]; then
+    echo "  $file"
+    listed="$listed $file"
+  fi
 done
