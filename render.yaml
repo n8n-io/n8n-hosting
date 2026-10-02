@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: n8n-web
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    startCommand: n8n start
+    env:
+      - key: PORT
+        value: "5678"
+      - key: N8N_BASIC_AUTH_ACTIVE
+        fromSecret: N8N_BASIC_AUTH_ACTIVE
+      - key: N8N_BASIC_AUTH_USER
+        fromSecret: N8N_BASIC_AUTH_USER
+      - key: N8N_BASIC_AUTH_PASSWORD
+        fromSecret: N8N_BASIC_AUTH_PASSWORD
+      - key: DATABASE_URL
+        fromSecret: DATABASE_URL
+      - key: WEBHOOK_URL
+        fromSecret: WEBHOOK_URL
+
+  - type: background
+    name: n8n-worker
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    startCommand: n8n worker
+    env:
+      - key: DATABASE_URL
+        fromSecret: DATABASE_URL
