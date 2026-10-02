@@ -42,11 +42,11 @@ Environment variables from ConfigMap for all components
       key: DB_POSTGRESDB_SCHEMA
 {{- end }}
 {{- if .Values.database.ssl.enabled }}
-- name: DB_POSTGRESDB_SSL
+- name: DB_POSTGRESDB_SSL_ENABLED
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: DB_POSTGRESDB_SSL
+      key: DB_POSTGRESDB_SSL_ENABLED
 {{- if .Values.database.ssl.ca }}
 - name: DB_POSTGRESDB_SSL_CA
   valueFrom:
