@@ -1,6 +1,12 @@
 # n8n Helm Chart
 
-Production-grade Helm chart for [n8n](https://n8n.io), the workflow automation platform. Supports queue mode, multi-main HA, webhook processors, task runners, HPA, PDB, network policies, and S3 external storage.
+The official Helm chart for [n8n](https://n8n.io), the workflow automation platform, maintained by n8n. It is built for production use and supports queue mode, multi-main HA, webhook processors, task runners, HPA, PDB, network policies, and S3 external storage.
+
+## Release schedule
+
+We release a new chart version every week. Each Wednesday, the day after n8n's weekly release, the chart moves to the latest `stable` n8n version.
+
+Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [changelog](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) to see which n8n version a release carries.
 
 ## Prerequisites
 
@@ -42,7 +48,7 @@ Versions released before signing was introduced have no signature, so the comman
    ./examples/create-secrets.sh
    ```
 
-3. **Choose a values file** from the [examples](./examples/) directory and customize it
+3. **Choose a values file** from the [examples](https://github.com/n8n-io/n8n-hosting/tree/main/charts/n8n/examples) directory and customize it
 
 4. **Deploy:**
    ```bash
@@ -70,14 +76,14 @@ All three use the same n8n container image, differentiated by command/args.
 
 | File | Use case |
 |---|---|
-| [standalone.yaml](./examples/standalone.yaml) | Single pod with SQLite, no external dependencies |
-| [minimal.yaml](./examples/minimal.yaml) | Single main pod, minimum config |
-| [minimal-with-docker.yaml](./examples/minimal-with-docker.yaml) | Quick testing with Docker Postgres/Redis |
-| [multi-main-queue.yaml](./examples/multi-main-queue.yaml) | Multi-main HA (Enterprise license required) |
-| [task-runners.yaml](./examples/task-runners.yaml) | Queue mode with task runner sidecars |
-| [production-s3.yaml](./examples/production-s3.yaml) | Production with S3, HPA, multi-main |
-| [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
-| [https-ingress.yaml](./examples/https-ingress.yaml) | HTTPS Ingress with TLS and webhook processor routing |
+| [standalone.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/standalone.yaml) | Single pod with SQLite, no external dependencies |
+| [minimal.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/minimal.yaml) | Single main pod, minimum config |
+| [minimal-with-docker.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/minimal-with-docker.yaml) | Quick testing with Docker Postgres/Redis |
+| [multi-main-queue.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/multi-main-queue.yaml) | Multi-main HA (Enterprise license required) |
+| [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/task-runners.yaml) | Queue mode with task runner sidecars |
+| [production-s3.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/production-s3.yaml) | Production with S3, HPA, multi-main |
+| [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
+| [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) | HTTPS Ingress with TLS and webhook processor routing |
 
 ## Secret Management
 
@@ -99,7 +105,7 @@ MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so 
 
 Use `ingress.sticky.enabled=true` for nginx cookie affinity, or `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. Multi-main deployments require sticky sessions at the load-balancing layer.
 
-See [https-ingress.yaml](./examples/https-ingress.yaml) for a complete HTTPS example.
+See [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) for a complete HTTPS example.
 
 ## Ports and Health Checks
 
@@ -168,7 +174,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
-See [values.yaml](./values.yaml) for the full list of configurable values.
+See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
 
 ## Extra containers (sidecars)
 
@@ -209,7 +215,7 @@ nodePlacement:
 
 > **Note:** When `multiMain.enabled=true`, the chart emits an automatic pod-anti-affinity rule to spread main replicas across nodes. Setting `nodePlacement.main.affinity` replaces that auto rule — include your own pod-anti-affinity term if you still want main replicas spread.
 
-See [`examples/node-placement.yaml`](./examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
+See [`examples/node-placement.yaml`](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
 
 ## Task Runners
 
@@ -234,7 +240,7 @@ kubectl create secret generic n8n-runner-token \
   --from-literal=auth-token=$(openssl rand -base64 32)
 ```
 
-See [task-runners.yaml](./examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
+See [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
 
 ## KEDA Autoscaling
 
@@ -289,11 +295,11 @@ Either component merges these annotations with anything you set in `commonAnnota
 
 The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
 
-See [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) for a complete example.
+See [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) for a complete example.
 
 ## Upgrading
 
-Chart version bumps are automated via Release Please. Check the [CHANGELOG](./CHANGELOG.md) for breaking changes before upgrading.
+Chart version bumps are automated via Release Please. Check the [CHANGELOG](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) for breaking changes before upgrading.
 
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml

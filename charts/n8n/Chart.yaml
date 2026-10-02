@@ -9,9 +9,9 @@ kubeVersion: ">=1.25.0-0"
 icon: >-
   https://raw.githubusercontent.com/n8n-io/n8n/57e4bf2b4101918634874f25ba8e5c249a57826b/packages/frontend/@n8n/design-system/src/components/N8nLogo/logo-icon.svg
 description: >-
-  Production-grade Helm chart for n8n, the workflow automation platform.
-  Supports queue mode, multi-main HA, webhook processors, task runners, HPA,
-  PDB, network policies, and S3 external storage.
+  The official, production-grade Helm chart for n8n, the workflow automation
+  platform. Supports queue mode, multi-main HA, webhook processors, task
+  runners, HPA, PDB, network policies, and S3 external storage.
 appVersion: "2.41.4"
 type: application
 annotations:
