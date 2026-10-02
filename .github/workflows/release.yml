@@ -9,10 +9,9 @@ on:
       - ".release-please-manifest.json"
       - ".github/workflows/release.yml"
 
-permissions:
-  contents: write
-  packages: write
-  pull-requests: write
+# Granted per job below, so that only the publish job can request the OIDC
+# token the chart is signed with.
+permissions: {}
 
 concurrency:
   group: release
@@ -21,6 +20,14 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      # release-please prefixes its outputs with the package path from
+      # release-please-config.json, so these are charts/n8n--*.
+      release_created: ${{ steps.release.outputs['charts/n8n--release_created'] }}
+      version: ${{ steps.release.outputs['charts/n8n--version'] }}
     env:
       # Mapped here because the `secrets` context is not available to a step's
       # `if`, and the step below has to be able to tell whether the App exists.
@@ -51,26 +58,72 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # release-please prefixes its outputs with the package path from
-      # release-please-config.json, so these are charts/n8n--*.
+  # A job of its own because it holds id-token: write. Every step that can mint
+  # the OIDC token can produce a signature that passes our own verification,
+  # so the token is kept away from release-please and its tag-referenced
+  # actions.
+  publish:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
       - uses: azure/setup-helm@v4
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         with:
           version: "3.17.0"
 
       - uses: actions/checkout@v4
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
 
+      # SHA pinned because the binary it installs is handed this run's OIDC
+      # token, and a signature made with that token says this workflow built
+      # the chart.
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      # Helm and cosign keep separate credential stores, so each logs in.
       - name: Log in to GHCR
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            cosign login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Package and push to GHCR
-        if: steps.release.outputs['charts/n8n--release_created'] == 'true'
+        id: push
         env:
-          CHART_VERSION: ${{ steps.release.outputs['charts/n8n--version'] }}
+          CHART_VERSION: ${{ needs.release.outputs.version }}
         run: |
+          set -euo pipefail
+
           helm package charts/n8n --destination /tmp/chart-pkg/
-          helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io/n8n-helm-chart
+          helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io/n8n-helm-chart 2>&1 | tee /tmp/push.log
+
+          # The chart is signed by digest rather than by tag: a tag can be moved
+          # to other content later, a digest cannot.
+          digest=$(awk '$1 == "Digest:" { print $2 }' /tmp/push.log)
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::could not read the pushed chart's digest from helm push, so there is nothing to sign."
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # helm push appends the chart name, so the chart lives one level below
+      # the push target above.
+      - name: Sign the chart
+        env:
+          CHART: ghcr.io/n8n-io/n8n-helm-chart/n8n@${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "$CHART"
+
+      # The command the README gives users, by version tag as they run it. This
+      # checks the tag resolves to the signed digest as well as the signature,
+      # and fails the release if either is wrong.
+      - name: Verify the signature
+        env:
+          CHART: ghcr.io/n8n-io/n8n-helm-chart/n8n:${{ needs.release.outputs.version }}
+        run: |
+          cosign verify "$CHART" \
+            --certificate-identity "https://github.com/n8n-io/n8n-hosting/.github/workflows/release.yml@refs/heads/main" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            > /dev/null

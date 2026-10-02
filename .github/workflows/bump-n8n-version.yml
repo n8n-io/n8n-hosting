@@ -1,7 +1,7 @@
 # Opens the weekly n8n version bump PR.
 #
 # Every Wednesday this resolves what n8n's `stable` release points at and, if it
-# has moved, rewrites the nine version pins through scripts/bump-n8n-version.sh
+# has moved, rewrites the eleven version pins through scripts/bump-n8n-version.sh
 # and opens one auto-merging PR. Release-please then cuts the chart release from
 # the squashed commit, so the weekly chart release also picks up whatever chart
 # work merged during the week.
