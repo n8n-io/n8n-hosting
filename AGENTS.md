@@ -7,6 +7,19 @@ Official deployment artefacts for self-hosted n8n. This file is for AI agents wo
 - `charts/n8n/`: the maintained Helm chart. Most work happens here.
 - `docker-compose/`, `docker-caddy/`, `kubernetes/`, `aws-cloudformation/`: the other artefacts. Pinned to the same n8n version as the chart; otherwise low-touch.
 
+## Branches
+
+Two branches take chart work until chart 2.0 is released.
+
+- `main` is the 1.x chart, released every week. Fixes, non-breaking features, CI and docs target `main`.
+- `chart-v2` is the 2.0 chart. A change that alters what an existing install renders or accepts targets `chart-v2`: a removed or renamed value, a changed default, a `feat(chart)!:` commit. It releases `2.0.0-rc.N` pre-releases from `release-please-config.chart-v2.json` and `.release-please-manifest.chart-v2.json`.
+
+Branch from the branch the ticket targets, and open the PR against it. When the ticket does not say, a breaking change goes to `chart-v2` and everything else to `main`.
+
+Until 2.0.0 is released, merge `main` into `chart-v2` regularly with a merge commit, so the release candidates carry the 1.x fixes. Never merge `chart-v2` into `main` before then. Do not rebase `chart-v2`. Do not cherry-pick into it either. On a merge conflict in `Chart.yaml`, keep `chart-v2`'s `version`. In `CHANGELOG.md`, keep the entries from both sides.
+
+To release 2.0.0, add a commit to `chart-v2` with a `Release-As: 2.0.0` footer, because release-please on that branch only ever increments the `rc` number. Then merge `chart-v2` into `main` and delete it. 1.x maintenance moves to a maintenance branch of its own.
+
 ## Design and decisions
 
 `charts/n8n/DESIGN.md` holds the design principles for the chart. Check every chart change against it before opening a PR, and cite the principle when a review comment rests on one.
@@ -22,7 +35,7 @@ Most work here is a chart change. Take it in this order:
 1. Read the templates, `values.yaml`, `values.schema.json` and the examples your change touches, and write in the style already there.
 2. Check the change against `charts/n8n/DESIGN.md`.
 3. Render before and after, and read the diff. Anything in it you did not mean to change is a defect in the change, so fix it before opening the PR.
-4. Keep existing installs rendering exactly as they do today. A new value needs a default that changes nothing, unless the change is a deliberate break landing on a major.
+4. Keep existing installs rendering exactly as they do today. A new value needs a default that changes nothing, unless the change is a deliberate break landing on the next major (see Branches).
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.
 6. Cover the rendered behaviour with a `helm-unittest` case in `charts/n8n/tests/`. A new `fail` in `n8n.validate` gets a `failedTemplate` case and a passing case for the valid shape.
 7. Leave `Chart.yaml` `version` alone. release-please owns it.
