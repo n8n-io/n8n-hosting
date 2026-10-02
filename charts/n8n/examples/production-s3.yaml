@@ -137,9 +137,6 @@ config:
       value: "info"
     - name: N8N_LOG_OUTPUT
       value: "console"
-    
-    - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
-      value: "50"
 
 executions:
   concurrency:
