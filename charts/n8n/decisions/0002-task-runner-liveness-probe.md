@@ -1,7 +1,7 @@
 # 0002. The task-runner sidecar has a liveness probe only
 
 Date: 2026-10-04
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/223
 
 ## Context
 
