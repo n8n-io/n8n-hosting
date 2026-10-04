@@ -223,6 +223,23 @@ persistence:
   size: 10Gi
   storageClassName: ""
 
+# ----- Additional Kubernetes resources -----
+# Arbitrary Kubernetes objects rendered as part of this Helm release.
+# Each entry is a map or a YAML string, and is passed through Helm tpl, so it
+# can reference the release (e.g. `{{ include "n8n.fullname" . }}-main` for the
+# main Service). Escape any literal `{{` as `{{ "{{" }}`, for example in a
+# Prometheus alert annotation. The chart adds the app.kubernetes.io/* labels
+# and the release namespace, unless the object sets its own.
+extraObjects: []
+# Examples:
+# extraObjects:
+#   - apiVersion: v1
+#     kind: ConfigMap
+#     metadata:
+#       name: '{{ include "n8n.fullname" . }}-extra'
+#     data:
+#       summary: '{{ "{{" }} $labels.instance }} is down'
+
 # ----- External Volumes -----
 extraVolumes: []
 # Examples:

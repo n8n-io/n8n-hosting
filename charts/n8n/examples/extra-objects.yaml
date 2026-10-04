@@ -1,0 +1,90 @@
+# Example: deploy objects the chart does not template, with extraObjects.
+#
+# Each entry goes through Helm tpl, so it can name things the chart creates and
+# follows the release name and namespace without editing. The three entries
+# below show the three things to know:
+# - a map entry that references the release (a Traefik IngressRoute)
+# - a literal {{ escaped for a tool with its own templates (a PrometheusRule)
+# - a string entry, for an object easier to write as plain YAML text
+#
+# Prerequisites:
+# - Traefik v3, which provides the traefik.io/v1alpha1 CRDs.
+# - The Prometheus Operator, which provides the monitoring.coreos.com/v1 CRDs.
+# - A TLS Secret named n8n-tls in the release namespace.
+# - External PostgreSQL and Redis services for queue mode.
+# Remove any entry whose CRDs your cluster does not have.
+
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+database:
+  useExternal: true
+  host: "postgres.example.internal"
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+redis:
+  enabled: true
+  useExternal: true
+  host: "redis.example.internal"
+  passwordSecret:
+    name: "n8n-redis-secret"
+    key: "password"
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 2
+  workerConcurrency: 10
+
+webhook:
+  url: "https://n8n.example.com"
+
+# The IngressRoute replaces the chart's Ingress.
+ingress:
+  enabled: false
+
+extraObjects:
+  # The chart names the main Service <fullname>-main, so the route references
+  # it rather than hard-coding a name that changes with the release.
+  # The port is service.port, 5678 by default.
+  - apiVersion: traefik.io/v1alpha1
+    kind: IngressRoute
+    metadata:
+      name: '{{ include "n8n.fullname" . }}'
+    spec:
+      entryPoints:
+        - websecure
+      routes:
+        - match: Host(`n8n.example.com`)
+          kind: Rule
+          services:
+            - name: '{{ include "n8n.fullname" . }}-main'
+              port: 5678
+      tls:
+        secretName: n8n-tls
+
+  # Prometheus fills in {{ $labels.instance }} when the alert fires, so Helm
+  # must pass it through. {{ "{{" }} renders as a literal {{.
+  - apiVersion: monitoring.coreos.com/v1
+    kind: PrometheusRule
+    metadata:
+      name: '{{ include "n8n.fullname" . }}-alerts'
+    spec:
+      groups:
+        - name: n8n
+          rules:
+            - alert: N8nDown
+              expr: 'up{namespace="{{ .Release.Namespace }}", service="{{ include "n8n.fullname" . }}-main"} == 0'
+              for: 5m
+              annotations:
+                summary: '{{ "{{" }} $labels.instance }} has been down for 5 minutes'
+
+  # A string entry is rendered as written, then parsed as YAML.
+  - |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: {{ include "n8n.fullname" . }}-endpoints
+    data:
+      main: http://{{ include "n8n.fullname" . }}-main.{{ .Release.Namespace }}.svc:5678

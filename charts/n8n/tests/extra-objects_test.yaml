@@ -1,0 +1,238 @@
+# extraObjects entries go through tpl, so these cases pin what a user can
+# reference, how a literal {{ is written, and what the chart adds to each object.
+suite: 'extraObjects'
+templates:
+  - templates/extra-objects.yaml
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+release:
+  name: prod
+  namespace: automation
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders nothing by default
+    template: templates/extra-objects.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: expands release references in a map entry
+    template: templates/extra-objects.yaml
+    set:
+      extraObjects:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: '{{ include "n8n.fullname" . }}-extra'
+          data:
+            service: '{{ include "n8n.fullname" . }}-main'
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: prod-n8n-extra
+      - equal:
+          path: data.service
+          value: prod-n8n-main
+
+  - it: expands release references in a string entry
+    template: templates/extra-objects.yaml
+    set:
+      extraObjects:
+        - |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: {{ .Release.Name }}-extra
+    asserts:
+      - equal:
+          path: metadata.name
+          value: prod-extra
+
+  - it: renders an escaped {{ as a literal
+    template: templates/extra-objects.yaml
+    set:
+      extraObjects:
+        - apiVersion: monitoring.coreos.com/v1
+          kind: PrometheusRule
+          metadata:
+            name: n8n-alerts
+          spec:
+            groups:
+              - name: n8n
+                rules:
+                  - alert: N8nDown
+                    expr: up == 0
+                    annotations:
+                      summary: '{{ "{{" }} $labels.instance }} is down'
+    asserts:
+      - equal:
+          path: spec.groups[0].rules[0].annotations.summary
+          value: '{{ $labels.instance }} is down'
+
+  - it: fails on an unescaped {{ that is not a Helm template
+    template: templates/extra-objects.yaml
+    set:
+      extraObjects:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: n8n-alerts
+          data:
+            summary: '{{ $labels.instance }} is down'
+    asserts:
+      - failedTemplate:
+          errorPattern: 'undefined variable "\$labels"'
+
+  - it: adds only the app.kubernetes.io labels, and the object's own labels win
+    template: templates/extra-objects.yaml
+    set:
+      commonLabels:
+        team: automation
+      extraObjects:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: extra
+            labels:
+              app.kubernetes.io/name: custom
+              tier: edge
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/name: custom
+            app.kubernetes.io/instance: prod
+            app.kubernetes.io/managed-by: Helm
+            tier: edge
+      - exists:
+          path: metadata.labels["app.kubernetes.io/version"]
+      - notExists:
+          path: metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: metadata.labels.team
+
+  - it: puts an object without a namespace in the release namespace
+    template: templates/extra-objects.yaml
+    set:
+      extraObjects:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: extra
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: automation
+
+  - it: keeps a namespace the object sets
+    template: templates/extra-objects.yaml
+    set:
+      extraObjects:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: extra
+            namespace: monitoring
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+
+  - it: renders every entry as its own document
+    template: templates/extra-objects.yaml
+    set:
+      extraObjects:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: first
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: second
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: second
+        documentIndex: 1
+
+  - it: rejects an entry without apiVersion, kind or metadata.name
+    template: templates/deployment-main.yaml
+    set:
+      extraObjects:
+        - kind: ConfigMap
+          data:
+            key: value
+    asserts:
+      - failedTemplate:
+          errorMessage: 'extraObjects[0] must set apiVersion, kind and metadata.name.'
+
+  - it: rejects a string entry that does not render to an object
+    template: templates/deployment-main.yaml
+    set:
+      extraObjects:
+        - |
+          - first
+          - second
+    asserts:
+      - failedTemplate:
+          errorPattern: '^extraObjects\[0\] must render to a single Kubernetes object, as a map or a YAML string\.'
+
+  - it: accepts a valid entry
+    template: templates/deployment-main.yaml
+    set:
+      extraObjects:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: extra
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects an entry that is neither a map nor a string
+    template: templates/deployment-main.yaml
+    set:
+      extraObjects:
+        - 42
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/extraObjects/0': got number, want string or object"
+
+  - it: renders the example with release references expanded and the escape kept
+    template: templates/extra-objects.yaml
+    values:
+      - ../examples/extra-objects.yaml
+    asserts:
+      - hasDocuments:
+          count: 3
+      - equal:
+          path: spec.routes[0].services[0].name
+          value: prod-n8n-main
+        documentSelector:
+          path: kind
+          value: IngressRoute
+      - equal:
+          path: spec.groups[0].rules[0].annotations.summary
+          value: '{{ $labels.instance }} has been down for 5 minutes'
+        documentSelector:
+          path: kind
+          value: PrometheusRule
+      - equal:
+          path: spec.groups[0].rules[0].expr
+          value: 'up{namespace="automation", service="prod-n8n-main"} == 0'
+        documentSelector:
+          path: kind
+          value: PrometheusRule
+      - equal:
+          path: data.main
+          value: http://prod-n8n-main.automation.svc:5678
+        documentSelector:
+          path: kind
+          value: ConfigMap

@@ -61,3 +61,12 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'podLabels."enabled" must be a string (got bool). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. "enabled": "true".'
+
+  - it: rejects an extraObjects entry that is neither a map nor a string
+    template: templates/deployment-main.yaml
+    set:
+      extraObjects:
+        - 42
+    asserts:
+      - failedTemplate:
+          errorPattern: '^extraObjects\[0\] must render to a single Kubernetes object, as a map or a YAML string\.'
