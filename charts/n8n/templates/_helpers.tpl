@@ -95,6 +95,32 @@ appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
 {{- end -}}
 
 {{/*
+Task-runner sidecar container, shared by the main pod (standalone) and worker
+pods (queue mode) so both sidecars stay the same.
+*/}}
+{{- define "n8n.taskRunnerContainer" -}}
+- name: task-runner
+  image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
+  imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  env:
+    {{- include "n8n.taskRunnerSidecarEnv" . | nindent 4 }}
+  resources:
+    {{- toYaml .Values.taskRunners.resources | nindent 4 }}
+  {{- if .Values.taskRunners.customConfig.enabled }}
+  volumeMounts:
+    - name: task-runner-config
+      mountPath: /etc/n8n-task-runners.json
+      subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
+      readOnly: true
+  {{- end }}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "n8n.serviceAccountName" -}}
