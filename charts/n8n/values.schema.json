@@ -150,6 +150,25 @@
             }
           }
         },
+        "probes": {
+          "type": "object",
+          "description": "Probes against the launcher's health endpoint in the task-runner sidecar",
+          "additionalProperties": false,
+          "properties": {
+            "liveness": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "path": { "type": "string", "minLength": 1 },
+                "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+                "periodSeconds": { "type": "integer", "minimum": 1 },
+                "timeoutSeconds": { "type": "integer", "minimum": 1 },
+                "failureThreshold": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        },
         "extraEnv": {
           "type": "array",
           "items": { "type": "object" }

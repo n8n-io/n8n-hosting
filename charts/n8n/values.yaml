@@ -145,6 +145,17 @@ taskRunners:
     limits:
       cpu: 500m
       memory: 512Mi
+  # Liveness probe against the launcher's health endpoint in the sidecar.
+  # It uses port 5680, or N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT when you set
+  # it in extraEnv.
+  probes:
+    liveness:
+      enabled: true
+      path: /healthz
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 30
+      failureThreshold: 6
 
   # Additional environment variables for task runners
   extraEnv: []

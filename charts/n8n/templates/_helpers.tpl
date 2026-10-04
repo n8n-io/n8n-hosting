@@ -111,6 +111,18 @@ pods (queue mode) so both sidecars stay the same.
     {{- include "n8n.taskRunnerSidecarEnv" . | nindent 4 }}
   resources:
     {{- toYaml .Values.taskRunners.resources | nindent 4 }}
+  {{- $probes := .Values.taskRunners.probes | default dict }}
+  {{- $port := include "n8n.taskRunnerHealthCheckPort" . }}
+  {{- if $port }}
+  {{- /* The launcher answers this itself, so a runner busy with a long task
+  does not fail it. The launcher restarts unhealthy runners on its own. */}}
+  {{- with $probes.liveness }}
+  {{- if .enabled }}
+  livenessProbe:
+    {{- include "n8n.taskRunnerProbe" (dict "probe" . "port" $port) | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
   {{- if .Values.taskRunners.customConfig.enabled }}
   volumeMounts:
     - name: task-runner-config
@@ -118,6 +130,36 @@ pods (queue mode) so both sidecars stay the same.
       subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
       readOnly: true
   {{- end }}
+{{- end -}}
+
+{{/*
+Port of the launcher's health endpoint in the task-runner sidecar. The launcher
+reads N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT, so the probe follows it when
+taskRunners.extraEnv sets it, and use the launcher's default otherwise. Empty
+when it comes from valueFrom, which the chart cannot read, so the probe is
+left out rather than pointed at the wrong port.
+*/}}
+{{- define "n8n.taskRunnerHealthCheckPort" -}}
+{{- $port := "5680" -}}
+{{- range .Values.taskRunners.extraEnv -}}
+{{- if eq (.name | default "") "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT" -}}
+{{- $port = .value | default "" | toString -}}
+{{- end -}}
+{{- end -}}
+{{- $port -}}
+{{- end -}}
+
+{{/*
+A task-runner sidecar probe against the launcher's health endpoint.
+*/}}
+{{- define "n8n.taskRunnerProbe" -}}
+httpGet:
+  path: {{ .probe.path }}
+  port: {{ .port }}
+initialDelaySeconds: {{ .probe.initialDelaySeconds }}
+periodSeconds: {{ .probe.periodSeconds }}
+timeoutSeconds: {{ .probe.timeoutSeconds }}
+failureThreshold: {{ .probe.failureThreshold }}
 {{- end -}}
 
 {{/*
