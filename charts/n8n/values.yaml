@@ -640,12 +640,23 @@ database:
     name: "n8n-db-password"          # <-- K8s Secret name
     key: "password"                  # <-- Key inside the secret
   # SSL configuration
+  # Server verification needs only a CA, and none at all if the server's CA is
+  # publicly trusted. Mutual TLS also needs a client key, which comes from
+  # existingSecret, and its certificate.
   ssl:
     enabled: false                   # <-- Enable SSL connection
     ca: ""                           # <-- CA certificate as PEM contents, not a file path
     cert: ""                         # <-- Client certificate as PEM contents, not a file path
-    key: ""                          # <-- Path to client key file
+    key: ""                          # <-- Not read by the chart. Use existingSecret.keyKey instead
     rejectUnauthorized: true         # <-- Reject unauthorized SSL connections
+    # TLS material from a Secret you manage. Each key you set is passed to n8n
+    # from that Secret; leave a key empty to skip it. A cert-manager Certificate
+    # Secret holds tls.crt and tls.key, plus ca.crt when its issuer provides one.
+    existingSecret:
+      name: ""                       # <-- K8s Secret name
+      caKey: ""                      # <-- Key holding the CA certificate (instead of ca)
+      certKey: ""                    # <-- Key holding the client certificate (instead of cert)
+      keyKey: ""                     # <-- Key holding the client private key
 
 # ----- Redis (required for queue mode) -----
 redis:

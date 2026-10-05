@@ -158,6 +158,32 @@ per mistake.
 {{- $errs = append $errs "multiMain.enabled=true requires multiMain.replicas >= 2" -}}
 {{- end -}}
 
+{{/* --- Database TLS from an existing Secret --- */}}
+{{- $ssl := .Values.database.ssl -}}
+{{- $sslSecret := $ssl.existingSecret | default dict -}}
+{{- $sslSecretKeys := or $sslSecret.caKey $sslSecret.certKey $sslSecret.keyKey -}}
+{{- if and $sslSecret.name (not $sslSecretKeys) -}}
+{{- $errs = append $errs "database.ssl.existingSecret.name is set but no key is. Set at least one of caKey, certKey or keyKey to a key your Secret holds, for example caKey: ca.crt." -}}
+{{- end -}}
+{{- if and $sslSecretKeys (not $sslSecret.name) -}}
+{{- $errs = append $errs "database.ssl.existingSecret has a key set but no name. Set database.ssl.existingSecret.name to the Secret that holds the keys." -}}
+{{- end -}}
+{{- if and $sslSecret.certKey (not $sslSecret.keyKey) -}}
+{{- $errs = append $errs "database.ssl.existingSecret.certKey is set but keyKey is not. A client certificate is only used with its private key." -}}
+{{- end -}}
+{{- if and $sslSecret.keyKey (not (or $sslSecret.certKey $ssl.cert)) -}}
+{{- $errs = append $errs "database.ssl.existingSecret.keyKey is set but there is no client certificate. Set database.ssl.existingSecret.certKey, or database.ssl.cert." -}}
+{{- end -}}
+{{- if and (or $sslSecret.name $sslSecretKeys) (not $ssl.enabled) -}}
+{{- $errs = append $errs "database.ssl.existingSecret is set but database.ssl.enabled is false. Set database.ssl.enabled: true, or remove database.ssl.existingSecret." -}}
+{{- end -}}
+{{- if and $ssl.ca $sslSecret.caKey -}}
+{{- $errs = append $errs "database.ssl.ca and database.ssl.existingSecret.caKey are mutually exclusive. Use one or the other." -}}
+{{- end -}}
+{{- if and $ssl.cert $sslSecret.certKey -}}
+{{- $errs = append $errs "database.ssl.cert and database.ssl.existingSecret.certKey are mutually exclusive. Use one or the other." -}}
+{{- end -}}
+
 {{/* --- Task runners --- */}}
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
 {{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}

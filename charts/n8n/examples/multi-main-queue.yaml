@@ -48,7 +48,13 @@ database:
     key: "password"
   ssl:
     enabled: true
-    rejectUnauthorized: true           # Set to false only for self-signed certs (not recommended for production)
+    rejectUnauthorized: true           # Set to false only for self-signed certs (not recommended for production), instead consider providing the server's CA below
+    # If the server's CA is not publicly trusted (Amazon RDS, for example), put
+    # the provider's CA bundle in a Secret and reference it:
+    #   kubectl create secret generic postgres-ca --from-file=ca.crt=global-bundle.pem
+    # existingSecret:
+    #   name: postgres-ca
+    #   caKey: ca.crt
 
 # External Redis (production Redis)
 redis:

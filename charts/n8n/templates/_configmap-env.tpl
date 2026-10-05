@@ -1,5 +1,6 @@
 {{/*
-Environment variables from ConfigMap for all components
+Environment variables shared by all components, from the ConfigMap and from
+the user's TLS Secret
 */}}
 {{- define "n8n.sharedConfigMapEnv" -}}
 # Shared configuration from ConfigMap
@@ -61,8 +62,29 @@ Environment variables from ConfigMap for all components
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_SSL_CERT
 {{- end }}
-# DB_POSTGRESDB_SSL_KEY is not sourced from the ConfigMap because TLS private keys
-# must not be stored unencrypted. Provide it via config.extraEnv from a Secret.
+{{- with .Values.database.ssl.existingSecret }}
+{{- if .caKey }}
+- name: DB_POSTGRESDB_SSL_CA
+  valueFrom:
+    secretKeyRef:
+      name: {{ .name | quote }}
+      key: {{ .caKey | quote }}
+{{- end }}
+{{- if .certKey }}
+- name: DB_POSTGRESDB_SSL_CERT
+  valueFrom:
+    secretKeyRef:
+      name: {{ .name | quote }}
+      key: {{ .certKey | quote }}
+{{- end }}
+{{- if .keyKey }}
+- name: DB_POSTGRESDB_SSL_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .name | quote }}
+      key: {{ .keyKey | quote }}
+{{- end }}
+{{- end }}
 {{- if not .Values.database.ssl.rejectUnauthorized }}
 - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
   valueFrom:

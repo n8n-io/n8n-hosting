@@ -55,5 +55,12 @@ Deployment Configuration:
   - Storage: S3 ({{ .Values.s3.bucket.name }})
 {{- end }}
 
+{{- if .Values.database.ssl.key }}
+
+WARNING: database.ssl.key is set, but the chart ignores it. To supply a client
+key, set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey.
+From chart 2.0, setting database.ssl.key fails the render.
+{{- end }}
+
 Documentation: https://docs.n8n.io/
 Issues: https://github.com/n8n-io/n8n-hosting/issues
