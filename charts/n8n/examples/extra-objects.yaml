@@ -9,7 +9,8 @@
 #
 # Prerequisites:
 # - Traefik v3, which provides the traefik.io/v1alpha1 CRDs.
-# - The Prometheus Operator, which provides the monitoring.coreos.com/v1 CRDs.
+# - kube-prometheus-stack, which provides the monitoring.coreos.com/v1 CRDs
+#   and kube-state-metrics.
 # - A TLS Secret named n8n-tls in the release namespace.
 # - External PostgreSQL and Redis services for queue mode.
 # Remove any entry whose CRDs your cluster does not have.
@@ -46,8 +47,8 @@ ingress:
 
 extraObjects:
   # The chart names the main Service <fullname>-main, so the route references
-  # it rather than hard-coding a name that changes with the release.
-  # The port is service.port, 5678 by default.
+  # it rather than hard-coding a name that changes with the release. The port
+  # is the Service's named port, so it follows service.port.
   - apiVersion: traefik.io/v1alpha1
     kind: IngressRoute
     metadata:
@@ -60,12 +61,13 @@ extraObjects:
           kind: Rule
           services:
             - name: '{{ include "n8n.fullname" . }}-main'
-              port: 5678
+              port: http
       tls:
         secretName: n8n-tls
 
-  # Prometheus fills in {{ $labels.instance }} when the alert fires, so Helm
+  # Prometheus fills in {{ $labels.deployment }} when the alert fires, so Helm
   # must pass it through. {{ "{{" }} renders as a literal {{.
+  # The metric comes from kube-state-metrics, which kube-prometheus-stack installs.
   - apiVersion: monitoring.coreos.com/v1
     kind: PrometheusRule
     metadata:
@@ -75,10 +77,10 @@ extraObjects:
         - name: n8n
           rules:
             - alert: N8nDown
-              expr: 'up{namespace="{{ .Release.Namespace }}", service="{{ include "n8n.fullname" . }}-main"} == 0'
+              expr: 'kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}", deployment="{{ include "n8n.fullname" . }}-main"} == 0'
               for: 5m
               annotations:
-                summary: '{{ "{{" }} $labels.instance }} has been down for 5 minutes'
+                summary: '{{ "{{" }} $labels.deployment }} has had no available replicas for 5 minutes'
 
   # A string entry is rendered as written, then parsed as YAML.
   - |
@@ -87,4 +89,4 @@ extraObjects:
     metadata:
       name: {{ include "n8n.fullname" . }}-endpoints
     data:
-      main: http://{{ include "n8n.fullname" . }}-main.{{ .Release.Namespace }}.svc:5678
+      main: http://{{ include "n8n.fullname" . }}-main.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}

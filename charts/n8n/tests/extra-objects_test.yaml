@@ -184,6 +184,37 @@ tests:
       - failedTemplate:
           errorPattern: '^extraObjects\[0\] must render to a single Kubernetes object, as a map or a YAML string\.'
 
+  - it: rejects a string entry that holds more than one document
+    template: templates/deployment-main.yaml
+    set:
+      extraObjects:
+        - |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: first
+          ---
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: second
+    asserts:
+      - failedTemplate:
+          errorMessage: 'extraObjects[0] holds more than one YAML document. Put each object in its own entry.'
+
+  - it: accepts a string entry that starts with a document marker
+    template: templates/deployment-main.yaml
+    set:
+      extraObjects:
+        - |
+          ---
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: extra
+    asserts:
+      - notFailedTemplate: {}
+
   - it: accepts a valid entry
     template: templates/deployment-main.yaml
     set:
@@ -213,20 +244,22 @@ tests:
       - hasDocuments:
           count: 3
       - equal:
-          path: spec.routes[0].services[0].name
-          value: prod-n8n-main
+          path: spec.routes[0].services[0]
+          value:
+            name: prod-n8n-main
+            port: http
         documentSelector:
           path: kind
           value: IngressRoute
       - equal:
           path: spec.groups[0].rules[0].annotations.summary
-          value: '{{ $labels.instance }} has been down for 5 minutes'
+          value: '{{ $labels.deployment }} has had no available replicas for 5 minutes'
         documentSelector:
           path: kind
           value: PrometheusRule
       - equal:
           path: spec.groups[0].rules[0].expr
-          value: 'up{namespace="automation", service="prod-n8n-main"} == 0'
+          value: 'kube_deployment_status_replicas_available{namespace="automation", deployment="prod-n8n-main"} == 0'
         documentSelector:
           path: kind
           value: PrometheusRule

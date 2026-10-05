@@ -222,8 +222,12 @@ per mistake.
 
 {{/* --- Extra objects --- */}}
 {{- range $i, $entry := .Values.extraObjects -}}
-{{- $obj := include "n8n.extraObject" (dict "root" $ "object" $entry) | fromYaml -}}
-{{- if hasKey $obj "Error" -}}
+{{- $rendered := include "n8n.extraObject" (dict "root" $ "object" $entry) -}}
+{{- $obj := fromYaml $rendered -}}
+{{/* fromYaml keeps only the first document, so a second one would be dropped without a word. */}}
+{{- if regexMatch "(?m)^---" (trimPrefix "---" (trim $rendered)) -}}
+{{- $errs = append $errs (printf "extraObjects[%d] holds more than one YAML document. Put each object in its own entry." $i) -}}
+{{- else if hasKey $obj "Error" -}}
 {{- $errs = append $errs (printf "extraObjects[%d] must render to a single Kubernetes object, as a map or a YAML string. %s" $i $obj.Error) -}}
 {{- else if not (and $obj.apiVersion $obj.kind (dig "metadata" "name" "" $obj)) -}}
 {{- $errs = append $errs (printf "extraObjects[%d] must set apiVersion, kind and metadata.name." $i) -}}
