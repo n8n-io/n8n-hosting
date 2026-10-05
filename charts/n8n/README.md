@@ -174,6 +174,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
+| `hostAliases` | Extra `/etc/hosts` entries for all n8n pods | `[]` |
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
