@@ -18,6 +18,11 @@ webhookProcessor:
   enabled: true
   replicaCount: 2
   disableProductionWebhooksOnMainProcess: true
+  # executions.concurrency.productionLimit reaches main and the workers only,
+  # so the webhook processors get the same limit here.
+  extraEnv:
+    - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
+      value: "50"
 
 # Enterprise license required for multi-main setup
 license:
