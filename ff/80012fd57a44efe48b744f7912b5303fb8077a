@@ -1,0 +1,27 @@
+docker-caddy/docker-compose.yml
+  s_9a7361ab934490::t_0684dd72232921 19
+docker-compose/subfolderWithSSL/docker-compose.yml
+  s_9a7361ab934490::t_4dc16b8d393549 48
+docker-compose/withPostgres/docker-compose.yml
+  s_9a7361ab934490::t_8b079449742164 31
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_9a7361ab934490::t_c6cf8a76e4f4c6 10
+kubernetes/n8n-deployment.yaml
+  s_9a7361ab934490::t_27a6c4618057fe 34-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff80012fd57a44efe48b744f7912b5303fb8077a",
+  "prompts": {},
+  "sessions": {
+    "s_9a7361ab934490": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf0f41e7-f5d0-4056-8505-89dbb02b2f7b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
