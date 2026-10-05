@@ -306,7 +306,9 @@ jobs:
       # provide, and <example>.post.sh checks it works with the chart.
       - name: Prepare the cluster for ${{ matrix.example }}.yaml
         if: hashFiles(format('charts/n8n/ci/install/{0}.pre.sh', matrix.example)) != ''
-        run: bash "charts/n8n/ci/install/${{ matrix.example }}.pre.sh"
+        env:
+          EXAMPLE: ${{ matrix.example }}
+        run: bash "charts/n8n/ci/install/${EXAMPLE}.pre.sh"
 
       - name: Install chart with ${{ matrix.example }}.yaml
         env:
@@ -322,7 +324,9 @@ jobs:
 
       - name: Check ${{ matrix.example }}.yaml against the cluster
         if: hashFiles(format('charts/n8n/ci/install/{0}.post.sh', matrix.example)) != ''
-        run: bash "charts/n8n/ci/install/${{ matrix.example }}.post.sh"
+        env:
+          EXAMPLE: ${{ matrix.example }}
+        run: bash "charts/n8n/ci/install/${EXAMPLE}.post.sh"
 
       - name: Show cluster state
         if: failure()

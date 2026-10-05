@@ -26,6 +26,12 @@ spec:
           env:
             - name: COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS
               value: n8n-ci
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
           readinessProbe:
             httpGet:
               path: /n8n-ci
