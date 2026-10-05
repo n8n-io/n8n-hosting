@@ -204,6 +204,14 @@ Parameters:
     Default: ""
     Description: "Only used when EnablePythonTaskRunner=true. External (pip) packages the runner may import (maps to N8N_RUNNERS_EXTERNAL_ALLOW). Comma-separated or * for all. Empty (default) = none."
 
+# AWS Partner Revenue Measurement
+  AwsPartnerAttributionTag:
+    Type: String
+    Default: "pc:26au7o6cdeh7fqdt376h9m9xk"
+    AllowedPattern: "^(|pc:[a-z0-9]+)$"
+    ConstraintDescription: "Must be empty, or an AWS Marketplace product code such as pc:abc123."
+    Description: "Value of the aws-apn-id tag added to the resources in this stack. AWS uses it for AWS Partner Revenue Measurement, which attributes the AWS spend of tagged resources to n8n as usage data. Leave empty to remove the tag. Running Fargate tasks keep their tags until they are replaced."
+
 # labels to make everything easier to read during setup
 Metadata:
   AWS::CloudFormation::Interface:
@@ -272,12 +280,18 @@ Metadata:
           - EnablePythonTaskRunner
           - PythonStdlibAllow
           - PythonExternalAllow
+      - Label:
+          default: "AWS Partner Attribution"
+        Parameters:
+          - AwsPartnerAttributionTag
 
 Conditions:
   # >=1 replica enables Multi-AZ + automatic failover
   RedisHA: !Not [ !Equals [ !Ref RedisReplicasPerNodeGroup, 0 ] ]
   # opt-in external task runner sidecar (JS + native Python)
   PythonRunner: !Equals [ !Ref EnablePythonTaskRunner, "true" ]
+  # adds the aws-apn-id tag to every taggable resource unless the parameter is empty
+  HasAwsPartnerAttributionTag: !Not [ !Equals [ !Ref AwsPartnerAttributionTag, "" ] ]
 
 Resources:
 
@@ -292,6 +306,8 @@ Resources:
           "LicenseKey": "${N8nLicenseKey}",
           "TenantId": "${N8nTenantId}"
         }
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # create encryption key secret        
   N8nEncryptionKey:
@@ -304,6 +320,8 @@ Resources:
         - !Split
           - "/"
           - !Ref AWS::StackId
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # create VPC just for n8n
   VPC:
@@ -315,6 +333,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-vpc"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # Internet Gateway (created and attached to the VPC; not routed to by private subnets)
   InternetGateway:
@@ -323,6 +342,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-igw"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -341,6 +361,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-private-1"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
@@ -352,6 +373,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-private-2"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   PrivateSubnet3:
     Type: AWS::EC2::Subnet
@@ -363,6 +385,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-private-3"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # Public subnets, first two in chosen region  
   PublicSubnet1:
@@ -375,6 +398,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-public-1"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -386,6 +410,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-public-2"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # route table for  allowing public access
   PublicRouteTable:
@@ -395,6 +420,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-public-rt"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   PublicDefaultRoute:
     Type: AWS::EC2::Route
@@ -420,6 +446,8 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   NatGatewayAz1:
     Type: AWS::EC2::NatGateway
@@ -430,11 +458,14 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-nat-az1"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
   
   NatEipAz2:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   NatGatewayAz2:
     Type: AWS::EC2::NatGateway
@@ -445,6 +476,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-nat-az2"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # private route tables configured per AZ
 
@@ -455,6 +487,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-private-rt-az1"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   PrivateDefaultRouteViaNatAz1:
     Type: AWS::EC2::Route
@@ -470,6 +503,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-private-rt-az2"
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   PrivateDefaultRouteViaNatAz2:
     Type: AWS::EC2::Route
@@ -512,6 +546,8 @@ Resources:
           FromPort: 443
           ToPort: 443
           CidrIp: 0.0.0.0/0
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # separate egress rules to prevent circular reference 
   ALBTaskEgress:
@@ -582,6 +618,8 @@ Resources:
           - 
             Key: "connection_logs.s3.enabled"
             Value: "false"
+        Tags:
+          - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # ALB target groups
   HttpAppTargetGroup:
@@ -610,6 +648,8 @@ Resources:
           Value: "30"
         - Key: slow_start.duration_seconds
           Value: "30"
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # target group for the dedicated webhook service (webhook process serves /healthz, not /)
   WebhookTargetGroup:
@@ -639,6 +679,8 @@ Resources:
           Value: "30"
         - Key: slow_start.duration_seconds
           Value: "30"
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # Listeners
   ElasticLoadBalancingV2Listener2:
@@ -654,6 +696,7 @@ Resources:
             Order: 1
             TargetGroupArn: !Ref HttpAppTargetGroup
             Type: "forward"
+        Tags: !If [HasAwsPartnerAttributionTag, [{Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}], !Ref AWS::NoValue]
 
   ElasticLoadBalancingV2Listener3:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -669,6 +712,7 @@ Resources:
               Protocol: HTTPS
               Port: 443
               StatusCode: HTTP_301
+        Tags: !If [HasAwsPartnerAttributionTag, [{Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}], !Ref AWS::NoValue]
 
   # route production webhook + form paths to the webhook service; everything else
   # (UI, REST API, and /webhook-test/* which needs the editor) stays on the mains
@@ -689,6 +733,7 @@ Resources:
         - Order: 1
           Type: forward
           TargetGroupArn: !Ref WebhookTargetGroup
+      Tags: !If [HasAwsPartnerAttributionTag, [{Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}], !Ref AWS::NoValue]
 
   # create A record in hosted zone
   N8nHostRecord:
@@ -713,6 +758,8 @@ Resources:
       # "${AWS::StackName}-n8n-bin" collides in S3's global namespace, can
       # exceed the 63-char limit, and breaks on uppercase stack names.
       # Everything references the bucket via !Ref S3BinaryBucket.
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
   
   # directly attach bucket policy
   S3BucketPolicy:
@@ -750,6 +797,8 @@ Resources:
         - !Ref PrivateRouteTableAz1
         - !Ref PrivateRouteTableAz2
       VpcEndpointType: Gateway
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # security groups and subnet group for postgres
   RDSSecurityGroup:
@@ -758,6 +807,8 @@ Resources:
       GroupName: !Sub "${AWS::StackName}-rds-sg"
       GroupDescription: Allow PostgreSQL access to RDS on 5432
       VpcId: !Ref VPC
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
   
   # separate security group ingresses for workers and mains to prevent circular reference
   RDSSecGroupIngressMain:
@@ -785,6 +836,8 @@ Resources:
       DBSubnetGroupName: !Sub "${AWS::StackName}-pg-db-subnets"
       DBSubnetGroupDescription: Subnet group for RDS Postgres
       SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3]
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # launch postgresdb instance
   PostgresDB:
@@ -820,6 +873,8 @@ Resources:
       DeletionProtection: false
       EnablePerformanceInsights: false
       CopyTagsToSnapshot: true
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
 
   # create secrets file for n8n to connect to RDS
@@ -836,6 +891,8 @@ Resources:
           "port": "5432",
           "database": "${DBName}"
         }  
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # create subnet group for elasticache
   CacheSubnetGroup:
@@ -844,6 +901,8 @@ Resources:
       Description: Subnet group for Redis
       SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3]
       CacheSubnetGroupName: !Sub ${AWS::StackName}-subnets
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # create security group for elasticache
   CacheSecurityGroup:
@@ -851,6 +910,8 @@ Resources:
     Properties:
       GroupDescription: Allow Redis (TCP 6379) from the app SG
       VpcId: !Ref VPC
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # separate security group ingresses for workers and mains
   CacheSecGroupIngressMain:
@@ -877,6 +938,8 @@ Resources:
     Properties:
       CacheParameterGroupFamily: redis7
       Description: Minimal parameter group (defaults)
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # create password secret for n8n to connect to redis
   RedisPasswordSecret:
@@ -885,6 +948,8 @@ Resources:
       Name: !Sub "${AWS::StackName}-app-user/redispassword"
       Description: Password for n8n to connect to redis
       SecretString: !Ref RedisPassword
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # create elasticache replication group for redis
   Redis:
@@ -905,6 +970,8 @@ Resources:
       AtRestEncryptionEnabled: true
       TransitEncryptionEnabled: true
       Port: 6379
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
 
 
@@ -922,6 +989,8 @@ Resources:
         CapacityProviders: 
           - "FARGATE"
           - "FARGATE_SPOT"
+        Tags:
+          - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
 # security group for n8n main tasks
   TaskSecGroupMain:
@@ -950,6 +1019,8 @@ Resources:
           FromPort: 443
           ToPort: 443
           CidrIp: 0.0.0.0/0
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
 # security group for n8n worker tasks
   TaskSecGroupWorker:
@@ -973,6 +1044,8 @@ Resources:
           FromPort: 443
           ToPort: 443
           CidrIp: 0.0.0.0/0
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # create log group for n8n in cloudwatch logs
   N8nLogGroup:
@@ -980,6 +1053,8 @@ Resources:
     Properties:
       LogGroupName: !Sub /ecs/${AWS::StackName}
       RetentionInDays: 7
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
       
   # ECS Task Role (shared by workers and mains)
   # in-line policy grants access to s3
@@ -1020,6 +1095,8 @@ Resources:
                   - "s3:DeleteObject"
                 Resource:
                   - !Sub "arn:aws:s3:::${S3BinaryBucket}/*"
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
 
   # ECS Task Execution Role
@@ -1069,6 +1146,8 @@ Resources:
                 Resource: 
                   - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${AWS::StackName}"
                   - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${AWS::StackName}:*"                  
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
   # Task Definition for n8n main
   N8nMainTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -1308,6 +1387,8 @@ Resources:
                 awslogs-region: !Sub ${AWS::Region}
                 awslogs-stream-prefix: ecs
           - !Ref "AWS::NoValue"
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # Fargate Service for main
   ECSMainService:
@@ -1327,6 +1408,7 @@ Resources:
             ContainerPort: 5678
         DesiredCount: 2
         TaskDefinition: !Ref N8nMainTaskDefinition
+        PropagateTags: SERVICE
         DeploymentConfiguration: 
             MaximumPercent: 200
             MinimumHealthyPercent: 100
@@ -1350,6 +1432,8 @@ Resources:
             CapacityProvider: "FARGATE"
             Weight: 1
             Base: 0
+        Tags:
+          - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
   
   # Task Definition for workers
   N8nWorkerTaskDefinition:
@@ -1580,6 +1664,8 @@ Resources:
                 awslogs-region: !Sub ${AWS::Region}
                 awslogs-stream-prefix: ecs
           - !Ref "AWS::NoValue"
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # Fargate Service for workers
   ECSWorkerService:
@@ -1594,6 +1680,7 @@ Resources:
         Cluster: !GetAtt ECSCluster.Arn
         DesiredCount: !Ref WorkerMinTasks
         TaskDefinition: !Ref N8nWorkerTaskDefinition
+        PropagateTags: SERVICE
         DeploymentConfiguration: 
             MaximumPercent: 200
             MinimumHealthyPercent: 100
@@ -1618,6 +1705,8 @@ Resources:
             CapacityProvider: "FARGATE"
             Weight: 1
             Base: 0
+        Tags:
+          - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # auto scaling for worker service
   ECSServiceScalableTarget:
@@ -1631,6 +1720,8 @@ Resources:
       MinCapacity: !Ref WorkerMinTasks
       MaxCapacity: !Ref WorkerMaxTasks
       RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # scaling rules for CPU
   ECSServiceCPUScalingPolicy:
@@ -1670,6 +1761,8 @@ Resources:
     Properties:
       GroupDescription: "n8n worker-autoscaler Lambda (reaches Redis 6379)"
       VpcId: !Ref VPC
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   CacheSecGroupIngressScaler:
     Type: AWS::EC2::SecurityGroupIngress
@@ -1706,6 +1799,8 @@ Resources:
               - Effect: Allow
                 Action: [ "cloudwatch:PutMetricData" ]
                 Resource: "*"
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   WorkerScalerFunction:
     Type: AWS::Lambda::Function
@@ -1783,6 +1878,8 @@ Resources:
                   {"MetricName": "WorkerBacklogPerTask", "Value": per_task, "Unit": "Count"},
               ])
               return {"waiting": waiting, "running": running, "per_task": per_task}
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   WorkerScalerSchedule:
     Type: AWS::Events::Rule
@@ -1793,6 +1890,8 @@ Resources:
       Targets:
         - Id: worker-scaler
           Arn: !GetAtt WorkerScalerFunction.Arn
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   WorkerScalerPermission:
     Type: AWS::Lambda::Permission
@@ -1979,6 +2078,8 @@ Resources:
           MountPoints:
             - SourceVolume: certs
               ContainerPath: /certs
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # Fargate Service for webhook processors. Reuses TaskSecGroupMain, which already
   # permits ALB ingress on 5678 and egress to RDS/Redis (and is allowed by both).
@@ -2000,6 +2101,7 @@ Resources:
             ContainerPort: 5678
         DesiredCount: !Ref WebhookMinTasks
         TaskDefinition: !Ref N8nWebhookTaskDefinition
+        PropagateTags: SERVICE
         DeploymentConfiguration:
             MaximumPercent: 200
             MinimumHealthyPercent: 100
@@ -2023,6 +2125,8 @@ Resources:
             CapacityProvider: "FARGATE"
             Weight: 1
             Base: 0
+        Tags:
+          - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   # auto scaling for webhook service
   ECSWebhookScalableTarget:
@@ -2036,6 +2140,8 @@ Resources:
       MinCapacity: !Ref WebhookMinTasks
       MaxCapacity: !Ref WebhookMaxTasks
       RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
   ECSWebhookCPUScalingPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy

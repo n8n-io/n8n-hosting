@@ -47,6 +47,20 @@ Before deploying, provide:
 
 The template includes placeholder defaults for some secrets so it is easy to inspect, but those values should be replaced before using the stack for a real deployment.
 
+## AWS Partner Revenue Measurement tag
+
+Every template adds the tag `aws-apn-id` to each stack resource that supports tags. The ECS services also pass the tag on to the Fargate tasks they run. AWS uses this tag for AWS Partner Revenue Measurement. It lets AWS attribute the spend of the tagged resources to n8n as an AWS Partner.
+
+The tag is usage data. AWS reports the usage and spend of the tagged resources to n8n, not the data stored in them. Check it against your own data policy before you deploy.
+
+The tag is separate from the licensing metadata that n8n sends to its licence server, and from n8n's telemetry. Removing the tag does not change either of them, and turning off telemetry does not remove the tag.
+
+The `AwsPartnerAttributionTag` parameter sets the tag value. To remove the tag, set the parameter to an empty value. The template then creates the resources without it, and a stack update removes it from existing resources.
+
+Fargate tasks get their tags only when they start. A stack update does not change tasks that are already running. They keep or lack the tag until ECS replaces them, for example on the next deployment.
+
+A stack created before this parameter existed gains the tag on its first update with these templates, because CloudFormation applies the parameter's default. To opt out, set the parameter to an empty value on that update.
+
 ## Worker Scaling
 
 The worker ECS service uses Application Auto Scaling target tracking. On the base template it scales on ECS service average CPU and memory (the `-webhooks` and `-ha` templates add queue-depth scaling on top, see below):
