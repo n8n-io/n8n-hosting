@@ -17,6 +17,6 @@ The inline `ca` and `cert` values stay, because they hold public material. Setti
 
 ## Consequences
 
-`database.ssl.key` still renders in 1.x, but `NOTES.txt` warns that it is not read and names `database.ssl.existingSecret`. Failing the render would break installs that set it, even though it never did anything, so the warning keeps 1.x upgrades in place. In 2.0, `database.ssl.key` fails the render with the replacement named, as retired keys do.
+`database.ssl.key` is still accepted in 1.x and ignored, and `NOTES.txt` warns about it and names `database.ssl.existingSecret`. Failing the render would break installs that set it, even though it never did anything, so the warning keeps 1.x upgrades in place. In 2.0, `database.ssl.key` fails the render with the replacement named, as retired keys do.
 
 Server verification alone needs no Secret: `database.ssl.enabled: true`, and the CA inline or from the Secret when the server's CA is not publicly trusted.

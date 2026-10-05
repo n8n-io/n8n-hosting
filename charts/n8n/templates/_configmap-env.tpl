@@ -67,22 +67,22 @@ the user's TLS Secret
 - name: DB_POSTGRESDB_SSL_CA
   valueFrom:
     secretKeyRef:
-      name: {{ .name }}
-      key: {{ .caKey }}
+      name: {{ .name | quote }}
+      key: {{ .caKey | quote }}
 {{- end }}
 {{- if .certKey }}
 - name: DB_POSTGRESDB_SSL_CERT
   valueFrom:
     secretKeyRef:
-      name: {{ .name }}
-      key: {{ .certKey }}
+      name: {{ .name | quote }}
+      key: {{ .certKey | quote }}
 {{- end }}
 {{- if .keyKey }}
 - name: DB_POSTGRESDB_SSL_KEY
   valueFrom:
     secretKeyRef:
-      name: {{ .name }}
-      key: {{ .keyKey }}
+      name: {{ .name | quote }}
+      key: {{ .keyKey | quote }}
 {{- end }}
 {{- end }}
 {{- if not .Values.database.ssl.rejectUnauthorized }}

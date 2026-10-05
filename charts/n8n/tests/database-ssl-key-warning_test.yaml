@@ -12,7 +12,7 @@ tests:
       database.ssl.key: "-----BEGIN PRIVATE KEY-----"
     asserts:
       - matchRegexRaw:
-          pattern: 'WARNING: database\.ssl\.key is set, but the chart does not read it'
+          pattern: 'WARNING: database\.ssl\.key is set, but the chart ignores it'
 
   - it: does not warn when database.ssl.key is empty
     asserts:
