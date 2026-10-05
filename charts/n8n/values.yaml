@@ -8,9 +8,11 @@ image:
   pullPolicy: IfNotPresent
 
 # ----- Image pull secrets -----
-# This is for the secrets for pulling an image from a
-# private repository, more information can be found here:
-# https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+# Existing Secrets of type kubernetes.io/dockerconfigjson, for pulling images
+# from a private or authenticated registry.
+# Every pod the chart creates references them, including the task-runner
+# sidecar and any extraInitContainers.
+# See https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
 # Example:
 # imagePullSecrets:
