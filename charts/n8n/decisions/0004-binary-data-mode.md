@@ -1,7 +1,7 @@
 # 0004. The chart sets a binary data mode only when S3 is enabled
 
 Date: 2026-10-02
-PR: https://github.com/n8n-io/n8n-hosting/pull/TBD
+PR: https://github.com/n8n-io/n8n-hosting/pull/220
 
 ## Context
 
