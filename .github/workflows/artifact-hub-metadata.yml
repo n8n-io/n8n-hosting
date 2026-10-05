@@ -1,0 +1,70 @@
+# Publishes artifacthub-repo.yml to the chart's OCI repository.
+#
+# Artifact Hub looks for this metadata under a fixed tag, `artifacthub.io`, and
+# identifies it by media type rather than by filename. Only someone who can
+# push to the registry can put it there, which is the whole point: it is the
+# proof of control behind the verified publisher badge.
+#
+# It is pushed from CI rather than by hand so that the registry's copy is
+# whatever was last reviewed on main, and so re-pushing it is a dispatch rather
+# than an archaeology exercise in someone's shell history.
+name: Artifact Hub metadata
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacthub-repo.yml"
+      - ".github/workflows/artifact-hub-metadata.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: artifact-hub-metadata
+  cancel-in-progress: false
+
+env:
+  # The chart's own repository, one level below the push target in release.yml,
+  # because `helm push` appends the chart name. Artifact Hub is registered
+  # against this path, so the metadata has to sit on it too.
+  REPOSITORY: ghcr.io/n8n-io/n8n-helm-chart/n8n
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # SHA pinned because the binary it installs is handed a token that can
+      # write to the chart's registry.
+      - uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
+
+      - name: Check the repository ID is set
+        run: |
+          set -euo pipefail
+
+          # Artifact Hub ignores metadata whose ID does not match, and says
+          # nothing about it: the badge simply never appears. Failing here is
+          # the only feedback there is.
+          id=$(awk '$1 == "repositoryID:" { print $2 }' artifacthub-repo.yml)
+
+          if [[ ! "$id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+            echo "::error::artifacthub-repo.yml has repositoryID '$id', which is not the UUID Artifact Hub shows on the repository's card in the control panel."
+            exit 1
+          fi
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            oras login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push the metadata
+        run: |
+          set -euo pipefail
+
+          oras push "${REPOSITORY}:artifacthub.io" \
+            --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+            artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml

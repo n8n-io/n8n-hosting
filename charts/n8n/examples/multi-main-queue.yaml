@@ -46,6 +46,15 @@ database:
   passwordSecret:
     name: "n8n-enterprise-db-secret"
     key: "password"
+  ssl:
+    enabled: true
+    rejectUnauthorized: true           # Set to false only for self-signed certs (not recommended for production), instead consider providing the server's CA below
+    # If the server's CA is not publicly trusted (Amazon RDS, for example), put
+    # the provider's CA bundle in a Secret and reference it:
+    #   kubectl create secret generic postgres-ca --from-file=ca.crt=global-bundle.pem
+    # existingSecret:
+    #   name: postgres-ca
+    #   caKey: ca.crt
 
 # External Redis (production Redis)
 redis:
@@ -64,7 +73,6 @@ s3:
     autoDetect: true  # Using IRSA
   storage:
     mode: "s3"
-    availableModes: "filesystem,s3"
 
 # Service account with enterprise IAM role
 serviceAccount:
@@ -119,12 +127,6 @@ config:
     # Security settings
     - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
       value: "true"
-    
-    # Database SSL
-    - name: DB_POSTGRESDB_SSL_ENABLED
-      value: "true"
-    - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-      value: "true"  # Set to "false" only if using self-signed certs (not recommended for production)
     
     # Enterprise logging
     - name: N8N_LOG_LEVEL
