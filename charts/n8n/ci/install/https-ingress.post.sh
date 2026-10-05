@@ -8,7 +8,8 @@ kubectl wait certificate/n8n-tls --for=condition=Ready --timeout=120s
 tls_dir=$(mktemp -d)
 kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8443:443 > /dev/null &
 forward=$!
-trap 'kill "$forward" 2> /dev/null; wait "$forward" 2> /dev/null; rm -rf "$tls_dir"' EXIT
+# wait returns 143 after kill, which set -e would turn into a failed check.
+trap 'kill "$forward" 2> /dev/null || true; wait "$forward" 2> /dev/null || true; rm -rf "$tls_dir"' EXIT
 
 kubectl get secret n8n-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$tls_dir/ca.crt"
 
