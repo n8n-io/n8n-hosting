@@ -674,6 +674,11 @@
         }
       }
     },
+    "extraObjects": {
+      "type": "array",
+      "description": "Additional Kubernetes objects rendered as part of the Helm release. Each entry is a map or a YAML string, and is passed through Helm tpl",
+      "items": { "type": ["object", "string"] }
+    },
     "extraContainers": {
       "type": "array",
       "description": "Additional containers (sidecars) for main, worker, and webhook-processor pods",
@@ -713,6 +718,21 @@
             "key": { "type": "string" }
           },
           "required": ["name", "key"]
+        },
+        "ssl": {
+          "type": "object",
+          "properties": {
+            "existingSecret": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "caKey": { "type": "string" },
+                "certKey": { "type": "string" },
+                "keyKey": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
         }
       },
       "additionalProperties": true

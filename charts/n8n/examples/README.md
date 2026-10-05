@@ -22,6 +22,9 @@ This directory contains common configuration examples for different deployment s
 ### Community Examples (Node Placement)
 - **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
 
+### Community Examples (Extra objects)
+- **[extra-objects.yaml](./extra-objects.yaml)** - Deploy objects the chart does not template, such as a Traefik `IngressRoute` and a `PrometheusRule`, with `extraObjects`
+
 ### Enterprise Examples (License Required)
 - **[production-s3.yaml](./production-s3.yaml)** - Production setup with multi-main, webhooks, S3 storage, and autoscaling
 - **[multi-main-queue.yaml](./multi-main-queue.yaml)** - Multi-main and queue mode configuration

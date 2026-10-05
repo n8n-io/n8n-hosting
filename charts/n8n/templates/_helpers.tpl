@@ -163,6 +163,21 @@ failureThreshold: {{ .probe.failureThreshold }}
 {{- end -}}
 
 {{/*
+Render one extraObjects entry through tpl and return it as YAML. A string
+entry is rendered as written; a map entry is serialised first, so both can
+reference the release. A literal `{{` has to be written as `{{ "{{" }}`.
+
+Call with (dict "root" $ "object" <entry>).
+*/}}
+{{- define "n8n.extraObject" -}}
+{{- if typeIs "string" .object -}}
+{{- tpl .object .root -}}
+{{- else -}}
+{{- tpl (toYaml .object) .root -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "n8n.serviceAccountName" -}}
@@ -226,6 +241,32 @@ per mistake.
 {{- $errs = append $errs "multiMain.enabled=true requires multiMain.replicas >= 2" -}}
 {{- end -}}
 
+{{/* --- Database TLS from an existing Secret --- */}}
+{{- $ssl := .Values.database.ssl -}}
+{{- $sslSecret := $ssl.existingSecret | default dict -}}
+{{- $sslSecretKeys := or $sslSecret.caKey $sslSecret.certKey $sslSecret.keyKey -}}
+{{- if and $sslSecret.name (not $sslSecretKeys) -}}
+{{- $errs = append $errs "database.ssl.existingSecret.name is set but no key is. Set at least one of caKey, certKey or keyKey to a key your Secret holds, for example caKey: ca.crt." -}}
+{{- end -}}
+{{- if and $sslSecretKeys (not $sslSecret.name) -}}
+{{- $errs = append $errs "database.ssl.existingSecret has a key set but no name. Set database.ssl.existingSecret.name to the Secret that holds the keys." -}}
+{{- end -}}
+{{- if and $sslSecret.certKey (not $sslSecret.keyKey) -}}
+{{- $errs = append $errs "database.ssl.existingSecret.certKey is set but keyKey is not. A client certificate is only used with its private key." -}}
+{{- end -}}
+{{- if and $sslSecret.keyKey (not (or $sslSecret.certKey $ssl.cert)) -}}
+{{- $errs = append $errs "database.ssl.existingSecret.keyKey is set but there is no client certificate. Set database.ssl.existingSecret.certKey, or database.ssl.cert." -}}
+{{- end -}}
+{{- if and (or $sslSecret.name $sslSecretKeys) (not $ssl.enabled) -}}
+{{- $errs = append $errs "database.ssl.existingSecret is set but database.ssl.enabled is false. Set database.ssl.enabled: true, or remove database.ssl.existingSecret." -}}
+{{- end -}}
+{{- if and $ssl.ca $sslSecret.caKey -}}
+{{- $errs = append $errs "database.ssl.ca and database.ssl.existingSecret.caKey are mutually exclusive. Use one or the other." -}}
+{{- end -}}
+{{- if and $ssl.cert $sslSecret.certKey -}}
+{{- $errs = append $errs "database.ssl.cert and database.ssl.existingSecret.certKey are mutually exclusive. Use one or the other." -}}
+{{- end -}}
+
 {{/* --- Task runners --- */}}
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
 {{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
@@ -276,6 +317,20 @@ per mistake.
 {{- end -}}
 {{- if not (kindIs "string" $v) -}}
 {{- $errs = append $errs (printf "podLabels.%q must be a string (got %s). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. %q: \"true\"." $k (kindOf $v) $k) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* --- Extra objects --- */}}
+{{- range $i, $entry := .Values.extraObjects -}}
+{{- $rendered := include "n8n.extraObject" (dict "root" $ "object" $entry) -}}
+{{- $obj := fromYaml $rendered -}}
+{{/* fromYaml keeps only the first document, so a second one would be dropped without a word. */}}
+{{- if regexMatch "(?m)^---" (trimPrefix "---" (trim $rendered)) -}}
+{{- $errs = append $errs (printf "extraObjects[%d] holds more than one YAML document. Put each object in its own entry." $i) -}}
+{{- else if hasKey $obj "Error" -}}
+{{- $errs = append $errs (printf "extraObjects[%d] must render to a single Kubernetes object, as a map or a YAML string. %s" $i $obj.Error) -}}
+{{- else if not (and $obj.apiVersion $obj.kind (dig "metadata" "name" "" $obj)) -}}
+{{- $errs = append $errs (printf "extraObjects[%d] must set apiVersion, kind and metadata.name." $i) -}}
 {{- end -}}
 {{- end -}}
 

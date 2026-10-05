@@ -24,24 +24,15 @@ data:
   DB_POSTGRESDB_SCHEMA: {{ .Values.database.schema | quote }}
   {{- end }}
   {{- if .Values.database.ssl.enabled }}
-  DB_POSTGRESDB_SSL: "true"
+  DB_POSTGRESDB_SSL_ENABLED: "true"
   {{- if .Values.database.ssl.ca }}
   DB_POSTGRESDB_SSL_CA: {{ .Values.database.ssl.ca | quote }}
   {{- end }}
   {{- if .Values.database.ssl.cert }}
   DB_POSTGRESDB_SSL_CERT: {{ .Values.database.ssl.cert | quote }}
   {{- end }}
-  # DB_POSTGRESDB_SSL_KEY is intentionally omitted from this ConfigMap.
-  # TLS private keys must not be stored in ConfigMaps, which are not encrypted
-  # at rest and are readable by anyone with ConfigMap read access in the namespace.
-  # Provide DB_POSTGRESDB_SSL_KEY via config.extraEnv referencing a Secret instead, e.g.:
-  #   config:
-  #     extraEnv:
-  #       - name: DB_POSTGRESDB_SSL_KEY
-  #         valueFrom:
-  #           secretKeyRef:
-  #             name: my-db-ssl-secret
-  #             key: tls.key
+  {{- /* The client key never goes in this ConfigMap, which is not encrypted at
+  rest. It comes from database.ssl.existingSecret as a secretKeyRef instead. */}}
   {{- if not .Values.database.ssl.rejectUnauthorized }}
   DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED: "false"
   {{- end }}
