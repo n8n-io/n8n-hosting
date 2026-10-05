@@ -1,0 +1,84 @@
+# hostAliases is one value shared by every n8n pod, so these cases pin that it
+# reaches all three pod specs and that the schema rejects malformed entries.
+suite: 'hostAliases'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  database.type: postgresdb
+  database.useExternal: true
+  database.host: postgres.example.com
+  queueMode.enabled: true
+  webhookProcessor.enabled: true
+tests:
+  - it: renders no hostAliases on any pod by default
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.hostAliases
+
+  - it: renders one alias on every pod
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      hostAliases:
+        - ip: 10.0.0.10
+          hostnames:
+            - n8n.acme.example.com
+    asserts:
+      - equal:
+          path: spec.template.spec.hostAliases
+          value:
+            - ip: 10.0.0.10
+              hostnames:
+                - n8n.acme.example.com
+
+  - it: rejects an entry without an ip
+    template: templates/deployment-main.yaml
+    set:
+      hostAliases:
+        - hostnames:
+            - n8n.acme.example.com
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/hostAliases/0': missing property 'ip'"
+
+  - it: rejects an entry without hostnames
+    template: templates/deployment-main.yaml
+    set:
+      hostAliases:
+        - ip: 10.0.0.10
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/hostAliases/0': missing property 'hostnames'"
+
+  - it: rejects an entry with an empty hostnames list
+    template: templates/deployment-main.yaml
+    set:
+      hostAliases:
+        - ip: 10.0.0.10
+          hostnames: []
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/hostAliases/0/hostnames': minItems"
+
+  - it: rejects an unknown key in an entry
+    template: templates/deployment-main.yaml
+    set:
+      hostAliases:
+        - ip: 10.0.0.10
+          hostnames:
+            - n8n.acme.example.com
+          name: internal
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/hostAliases/0': additional properties 'name' not allowed"
