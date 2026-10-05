@@ -177,6 +177,35 @@ per mistake.
 {{- if and .Values.s3.auth.autoDetect (not .Values.serviceAccount.awsRoleArn) -}}
 {{- $errs = append $errs "serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)" -}}
 {{- end -}}
+{{- with .Values.s3.storage.mode -}}
+{{- if ne . "s3" -}}
+{{- $errs = append $errs (printf "s3.storage.mode is %q but s3.enabled=true, so binary data is written to each pod's local disk and not to S3. Set s3.storage.mode to \"s3\", or remove it to follow s3.enabled. S3 binary data storage requires an n8n Business or Enterprise licence." .) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/* --- Binary data mode set through env ---
+An env entry renders after the chart's own variable and wins, so it is also
+the way to keep S3 configured for execution data with binary data elsewhere. */}}
+{{- $envLists := dict
+  "config.extraEnv" .Values.config.extraEnv
+  "queueMode.workerExtraEnv" .Values.queueMode.workerExtraEnv
+  "webhook.extraEnv" .Values.webhook.extraEnv
+  "webhookProcessor.extraEnv" .Values.webhookProcessor.extraEnv
+  "redis.extraEnv" .Values.redis.extraEnv
+  "executions.extraEnv" .Values.executions.extraEnv
+  "s3.storage.extraEnv" .Values.s3.storage.extraEnv
+-}}
+{{- range $key := keys $envLists | sortAlpha -}}
+{{- range (get $envLists $key | default list) -}}
+{{- if eq (toString .name) "N8N_DEFAULT_BINARY_DATA_MODE" -}}
+{{/* n8n cannot tell that pods have separate disks; the chart can. */}}
+{{- if and $.Values.queueMode.enabled (eq (toString .value | lower) "filesystem") -}}
+{{- $fix := ternary "remove it to store binary data in S3" "store binary data in S3 with s3.enabled=true" $.Values.s3.enabled -}}
+{{- $errs = append $errs (printf "%s sets N8N_DEFAULT_BINARY_DATA_MODE=filesystem, but queueMode.enabled=true. Worker pods do not share a filesystem, so binary data one pod writes cannot be read by another. Remove the variable to let n8n choose, set it to \"database\", or %s." $key $fix) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/* --- License --- */}}

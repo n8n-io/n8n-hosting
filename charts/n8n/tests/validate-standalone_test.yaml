@@ -46,3 +46,14 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'webhookProcessor.enabled=true requires queueMode.enabled=true'
+
+  # A standalone install has one pod, so filesystem mode is n8n's own default there.
+  - it: accepts a filesystem binary data mode outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      config.extraEnv:
+        - name: N8N_DEFAULT_BINARY_DATA_MODE
+          value: filesystem
+    asserts:
+      - notFailedTemplate: {}
