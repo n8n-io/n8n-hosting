@@ -1,8 +1,8 @@
 # Overlay for installing examples/production-s3.yaml on kind. It replaces the
 # placeholders with the fixtures in ../fixtures/, reads the licence from the
 # n8n-license Secret CI creates, and scales the example down to fit a hosted
-# runner. The fixture Postgres has no TLS, so extraEnv drops the example's
-# DB_POSTGRESDB_SSL_* settings and keeps the rest.
+# runner. The fixture Postgres has no TLS, so database.ssl is off. extraEnv
+# keeps the example's other settings.
 multiMain:
   replicas: 2
 queueMode:
@@ -26,6 +26,8 @@ license:
     key: license-key
 database:
   host: postgres
+  ssl:
+    enabled: false
 redis:
   host: redis
 s3:
