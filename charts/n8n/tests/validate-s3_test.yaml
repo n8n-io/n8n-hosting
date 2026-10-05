@@ -1,0 +1,61 @@
+suite: 'validate: S3'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  s3.enabled: true
+  s3.bucket.name: n8n-data
+  s3.bucket.region: eu-west-1
+tests:
+  - it: accepts S3 with an access key
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.accessKeyId: AKIAEXAMPLE
+      s3.auth.secretAccessKeySecret.name: n8n-s3
+      s3.auth.secretAccessKeySecret.key: secret-access-key
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: accepts S3 with IRSA
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: requires s3.bucket.name
+    template: templates/deployment-main.yaml
+    set:
+      s3.bucket.name: ""
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+    asserts:
+      - failedTemplate:
+          errorMessage: 's3.bucket.name is required when s3.enabled=true'
+
+  - it: requires s3.bucket.region
+    template: templates/deployment-main.yaml
+    set:
+      s3.bucket.region: ""
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+    asserts:
+      - failedTemplate:
+          errorMessage: 's3.bucket.region is required when s3.enabled=true'
+
+  - it: requires an access key when autoDetect is off
+    template: templates/deployment-main.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: 's3.auth.accessKeyId is required when s3.enabled=true and s3.auth.autoDetect=false'
+
+  - it: requires serviceAccount.awsRoleArn when autoDetect is on
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)'

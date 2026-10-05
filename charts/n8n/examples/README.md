@@ -17,9 +17,13 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (Ingress)
 - **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress with TLS, sticky sessions, and webhook processor routing
+- **[mcp-server.yaml](./mcp-server.yaml)** - Scale the MCP Server Trigger (`/mcp`) across multiple webhook processors (requires n8n ≥ 2.8.0)
 
 ### Community Examples (Node Placement)
 - **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
+
+### Community Examples (Extra objects)
+- **[extra-objects.yaml](./extra-objects.yaml)** - Deploy objects the chart does not template, such as a Traefik `IngressRoute` and a `PrometheusRule`, with `extraObjects`
 
 ### Enterprise Examples (License Required)
 - **[production-s3.yaml](./production-s3.yaml)** - Production setup with multi-main, webhooks, S3 storage, and autoscaling
@@ -59,7 +63,7 @@ helm install n8n ./charts/n8n -f my-values.yaml
 For quick testing with Docker:
 ```bash
 # Start PostgreSQL
-docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:16
+docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:18
 
 # Start Redis
 docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine

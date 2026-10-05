@@ -31,6 +31,7 @@ docs: update README with OCI install instructions
 
 - [Helm](https://helm.sh/docs/intro/install/) 3.12+
 - [chart-testing (ct)](https://github.com/helm/chart-testing) for linting
+- [helm-unittest](https://github.com/helm-unittest/helm-unittest) 1.1+ for unit tests, which needs Helm 3.18+
 
 ### Local Linting
 
@@ -38,6 +39,25 @@ docs: update README with OCI install instructions
 helm lint charts/n8n
 ct lint --charts charts/n8n --validate-maintainers=false
 ```
+
+### Unit Tests
+
+The unit tests live in `charts/n8n/tests/`. Install the plugin once:
+
+```bash
+helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.1.2
+```
+
+On Helm 4, add `--verify=false` to that command. Then run both passes:
+
+```bash
+helm unittest --strict charts/n8n
+helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
+```
+
+The second pass covers validation that `values.schema.json` also enforces, so it runs with schema validation off.
+
+`tests/default-render_test.yaml` compares the default render with a stored snapshot. If your change alters that output on purpose, run `helm unittest -u charts/n8n` and commit the updated file in `tests/__snapshot__/`.
 
 ### Template Validation
 
@@ -169,11 +189,19 @@ kubectl delete namespace n8n-test
 kind delete cluster --name n8n-test
 ```
 
-You can also let CI do this for you — add the `test-install` label to your PR and the install-test job will run automatically.
+Maintainers can label PRs with `test-install` to run the tests with CI.
 
 ### Version Bumps
 
-**Do not manually edit `Chart.yaml` version.** Semantic-release bumps it automatically based on commit messages.
+**Do not manually edit `Chart.yaml` version.** Release Please bumps it automatically based on commit messages.
+
+The n8n version is a separate thing to the chart version. It is pinned in multiple files across the various deployment artefacts.
+
+The `bump-n8n-version` workflow runs this script every Wednesday to follow n8n's `stable` release cadence. If you do need to bump the versions by hand, you can do so by running:
+
+```bash
+scripts/bump-n8n-version.sh 2.38.6
+```
 
 ## Pull Requests
 

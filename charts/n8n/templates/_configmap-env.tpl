@@ -1,5 +1,6 @@
 {{/*
-Environment variables from ConfigMap for all components
+Environment variables shared by all components, from the ConfigMap and from
+the user's TLS Secret
 */}}
 {{- define "n8n.sharedConfigMapEnv" -}}
 # Shared configuration from ConfigMap
@@ -42,11 +43,11 @@ Environment variables from ConfigMap for all components
       key: DB_POSTGRESDB_SCHEMA
 {{- end }}
 {{- if .Values.database.ssl.enabled }}
-- name: DB_POSTGRESDB_SSL
+- name: DB_POSTGRESDB_SSL_ENABLED
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: DB_POSTGRESDB_SSL
+      key: DB_POSTGRESDB_SSL_ENABLED
 {{- if .Values.database.ssl.ca }}
 - name: DB_POSTGRESDB_SSL_CA
   valueFrom:
@@ -61,8 +62,29 @@ Environment variables from ConfigMap for all components
       name: {{ include "n8n.fullname" . }}
       key: DB_POSTGRESDB_SSL_CERT
 {{- end }}
-# DB_POSTGRESDB_SSL_KEY is not sourced from the ConfigMap because TLS private keys
-# must not be stored unencrypted. Provide it via config.extraEnv from a Secret.
+{{- with .Values.database.ssl.existingSecret }}
+{{- if .caKey }}
+- name: DB_POSTGRESDB_SSL_CA
+  valueFrom:
+    secretKeyRef:
+      name: {{ .name | quote }}
+      key: {{ .caKey | quote }}
+{{- end }}
+{{- if .certKey }}
+- name: DB_POSTGRESDB_SSL_CERT
+  valueFrom:
+    secretKeyRef:
+      name: {{ .name | quote }}
+      key: {{ .certKey | quote }}
+{{- end }}
+{{- if .keyKey }}
+- name: DB_POSTGRESDB_SSL_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .name | quote }}
+      key: {{ .keyKey | quote }}
+{{- end }}
+{{- end }}
 {{- if not .Values.database.ssl.rejectUnauthorized }}
 - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
   valueFrom:
@@ -83,23 +105,6 @@ Environment variables from ConfigMap for all components
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
-{{- end }}
-{{- if .Values.taskRunners.enabled }}
-- name: N8N_RUNNERS_MODE
-  valueFrom:
-    configMapKeyRef:
-      name: {{ include "n8n.fullname" . }}
-      key: N8N_RUNNERS_MODE
-- name: N8N_RUNNERS_AUTH_TOKEN
-  valueFrom:
-    secretKeyRef:
-      {{- if .Values.taskRunners.authToken.existingSecret }}
-      name: {{ .Values.taskRunners.authToken.existingSecret }}
-      key: {{ .Values.taskRunners.authToken.existingSecretKey | default "N8N_RUNNERS_AUTH_TOKEN" }}
-      {{- else }}
-      name: {{ include "n8n.fullname" . }}-task-runners
-      key: N8N_RUNNERS_AUTH_TOKEN
-      {{- end }}
 {{- end }}
 {{- if .Values.queueMode.enabled }}
 {{- if .Values.redis.clusterNodes }}
@@ -204,11 +209,11 @@ Environment variables from ConfigMap for main pods only
 {{- define "n8n.mainConfigMapEnv" -}}
 {{- if .Values.webhook.enabled }}
 {{- if or .Values.webhook.url (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) }}
-- name: WEBHOOK_URL
+- name: N8N_WEBHOOK_URL
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: WEBHOOK_URL
+      key: N8N_WEBHOOK_URL
 {{- end }}
 {{- if .Values.webhook.timeout }}
 - name: N8N_WEBHOOK_TIMEOUT
@@ -253,6 +258,9 @@ Environment variables from ConfigMap for main pods only
       name: {{ include "n8n.fullname" . }}
       key: N8N_DISABLE_PRODUCTION_MAIN_PROCESS
 {{- end }}
+{{- if include "n8n.mainTaskRunnersEnabled" . }}
+{{- include "n8n.taskRunnerConfigMapEnv" . | nindent 0 }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -261,11 +269,11 @@ Environment variables from ConfigMap for webhook processor pods (similar to main
 {{- define "n8n.webhookProcessorConfigMapEnv" -}}
 {{- if .Values.webhook.enabled }}
 {{- if or .Values.webhook.url (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) }}
-- name: WEBHOOK_URL
+- name: N8N_WEBHOOK_URL
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: WEBHOOK_URL
+      key: N8N_WEBHOOK_URL
 {{- end }}
 {{- if .Values.webhook.timeout }}
 - name: N8N_WEBHOOK_TIMEOUT
@@ -290,11 +298,11 @@ Environment variables from ConfigMap for worker pods (webhook URL for resume/wai
 {{- define "n8n.workerConfigMapEnv" -}}
 {{- if .Values.webhook.enabled }}
 {{- if or .Values.webhook.url (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) }}
-- name: WEBHOOK_URL
+- name: N8N_WEBHOOK_URL
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: WEBHOOK_URL
+      key: N8N_WEBHOOK_URL
 {{- end }}
 {{- end }}
 {{- if or (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) (and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString))) }}
@@ -304,10 +312,34 @@ Environment variables from ConfigMap for worker pods (webhook URL for resume/wai
       name: {{ include "n8n.fullname" . }}
       key: N8N_EDITOR_BASE_URL
 {{- end }}
+{{- if .Values.taskRunners.enabled }}
+{{- include "n8n.taskRunnerConfigMapEnv" . | nindent 0 }}
+{{- end }}
 {{- end }}
 
 {{/*
-Task Runners environment variables for n8n broker (main and worker pods)
+Task runner ConfigMap-backed environment variables (main in standalone mode, workers in queue mode)
+*/}}
+{{- define "n8n.taskRunnerConfigMapEnv" -}}
+- name: N8N_RUNNERS_MODE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ include "n8n.fullname" . }}
+      key: N8N_RUNNERS_MODE
+- name: N8N_RUNNERS_AUTH_TOKEN
+  valueFrom:
+    secretKeyRef:
+      {{- if .Values.taskRunners.authToken.existingSecret }}
+      name: {{ .Values.taskRunners.authToken.existingSecret }}
+      key: {{ .Values.taskRunners.authToken.existingSecretKey | default "N8N_RUNNERS_AUTH_TOKEN" }}
+      {{- else }}
+      name: {{ include "n8n.fullname" . }}-task-runners
+      key: N8N_RUNNERS_AUTH_TOKEN
+      {{- end }}
+{{- end }}
+
+{{/*
+Task Runners environment variables for n8n broker (main in standalone mode, workers in queue mode)
 */}}
 {{- define "n8n.taskRunnerBrokerEnv" -}}
 {{- if .Values.taskRunners.enabled }}

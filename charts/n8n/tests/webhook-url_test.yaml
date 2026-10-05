@@ -1,0 +1,93 @@
+# n8n reads the webhook base URL from N8N_WEBHOOK_URL and logs a deprecation
+# warning for WEBHOOK_URL, so these cases pin the name n8n reads on every
+# component, from both sources the chart takes it from.
+suite: 'webhook: URL'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  database.type: postgresdb
+  database.useExternal: true
+  database.host: postgres.example.com
+  queueMode.enabled: true
+  webhookProcessor.enabled: true
+tests:
+  - it: sets N8N_WEBHOOK_URL in the ConfigMap from webhook.url
+    template: templates/configmap.yaml
+    set:
+      webhook.url: https://hooks.example.com
+    asserts:
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://hooks.example.com
+      - notExists:
+          path: data.WEBHOOK_URL
+
+  - it: sets N8N_WEBHOOK_URL in the ConfigMap from the ingress host
+    template: templates/configmap.yaml
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: n8n.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://n8n.example.com
+      - notExists:
+          path: data.WEBHOOK_URL
+
+  - it: passes N8N_WEBHOOK_URL to every n8n container from webhook.url
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      webhook.url: https://hooks.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_WEBHOOK_URL
+            valueFrom:
+              configMapKeyRef:
+                name: RELEASE-NAME-n8n
+                key: N8N_WEBHOOK_URL
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEBHOOK_URL
+          any: true
+
+  - it: passes N8N_WEBHOOK_URL to every n8n container from the ingress host
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: n8n.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_WEBHOOK_URL
+            valueFrom:
+              configMapKeyRef:
+                name: RELEASE-NAME-n8n
+                key: N8N_WEBHOOK_URL
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEBHOOK_URL
+          any: true

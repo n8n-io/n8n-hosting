@@ -1,0 +1,17 @@
+{{- /* Only the app.kubernetes.io/* identity labels: helm.sh/chart and commonLabels stay off objects the chart does not own. */ -}}
+{{- $chartLabels := dict "app.kubernetes.io/name" (include "n8n.name" .) "app.kubernetes.io/instance" .Release.Name "app.kubernetes.io/managed-by" .Release.Service -}}
+{{- with .Chart.AppVersion -}}
+{{- $_ := set $chartLabels "app.kubernetes.io/version" . -}}
+{{- end -}}
+{{- range .Values.extraObjects }}
+{{- $obj := include "n8n.extraObject" (dict "root" $ "object" .) | fromYaml }}
+{{- $metadata := $obj.metadata | default dict }}
+{{- /* merge keeps the first map's keys, so a label the object sets wins. */ -}}
+{{- $_ := set $metadata "labels" (merge ($metadata.labels | default dict) $chartLabels) }}
+{{- if not $metadata.namespace }}
+{{- $_ := set $metadata "namespace" $.Release.Namespace }}
+{{- end }}
+{{- $_ := set $obj "metadata" $metadata }}
+---
+{{ toYaml $obj | trim }}
+{{- end }}
