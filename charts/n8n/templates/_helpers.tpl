@@ -230,6 +230,12 @@ per mistake.
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
 {{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
 {{- end -}}
+{{- if and .Values.taskRunners.enabled ((.Values.taskRunners.probes | default dict).liveness | default dict).enabled -}}
+{{- $healthPort := include "n8n.taskRunnerHealthCheckPort" . -}}
+{{- if and $healthPort (or (not (regexMatch "^[0-9]+$" $healthPort)) (lt (atoi $healthPort) 1) (gt (atoi $healthPort) 65535)) -}}
+{{- $errs = append $errs (printf "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT in taskRunners.extraEnv must be a port number from 1 to 65535, got %q. The sidecar's liveness probe uses it." $healthPort) -}}
+{{- end -}}
+{{- end -}}
 
 {{/* --- S3 --- */}}
 {{- if .Values.s3.enabled -}}
