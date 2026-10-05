@@ -1,0 +1,49 @@
+suite: 'render: install method'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/secrets.yaml
+chart:
+  version: 9.9.9
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  queueMode.enabled: true
+  webhookProcessor.enabled: true
+  database.type: postgresdb
+  database.useExternal: true
+  database.host: postgres.acme.example.com
+  database.passwordSecret.name: n8n-db
+  redis.host: redis.acme.example.com
+tests:
+  - it: names the chart and its version
+    template: templates/configmap.yaml
+    asserts:
+      - equal:
+          path: data.N8N_INSTALL_METHOD
+          value: helm-chart/9.9.9
+
+  - it: reaches every component
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_INSTALL_METHOD
+            valueFrom:
+              configMapKeyRef:
+                name: RELEASE-NAME-n8n
+                key: N8N_INSTALL_METHOD
+
+  - it: lets a wrapping chart report as itself
+    template: templates/configmap.yaml
+    set:
+      config.installMethod: azure-marketplace/1.0.0
+    asserts:
+      - equal:
+          path: data.N8N_INSTALL_METHOD
+          value: azure-marketplace/1.0.0
