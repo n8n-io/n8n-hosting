@@ -95,6 +95,21 @@ appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
 {{- end -}}
 
 {{/*
+Render one extraObjects entry through tpl and return it as YAML. A string
+entry is rendered as written; a map entry is serialised first, so both can
+reference the release. A literal `{{` has to be written as `{{ "{{" }}`.
+
+Call with (dict "root" $ "object" <entry>).
+*/}}
+{{- define "n8n.extraObject" -}}
+{{- if typeIs "string" .object -}}
+{{- tpl .object .root -}}
+{{- else -}}
+{{- tpl (toYaml .object) .root -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "n8n.serviceAccountName" -}}
@@ -228,6 +243,20 @@ per mistake.
 {{- end -}}
 {{- if not (kindIs "string" $v) -}}
 {{- $errs = append $errs (printf "podLabels.%q must be a string (got %s). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. %q: \"true\"." $k (kindOf $v) $k) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* --- Extra objects --- */}}
+{{- range $i, $entry := .Values.extraObjects -}}
+{{- $rendered := include "n8n.extraObject" (dict "root" $ "object" $entry) -}}
+{{- $obj := fromYaml $rendered -}}
+{{/* fromYaml keeps only the first document, so a second one would be dropped without a word. */}}
+{{- if regexMatch "(?m)^---" (trimPrefix "---" (trim $rendered)) -}}
+{{- $errs = append $errs (printf "extraObjects[%d] holds more than one YAML document. Put each object in its own entry." $i) -}}
+{{- else if hasKey $obj "Error" -}}
+{{- $errs = append $errs (printf "extraObjects[%d] must render to a single Kubernetes object, as a map or a YAML string. %s" $i $obj.Error) -}}
+{{- else if not (and $obj.apiVersion $obj.kind (dig "metadata" "name" "" $obj)) -}}
+{{- $errs = append $errs (printf "extraObjects[%d] must set apiVersion, kind and metadata.name." $i) -}}
 {{- end -}}
 {{- end -}}
 

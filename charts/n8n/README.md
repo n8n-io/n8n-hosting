@@ -84,6 +84,7 @@ All three use the same n8n container image, differentiated by command/args.
 | [production-s3.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/production-s3.yaml) | Production with S3, HPA, multi-main |
 | [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
 | [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) | HTTPS Ingress with TLS and webhook processor routing |
+| [extra-objects.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/extra-objects.yaml) | Extra objects beside the chart: a Traefik IngressRoute, a PrometheusRule and a string entry |
 
 ## Secret Management
 
@@ -168,6 +169,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
 | `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `networkPolicy.enabled` | Network policies | `false` |
+| `extraObjects` | Additional Kubernetes objects rendered with the release | `[]` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
@@ -175,6 +177,44 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
+
+## Extra objects
+
+Use `extraObjects` to deploy additional Kubernetes resources with the n8n release, such as a Traefik `IngressRoute`, a `SecretProviderClass` or a `PrometheusRule`. The chart does not need to know the kind.
+
+Each entry is a map or a YAML string. Both are passed through Helm `tpl`, so an entry can reference the release:
+
+```yaml
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: '{{ include "n8n.fullname" . }}-extra'
+    data:
+      mainService: '{{ include "n8n.fullname" . }}-main'
+```
+
+Escape any literal `{{` as `{{ "{{" }}`. This matters for objects that carry their own templates, such as Prometheus alert annotations. Without the escape, the render fails with `undefined variable`:
+
+```yaml
+extraObjects:
+  - apiVersion: monitoring.coreos.com/v1
+    kind: PrometheusRule
+    metadata:
+      name: n8n-alerts
+    spec:
+      groups:
+        - name: n8n
+          rules:
+            - alert: N8nDown
+              expr: up{job="n8n"} == 0
+              annotations:
+                summary: '{{ "{{" }} $labels.instance }} is down'
+```
+
+The chart adds the `app.kubernetes.io/name`, `instance`, `version` and `managed-by` labels to every object. A label the object sets itself wins. `helm.sh/chart` and `commonLabels` are not added. An object without `metadata.namespace` goes into the release namespace. An object that sets one keeps it. Every entry must set `apiVersion`, `kind` and `metadata.name`.
+
+See [extra-objects.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/extra-objects.yaml) for a complete example.
 
 ## Extra containers (sidecars)
 
