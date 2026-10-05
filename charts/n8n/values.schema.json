@@ -20,14 +20,14 @@
     },
     "imagePullSecrets": {
       "type": "array",
-      "default": [],
-      "description": "Existing pull Secrets for private image repositories, referenced by every pod the chart creates",
+      "description": "Existing pull Secrets for private image registries, referenced by every pod the chart creates",
       "items": {
         "type": "object",
         "properties": {
           "name": { "type": "string", "minLength": 1 }
         },
-        "required": ["name"]
+        "required": ["name"],
+        "additionalProperties": false
       }
     },
     "replicaCount": { "type": "integer", "minimum": 1 },
