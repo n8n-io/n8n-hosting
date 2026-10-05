@@ -326,20 +326,6 @@
         }
       }
     },
-    "hostAliases": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "ip": { "type": "string" },
-          "hostnames": {
-            "type": "array",
-            "items": { "type": "string" }
-          }
-        },
-        "required": ["ip", "hostnames"]
-      }
-    },
     "podAnnotations": { "type": "object", "additionalProperties": true },
     "podLabels": {
       "type": "object",
@@ -377,6 +363,23 @@
       "type": "object",
       "description": "Pod DNS configuration applied to main, worker, and webhook-processor pods.",
       "additionalProperties": true
+    },
+    "hostAliases": {
+      "type": "array",
+      "description": "Extra /etc/hosts entries for main, worker, and webhook-processor pods.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ip": { "type": "string", "minLength": 1 },
+          "hostnames": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        },
+        "required": ["ip", "hostnames"]
+      }
     },
     "rbac": {
       "type": "object",
