@@ -1,0 +1,28 @@
+charts/n8n/tests/install-method_test.yaml
+  s_9a7361ab934490::t_824509cac70182 1-52
+  s_9a7361ab934490::t_7e44ff96fec286 53
+charts/n8n/templates/configmap.yaml
+  s_9a7361ab934490::t_c2ea6264dbc19e 15-17
+charts/n8n/templates/_configmap-env.tpl
+  s_9a7361ab934490::t_d0ffff492a0ff6 11-15
+charts/n8n/values.yaml
+  s_9a7361ab934490::t_54680b22f24665 594-595
+charts/n8n/tests/__snapshot__/default-render_test.yaml.snap
+  s_9a7361ab934490::t_b4d44ec75506ed 36,81,98-102,321,343-347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a2bd0ffd0d1a5e09355cc8065d2a7b453bf2ca2",
+  "prompts": {},
+  "sessions": {
+    "s_9a7361ab934490": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf0f41e7-f5d0-4056-8505-89dbb02b2f7b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
