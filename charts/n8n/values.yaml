@@ -309,6 +309,19 @@ dnsConfig: {}
 #   nameservers:
 #     - 127.0.0.1
 
+# Extra /etc/hosts entries for main, worker, and webhook-processor pods.
+# Use them when a hostname n8n calls does not resolve inside the cluster, or
+# resolves to an address the pods cannot reach. Corporate DNS and split-horizon
+# DNS are the usual cases. Pointing n8n's own public hostname at an internal
+# address also keeps calls n8n makes to itself inside the cluster.
+# See https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/
+hostAliases: []
+# Example:
+# hostAliases:
+#   - ip: 10.0.0.10
+#     hostnames:
+#       - n8n.example.com
+
 # ----- Resources -----
 resources:
   main:
@@ -357,18 +370,6 @@ nodePlacement: {}
 #         operator: Equal
 #         value: n8n-workers
 #         effect: NoSchedule
-
-# ----- Host aliases -----
-# Adds entries to /etc/hosts on every pod (main, worker, webhook-processor).
-# Useful for pinning n8n's own public hostname (WEBHOOK_URL/N8N_HOST) to an
-# internal/private IP so that traffic n8n's own OAuth/MCP clients send to
-# themselves stays inside the cluster instead of hairpinning out through an
-# external load balancer or tunnel and back in.
-# hostAliases:
-#   - ip: "10.0.0.1"
-#     hostnames:
-#       - "n8n.example.com"
-hostAliases: []
 
 # ----- Security -----
 # Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
