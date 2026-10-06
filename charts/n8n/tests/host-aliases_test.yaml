@@ -52,6 +52,17 @@ tests:
       - failedTemplate:
           errorPattern: "at '/hostAliases/0': missing property 'ip'"
 
+  - it: rejects an entry with a malformed ip
+    template: templates/deployment-main.yaml
+    set:
+      hostAliases:
+        - ip: not-an-ip
+          hostnames:
+            - n8n.acme.example.com
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/hostAliases/0/ip':"
+
   - it: rejects an entry without hostnames
     template: templates/deployment-main.yaml
     set:
