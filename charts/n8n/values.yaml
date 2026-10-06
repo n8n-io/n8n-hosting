@@ -11,7 +11,8 @@ image:
 # Existing Secrets of type kubernetes.io/dockerconfigjson, for pulling images
 # from a private or authenticated registry.
 # The main, worker and webhook-processor pods and the Helm test pod reference
-# them, so they also cover the task-runner sidecar and any extraInitContainers.
+# them at pod level. Every container in those pods uses them, including the
+# task-runner sidecar, extraContainers and extraInitContainers.
 # Pods you add through extraObjects need their own.
 # See https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
