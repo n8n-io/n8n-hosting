@@ -34,6 +34,8 @@ env:
 
 jobs:
   push:
+    # A fork inherits this workflow, and it has nothing to publish to.
+    if: github.repository == 'n8n-io/n8n-hosting'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
