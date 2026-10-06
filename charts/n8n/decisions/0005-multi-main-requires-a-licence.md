@@ -1,7 +1,7 @@
 # 0005. Several mains render only with multi-main and a licence
 
 Date: 2026-10-06
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/229
 
 ## Context
 
