@@ -1,0 +1,29 @@
+docker-compose/withPostgres/docker-compose.yml
+  s_c9e4b11e432a13::t_6250d806f14247 31
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_c9e4b11e432a13::t_6250d806f14247 10
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks-ha.yaml
+  s_c9e4b11e432a13::t_6250d806f14247 1201,1488,1960
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks.yaml
+  s_c9e4b11e432a13::t_6250d806f14247 1128,1415,1887
+docker-compose/subfolderWithSSL/docker-compose.yml
+  s_c9e4b11e432a13::t_6250d806f14247 48
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode.yaml
+  s_c9e4b11e432a13::t_6250d806f14247 1049,1257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7478efb2f161cc3da0b4fd15f1050c8a05b4b157",
+  "prompts": {},
+  "sessions": {
+    "s_c9e4b11e432a13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef4701cb-b626-4daa-81d1-b72194933b28",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
