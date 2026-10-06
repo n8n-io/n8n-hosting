@@ -20,7 +20,7 @@
     },
     "imagePullSecrets": {
       "type": "array",
-      "description": "Existing pull Secrets for private image registries, referenced by every pod the chart creates",
+      "description": "Existing pull Secrets for private image registries, referenced by every n8n pod and the Helm test pod",
       "items": {
         "type": "object",
         "properties": {
