@@ -29,7 +29,8 @@ tests:
       queueMode.enabled: true
       multiMain.enabled: true
       multiMain.replicas: 2
-      license.activationKeySecret.name: n8n-license
+      license.enabled: true
+      license.existingSecret.name: n8n-license
       redis.host: redis
     asserts:
       - hasDocuments:

@@ -1,11 +1,11 @@
 # 0004. The main PodDisruptionBudget renders only with a second main pod
 
 Date: 2026-10-06
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/228
 
 ## Context
 
-The chart ships a PodDisruptionBudget for main pods with `minAvailable: 1`. `pdb.enabled` defaults to true and `replicaCount` defaults to 1. With one main pod, a budget of `minAvailable: 1` allows no voluntary evictions at all. `kubectl drain`, cluster autoscaler scale-down and managed node upgrades wait on it until someone deletes the budget by hand. Standalone mode never runs more than one main pod, so it is always in this state.
+The chart ships a PodDisruptionBudget for main pods with `minAvailable: 1`. `pdb.enabled` defaults to true and `replicaCount` defaults to 1. With one main pod, a budget of `minAvailable: 1` allows no voluntary evictions at all. `kubectl drain`, cluster autoscaler scale-down and managed node upgrades wait on it until someone deletes the budget by hand. Standalone installs default to one main pod, so they start in this state.
 
 A PDB protects availability only when another pod keeps serving while one is evicted. With a single pod, the eviction causes the outage whether or not a budget exists. The budget only decides whether the node can be drained.
 
