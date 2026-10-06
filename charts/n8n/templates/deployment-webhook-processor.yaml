@@ -12,7 +12,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if not (include "n8n.autoscalerOwnsReplicas" (dict "root" . "component" "webhook-processor")) }}
   replicas: {{ .Values.webhookProcessor.replicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:

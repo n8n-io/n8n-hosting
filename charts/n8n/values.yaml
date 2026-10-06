@@ -82,7 +82,9 @@ multiMain:
 # ----- Task Runners (external mode with sidecar containers) -----
 taskRunners:
   # Enable task runners for executing user-provided JavaScript and Python code
-  # When enabled, a sidecar container (n8nio/runners) is added to main and worker pods
+  # When enabled, a sidecar container (n8nio/runners) is added to:
+  #   - worker pods in queue mode (main offloads manual executions to workers)
+  #   - main pods in standalone mode (queueMode.enabled=false)
   enabled: false
 
   # Task runner image configuration
@@ -220,6 +222,23 @@ persistence:
   accessModes: ["ReadWriteOnce"]
   size: 10Gi
   storageClassName: ""
+
+# ----- Additional Kubernetes resources -----
+# Arbitrary Kubernetes objects rendered as part of this Helm release.
+# Each entry is a map or a YAML string, and is passed through Helm tpl, so it
+# can reference the release (e.g. `{{ include "n8n.fullname" . }}-main` for the
+# main Service). Escape any literal `{{` as `{{ "{{" }}`, for example in a
+# Prometheus alert annotation. The chart adds the app.kubernetes.io/* labels
+# and the release namespace, unless the object sets its own.
+extraObjects: []
+# Examples:
+# extraObjects:
+#   - apiVersion: v1
+#     kind: ConfigMap
+#     metadata:
+#       name: '{{ include "n8n.fullname" . }}-extra'
+#     data:
+#       summary: '{{ "{{" }} $labels.instance }} is down'
 
 # ----- External Volumes -----
 extraVolumes: []
@@ -494,6 +513,13 @@ hpa:
 keda:
   enabled: false
   worker:
+    # Pause KEDA autoscaling, freezing workers at their current replica count
+    # (sets autoscaling.keda.sh/paused=true)
+    pause: false
+    # Optional replica count to hold while paused (sets autoscaling.keda.sh/paused-replicas).
+    # Only applied when pause=true. Leave unset to freeze at the current count;
+    # set 0 to scale workers down to zero, e.g. to drain the queue before a migration.
+    pausedReplicaCount: null
     pollingInterval: 15
     cooldownPeriod: 300
     minReplicaCount: 2
@@ -513,6 +539,13 @@ keda:
           name: ""
   webhookProcessor:
     enabled: false
+    # Pause KEDA autoscaling, freezing webhook processors at their current
+    # replica count (sets autoscaling.keda.sh/paused=true)
+    pause: false
+    # Optional replica count to hold while paused (sets autoscaling.keda.sh/paused-replicas).
+    # Only applied when pause=true. Leave unset to freeze at the current count;
+    # set 0 to stop handling webhooks entirely, e.g. during a maintenance window.
+    pausedReplicaCount: null
     pollingInterval: 15
     cooldownPeriod: 120
     minReplicaCount: 2
@@ -530,6 +563,8 @@ webhook:
   enabled: true
   # Custom webhook URL base domain (if not set, will use ingress host)
   # Format: https://your-domain.com (n8n adds /webhook path automatically)
+  # Rendered as N8N_WEBHOOK_URL, which sets the base URL for both test and
+  # production webhooks.
   url: ""
   # Timeout for webhook requests in milliseconds
   timeout: 120000
@@ -625,12 +660,23 @@ database:
     name: "n8n-db-password"          # <-- K8s Secret name
     key: "password"                  # <-- Key inside the secret
   # SSL configuration
+  # Server verification needs only a CA, and none at all if the server's CA is
+  # publicly trusted. Mutual TLS also needs a client key, which comes from
+  # existingSecret, and its certificate.
   ssl:
     enabled: false                   # <-- Enable SSL connection
-    ca: ""                           # <-- Path to CA certificate file
-    cert: ""                         # <-- Path to client certificate file
-    key: ""                          # <-- Path to client key file
+    ca: ""                           # <-- CA certificate as PEM contents, not a file path
+    cert: ""                         # <-- Client certificate as PEM contents, not a file path
+    key: ""                          # <-- Not read by the chart. Use existingSecret.keyKey instead
     rejectUnauthorized: true         # <-- Reject unauthorized SSL connections
+    # TLS material from a Secret you manage. Each key you set is passed to n8n
+    # from that Secret; leave a key empty to skip it. A cert-manager Certificate
+    # Secret holds tls.crt and tls.key, plus ca.crt when its issuer provides one.
+    existingSecret:
+      name: ""                       # <-- K8s Secret name
+      caKey: ""                      # <-- Key holding the CA certificate (instead of ca)
+      certKey: ""                    # <-- Key holding the client certificate (instead of cert)
+      keyKey: ""                     # <-- Key holding the client private key
 
 # ----- Redis (required for queue mode) -----
 redis:
@@ -683,8 +729,6 @@ s3:
   storage:
     # Binary data storage mode (filesystem or s3 (filesystem))
     mode: "filesystem"
-    # Available binary data modes (comma-separated ex: filesystem,s3)
-    availableModes: "filesystem"              # <-- Available storage modes for n8n
     # S3 specific settings
     forcePathStyle: false                      # <-- Force path-style URLs (for S3-compatible providers)
     # Additional S3 environment variables

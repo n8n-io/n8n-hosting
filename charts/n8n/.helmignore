@@ -30,16 +30,19 @@
 ehthumbs.db
 Thumbs.db
 
-# CI/CD files
+# CI/CD files. /ci/ holds the values files chart-testing and CI render the
+# chart with; they are read from the repository and are no use to an install.
 .github/
 .gitlab-ci.yml
 .travis.yml
 .circleci/
+/ci/
 
-# Documentation and examples (keep only essential docs)
+# Documentation and examples.
 CHANGELOG.md
+DESIGN.md
+decisions/
 LICENSE
-*.md
 examples/
 docs/
 

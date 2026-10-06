@@ -22,6 +22,10 @@ hpa:
 keda:
   enabled: true
   worker:
+    # Pause autoscaling, holding workers at their current replica count
+    pause: false
+    # Uncomment to pause at a specific count instead; 0 scales workers down entirely
+    # pausedReplicaCount: 0
     pollingInterval: 15       # How often KEDA checks the queue (seconds)
     cooldownPeriod: 300        # Wait time before scaling down (seconds)
     minReplicaCount: 2
@@ -40,6 +44,12 @@ keda:
           # Reference a TriggerAuthentication if Redis requires auth
           # See: https://keda.sh/docs/latest/concepts/authentication/
           name: ""
+  webhookProcessor:
+    enabled: false
+    # Pause autoscaling, holding webhook processors at their current count
+    pause: false
+    # Uncomment to pause at a specific count instead; 0 scales webhook processors down entirely
+    # pausedReplicaCount: 0
 
 # External database
 database:

@@ -1,0 +1,28 @@
+suite: 'validate: multiple problems'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  # A check that calls fail directly stops at the first problem, so this
+  # render would report one problem, not six. helm-unittest drops the
+  # "6 problems in your values:" header line, so only the list is compared.
+  - it: reports every problem in one render
+    template: templates/deployment-main.yaml
+    set:
+      ingress.webhookProcessor.enabled: true
+      s3.enabled: true
+      serviceAccount.create: false
+      podLabels:
+        app.kubernetes.io/name: custom
+    asserts:
+      - failedTemplate:
+          errorMessage: |-
+            - ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true
+            - s3.bucket.name is required when s3.enabled=true
+            - s3.bucket.region is required when s3.enabled=true
+            - s3.auth.accessKeyId is required when s3.enabled=true and s3.auth.autoDetect=false
+            - serviceAccount.create=false but serviceAccount.name is still the chart default "n8n". Set serviceAccount.name to your pre-existing ServiceAccount, or to "" to use the namespace's default ServiceAccount.
+            - podLabels."app.kubernetes.io/name" is a chart-managed selector/identity label and cannot be overridden. Reserved keys: app.kubernetes.io/name, app.kubernetes.io/instance, app.kubernetes.io/component, app.kubernetes.io/version, app.kubernetes.io/managed-by, helm.sh/chart

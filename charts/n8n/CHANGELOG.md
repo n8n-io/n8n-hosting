@@ -4,6 +4,52 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.14.0](https://github.com/n8n-io/n8n-hosting/compare/v1.13.0...v1.14.0) (2026-09-30)
+
+
+### Features
+
+* **chart:** bump n8n to 2.41.4 ([#213](https://github.com/n8n-io/n8n-hosting/issues/213)) ([00ff1a6](https://github.com/n8n-io/n8n-hosting/commit/00ff1a670972475459ff9b4808af0084fdd3dd21))
+* **chart:** report every validation failure in one render ([#209](https://github.com/n8n-io/n8n-hosting/issues/209)) ([6bdbd01](https://github.com/n8n-io/n8n-hosting/commit/6bdbd012d8e9017258d25ede5c3450c3792e6d75))
+
+
+### Bug Fixes
+
+* **chart:** drop deprecated N8N_AVAILABLE_BINARY_DATA_MODES ([#185](https://github.com/n8n-io/n8n-hosting/issues/185)) ([bb5e9a6](https://github.com/n8n-io/n8n-hosting/commit/bb5e9a64f7f854c3947666a60ddfd8c793a3f76e))
+
+## [1.13.0](https://github.com/n8n-io/n8n-hosting/compare/v1.12.0...v1.13.0) (2026-09-23)
+
+
+### Features
+
+* **chart:** allow webhook processors to be paused and scaled to zero ([#202](https://github.com/n8n-io/n8n-hosting/issues/202)) ([65e517e](https://github.com/n8n-io/n8n-hosting/commit/65e517e05330e316c72ee14ee1c4042193302c63))
+* **chart:** bump n8n to 2.40.5 ([#206](https://github.com/n8n-io/n8n-hosting/issues/206)) ([5bcae91](https://github.com/n8n-io/n8n-hosting/commit/5bcae91bf00f1814794f32f4be7ff938bd2ba8d4))
+
+
+### Bug Fixes
+
+* **chart:** leave worker and webhook-processor replicas to the autoscaler ([#201](https://github.com/n8n-io/n8n-hosting/issues/201)) ([a344ca3](https://github.com/n8n-io/n8n-hosting/commit/a344ca3ae804a7c92df6f7608a1b20688368c6e4))
+* **chart:** ship README.md inside the packaged chart ([#205](https://github.com/n8n-io/n8n-hosting/issues/205)) ([0cbe882](https://github.com/n8n-io/n8n-hosting/commit/0cbe88280454f7d7fc9f37ff1c458fb3da546a2a))
+
+
+### Documentation
+
+* **chart:** add design principles, decisions and an AGENTS.md ([#204](https://github.com/n8n-io/n8n-hosting/issues/204)) ([05ca169](https://github.com/n8n-io/n8n-hosting/commit/05ca169d5a0940853a7dae2d2af3936e63d5d4ba))
+
+## [1.12.0](https://github.com/n8n-io/n8n-hosting/compare/v1.11.0...v1.12.0) (2026-09-16)
+
+
+### Features
+
+* **chart:** Allow workers to be paused and scaled to zero ([#177](https://github.com/n8n-io/n8n-hosting/issues/177)) ([f017a9f](https://github.com/n8n-io/n8n-hosting/commit/f017a9f83b63c6f59ffa226286502aeddfc905ed))
+* **chart:** bump n8n to 2.39.6 ([#198](https://github.com/n8n-io/n8n-hosting/issues/198)) ([6bf6e75](https://github.com/n8n-io/n8n-hosting/commit/6bf6e7534fac8b7118afcc3b132cb202f0d4b8cd))
+* **chart:** pin n8n to appVersion ([#193](https://github.com/n8n-io/n8n-hosting/issues/193)) ([7fbc10f](https://github.com/n8n-io/n8n-hosting/commit/7fbc10fcfd8d334e3dc3eb88e1be6b3076706727))
+
+
+### Bug Fixes
+
+* align Postgres to the newest supported major (18) ([#181](https://github.com/n8n-io/n8n-hosting/issues/181)) ([6b78193](https://github.com/n8n-io/n8n-hosting/commit/6b78193475d84ae190622d8a8e9ba8598e89b7d1))
+
 ## [1.11.0](https://github.com/n8n-io/n8n-hosting/compare/v1.10.1...v1.11.0) (2026-07-17)
 
 

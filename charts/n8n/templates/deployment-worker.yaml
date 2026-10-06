@@ -12,7 +12,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if not (include "n8n.autoscalerOwnsReplicas" (dict "root" . "component" "worker")) }}
   replicas: {{ .Values.queueMode.workerReplicaCount }}
+  {{- end }}
   revisionHistoryLimit: 3
   selector:
     matchLabels:

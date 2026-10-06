@@ -1,17 +1,46 @@
 apiVersion: v2
 name: n8n
-version: 1.11.0  # x-release-please-version
+version: 1.14.0  # x-release-please-version
 kubeVersion: ">=1.25.0-0"
+# Pinned to a commit rather than a branch: this file lives inside the n8n
+# frontend, which reorganises its paths, and a moved logo breaks every chart
+# version that points at it. Artifact Hub shows the logo as a square tile, so
+# this is the square mark rather than the wordmark.
 icon: >-
-  https://raw.githubusercontent.com/n8n-io/n8n/master/packages/editor-ui/public/images/n8n-logo.png
+  https://raw.githubusercontent.com/n8n-io/n8n/57e4bf2b4101918634874f25ba8e5c249a57826b/packages/frontend/@n8n/design-system/src/components/N8nLogo/logo-icon.svg
 description: >-
-  Production-grade Helm chart for n8n, the workflow automation platform.
-  Supports queue mode, multi-main HA, webhook processors, task runners, HPA,
-  PDB, network policies, and S3 external storage.
-appVersion: "2.38.5"
+  The official, production-grade Helm chart for n8n, the workflow automation
+  platform. Supports queue mode, multi-main HA, webhook processors, task
+  runners, HPA, PDB, network policies, and S3 external storage.
+appVersion: "2.41.4"
 type: application
 annotations:
   artifacthub.io/license: MIT
+  artifacthub.io/category: integration-delivery
+  # Artifact Hub builds the package page from inside the .tgz, so these
+  # annotations and the README beside them are the whole of what it shows.
+  # `home` and `sources` above are rendered separately; this is for the rest.
+  artifacthub.io/links: |
+    - name: Chart documentation
+      url: https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/README.md
+    - name: Self-hosting documentation
+      url: https://docs.n8n.io/hosting/
+    - name: Community forum
+      url: https://community.n8n.io
+  # The images Artifact Hub scans for the vulnerability report on the chart's
+  # page. Left undeclared it scans whatever a default-values render emits,
+  # which is the wrong set twice over: the task runner is missing because its
+  # sidecar is off by default, and the busybox in the helm test hook is
+  # counted although no n8n deployment runs it.
+  #
+  # An annotation is a plain string that Helm never templates, so these tags
+  # cannot follow appVersion on their own; scripts/bump-n8n-version.sh moves
+  # all three together.
+  artifacthub.io/images: |
+    - name: n8n
+      image: docker.n8n.io/n8nio/n8n:2.41.4
+    - name: task-runner
+      image: n8nio/runners:2.41.4
 keywords:
   - n8n
   - workflow-automation
