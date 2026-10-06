@@ -31,6 +31,7 @@ tests:
       queueMode.enabled: false
       multiMain.enabled: true
       multiMain.replicas: 2
+      license.enabled: true
     asserts:
       - failedTemplate:
           errorMessage: 'multiMain.enabled=true requires queueMode.enabled=true'
@@ -40,6 +41,7 @@ tests:
     set:
       multiMain.enabled: true
       multiMain.replicas: 1
+      license.enabled: true
     asserts:
       - failedTemplate:
           errorMessage: 'multiMain.enabled=true requires multiMain.replicas >= 2'
