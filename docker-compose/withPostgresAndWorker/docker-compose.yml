@@ -7,6 +7,7 @@ x-shared: &shared
   restart: always
   image: docker.n8n.io/n8nio/n8n:${N8N_VERSION}
   environment:
+    - N8N_INSTALL_METHOD=docker-compose/with-postgres-and-worker
     - DB_TYPE=postgresdb
     - DB_POSTGRESDB_HOST=postgres
     - DB_POSTGRESDB_PORT=5432
