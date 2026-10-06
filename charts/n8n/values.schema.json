@@ -689,6 +689,13 @@
         "existingSecret": { "type": "string" },
         "env": {
           "type": "object",
+          "properties": {
+            "N8N_ENCRYPTION_KEY_FILE": {
+              "type": "string",
+              "pattern": "^(/.*)?$",
+              "description": "Absolute path of a mounted encryption key file. When set, n8n containers read the key from this file instead of N8N_ENCRYPTION_KEY"
+            }
+          },
           "additionalProperties": { "type": "string" }
         }
       }

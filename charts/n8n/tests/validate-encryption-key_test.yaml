@@ -20,4 +20,20 @@ tests:
       secretRefs.existingSecret: ""
     asserts:
       - failedTemplate:
-          errorMessage: 'secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret'
+          errorMessage: 'secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, provide secretRefs.existingSecret with your own Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY_FILE'
+
+  - it: accepts the placeholder key with a key file
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY_FILE: /run/secrets/n8n/encryption-key
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects a relative key file path in the schema
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_ENCRYPTION_KEY_FILE: secrets/encryption-key
+    asserts:
+      - failedTemplate:
+          errorPattern: 'N8N_ENCRYPTION_KEY_FILE.*does not match pattern'

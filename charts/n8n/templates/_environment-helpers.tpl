@@ -121,10 +121,10 @@ Encryption key environment variable
 */}}
 {{- define "n8n.encryptionKeyEnv" -}}
 {{- $encryptionKeyFile := .Values.secretRefs.env.N8N_ENCRYPTION_KEY_FILE | default "" -}}
-{{- if $encryptionKeyFile }}
+{{- if $encryptionKeyFile -}}
 - name: N8N_ENCRYPTION_KEY_FILE
   value: {{ $encryptionKeyFile | quote }}
-{{- else }}
+{{- else -}}
 - name: N8N_ENCRYPTION_KEY
   valueFrom:
     secretKeyRef:
@@ -137,7 +137,6 @@ Encryption key environment variable
 Core n8n secrets environment variables
 */}}
 {{- define "n8n.coreSecretsEnv" -}}
-# Core n8n secrets
 {{ include "n8n.encryptionKeyEnv" . }}
 - name: N8N_HOST
   valueFrom:

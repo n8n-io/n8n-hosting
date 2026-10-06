@@ -122,6 +122,10 @@ extraVolumeMounts:
 
 In file mode, `n8n-core-secrets` only needs the other core keys (`N8N_HOST`, `N8N_PORT`, and `N8N_PROTOCOL`). The file path is taken from Helm values even when `secretRefs.existingSecret` is set; Helm cannot inspect an externally managed Secret to select the mode automatically. Global extra volume mounts are not added to task-runner or user-supplied sidecars, which do not need the n8n encryption key; declare sidecar mounts explicitly if needed.
 
+When the path is set, it wins, and any `N8N_ENCRYPTION_KEY` in values is ignored. The containers receive the path directly, so the chart-managed Secret never stores it. In file mode that Secret also leaves out `N8N_ENCRYPTION_KEY`, because no container reads it.
+
+> **Warning:** the key file must hold the same key the install already uses. n8n encrypts every stored credential with this key. If the value changes when you switch between `N8N_ENCRYPTION_KEY` and `N8N_ENCRYPTION_KEY_FILE`, n8n can no longer read those credentials.
+
 ## Ingress and HTTPS
 
 Set `ingress.enabled=true` to create the main Ingress for the n8n UI, API, and test webhooks. Configure `ingress.className`, controller-specific `ingress.annotations`, and `ingress.tls` for HTTPS termination. For cert-manager, add the issuer annotation and set `ingress.tls[].secretName` to the certificate Secret cert-manager should create.

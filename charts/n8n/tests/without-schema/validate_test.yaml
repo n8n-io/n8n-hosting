@@ -70,3 +70,11 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: '^extraObjects\[0\] must render to a single Kubernetes object, as a map or a YAML string\.'
+
+  - it: rejects a relative key file path
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_ENCRYPTION_KEY_FILE: secrets/encryption-key
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_ENCRYPTION_KEY_FILE must be an absolute path'
