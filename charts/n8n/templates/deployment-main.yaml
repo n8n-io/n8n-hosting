@@ -12,7 +12,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled }}
+  replicas: {{ include "n8n.mainReplicas" . }}
   revisionHistoryLimit: 3
   {{- with .Values.strategy }}
   strategy:

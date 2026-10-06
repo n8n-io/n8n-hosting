@@ -500,25 +500,6 @@ matches the snapshot:
           terminationGracePeriodSeconds: 60
           volumes: null
   5: |
-    apiVersion: policy/v1
-    kind: PodDisruptionBudget
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: n8n
-        app.kubernetes.io/version: 0.0.0
-        helm.sh/chart: n8n-0.0.0
-      name: RELEASE-NAME-n8n-main
-      namespace: NAMESPACE
-    spec:
-      minAvailable: 1
-      selector:
-        matchLabels:
-          app.kubernetes.io/component: main
-          app.kubernetes.io/instance: RELEASE-NAME
-          app.kubernetes.io/name: n8n
-  6: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     metadata:
@@ -544,7 +525,7 @@ matches the snapshot:
           - secrets
         verbs:
           - get
-  7: |
+  6: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     metadata:
@@ -564,7 +545,7 @@ matches the snapshot:
       - kind: ServiceAccount
         name: n8n
         namespace: NAMESPACE
-  8: |
+  7: |
     apiVersion: v1
     data:
       N8N_RUNNERS_AUTH_TOKEN: c25hcHNob3QtdGVzdC10b2tlbg==
@@ -579,7 +560,7 @@ matches the snapshot:
       name: RELEASE-NAME-n8n-task-runners
       namespace: NAMESPACE
     type: Opaque
-  9: |
+  8: |
     apiVersion: v1
     kind: Service
     metadata:
@@ -601,7 +582,7 @@ matches the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: n8n
       type: ClusterIP
-  10: |
+  9: |
     apiVersion: v1
     kind: ServiceAccount
     metadata:
@@ -613,7 +594,7 @@ matches the snapshot:
         helm.sh/chart: n8n-0.0.0
       name: n8n
       namespace: NAMESPACE
-  11: |
+  10: |
     apiVersion: v1
     kind: Pod
     metadata:

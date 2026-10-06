@@ -339,3 +339,10 @@ Call with the root context and the keda.<component> values, e.g.
 {{- toYaml $annotations -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Main pod replica count: multiMain.replicas under multi-main, otherwise replicaCount.
+*/}}
+{{- define "n8n.mainReplicas" -}}
+{{- ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled -}}
+{{- end -}}
