@@ -1198,7 +1198,7 @@ Resources:
               ValueFrom: !Ref RedisPasswordSecret
           Environment:
             - Name: N8N_INSTALL_METHOD
-              Value: cloudformation/ecs-fargate-queuemode-webhooks-ha
+              Value: aws-cloudformation-ecs-fargate-queuemode-webhooks-ha
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord
             - Name: N8N_PROTOCOL
@@ -1485,7 +1485,7 @@ Resources:
               ValueFrom: !Ref RedisPasswordSecret               
           Environment:
             - Name: N8N_INSTALL_METHOD
-              Value: cloudformation/ecs-fargate-queuemode-webhooks-ha
+              Value: aws-cloudformation-ecs-fargate-queuemode-webhooks-ha
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord
             - Name: N8N_PORT
@@ -1957,7 +1957,7 @@ Resources:
               ValueFrom: !Ref RedisPasswordSecret
           Environment:
             - Name: N8N_INSTALL_METHOD
-              Value: cloudformation/ecs-fargate-queuemode-webhooks-ha
+              Value: aws-cloudformation-ecs-fargate-queuemode-webhooks-ha
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord
             - Name: N8N_PROTOCOL
