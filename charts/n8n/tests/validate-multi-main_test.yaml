@@ -85,3 +85,21 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'hpa.main.enabled=true with hpa.main.maxReplicas > 1 requires multiMain.enabled=true. Without multi-main, each extra main runs schedules and triggers on its own. Set multiMain.enabled=true, or set hpa.main.enabled=false.'
+
+  - it: accepts more than one main replica with multi-main
+    template: templates/deployment-main.yaml
+    set:
+      replicaCount: 3
+      multiMain.enabled: true
+      multiMain.replicas: 2
+      license.enabled: true
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects more than one main replica without multi-main
+    template: templates/deployment-main.yaml
+    set:
+      replicaCount: 2
+    asserts:
+      - failedTemplate:
+          errorMessage: 'replicaCount > 1 requires multiMain.enabled=true. Without multi-main, each extra main runs schedules and triggers on its own. Set multiMain.enabled=true, or set replicaCount to 1.'

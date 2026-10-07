@@ -169,6 +169,7 @@ strategy: {}
 podLabels: {}
 
 # ----- Main replicas (when multi-main is disabled) -----
+# Keep this at 1. To run several mains, enable multiMain and set multiMain.replicas.
 replicaCount: 1
 
 # ----- Service -----
@@ -487,7 +488,7 @@ lifecycle:
 
 # ----- Autoscaling -----
 hpa:
-  # Main pods autoscaling (UI/API pods). maxReplicas above 1 requires multiMain.enabled
+  # Main pods autoscaling (UI/API pods). When enabled, maxReplicas above 1 requires multiMain.enabled
   main:
     enabled: false
     minReplicas: 1
