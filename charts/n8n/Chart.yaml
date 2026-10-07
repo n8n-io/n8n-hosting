@@ -1,6 +1,6 @@
 apiVersion: v2
 name: n8n
-version: 1.14.0  # x-release-please-version
+version: 1.15.0  # x-release-please-version
 kubeVersion: ">=1.25.0-0"
 # Pinned to a commit rather than a branch: this file lives inside the n8n
 # frontend, which reorganises its paths, and a moved logo breaks every chart

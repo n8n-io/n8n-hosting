@@ -4,6 +4,46 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.15.0](https://github.com/n8n-io/n8n-hosting/compare/v1.14.0...v1.15.0) (2026-10-07)
+
+
+### Upgrade notes
+
+**Postgres TLS now applies.** This release addresses a defect where `database.ssl.enabled: true` had no effect on its own and the connection stayed plaintext unless `ssl.ca` or `ssl.cert` was also set.
+
+From this release it now correctly negotiates TLS and verifies the server certificate (assuming `rejectUnauthorized` remains at its default of `true`).
+
+If you set `ssl.enabled: true` against a managed Postgres whose CA is not in Node's default trust store, n8n will fail to connect after the upgrade until you supply the CA. Set `database.ssl.ca` to the PEM contents, or point `database.ssl.existingSecret` at a Secret holding it:
+
+```yaml
+database:
+  ssl:
+    enabled: true
+    existingSecret:
+      name: postgres-tls
+      caKey: ca.crt
+```
+
+`examples/production-s3.yaml` shows an example.
+
+Alternatively, setting `rejectUnauthorized: false` also unblocks the upgrade, but skips verification.
+
+You are not affected if `ssl.enabled` is false (the default) or you already set `ssl.ca`.
+
+**`database.ssl.key` continues to be ignored.** The chart does not pass this value to n8n. To supply a client key, use `database.ssl.existingSecret.keyKey`. Chart 2.0 will refuse to render with `ssl.key` set.
+
+### Features
+
+* **chart:** add extraObjects to deploy extra Kubernetes objects ([#219](https://github.com/n8n-io/n8n-hosting/issues/219)) ([60b692c](https://github.com/n8n-io/n8n-hosting/commit/60b692cb47deda4fa75d8c1f2bda5ec5110edf53))
+* **chart:** bump n8n to 2.42.4 ([#230](https://github.com/n8n-io/n8n-hosting/issues/230)) ([fce51d0](https://github.com/n8n-io/n8n-hosting/commit/fce51d0a247aaeefda072c270e34348eca6b0c91))
+* **chart:** list the chart on Artifact Hub and sign releases ([#214](https://github.com/n8n-io/n8n-hosting/issues/214)) ([5fb4203](https://github.com/n8n-io/n8n-hosting/commit/5fb4203a0498f3602ffd91f0113ee9bdc1e2f885))
+* **chart:** source Postgres TLS certs and key from an existing Secret ([#222](https://github.com/n8n-io/n8n-hosting/issues/222)) ([85eee41](https://github.com/n8n-io/n8n-hosting/commit/85eee41763530a27140278f802396a119a7bba28))
+
+
+### Bug Fixes
+
+* **chart:** use DB_POSTGRESDB_SSL_ENABLED to enable Postgres TLS ([#175](https://github.com/n8n-io/n8n-hosting/issues/175)) ([d5525ec](https://github.com/n8n-io/n8n-hosting/commit/d5525ec43428475d20b6021ae56bde321b634b9a))
+
 ## [1.14.0](https://github.com/n8n-io/n8n-hosting/compare/v1.13.0...v1.14.0) (2026-09-30)
 
 
