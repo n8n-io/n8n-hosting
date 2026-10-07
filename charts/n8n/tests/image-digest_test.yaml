@@ -1,0 +1,98 @@
+# A digest, when set, replaces the tag in the image reference. The n8n and
+# runner images are pinned separately because they are different images.
+suite: 'image digest'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  image.tag: "2.40.0"
+  webhookProcessor.enabled: true
+  taskRunners.enabled: true
+tests:
+  - it: renders the tag form on every n8n container when no digest is set
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.n8n.io/n8nio/n8n:2.40.0
+
+  - it: renders the digest form on every n8n container when image.digest is set
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.n8n.io/n8nio/n8n@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+  - it: renders the runner tag form on the worker when no digest is set
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners:2.40.0
+
+  - it: renders the runner digest form on the worker when taskRunners.image.digest is set
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.image.digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+  - it: renders the runner tag form on main outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      webhookProcessor.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners:2.40.0
+
+  - it: renders the runner digest form on main outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      webhookProcessor.enabled: false
+      taskRunners.image.digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+  - it: keeps the runner on its tag when only image.digest is set
+    template: templates/deployment-worker.yaml
+    set:
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners:2.40.0
+
+  - it: rejects a digest without the sha256 prefix
+    template: templates/deployment-main.yaml
+    set:
+      image.digest: "2.40.0"
+    asserts:
+      - failedTemplate:
+          errorPattern: "/image/digest"
+
+  - it: rejects a runner digest without the sha256 prefix
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.image.digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    asserts:
+      - failedTemplate:
+          errorPattern: "/taskRunners/image/digest"

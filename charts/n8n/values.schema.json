@@ -11,6 +11,11 @@
           "type": "string",
           "description": "n8n image tag. Leave empty to use the chart's appVersion"
         },
+        "digest": {
+          "type": "string",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "description": "n8n image digest. When set, the image is pulled by digest and tag is ignored"
+        },
         "pullPolicy": {
           "type": "string",
           "enum": ["Always", "IfNotPresent", "Never"]
@@ -83,6 +88,11 @@
             "tag": {
               "type": "string",
               "description": "Task runner image tag. Leave empty to use the same tag as the main n8n image"
+            },
+            "digest": {
+              "type": "string",
+              "pattern": "^(sha256:[a-f0-9]{64})?$",
+              "description": "Task runner image digest. When set, the runner image is pulled by digest and tag is ignored"
             },
             "pullPolicy": {
               "type": "string",

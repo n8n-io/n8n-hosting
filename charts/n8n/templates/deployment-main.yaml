@@ -67,7 +67,7 @@ spec:
 
       containers:
         - name: n8n-main
-          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
+          image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false
@@ -202,7 +202,7 @@ spec:
         {{- if include "n8n.mainTaskRunnersEnabled" . }}
         # Task Runner sidecar container
         - name: task-runner
-          image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
+          image: {{ include "n8n.taskRunnerImage" . | quote }}
           imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false

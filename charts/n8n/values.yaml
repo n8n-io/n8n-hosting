@@ -5,6 +5,11 @@ image:
   # chart release was built and tested against.
   # Set explicitly to run a different n8n version.
   tag: ""
+  # Pin the image by digest, e.g. "sha256:3f1c...". When set, the image is
+  # pulled as repository@digest and tag is ignored. The chart never fills
+  # this in: the weekly n8n bump moves appVersion only, so a pinned digest
+  # stays on the image you chose until you change it.
+  digest: ""
   pullPolicy: IfNotPresent
 
 # ----- Names -----
@@ -94,6 +99,11 @@ taskRunners:
     # Leave empty to automatically use the same tag as the main n8n image
     # Set explicitly only if you need a different version (not recommended)
     tag: ""
+    # Pin the runner image by digest, e.g. "sha256:9a2b...". When set, tag is
+    # ignored. image.digest does not apply here because the runner is a
+    # separate image, so set both to pin both. Keep the two on the same n8n
+    # version. The weekly n8n bump does not move this digest either.
+    digest: ""
     pullPolicy: IfNotPresent
 
   # Task runner mode (only external mode is supported in this chart)

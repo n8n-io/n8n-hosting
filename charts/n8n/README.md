@@ -151,6 +151,8 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 |---|---|---|
 | `image.repository` | n8n image | `docker.n8n.io/n8nio/n8n` |
 | `image.tag` | n8n version | `""` (uses the chart's `appVersion`) |
+| `image.digest` | Pin the n8n image by digest (`sha256:...`); replaces `image.tag` when set | `""` |
+| `taskRunners.image.digest` | Pin the runner image by digest; replaces `taskRunners.image.tag` when set | `""` |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
 | `queueMode.workerConcurrency` | Jobs per worker | `10` |
 | `multiMain.enabled` | Multi-main HA (Enterprise) | `false` |

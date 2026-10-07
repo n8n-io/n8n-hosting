@@ -95,6 +95,30 @@ appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
 {{- end -}}
 
 {{/*
+n8n image reference. A digest, when set, replaces the tag, so the image is
+pinned by content and nothing is resolved by tag at pull time.
+*/}}
+{{- define "n8n.image" -}}
+{{- if .Values.image.digest -}}
+{{- printf "%s@%s" .Values.image.repository .Values.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.image.repository (include "n8n.imageTag" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Task runner image reference. Takes only taskRunners.image.digest: the runner is
+a different image, so the n8n digest can never apply to it.
+*/}}
+{{- define "n8n.taskRunnerImage" -}}
+{{- if .Values.taskRunners.image.digest -}}
+{{- printf "%s@%s" .Values.taskRunners.image.repository .Values.taskRunners.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.taskRunners.image.repository (include "n8n.taskRunnerImageTag" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Render one extraObjects entry through tpl and return it as YAML. A string
 entry is rendered as written; a map entry is serialised first, so both can
 reference the release. A literal `{{` has to be written as `{{ "{{" }}`.
