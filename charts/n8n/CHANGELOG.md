@@ -4,6 +4,21 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.15.0](https://github.com/n8n-io/n8n-hosting/compare/v1.14.0...v1.15.0) (2026-10-07)
+
+
+### Features
+
+* **chart:** add extraObjects to deploy extra Kubernetes objects ([#219](https://github.com/n8n-io/n8n-hosting/issues/219)) ([60b692c](https://github.com/n8n-io/n8n-hosting/commit/60b692cb47deda4fa75d8c1f2bda5ec5110edf53))
+* **chart:** bump n8n to 2.42.4 ([#230](https://github.com/n8n-io/n8n-hosting/issues/230)) ([fce51d0](https://github.com/n8n-io/n8n-hosting/commit/fce51d0a247aaeefda072c270e34348eca6b0c91))
+* **chart:** list the chart on Artifact Hub and sign releases ([#214](https://github.com/n8n-io/n8n-hosting/issues/214)) ([5fb4203](https://github.com/n8n-io/n8n-hosting/commit/5fb4203a0498f3602ffd91f0113ee9bdc1e2f885))
+* **chart:** source Postgres TLS certs and key from an existing Secret ([#222](https://github.com/n8n-io/n8n-hosting/issues/222)) ([85eee41](https://github.com/n8n-io/n8n-hosting/commit/85eee41763530a27140278f802396a119a7bba28))
+
+
+### Bug Fixes
+
+* **chart:** use DB_POSTGRESDB_SSL_ENABLED to enable Postgres TLS ([#175](https://github.com/n8n-io/n8n-hosting/issues/175)) ([d5525ec](https://github.com/n8n-io/n8n-hosting/commit/d5525ec43428475d20b6021ae56bde321b634b9a))
+
 ## [1.14.0](https://github.com/n8n-io/n8n-hosting/compare/v1.13.0...v1.14.0) (2026-09-30)
 
 
