@@ -158,6 +158,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `taskRunners.enabled` | Task runner sidecars | `false` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
+| `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations` | `{}` |
 | `strategy` | Deployment update strategy | `{}` (k8s default) |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
 | `hpa.main.enabled` | HPA for main pods | `false` |

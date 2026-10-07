@@ -270,7 +270,12 @@
         "size": { "type": "string", "pattern": "^[0-9]+Gi$" },
         "accessModes": { "type": "array", "items": { "type": "string" } },
         "storageClassName": { "type": "string" },
-        "existingClaim": { "type": "string" }
+        "existingClaim": { "type": "string" },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "default": {}
+        }
       },
       "required": ["enabled"]
     },

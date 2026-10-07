@@ -222,6 +222,10 @@ persistence:
   accessModes: ["ReadWriteOnce"]
   size: 10Gi
   storageClassName: ""
+  # Annotations on the chart-managed PVC only, merged over commonAnnotations.
+  # Useful for backup and retention tooling, e.g. helm.sh/resource-policy: keep.
+  # Not applied with existingClaim, because the chart does not render that PVC.
+  annotations: {}
 
 # ----- Additional Kubernetes resources -----
 # Arbitrary Kubernetes objects rendered as part of this Helm release.

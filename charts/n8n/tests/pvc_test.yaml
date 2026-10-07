@@ -1,0 +1,44 @@
+suite: 'persistence'
+templates:
+  - templates/pvc.yaml
+set:
+  persistence.enabled: true
+tests:
+  - it: renders commonAnnotations alone when persistence.annotations is unset
+    set:
+      commonAnnotations:
+        team: platform
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            team: platform
+
+  - it: renders persistence.annotations on the PVC
+    set:
+      persistence.annotations:
+        helm.sh/resource-policy: keep
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            helm.sh/resource-policy: keep
+
+  - it: merges with commonAnnotations, and persistence.annotations wins on a shared key
+    set:
+      commonAnnotations:
+        team: platform
+        backup.example.com/schedule: weekly
+      persistence.annotations:
+        backup.example.com/schedule: daily
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            team: platform
+            backup.example.com/schedule: daily
+
+  - it: renders no annotations block when neither is set
+    asserts:
+      - notExists:
+          path: metadata.annotations
