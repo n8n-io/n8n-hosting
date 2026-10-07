@@ -396,6 +396,15 @@
         "worker": {
           "type": "object",
           "properties": {
+            "startup": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "path": { "type": "string" },
+                "periodSeconds": { "type": "integer", "minimum": 1 },
+                "failureThreshold": { "type": "integer", "minimum": 1 }
+              }
+            },
             "readiness": {
               "type": "object",
               "properties": {

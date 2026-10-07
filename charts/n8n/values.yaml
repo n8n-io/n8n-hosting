@@ -430,6 +430,15 @@ probes:
   # /healthz/readiness answers 503 until the worker has its database,
   # migrations and Redis connection.
   worker:
+    # Holds off liveness until the health endpoint answers. The worker
+    # starts it only after database migrations, so this budget also
+    # covers a wait on the migration lock. Renders only when
+    # redis.healthCheck.enabled is true.
+    startup:
+      enabled: true
+      path: /healthz
+      periodSeconds: 10
+      failureThreshold: 30
     readiness:
       enabled: true
       type: "httpGet"                        # <-- httpGet or exec; exec runs command instead
@@ -442,7 +451,7 @@ probes:
     liveness:
       enabled: true
       type: "httpGet"                        # <-- httpGet or exec; exec runs command instead
-      path: /healthz                         # <-- Also used by the worker startup probe
+      path: /healthz
       command: []
       initialDelaySeconds: 60
       periodSeconds: 30

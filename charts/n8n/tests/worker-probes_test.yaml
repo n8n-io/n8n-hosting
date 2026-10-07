@@ -91,9 +91,6 @@ tests:
         failureThreshold: 8
     asserts:
       - equal:
-          path: spec.template.spec.containers[0].startupProbe.httpGet.path
-          value: /custom/healthz
-      - equal:
           path: spec.template.spec.containers[0].livenessProbe
           value:
             httpGet:
@@ -113,6 +110,33 @@ tests:
             periodSeconds: 6
             timeoutSeconds: 7
             failureThreshold: 8
+
+  - it: takes the startup probe path and budget from values
+    template: templates/deployment-worker.yaml
+    set:
+      probes.worker.startup:
+        path: /custom/healthz
+        periodSeconds: 5
+        failureThreshold: 60
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            httpGet:
+              path: /custom/healthz
+              port: 5678
+            failureThreshold: 60
+            periodSeconds: 5
+
+  - it: drops the startup probe when it is disabled
+    template: templates/deployment-worker.yaml
+    set:
+      probes.worker.startup.enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
 
   - it: drops a probe that is disabled
     template: templates/deployment-worker.yaml

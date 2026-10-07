@@ -158,15 +158,15 @@ spec:
 
           # Worker Health Probes
           {{- $healthPort := .Values.redis.healthCheck.port }}
-          {{- if .Values.redis.healthCheck.enabled }}
-          # The health server starts only after database migrations finish,
-          # so this budget also covers a wait on the migration lock.
+          {{- with .Values.probes.worker.startup }}
+          {{- if and .enabled $.Values.redis.healthCheck.enabled }}
           startupProbe:
             httpGet:
-              path: {{ .Values.probes.worker.liveness.path }}
+              path: {{ .path }}
               port: {{ $healthPort }}
-            failureThreshold: 30
-            periodSeconds: 10
+            failureThreshold: {{ .failureThreshold }}
+            periodSeconds: {{ .periodSeconds }}
+          {{- end }}
           {{- end }}
 
           {{- with .Values.probes.worker.readiness }}
