@@ -2,12 +2,11 @@ apiVersion: v2
 name: n8n
 version: 1.15.0  # x-release-please-version
 kubeVersion: ">=1.25.0-0"
-# Pinned to a commit rather than a branch: this file lives inside the n8n
-# frontend, which reorganises its paths, and a moved logo breaks every chart
-# version that points at it. Artifact Hub shows the logo as a square tile, so
-# this is the square mark rather than the wordmark.
+# Artifact Hub fits the logo into a square box and only ever scales images
+# down, so the icon is a square drawn at 320px. It lives in this repository so
+# that its path stays put.
 icon: >-
-  https://raw.githubusercontent.com/n8n-io/n8n/57e4bf2b4101918634874f25ba8e5c249a57826b/packages/frontend/@n8n/design-system/src/components/N8nLogo/logo-icon.svg
+  https://raw.githubusercontent.com/n8n-io/n8n-hosting/main/assets/n8n-chart-icon.svg
 description: >-
   The official, production-grade Helm chart for n8n, the workflow automation
   platform. Supports queue mode, multi-main HA, webhook processors, task
