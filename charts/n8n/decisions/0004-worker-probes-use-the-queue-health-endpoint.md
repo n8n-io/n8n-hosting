@@ -11,7 +11,7 @@ n8n starts an HTTP server on a worker when `QUEUE_HEALTH_CHECK_ACTIVE` is set. `
 
 ## Decision
 
-`redis.healthCheck.enabled` defaults to `true`, so workers serve the health endpoint on `redis.healthCheck.port`. Worker liveness probes `/healthz`. Worker readiness probes `/healthz/readiness`. A startup probe on `/healthz` with the same budget as main's (30 attempts, 10 seconds apart) holds off liveness during a slow first start or a wait on the migration lock.
+`redis.healthCheck.enabled` defaults to `true`, so workers serve the health endpoint on `redis.healthCheck.port`. Worker liveness probes `/healthz`. Worker readiness probes `/healthz/readiness`. A startup probe on `/healthz` with the same budget as main's (30 attempts, 10 seconds apart) holds off liveness during a slow first start or a wait on the migration lock. The task-runner sidecar has no startup probe because its launcher answers within a second. The worker answers only after migrations, so it needs one. Every worker probe field, the startup probe included, sits under `probes.worker`, so users can tune or disable each probe without patching the template.
 
 `probes.worker.*.type: exec` with a `command` still runs an exec probe instead. Three combinations stop the render with the fix named: an HTTP probe with the health endpoint switched off, an exec probe with no command, and a command on an HTTP probe. This sits under "Fail loudly, never silently": the old fallback from `httpGet` to `exec` rendered a probe that could not fail.
 
