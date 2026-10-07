@@ -13,7 +13,7 @@ n8n reads `N8N_INSTALL_METHOD` and sends it with the telemetry it already sends.
 
 The chart sets `N8N_INSTALL_METHOD` to `helm-chart/<chart version>` on every component. The value comes from `config.installMethod`. When that value is empty, the chart uses its own name and version. A wrapping chart sets `config.installMethod` to its own name and version.
 
-The value has its own key rather than an entry in `config.extraEnv`. This follows "one place to set anything, and a defined winner". An override through `extraEnv` would put two entries with the same name in the pod spec, and server-side apply and strategic merge patches do not handle that reliably.
+The value has its own key rather than an entry in `config.extraEnv`. This follows "one place to set anything, and a defined winner". The chart sets the variable itself, so `config.installMethod` is the one place to change it. If someone also sets it in `config.extraEnv`, the pod spec carries two entries with the same name. Kubernetes uses the last one, so the `extraEnv` entry wins. Other chart-managed variables behave the same way. Server-side apply and strategic merge patches do not handle duplicate names reliably, so `config.installMethod` is the supported way.
 
 ## Consequences
 
