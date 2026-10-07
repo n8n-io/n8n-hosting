@@ -145,6 +145,19 @@ per mistake.
 {{- end -}}
 {{- end -}}
 
+{{/* --- Worker probes --- */}}
+{{- if .Values.queueMode.enabled -}}
+{{- range $name := list "liveness" "readiness" -}}
+{{- $probe := index $.Values.probes.worker $name -}}
+{{- if and $probe.enabled (eq $probe.type "httpGet") (not $.Values.redis.healthCheck.enabled) -}}
+{{- $errs = append $errs (printf "probes.worker.%s.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or set probes.worker.%s.type=exec with a command." $name $name) -}}
+{{- end -}}
+{{- if and $probe.enabled (eq $probe.type "exec") (not $probe.command) -}}
+{{- $errs = append $errs (printf "probes.worker.%s.type=exec requires probes.worker.%s.command. Set a command, or set probes.worker.%s.type=httpGet." $name $name $name) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{/* --- Standalone mode constraints --- */}}
 {{- if not .Values.queueMode.enabled -}}
 {{- if and (not .Values.persistence.enabled) (not .Values.database.useExternal) -}}

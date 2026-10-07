@@ -425,28 +425,25 @@ probes:
     periodSeconds: 10
     timeoutSeconds: 3
     failureThreshold: 6
-  # Worker-specific probes (workers don't have HTTP endpoints)
+  # Worker probes. Workers serve /healthz and /healthz/readiness on
+  # redis.healthCheck.port when redis.healthCheck.enabled is true.
+  # /healthz/readiness answers 503 until the worker has its database,
+  # migrations and Redis connection.
   worker:
     readiness:
       enabled: true
-      # Custom readiness probe that checks if worker is ready
-      type: "exec"                           # <-- Use exec probe instead of HTTP
-      command:
-        - "/bin/sh"
-        - "-c"
-        - "pgrep -f 'n8n worker' > /dev/null"
+      type: "httpGet"                        # <-- httpGet or exec; exec runs command instead
+      path: /healthz/readiness
+      command: []
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 3
       failureThreshold: 6
     liveness:
       enabled: true
-      # Check if n8n worker process is still running
-      type: "exec"
-      command:
-        - "/bin/sh"
-        - "-c"
-        - "pgrep -f 'n8n worker' > /dev/null"
+      type: "httpGet"                        # <-- httpGet or exec; exec runs command instead
+      path: /healthz                         # <-- Also used by the worker startup probe
+      command: []
       initialDelaySeconds: 60
       periodSeconds: 30
       timeoutSeconds: 5
@@ -701,9 +698,10 @@ redis:
     stalledInterval: 30000                         # <-- Stalled job check interval (ms)
     maxStalledCount: 1                             # <-- Max stalled job retries
   # Health check settings
+  # Worker health endpoint, probed by probes.worker
   healthCheck:
-    enabled: false                                 # <-- Enable queue health checks
-    port: 5678                                     # <-- Health check port
+    enabled: true                                  # <-- Serve /healthz and /healthz/readiness on workers
+    port: 5678                                     # <-- Port the worker health endpoint listens on
   # Additional Redis environment variables
   extraEnv: []
 

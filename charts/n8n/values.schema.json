@@ -422,9 +422,9 @@
                 "enabled": { "type": "boolean" },
                 "type": {
                   "type": "string",
-                  "enum": ["exec"],
-                  "description": "Workers don't expose an HTTP endpoint; only exec probes are supported"
+                  "enum": ["httpGet", "exec"]
                 },
+                "path": { "type": "string" },
                 "command": {
                   "type": "array",
                   "items": { "type": "string" }
