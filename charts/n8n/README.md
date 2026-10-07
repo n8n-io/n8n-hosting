@@ -174,6 +174,9 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
+| `securityContext` | Pod securityContext for all n8n pods (`fsGroup`, `runAsUser`, `runAsGroup`) | enabled, `1000` |
+| `podSecurityContext.<role>` | Pod securityContext overrides for `main`, `worker` or `webhookProcessor` | `{}` |
+| `containerSecurityContext.<role>` | Container securityContext overrides for `main`, `worker`, `webhookProcessor` or `taskRunner` | `{}` |
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
@@ -256,6 +259,34 @@ nodePlacement:
 > **Note:** When `multiMain.enabled=true`, the chart emits an automatic pod-anti-affinity rule to spread main replicas across nodes. Setting `nodePlacement.main.affinity` replaces that auto rule — include your own pod-anti-affinity term if you still want main replicas spread.
 
 See [`examples/node-placement.yaml`](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
+
+## Security Context
+
+Every n8n pod runs with `securityContext`: UID, GID and `fsGroup` 1000, `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. Every container sets `allowPrivilegeEscalation: false` and drops all capabilities.
+
+To change these for one role, set `podSecurityContext.<role>` or `containerSecurityContext.<role>`. Each block merges over the defaults, so it only needs the fields that change. A field set to `null` is removed. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
+
+```yaml
+# OpenShift: let the restricted SCC assign the UID and GID. Set the same for
+# webhookProcessor when it is enabled.
+podSecurityContext:
+  main:
+    fsGroup: null
+    runAsUser: null
+    runAsGroup: null
+  worker:
+    fsGroup: null
+    runAsUser: null
+    runAsGroup: null
+
+# Distroless task-runner image, which runs as UID 65532.
+containerSecurityContext:
+  taskRunner:
+    runAsUser: 65532
+    runAsGroup: 65532
+```
+
+Set `securityContext.enabled: false` to drop the pod defaults. A `podSecurityContext.<role>` block still applies on its own.
 
 ## Task Runners
 
