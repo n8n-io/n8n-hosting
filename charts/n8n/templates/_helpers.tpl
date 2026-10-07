@@ -95,12 +95,36 @@ appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
 {{- end -}}
 
 {{/*
+n8n image reference. A digest, when set, replaces the tag, so the image is
+pinned by content and nothing is resolved by tag at pull time.
+*/}}
+{{- define "n8n.image" -}}
+{{- if .Values.image.digest -}}
+{{- printf "%s@%s" .Values.image.repository .Values.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.image.repository (include "n8n.imageTag" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Task runner image reference. Takes only taskRunners.image.digest: the runner is
+a different image, so the n8n digest can never apply to it.
+*/}}
+{{- define "n8n.taskRunnerImage" -}}
+{{- if .Values.taskRunners.image.digest -}}
+{{- printf "%s@%s" .Values.taskRunners.image.repository .Values.taskRunners.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.taskRunners.image.repository (include "n8n.taskRunnerImageTag" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Task-runner sidecar container, shared by the main pod (standalone) and worker
 pods (queue mode) so both sidecars stay the same.
 */}}
 {{- define "n8n.taskRunnerContainer" -}}
 - name: task-runner
-  image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
+  image: {{ include "n8n.taskRunnerImage" . | quote }}
   imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
   securityContext:
     allowPrivilegeEscalation: false
