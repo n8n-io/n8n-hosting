@@ -245,3 +245,11 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'probes.worker.readiness.command is set but probes.worker.readiness.type is httpGet, so the command would not run. Set probes.worker.readiness.type=exec to run it, or remove the command.'
+
+  - it: skips the probe checks when there are no worker pods
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.workerReplicaCount: 0
+      redis.healthCheck.enabled: false
+    asserts:
+      - notFailedTemplate: {}

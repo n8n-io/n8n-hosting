@@ -146,7 +146,8 @@ per mistake.
 {{- end -}}
 
 {{/* --- Worker probes --- */}}
-{{- if .Values.queueMode.enabled -}}
+{{/* Same condition as deployment-worker.yaml: no worker pods, nothing to probe. */}}
+{{- if and .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) -}}
 {{- range $name := list "liveness" "readiness" -}}
 {{- $probe := index $.Values.probes.worker $name -}}
 {{- if and $probe.enabled (eq $probe.type "httpGet") (not $.Values.redis.healthCheck.enabled) -}}
