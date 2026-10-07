@@ -279,7 +279,7 @@ podSecurityContext:
     runAsUser: null
     runAsGroup: null
 
-# Distroless task-runner image, which runs as UID 65532.
+# Run the task runner as nobody (UID and GID 65532), as n8n's hardening guide recommends.
 containerSecurityContext:
   taskRunner:
     runAsUser: 65532

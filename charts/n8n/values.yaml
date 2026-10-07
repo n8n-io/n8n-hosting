@@ -390,7 +390,8 @@ podSecurityContext:
 # readOnlyRootFilesystem is not set by default. n8n writes to ~/.n8n/, /tmp/
 # and other paths at runtime, so enabling it needs writable volumes mounted
 # at those paths.
-# Example for the distroless task-runner image, which runs as UID 65532:
+# Example that runs the task runner as nobody (UID and GID 65532), as
+# n8n's task-runner hardening guide recommends:
 #   containerSecurityContext:
 #     taskRunner:
 #       runAsUser: 65532

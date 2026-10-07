@@ -7,7 +7,7 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/160
 
 The chart had one `securityContext` block for every pod. It set `fsGroup`, `runAsUser` and `runAsGroup` from values, and always added `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. Every container got `allowPrivilegeEscalation: false` and dropped all capabilities, and none of that could be changed from values.
 
-That is too coarse for some clusters. OpenShift's restricted SCC assigns the UID and GID itself and rejects a pod that pins them. The distroless task-runner image runs as UID 65532, not 1000. A read-only root filesystem suits some containers before others. The only escape was `securityContext.enabled: false`, which also dropped `runAsNonRoot` and seccomp.
+That is too coarse for some clusters. OpenShift's restricted SCC assigns the UID and GID itself and rejects a pod that pins them. n8n's task-runner hardening guide runs the runner as `nobody` (UID and GID 65532), not 1000. A read-only root filesystem suits some containers before others. The only escape was `securityContext.enabled: false`, which also dropped `runAsNonRoot` and seccomp.
 
 ## Decision
 
