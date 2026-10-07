@@ -159,7 +159,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          minimum=$(grep -E '^kubeVersion:' charts/n8n/Chart.yaml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          minimum=$(grep -E '^kubeVersion:' charts/n8n/Chart.yaml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
           if [[ -z "$minimum" ]]; then
             echo "::error file=charts/n8n/Chart.yaml::Could not read the minimum Kubernetes version from kubeVersion."
             exit 1
@@ -169,7 +169,7 @@ jobs:
           for version in "$minimum" "$KUBERNETES_NEWEST"; do
             for f in charts/n8n/examples/*.yaml; do
               echo "Validating $f against Kubernetes $version"
-              if ! helm template test charts/n8n -f "$f" |
+              if ! helm template test charts/n8n -f "$f" --kube-version "$version" |
                    kubeconform -strict -summary \
                      -kubernetes-version "$version" \
                      -schema-location "$K8S_SCHEMAS" \
