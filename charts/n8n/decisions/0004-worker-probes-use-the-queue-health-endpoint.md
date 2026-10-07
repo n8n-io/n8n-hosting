@@ -13,7 +13,7 @@ n8n starts an HTTP server on a worker when `QUEUE_HEALTH_CHECK_ACTIVE` is set. `
 
 `redis.healthCheck.enabled` defaults to `true`, so workers serve the health endpoint on `redis.healthCheck.port`. Worker liveness probes `/healthz`. Worker readiness probes `/healthz/readiness`. A startup probe on `/healthz` with the same budget as main's (30 attempts, 10 seconds apart) holds off liveness during a slow first start or a wait on the migration lock.
 
-`probes.worker.*.type: exec` with a `command` still runs an exec probe instead. An HTTP probe with the health endpoint switched off, and an exec probe with no command, stop the render with the fix named. This sits under "Fail loudly, never silently": the old fallback from `httpGet` to `exec` rendered a probe that could not fail.
+`probes.worker.*.type: exec` with a `command` still runs an exec probe instead. Three combinations stop the render with the fix named: an HTTP probe with the health endpoint switched off, an exec probe with no command, and a command on an HTTP probe. This sits under "Fail loudly, never silently": the old fallback from `httpGet` to `exec` rendered a probe that could not fail.
 
 The chart sets the health variables on workers only. n8n reads them in the worker process and nowhere else.
 
@@ -21,5 +21,5 @@ The chart sets the health variables on workers only. n8n reads them in the worke
 
 - With default values, upgrading rolls the workers. From then on, a worker without its database or Redis drops out of Ready, and a worker stuck past the startup budget is restarted.
 - A values file copied whole from an older chart sets `redis.healthCheck.enabled: false` and `type: exec`, and keeps the old exec probes. Remove those keys to take the new defaults.
-- A values file that sets only `redis.healthCheck.enabled: false` now fails to render. Set `probes.worker.*.type: exec` with a command, or remove the key.
+- A values file that sets only `redis.healthCheck.enabled: false`, only `type: exec`, or only `command` now fails to render. Set `type: exec` together with a `command`, or remove the keys.
 - The worker health port must not clash with another port in the worker container, such as the task-runner broker on 5679.
