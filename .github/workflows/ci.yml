@@ -173,9 +173,9 @@ jobs:
           # Without this, a version with no published schemas fails every
           # example with a message that hides the cause.
           for version in "$minimum" "$KUBERNETES_NEWEST"; do
-            if ! printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: probe\n' |
-                 kubeconform -strict -kubernetes-version "$version" -schema-location "$K8S_SCHEMAS" - > /dev/null; then
-              echo "::error::The pinned kubernetes-json-schema commit has no schemas for Kubernetes $version."
+            if ! probe=$(printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: probe\n' |
+                 kubeconform -strict -kubernetes-version "$version" -schema-location "$K8S_SCHEMAS" - 2>&1); then
+              echo "::error::Could not load the Kubernetes $version schemas from the pinned kubernetes-json-schema commit: ${probe//$'\n'/ }"
               exit 1
             fi
           done
