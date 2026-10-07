@@ -5,7 +5,7 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/226
 
 ## Context
 
-n8n reads `N8N_INSTALL_METHOD` and sends it with the telemetry it already sends, so we can tell which artefact installed n8n. The chart reports `helm-chart/<chart version>`.
+n8n reads `N8N_INSTALL_METHOD` and sends it with the telemetry it already sends, so we can tell which artefact installed n8n. The chart will report `helm-chart/<chart version>` once #224 lands.
 
 This repository has more artefacts than the chart: the Docker Compose stacks, the Docker Caddy stack, the plain Kubernetes manifests and the CloudFormation templates. Without a value, an install from any of them looks the same as a hand-written setup.
 
@@ -22,7 +22,7 @@ Each artefact sets `N8N_INSTALL_METHOD` to its name, with no version. A variant 
 | `docker-compose/subfolderWithSSL` | `docker-compose-subfolder-with-ssl` |
 | `docker-caddy` | `docker-caddy` |
 | `kubernetes` | `kubernetes` |
-| `aws-cloudformation/ecs-fargate` | `aws-cloudformation-ecs-fargate-queuemode`, `-queuemode-webhooks`, `-queuemode-webhooks-ha` |
+| `aws-cloudformation/ecs-fargate` | `aws-cloudformation-ecs-fargate-queuemode`, `aws-cloudformation-ecs-fargate-queuemode-webhooks`, `aws-cloudformation-ecs-fargate-queuemode-webhooks-ha` |
 
 The format is `<artefact>[/<version>]`. The slash is the version separator, so a name never contains one. If an artefact gets a version later, append `/<version>` to its name.
 
