@@ -165,6 +165,21 @@ jobs:
             exit 1
           fi
 
+          if [[ "$(printf '%s\n' "$minimum" "$KUBERNETES_NEWEST" | sort -V | head -1)" != "$minimum" ]]; then
+            echo "::error::KUBERNETES_NEWEST ($KUBERNETES_NEWEST) is older than the chart's minimum ($minimum). Raise it."
+            exit 1
+          fi
+
+          # Without this, a version with no published schemas fails every
+          # example with a message that hides the cause.
+          for version in "$minimum" "$KUBERNETES_NEWEST"; do
+            if ! printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: probe\n' |
+                 kubeconform -strict -kubernetes-version "$version" -schema-location "$K8S_SCHEMAS" - > /dev/null; then
+              echo "::error::The pinned kubernetes-json-schema commit has no schemas for Kubernetes $version."
+              exit 1
+            fi
+          done
+
           failed=0
           for version in "$minimum" "$KUBERNETES_NEWEST"; do
             for f in charts/n8n/examples/*.yaml; do
