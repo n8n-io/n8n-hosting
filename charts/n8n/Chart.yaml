@@ -12,7 +12,7 @@ description: >-
   The official, production-grade Helm chart for n8n, the workflow automation
   platform. Supports queue mode, multi-main HA, webhook processors, task
   runners, HPA, PDB, network policies, and S3 external storage.
-appVersion: "2.41.4"
+appVersion: "2.42.4"
 type: application
 annotations:
   artifacthub.io/license: MIT
@@ -38,9 +38,9 @@ annotations:
   # all three together.
   artifacthub.io/images: |
     - name: n8n
-      image: docker.n8n.io/n8nio/n8n:2.41.4
+      image: docker.n8n.io/n8nio/n8n:2.42.4
     - name: task-runner
-      image: n8nio/runners:2.41.4
+      image: n8nio/runners:2.42.4
 keywords:
   - n8n
   - workflow-automation
