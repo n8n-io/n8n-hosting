@@ -1,0 +1,199 @@
+# Workers probe the HTTP server n8n starts when QUEUE_HEALTH_CHECK_ACTIVE is
+# set. /healthz/readiness answers 503 until the worker has its database,
+# migrations and Redis, so a worker without them stops reporting Ready.
+suite: 'worker: probes'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: enables the queue health endpoint on the worker by default
+    template: templates/deployment-worker.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: QUEUE_HEALTH_CHECK_ACTIVE
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: QUEUE_HEALTH_CHECK_PORT
+            value: "5678"
+
+  - it: leaves the health endpoint off the main pod, which never reads it
+    template: templates/deployment-main.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: QUEUE_HEALTH_CHECK_ACTIVE
+            value: "true"
+
+  - it: probes the health endpoint over HTTP by default
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            httpGet:
+              path: /healthz
+              port: 5678
+            failureThreshold: 30
+            periodSeconds: 10
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          value:
+            path: /healthz
+            port: 5678
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+          value:
+            path: /healthz/readiness
+            port: 5678
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe.exec
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe.exec
+
+  - it: probes the port set in redis.healthCheck.port
+    template: templates/deployment-worker.yaml
+    set:
+      redis.healthCheck.port: 5690
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.port
+          value: 5690
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 5690
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: 5690
+
+  - it: takes probe paths and timings from values
+    template: templates/deployment-worker.yaml
+    set:
+      probes.worker.liveness:
+        path: /custom/healthz
+        initialDelaySeconds: 1
+        periodSeconds: 2
+        timeoutSeconds: 3
+        failureThreshold: 4
+      probes.worker.readiness:
+        path: /custom/healthz/readiness
+        initialDelaySeconds: 5
+        periodSeconds: 6
+        timeoutSeconds: 7
+        failureThreshold: 8
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.path
+          value: /custom/healthz
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /custom/healthz
+              port: 5678
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 3
+            failureThreshold: 4
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /custom/healthz/readiness
+              port: 5678
+            initialDelaySeconds: 5
+            periodSeconds: 6
+            timeoutSeconds: 7
+            failureThreshold: 8
+
+  - it: drops a probe that is disabled
+    template: templates/deployment-worker.yaml
+    set:
+      probes.worker.liveness.enabled: false
+      probes.worker.readiness.enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - exists:
+          path: spec.template.spec.containers[0].startupProbe
+
+  - it: runs an exec probe when type is exec
+    template: templates/deployment-worker.yaml
+    set:
+      probes.worker.liveness.type: exec
+      probes.worker.liveness.command: ["/bin/true"]
+      probes.worker.readiness.type: exec
+      probes.worker.readiness.command: ["/bin/true"]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value: ["/bin/true"]
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: ["/bin/true"]
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+
+  - it: renders exec probes and no health endpoint when both are switched off
+    template: templates/deployment-worker.yaml
+    set:
+      redis.healthCheck.enabled: false
+      probes.worker.liveness.type: exec
+      probes.worker.liveness.command: ["/bin/true"]
+      probes.worker.readiness.type: exec
+      probes.worker.readiness.command: ["/bin/true"]
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: QUEUE_HEALTH_CHECK_ACTIVE
+            value: "true"
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe.exec
+
+  - it: rejects an HTTP liveness probe with the health endpoint off
+    template: templates/deployment-main.yaml
+    set:
+      redis.healthCheck.enabled: false
+      probes.worker.readiness.enabled: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'probes.worker.liveness.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or set probes.worker.liveness.type=exec with a command.'
+
+  - it: rejects an HTTP readiness probe with the health endpoint off
+    template: templates/deployment-main.yaml
+    set:
+      redis.healthCheck.enabled: false
+      probes.worker.liveness.enabled: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'probes.worker.readiness.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or set probes.worker.readiness.type=exec with a command.'
+
+  - it: accepts a disabled HTTP probe with the health endpoint off
+    template: templates/deployment-main.yaml
+    set:
+      redis.healthCheck.enabled: false
+      probes.worker.liveness.enabled: false
+      probes.worker.readiness.enabled: false
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects an exec probe with no command
+    template: templates/deployment-main.yaml
+    set:
+      probes.worker.liveness.type: exec
+    asserts:
+      - failedTemplate:
+          errorMessage: 'probes.worker.liveness.type=exec requires probes.worker.liveness.command. Set a command, or set probes.worker.liveness.type=httpGet.'
