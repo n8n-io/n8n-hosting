@@ -7,6 +7,31 @@ This file is automatically managed by [Release Please](https://github.com/google
 ## [1.15.0](https://github.com/n8n-io/n8n-hosting/compare/v1.14.0...v1.15.0) (2026-10-07)
 
 
+### Upgrade notes
+
+**Postgres TLS now applies.** This release addresses a defect where `database.ssl.enabled: true` had no effect on its own and the connection stayed plaintext unless `ssl.ca` or `ssl.cert` was also set.
+
+From this release it now correctly negotiates TLS and verifies the server certificate (assuming `rejectUnauthorized` remains at its default of `true`).
+
+If you set `ssl.enabled: true` against a managed Postgres whose CA is not in Node's default trust store, n8n will fail to connect after the upgrade until you supply the CA. Set `database.ssl.ca` to the PEM contents, or point `database.ssl.existingSecret` at a Secret holding it:
+
+```yaml
+database:
+  ssl:
+    enabled: true
+    existingSecret:
+      name: postgres-tls
+      caKey: ca.crt
+```
+
+`examples/production-s3.yaml` shows an example.
+
+Alternatively, setting `rejectUnauthorized: false` also unblocks the upgrade, but skips verification.
+
+You are not affected if `ssl.enabled` is false (the default) or you already set `ssl.ca`.
+
+**`database.ssl.key` continues to be ignored.** The chart does not pass this value to n8n. To supply a client key, use `database.ssl.existingSecret.keyKey`. Chart 2.0 will refuse to render with `ssl.key` set.
+
 ### Features
 
 * **chart:** add extraObjects to deploy extra Kubernetes objects ([#219](https://github.com/n8n-io/n8n-hosting/issues/219)) ([60b692c](https://github.com/n8n-io/n8n-hosting/commit/60b692cb47deda4fa75d8c1f2bda5ec5110edf53))
