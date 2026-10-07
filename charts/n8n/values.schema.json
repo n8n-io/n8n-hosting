@@ -341,6 +341,27 @@
         "runAsGroup": { "type": "integer", "minimum": 0 }
       }
     },
+    "podSecurityContext": {
+      "type": "object",
+      "description": "Pod securityContext overrides per role, merged over securityContext. A null field removes it.",
+      "properties": {
+        "main": { "type": "object" },
+        "worker": { "type": "object" },
+        "webhookProcessor": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "description": "Container securityContext overrides per container, merged over allowPrivilegeEscalation: false and capabilities.drop: [ALL]. A null field removes it. taskRunner applies to the task-runner sidecar on main and worker pods.",
+      "properties": {
+        "main": { "type": "object" },
+        "worker": { "type": "object" },
+        "webhookProcessor": { "type": "object" },
+        "taskRunner": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
     "serviceAccount": {
       "type": "object",
       "properties": {

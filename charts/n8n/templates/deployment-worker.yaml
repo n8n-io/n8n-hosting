@@ -36,14 +36,9 @@ spec:
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
-      {{- if .Values.securityContext.enabled }}
+      {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "worker") }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- . | nindent 8 }}
       {{- end }}
 
       {{- with .Values.dnsPolicy }}
@@ -71,11 +66,10 @@ spec:
           args:
             - "worker"
             - "--concurrency={{ .Values.queueMode.workerConcurrency }}"
+          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "worker") }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- . | nindent 12 }}
+          {{- end }}
 
           {{- if .Values.lifecycle.worker.preStop.enabled }}
           lifecycle:
@@ -200,11 +194,10 @@ spec:
         - name: task-runner
           image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
           imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
+          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "taskRunner") }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- . | nindent 12 }}
+          {{- end }}
 
           env:
             {{- include "n8n.taskRunnerSidecarEnv" . | nindent 12 }}

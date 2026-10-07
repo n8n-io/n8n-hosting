@@ -359,14 +359,47 @@ nodePlacement: {}
 #         effect: NoSchedule
 
 # ----- Security -----
-# Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
-# ~/.n8n/, /tmp/, and other paths at runtime. Enabling it would require
-# extensive volumeMount overrides and is not practical for this workload.
+# Pod securityContext for every n8n pod. When enabled, the chart also sets
+# runAsNonRoot: true and seccompProfile.type: RuntimeDefault.
+# Set enabled: false to drop these defaults. A podSecurityContext role block
+# still renders on its own.
 securityContext:
   enabled: true
   fsGroup: 1000
   runAsUser: 1000
   runAsGroup: 1000
+
+# Pod securityContext overrides per role. Each block merges over the
+# securityContext defaults above, so set only the fields you want to change.
+# Set a field to null to remove it.
+# Example for OpenShift, where the restricted SCC assigns the UID and GID:
+#   podSecurityContext:
+#     main:
+#       fsGroup: null
+#       runAsUser: null
+#       runAsGroup: null
+podSecurityContext:
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+
+# Container securityContext overrides per container. Every container gets
+# allowPrivilegeEscalation: false and capabilities.drop: [ALL]. Each block
+# merges over that default, and a null removes a field. taskRunner applies
+# to the task-runner sidecar on main and on worker pods.
+# readOnlyRootFilesystem is not set by default. n8n writes to ~/.n8n/, /tmp/
+# and other paths at runtime, so enabling it needs writable volumes mounted
+# at those paths.
+# Example for the distroless task-runner image, which runs as UID 65532:
+#   containerSecurityContext:
+#     taskRunner:
+#       runAsUser: 65532
+#       runAsGroup: 65532
+containerSecurityContext:
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
 
 # ----- RBAC ServiceAccount & Network Policy -----
 rbac:

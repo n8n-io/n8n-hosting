@@ -64,6 +64,57 @@ always set by the chart.
 {{- end -}}
 
 {{/*
+Pod securityContext for a role (main, worker, webhookProcessor). The role's
+podSecurityContext block merges over the chart-wide securityContext, and a
+null in the role block removes the field. securityContext.enabled=false drops
+the chart-wide defaults but keeps the role block.
+*/}}
+{{- define "n8n.podSecurityContext" -}}
+{{- $root := .root -}}
+{{- $sc := dict -}}
+{{- if $root.Values.securityContext.enabled -}}
+{{- $sc = dict "fsGroup" $root.Values.securityContext.fsGroup "runAsUser" $root.Values.securityContext.runAsUser "runAsGroup" $root.Values.securityContext.runAsGroup "runAsNonRoot" true "seccompProfile" (dict "type" "RuntimeDefault") -}}
+{{- end -}}
+{{- $override := index ($root.Values.podSecurityContext | default dict) .role | default dict -}}
+{{- $sc = mergeOverwrite $sc (deepCopy $override) -}}
+{{- include "n8n.dropNulls" $sc -}}
+{{- with $sc }}{{ toYaml . }}{{ end -}}
+{{- end -}}
+
+{{/*
+Container securityContext for a role (main, worker, webhookProcessor,
+taskRunner). The role's containerSecurityContext block merges over the
+hardened default, and a null in the role block removes the field.
+*/}}
+{{- define "n8n.containerSecurityContext" -}}
+{{- $root := .root -}}
+{{- $sc := dict "allowPrivilegeEscalation" false "capabilities" (dict "drop" (list "ALL")) -}}
+{{- $override := index ($root.Values.containerSecurityContext | default dict) .role | default dict -}}
+{{- $sc = mergeOverwrite $sc (deepCopy $override) -}}
+{{- include "n8n.dropNulls" $sc -}}
+{{- with $sc }}{{ toYaml . }}{{ end -}}
+{{- end -}}
+
+{{/*
+Removes null values from a map in place, recursing into nested maps. A map
+left empty is removed too, so a null under capabilities does not leave an
+empty capabilities block.
+*/}}
+{{- define "n8n.dropNulls" -}}
+{{- $m := . -}}
+{{- range $k, $v := $m -}}
+{{- if kindIs "invalid" $v -}}
+{{- $_ := unset $m $k -}}
+{{- else if kindIs "map" $v -}}
+{{- include "n8n.dropNulls" $v -}}
+{{- if not $v -}}
+{{- $_ := unset $m $k -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Selector labels
 */}}
 {{- define "n8n.selectorLabels" -}}
