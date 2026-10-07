@@ -155,6 +155,9 @@ per mistake.
 {{- if and $probe.enabled (eq $probe.type "exec") (not $probe.command) -}}
 {{- $errs = append $errs (printf "probes.worker.%s.type=exec requires probes.worker.%s.command. Set a command, or set probes.worker.%s.type=httpGet." $name $name $name) -}}
 {{- end -}}
+{{- if and $probe.enabled (eq $probe.type "httpGet") $probe.command -}}
+{{- $errs = append $errs (printf "probes.worker.%s.command is set but probes.worker.%s.type is httpGet, so the command would not run. Set probes.worker.%s.type=exec to run it, or remove the command." $name $name $name) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 

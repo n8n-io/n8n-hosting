@@ -697,7 +697,6 @@ redis:
     lockRenewTime: 10000                           # <-- Lock renewal frequency (ms)
     stalledInterval: 30000                         # <-- Stalled job check interval (ms)
     maxStalledCount: 1                             # <-- Max stalled job retries
-  # Health check settings
   # Worker health endpoint, probed by probes.worker
   healthCheck:
     enabled: true                                  # <-- Serve /healthz and /healthz/readiness on workers

@@ -190,10 +190,34 @@ tests:
     asserts:
       - notFailedTemplate: {}
 
-  - it: rejects an exec probe with no command
+  - it: rejects an exec liveness probe with no command
     template: templates/deployment-main.yaml
     set:
       probes.worker.liveness.type: exec
     asserts:
       - failedTemplate:
           errorMessage: 'probes.worker.liveness.type=exec requires probes.worker.liveness.command. Set a command, or set probes.worker.liveness.type=httpGet.'
+
+  - it: rejects an exec readiness probe with no command
+    template: templates/deployment-main.yaml
+    set:
+      probes.worker.readiness.type: exec
+    asserts:
+      - failedTemplate:
+          errorMessage: 'probes.worker.readiness.type=exec requires probes.worker.readiness.command. Set a command, or set probes.worker.readiness.type=httpGet.'
+
+  - it: rejects a command on an HTTP liveness probe
+    template: templates/deployment-main.yaml
+    set:
+      probes.worker.liveness.command: ["/bin/true"]
+    asserts:
+      - failedTemplate:
+          errorMessage: 'probes.worker.liveness.command is set but probes.worker.liveness.type is httpGet, so the command would not run. Set probes.worker.liveness.type=exec to run it, or remove the command.'
+
+  - it: rejects a command on an HTTP readiness probe
+    template: templates/deployment-main.yaml
+    set:
+      probes.worker.readiness.command: ["/bin/true"]
+    asserts:
+      - failedTemplate:
+          errorMessage: 'probes.worker.readiness.command is set but probes.worker.readiness.type is httpGet, so the command would not run. Set probes.worker.readiness.type=exec to run it, or remove the command.'
