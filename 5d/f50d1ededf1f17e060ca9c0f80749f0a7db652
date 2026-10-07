@@ -1,0 +1,19 @@
+charts/n8n/decisions/0002-chart-reports-install-method.md
+  s_e4cec9b7780cdc::t_da809a12e71195 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5df50d1ededf1f17e060ca9c0f80749f0a7db652",
+  "prompts": {},
+  "sessions": {
+    "s_e4cec9b7780cdc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1eaf0312-a388-418f-96e5-abd5cb084c61",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
