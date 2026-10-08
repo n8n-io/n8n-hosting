@@ -191,27 +191,7 @@ spec:
 
         {{- if .Values.taskRunners.enabled }}
         # Task Runner sidecar container
-        - name: task-runner
-          image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
-          imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
-          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "taskRunner") }}
-          securityContext:
-            {{- . | nindent 12 }}
-          {{- end }}
-
-          env:
-            {{- include "n8n.taskRunnerSidecarEnv" . | nindent 12 }}
-
-          resources:
-            {{- toYaml .Values.taskRunners.resources | nindent 12 }}
-
-          {{- if .Values.taskRunners.customConfig.enabled }}
-          volumeMounts:
-            - name: task-runner-config
-              mountPath: /etc/n8n-task-runners.json
-              subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
-              readOnly: true
-          {{- end }}
+        {{- include "n8n.taskRunnerContainer" . | nindent 8 }}
         {{- end }}
 
         {{- with .Values.extraContainers }}

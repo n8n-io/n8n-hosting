@@ -311,6 +311,8 @@ kubectl create secret generic n8n-runner-token \
   --from-literal=auth-token=$(openssl rand -base64 32)
 ```
 
+**Health probe:** the sidecar has a liveness probe on the launcher's health endpoint, `/healthz` on port `5680`. The launcher answers this endpoint itself, so a runner busy with a long task does not fail the probe. Kubernetes restarts the sidecar only when the launcher stops responding. The launcher already restarts a runner that stops responding. Tune or disable the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `taskRunners.extraEnv`, the probe uses that port. Set it with `value`, because the chart cannot read a `valueFrom` reference and leaves the probe out in that case.
+
 See [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
 
 ## KEDA Autoscaling

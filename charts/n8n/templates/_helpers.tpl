@@ -146,6 +146,73 @@ appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
 {{- end -}}
 
 {{/*
+Task-runner sidecar container, shared by the main pod (standalone) and worker
+pods (queue mode) so both sidecars stay the same.
+*/}}
+{{- define "n8n.taskRunnerContainer" -}}
+- name: task-runner
+  image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
+  imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
+  {{- with include "n8n.containerSecurityContext" (dict "root" . "role" "taskRunner") }}
+  securityContext:
+    {{- . | nindent 4 }}
+  {{- end }}
+  env:
+    {{- include "n8n.taskRunnerSidecarEnv" . | nindent 4 }}
+  resources:
+    {{- toYaml .Values.taskRunners.resources | nindent 4 }}
+  {{- $probes := .Values.taskRunners.probes | default dict }}
+  {{- $port := include "n8n.taskRunnerHealthCheckPort" . }}
+  {{- if $port }}
+  {{- /* The launcher answers this itself, so a runner busy with a long task
+  does not fail it. The launcher restarts unhealthy runners on its own. */}}
+  {{- with $probes.liveness }}
+  {{- if .enabled }}
+  livenessProbe:
+    {{- include "n8n.taskRunnerProbe" (dict "probe" . "port" $port) | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.taskRunners.customConfig.enabled }}
+  volumeMounts:
+    - name: task-runner-config
+      mountPath: /etc/n8n-task-runners.json
+      subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
+      readOnly: true
+  {{- end }}
+{{- end -}}
+
+{{/*
+Port of the launcher's health endpoint in the task-runner sidecar. The launcher
+reads N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT, so the probe follows it when
+taskRunners.extraEnv sets it, and use the launcher's default otherwise. Empty
+when it comes from valueFrom, which the chart cannot read, so the probe is
+left out rather than pointed at the wrong port.
+*/}}
+{{- define "n8n.taskRunnerHealthCheckPort" -}}
+{{- $port := "5680" -}}
+{{- range .Values.taskRunners.extraEnv -}}
+{{- if eq (.name | default "") "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT" -}}
+{{- $port = .value | default "" | toString -}}
+{{- end -}}
+{{- end -}}
+{{- $port -}}
+{{- end -}}
+
+{{/*
+A task-runner sidecar probe against the launcher's health endpoint.
+*/}}
+{{- define "n8n.taskRunnerProbe" -}}
+httpGet:
+  path: {{ .probe.path }}
+  port: {{ .port }}
+initialDelaySeconds: {{ .probe.initialDelaySeconds }}
+periodSeconds: {{ .probe.periodSeconds }}
+timeoutSeconds: {{ .probe.timeoutSeconds }}
+failureThreshold: {{ .probe.failureThreshold }}
+{{- end -}}
+
+{{/*
 Render one extraObjects entry through tpl and return it as YAML. A string
 entry is rendered as written; a map entry is serialised first, so both can
 reference the release. A literal `{{` has to be written as `{{ "{{" }}`.
@@ -253,6 +320,12 @@ per mistake.
 {{/* --- Task runners --- */}}
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
 {{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
+{{- end -}}
+{{- if and .Values.taskRunners.enabled ((.Values.taskRunners.probes | default dict).liveness | default dict).enabled -}}
+{{- $healthPort := include "n8n.taskRunnerHealthCheckPort" . -}}
+{{- if and $healthPort (or (not (regexMatch "^[0-9]+$" $healthPort)) (lt (atoi $healthPort) 1) (gt (atoi $healthPort) 65535)) -}}
+{{- $errs = append $errs (printf "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT in taskRunners.extraEnv must be a port number from 1 to 65535, got %q. The sidecar's liveness probe uses it." $healthPort) -}}
+{{- end -}}
 {{- end -}}
 
 {{/* --- S3 --- */}}
