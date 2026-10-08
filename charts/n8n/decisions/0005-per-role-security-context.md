@@ -1,7 +1,7 @@
 # 0005. Per-role securityContext merges over the chart defaults
 
 Date: 2026-10-07
-PR: https://github.com/n8n-io/n8n-hosting/pull/160
+PR: https://github.com/n8n-io/n8n-hosting/pull/236
 
 ## Context
 
