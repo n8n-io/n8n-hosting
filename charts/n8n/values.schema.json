@@ -362,7 +362,7 @@
     },
     "podSecurityContext": {
       "type": "object",
-      "description": "Pod securityContext overrides per role, merged over securityContext. A null field removes it.",
+      "description": "Pod securityContext per role. A role block replaces securityContext for that role and is rendered as written.",
       "properties": {
         "main": { "type": "object" },
         "worker": { "type": "object" },
@@ -372,7 +372,7 @@
     },
     "containerSecurityContext": {
       "type": "object",
-      "description": "Container securityContext overrides per container, merged over allowPrivilegeEscalation: false and capabilities.drop: [ALL]. A null field removes it. taskRunner applies to the task-runner sidecar on main and worker pods.",
+      "description": "Container securityContext per container. User values merge over the defaults in values.yaml, and a null removes a field. taskRunner applies to the task-runner sidecar on main and worker pods.",
       "properties": {
         "main": { "type": "object" },
         "worker": { "type": "object" },

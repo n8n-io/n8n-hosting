@@ -1,10 +1,6 @@
-# A null in a role block removes the field the chart would otherwise set,
-# as on OpenShift, where the restricted SCC assigns the UID and GID.
-podSecurityContext:
-  main:
-    fsGroup: null
-    runAsUser: null
-    runAsGroup: null
+# A null removes a default that values.yaml sets: one field on main, and the
+# whole block on worker.
 containerSecurityContext:
   main:
     allowPrivilegeEscalation: null
+  worker: null
