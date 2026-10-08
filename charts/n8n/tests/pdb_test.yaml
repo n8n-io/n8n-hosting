@@ -1,0 +1,72 @@
+# The main PDB uses minAvailable: 1, so with a single main pod it would forbid
+# every eviction and hang node drains. It renders only when there is a second
+# main pod to keep serving while one is evicted.
+suite: 'main PodDisruptionBudget'
+templates:
+  - templates/pdb.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders nothing with the default single replica
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders with replicaCount above one
+    set:
+      replicaCount: 2
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: spec.minAvailable
+          value: 1
+
+  - it: renders with multi-main
+    set:
+      queueMode.enabled: true
+      multiMain.enabled: true
+      multiMain.replicas: 2
+      license.enabled: true
+      license.existingSecret.name: n8n-license
+      redis.host: redis
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: renders when the main HPA keeps at least two replicas
+    set:
+      hpa.main.enabled: true
+      hpa.main.minReplicas: 2
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: renders nothing when the main HPA can scale down to one replica
+    set:
+      hpa.main.enabled: true
+      hpa.main.minReplicas: 1
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders with replicaCount above one when the main HPA allows one replica
+    set:
+      replicaCount: 2
+      hpa.main.enabled: true
+      hpa.main.minReplicas: 1
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: renders nothing with pdb.enabled false and several replicas
+    set:
+      pdb.enabled: false
+      replicaCount: 3
+      hpa.main.enabled: true
+      hpa.main.minReplicas: 2
+    asserts:
+      - hasDocuments:
+          count: 0

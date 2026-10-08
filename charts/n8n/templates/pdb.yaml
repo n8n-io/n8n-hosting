@@ -1,4 +1,7 @@
-{{- if .Values.pdb.enabled }}
+{{- /* A budget over a single main pod forbids every eviction and hangs node drains, so render only when a second main pod exists. */}}
+{{- $mainReplicas := include "n8n.mainReplicas" . | int }}
+{{- $hpaMinReplicas := ternary .Values.hpa.main.minReplicas 0 .Values.hpa.main.enabled | int }}
+{{- if and .Values.pdb.enabled (or (gt $mainReplicas 1) (gt $hpaMinReplicas 1)) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:

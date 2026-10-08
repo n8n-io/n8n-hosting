@@ -553,6 +553,10 @@ keda:
     triggers: []
 
 # ----- Pod Disruption Budget -----
+# Covers main pods. When enabled, it renders only when main runs more than
+# one replica: replicaCount or multiMain.replicas above 1, or hpa.main.enabled
+# with hpa.main.minReplicas above 1. A single main pod can then still be
+# evicted during a node drain.
 pdb:
   enabled: true
   minAvailable: 1
