@@ -1,0 +1,7 @@
+apiVersion: v2
+name: n8n-self-hosted
+description: A quick helm chart for n8n 
+type: application
+version: 0.0.1
+appVersion: "1.123.18"
+icon: "https://raw.githubusercontent.com/n8n-io/n8n-hosting/refs/heads/main/helm/assets/icon.png"
