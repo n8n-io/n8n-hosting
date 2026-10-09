@@ -1,8 +1,9 @@
 import type { ListrTask } from 'listr2';
-import { type Env } from './kube.ts';
-import { checkTask, deployedTargets, execFor } from './check.ts';
-import { targetTask } from './targets.ts';
-import { UserError } from './ui.ts';
+import type { Env } from '../kube.ts';
+import { deployedTargets, targetTask } from '../targets/index.ts';
+import { UserError } from '../ui.ts';
+import { checkTask } from './check.ts';
+import { execFor } from './exec.ts';
 
 const MARKER = 'labmarker0001';
 
@@ -15,7 +16,8 @@ export async function upgradeTasks(env: Env, t: string, from: string, to?: strin
   const { main } = execFor(env, t);
   const old = { ...env, tag: from };
   const next = { ...env, tag: to };
-  const version = (label: string): ListrTask => ({
+
+  const version = (label: 'from' | 'to'): ListrTask => ({
     title: `n8n is ${label}`,
     task: async (_, task) => {
       const running = (await main('n8n --version')).trim().split('\n').pop()!;
@@ -24,6 +26,7 @@ export async function upgradeTasks(env: Env, t: string, from: string, to?: strin
       if (want && running !== want) throw new Error(`expected ${want}, got ${running}`);
     },
   });
+
   return [
     { ...targetTask(old, t), title: `Install ${from}` },
     version('from'),

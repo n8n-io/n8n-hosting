@@ -1,8 +1,8 @@
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { type Env, ROOT, apply, ensureNs, exists, kubectl } from './kube.ts';
-import { removeNamespaces } from './targets.ts';
+import { type Env, ROOT, apply, exists, kubectl } from './kube.ts';
+import { ensureNs, removeNamespaces } from './namespaces.ts';
 import { run } from './sh.ts';
 import { UserError, c, table } from './ui.ts';
 

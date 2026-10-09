@@ -18,7 +18,7 @@ export function listExamples(env: Env): string[] {
 
 export const exampleFile = (env: Env, t: string) => join(dir(env), `${t.slice(EXAMPLE_PREFIX.length)}.yaml`);
 
-type Values = Record<string, any>;
+export type Values = Record<string, any>;
 export const exampleValues = (env: Env, t: string): Values => parse(readFileSync(exampleFile(env, t), 'utf8')) ?? {};
 
 /** An example that turns on multi-main or a licence cannot run without an Enterprise key. */

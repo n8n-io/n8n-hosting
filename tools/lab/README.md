@@ -106,7 +106,7 @@ The lab is a small TypeScript CLI that drives tools you already have (`kubectl`,
 flowchart TB
     you(["you<br/><code>./lab up queue</code>"])
 
-    subgraph cli["cli.ts: commands, arguments, progress"]
+    subgraph cli["cli.ts + commands/: one small file per command"]
         direction LR
         up["up / down / status"]
         chk["check --e2e"]
@@ -116,10 +116,10 @@ flowchart TB
 
     subgraph core["The core"]
         direction TB
-        prov["<b>providers.ts</b><br/>where it runs<br/>list · create · connect · destroy"]
+        prov["<b>providers/</b><br/>where it runs<br/>list · create · connect · destroy"]
         clus["<b>clusters.ts</b><br/>pick a cluster,<br/>remember it"]
-        targ["<b>targets.ts</b><br/>what to deploy:<br/>the steps for each target"]
-        test["<b>check.ts · e2e.ts · upgrade.ts</b><br/>how to prove it works"]
+        targ["<b>targets/</b><br/>what to deploy:<br/>the steps for each target"]
+        test["<b>testing/</b><br/>check · e2e · upgrade<br/>how to prove it works"]
         add["<b>addons.ts</b><br/>optional hooks"]
     end
 
@@ -304,29 +304,47 @@ n8n's own diagnostics are **off** in every lab deployment unless you turn them o
 
 ```
 tools/lab/
-├── lab                    # entry point: runs src/cli.ts
+├── lab                      # entry point: runs src/cli.ts
 ├── src/
-│   ├── cli.ts             # commands, arguments, progress output
-│   ├── providers.ts       # where it runs: minikube, aws, azure
-│   ├── clusters.ts        # choosing a cluster, remembering it in .lab-state.json
-│   ├── targets.ts         # what each target deploys: the steps
-│   ├── examples.ts        # reads chart examples, finds their secrets and licence needs
-│   ├── check.ts           # the smoke tests behind `check`
-│   ├── e2e.ts             # the workflow test behind `check --e2e`
-│   ├── upgrade.ts         # the upgrade test. Reuses the target and check tasks
-│   ├── addons.ts          # the addon hooks
-│   ├── kube.ts            # kubectl and helm wrappers, namespace labels, lab settings
-│   ├── sh.ts              # runs a process safely (an argument list, never a shell string)
-│   └── ui.ts              # terminal colours, prompts, tables
-├── values/common.yaml     # Helm values shared by every chart target
-├── manifests/             # Postgres and Redis for the chart targets
-├── build-image.sh         # builds an image from an n8n branch
-└── AGENTS.md              # for AI agents working on the lab
+│   ├── cli.ts               # reads options, picks the provider and cluster, runs one command
+│   ├── options.ts           # command-line flags, parsed once into an Options object
+│   ├── help.ts              # the --help text
+│   ├── commands/            # one small file per command
+│   │   ├── up.ts  down.ts  status.ts  check.ts  upgrade.ts  clusters.ts  registry.ts
+│   ├── providers/           # where it runs
+│   │   ├── types.ts         #   the Provider interface
+│   │   ├── minikube.ts  eks.ts  aks.ts
+│   │   ├── lab.ts           #   the lab tag, the owner, name rules shared by the clouds
+│   │   └── index.ts         #   getProvider, and the "is the CLI installed?" check
+│   ├── targets/             # what gets deployed
+│   │   ├── names.ts         #   target names, descriptions, namespaces
+│   │   ├── chart.ts  example.ts  k8s.ts  compose.ts   # the steps for each kind of target
+│   │   ├── steps.ts         #   helpers they share: secrets, Helm install, waiting
+│   │   └── index.ts         #   targetTask, removal, "what is deployed now"
+│   ├── testing/             # how it proves it works
+│   │   ├── check.ts         #   smoke tests, and the retrying check() helper
+│   │   ├── e2e.ts           #   the workflow test, and e2e-client.js which runs inside the pod
+│   │   ├── upgrade.ts       #   install old, upgrade, check
+│   │   └── exec.ts  retry.ts
+│   ├── kube.ts              # the Env, and kubectl and helm wrappers
+│   ├── namespaces.ts        # the lab's label, listing and removing its namespaces
+│   ├── settings.ts          # the n8n settings written into every deployment
+│   ├── clusters.ts          # choosing a cluster, remembering it in .lab-state.json
+│   ├── chart-examples.ts    # reads chart examples, finds their secrets and licence needs
+│   ├── addons.ts            # the addon hooks
+│   ├── failures.ts  tasks.ts  sh.ts  ui.ts
+├── test/                    # unit tests: pnpm test
+├── values/common.yaml       # Helm values shared by every chart target
+├── manifests/               # Postgres and Redis for the chart targets
+├── build-image.sh           # builds an image from an n8n branch
+└── AGENTS.md                # for AI agents working on the lab
 ```
 
-**How the pieces talk.** `cli.ts` is the only file that knows about commands. It asks a **provider** for a cluster, then builds a list of **tasks** from **targets**, **checks** or the **upgrade** flow, and runs them with [listr2](https://listr2.kilic.dev/) for the progress display. Everything reaches the cluster through `kube.ts`, which refuses to run `kubectl` or `helm` without an explicit context, so the lab can never act on whatever cluster happens to be current.
+**How the pieces talk.** `cli.ts` reads the options, picks a **provider** and a cluster, and hands one **command** an `Env`: where it runs, which cluster, what to deploy from. A command builds a list of **tasks** from **targets** or **testing** and runs them with [listr2](https://listr2.kilic.dev/) for the progress display. Everything reaches the cluster through `kube.ts`, which refuses to run `kubectl` or `helm` without an explicit context, so the lab can never act on whatever cluster happens to be current.
 
-**One rule about failures.** listr2 does not fail the top-level run when a subtask fails, so every step and check records its failure (`failures` in `targets.ts`, `failed` in `check.ts`) and the command turns that into the exit code. Keep doing this for new steps.
+**One rule about failures.** listr2 does not fail the top-level run when a subtask fails, so every step and check records its failure with `recordFailure(target, step)` (`failures.ts`), and the command turns the list into the exit code. The helpers in `targets/steps.ts` and `testing/check.ts` do it for you. Keep using them for new steps.
+
+**Small, testable functions.** Anything that decides something is a pure function with no cluster in sight (`composeOverride`, `sized`, `storageClassToDefault`, `runningFor`, and so on), and `pnpm test` covers them. The functions that talk to a cluster stay thin.
 
 ---
 
@@ -334,20 +352,24 @@ tools/lab/
 
 ### Add a target
 
-A target is a name plus a list of steps in `src/targets.ts`.
+A target is a name plus a list of steps. They live in `src/targets/`.
 
-1. For a Helm topology, add the name to `CHART_TARGETS` and its `--set` flags to `CHART_FLAGS`. That is usually the whole change. For something else, write steps like `k8sSteps` and wire them into `targetTask`.
-2. Add a one-line description to `DESCRIPTION` so it shows in `--help`.
-3. Make sure `check.ts` can reach it (`execFor`).
+1. **A new Helm topology** is one line: add its `--set` values to `TOPOLOGY` in `chart.ts`, and its name to `CHART_TARGETS` in `names.ts`.
+2. **Something else** gets its own file with a function that returns steps, like `k8s.ts`. Wire it into `stepsFor` in `targets/index.ts`.
+3. Add a one-line description to `DESCRIPTION` in `names.ts`, so it shows in `--help`.
+4. Make sure `testing/exec.ts` can reach it (`execFor`).
+
+Build steps with the helpers in `steps.ts` (`step`, `ensureChartSecrets`, `helmInstall`, `waitForRollouts`). They create secrets once, set Helm values in the right order and record failures for you.
 
 ### Add a provider
 
-A provider lists, creates, connects to and destroys named clusters. It only has to give back a kube context. Add an entry in `src/providers.ts`:
+A provider lists, creates, connects to and destroys named clusters. It only has to give back a kube context. Add `src/providers/<name>.ts` and register it in `providers/index.ts`:
 
 ```ts
 interface Provider {
   name: string;
   local: boolean;                  // local providers can use loaded images and run Compose
+  shared?: boolean;                // the cluster list may hold clusters that are not the lab's
   clis: string[];                  // checked before anything is created, with an install hint
   defaultName(): string;
   list(): Promise<Cluster[]>;      // only the lab's own clusters (check the lab tag)
@@ -360,15 +382,20 @@ interface Provider {
 }
 ```
 
-Rules a cloud provider follows: tag everything with `lab=n8n-hosting-lab`, list and delete only clusters that carry that tag, put the provider name in the kube context (`aws-<name>`), and never delete anything in `down`.
+Rules a cloud provider follows: tag everything with the lab tag (`providers/lab.ts`), list and delete only clusters that carry it, put the provider name in the kube context (`aws-<name>`), and never delete anything in `down`. Add an install hint for its CLI in `providers/index.ts`.
 
 ### Add a check
 
-Use the `check()` helper in `src/check.ts`. It retries, and it records a failure so the exit code is right:
+Use the `checker` helper in `src/testing/check.ts`. It retries, and it records a failure so the exit code is right:
 
 ```ts
+const check = checker(target);
 check('Metrics endpoint answers', () => expectStatus(main, '/metrics', 200))
 ```
+
+### Add a command
+
+Write `src/commands/<name>.ts` exporting a `Command` (`(env, args, opts) => Promise<void>`), add it to `STANDALONE` or `ON_CLUSTER` in `cli.ts`, and a line to `help.ts`.
 
 ### Write an addon
 
@@ -444,4 +471,5 @@ The lab is meant to be pointed at accounts and machines with real things in them
 - **An example needs KEDA or labelled nodes.** The lab stops early and prints the command to install or label.
 - **A cloud cluster is still running.** `./lab status --provider aws`, then `./lab cluster delete <name> --provider aws`.
 
-Check types with `pnpm typecheck`. Working on the lab with an AI agent: see [AGENTS.md](AGENTS.md).
+Check types with `pnpm typecheck` and run the unit tests with `pnpm test`. Working on the lab with an AI agent: see [AGENTS.md](AGENTS.md).
+

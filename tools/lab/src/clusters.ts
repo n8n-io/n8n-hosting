@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT } from './kube.ts';
-import type { Provider } from './providers.ts';
+import { type Env, ROOT } from './kube.ts';
+import type { Provider } from './providers/index.ts';
 import { UserError, ask, c, choose } from './ui.ts';
 
 // The cluster last used per provider, like kubectl's current context. Generated, so it is git-ignored.
@@ -50,4 +50,10 @@ export async function use(provider: Provider, flag?: string): Promise<{ name: st
   const found = existing.find((e) => e.name === name);
   if (!found) throw new UserError(`No ${provider.name} cluster named ${name}. See: ./lab clusters`);
   return found;
+}
+
+/** Makes a cluster the one every command talks to: sets its name and the kube context that reaches it. */
+export async function selectCluster(env: Env, name: string): Promise<void> {
+  env.cluster = name;
+  env.ctx = await env.provider.connect(name);
 }

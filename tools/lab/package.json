@@ -7,7 +7,8 @@
     "lab": "src/cli.ts"
   },
   "scripts": {
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "node --test test/*.test.ts"
   },
   "engines": {
     "node": ">=24"
