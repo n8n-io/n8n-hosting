@@ -1,6 +1,8 @@
-# A null removes a default that values.yaml sets: one field on main, and the
-# whole block on worker.
+# A null removes a default that values.yaml sets: one field on main, and
+# every field on worker.
 containerSecurityContext:
   main:
     allowPrivilegeEscalation: null
-  worker: null
+  worker:
+    allowPrivilegeEscalation: null
+    capabilities: null

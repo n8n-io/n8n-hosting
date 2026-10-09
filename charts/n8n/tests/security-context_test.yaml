@@ -183,7 +183,7 @@ tests:
             capabilities:
               drop: [ALL]
 
-  - it: renders no container securityContext when the role is set to null
+  - it: renders no container securityContext when every field is set to null
     template: templates/deployment-worker.yaml
     values:
       - values/security-context-null.yaml
@@ -195,6 +195,18 @@ tests:
     template: templates/deployment-worker.yaml
     set:
       containerSecurityContext: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+
+  - it: renders the hardened container default for a role missing from the values
+    template: templates/deployment-worker.yaml
+    set:
+      containerSecurityContext.worker: null
     asserts:
       - equal:
           path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
