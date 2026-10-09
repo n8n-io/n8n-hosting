@@ -32,9 +32,7 @@ Node 24 or later runs the TypeScript directly. There is no build step. Check typ
 
 ## Layout
 
-The full picture, with diagrams, is in [docs/architecture.md](docs/architecture.md). Adding something: [docs/extending.md](docs/extending.md).
-
-`src/` is layers. A layer only imports from the layers below it, and `test/architecture.test.ts` enforces that.
+`src/` is layers. Keep the direction: a layer only imports from the layers below it, so the table below reads top to bottom.
 
 | Layer | What is in it |
 | --- | --- |
@@ -45,12 +43,20 @@ The full picture, with diagrams, is in [docs/architecture.md](docs/architecture.
 | `src/cluster/` | `kube.ts` the `Env` and the kubectl and helm wrappers, `namespaces.ts` the lab's label and namespace cleanup, `settings.ts` the n8n settings every deployment gets, `selection.ts` choosing and remembering a cluster. |
 | `src/support/` | `sh.ts` process runner, `ui.ts` prompts and colours, `tasks.ts` progress, `failures.ts` the failure list. Knows nothing about the lab. |
 | `src/addons.ts` | The addon hooks. `addons/<name>/index.ts` is one addon. |
-| `test/` | Unit tests for the pure functions, and the layering test. `pnpm test`. |
+| `test/` | Unit tests for the pure functions. `pnpm test`. |
+
+## Adding things
+
+- **A Helm topology:** add its `--set` values to `TOPOLOGY` in `src/targets/chart.ts` and its name to `CHART_TARGETS` in `src/targets/names.ts`. Another kind of target gets its own file in `src/targets/`, wired into `stepsFor` in `targets/index.ts`. Add a line to `DESCRIPTION` in `names.ts`, and make sure `testing/exec.ts` can reach it.
+- **A cloud:** one file in `src/providers/` implementing `Provider` (`types.ts`), registered in `providers/index.ts`. It only has to hand back a kube context. Tag what it creates with the lab tag (`lab.ts`), list and delete only clusters that carry it, and add an install hint for its CLI.
+- **A check:** use `checker(target)` in `src/testing/check.ts`. It retries and records the failure.
+- **A command:** a file in `src/cli/commands/`, added to `STANDALONE` or `ON_CLUSTER` in `src/cli/index.ts` and to `help.ts`.
+- **An addon:** one file exporting `(lab) => ({ name, env?, beforeUp?, afterUp?, afterDown?, commands? })`. Load it with `--addon <path>` or `LAB_ADDONS`. The hooks are documented in `src/addons.ts`.
 
 
 ## Rules
 
-- **Never write to n8n-hosting.** Treat `HOSTING` as read-only: the lab applies its files as shipped and changes them only in memory or in a generated override.
+- **Never write to the files it deploys.** Treat `HOSTING` (by default this repository) as read-only: the lab applies its files as shipped and changes them only in memory or in a generated override.
 - **Addons stay optional.** Nothing outside `addons/<name>/` may need an addon. n8n diagnostics are off unless an addon or `--env` turns them on.
 - **A missing provider CLI is an error with an install hint**, never a silent fallback. Check CLIs in `requireClis` before anything is created.
 - **Cloud means cost.** Creating a cluster asks first. `down` never deletes a cluster; only `cluster delete` does, and it asks. Tag everything the lab creates, and only list or delete clusters that carry the lab tag. Namespaces carry `app.kubernetes.io/managed-by=n8n-hosting-lab`, and `down` only removes those.
