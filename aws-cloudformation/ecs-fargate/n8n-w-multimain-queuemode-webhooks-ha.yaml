@@ -1197,7 +1197,7 @@ Resources:
             - Name: QUEUE_BULL_REDIS_PASSWORD
               ValueFrom: !Ref RedisPasswordSecret
           Environment:
-            - Name: N8N_INSTALL_METHOD
+            - Name: N8N_DEPLOYMENT_ARTIFACT
               Value: aws-cloudformation-ecs-fargate-queuemode-webhooks-ha
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord
@@ -1484,7 +1484,7 @@ Resources:
             - Name: QUEUE_BULL_REDIS_PASSWORD
               ValueFrom: !Ref RedisPasswordSecret               
           Environment:
-            - Name: N8N_INSTALL_METHOD
+            - Name: N8N_DEPLOYMENT_ARTIFACT
               Value: aws-cloudformation-ecs-fargate-queuemode-webhooks-ha
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord
@@ -1956,7 +1956,7 @@ Resources:
             - Name: QUEUE_BULL_REDIS_PASSWORD
               ValueFrom: !Ref RedisPasswordSecret
           Environment:
-            - Name: N8N_INSTALL_METHOD
+            - Name: N8N_DEPLOYMENT_ARTIFACT
               Value: aws-cloudformation-ecs-fargate-queuemode-webhooks-ha
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord

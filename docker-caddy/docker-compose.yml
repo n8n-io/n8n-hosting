@@ -16,7 +16,7 @@ services:
     ports:
       - 5678:5678
     environment:
-      - N8N_INSTALL_METHOD=docker-caddy
+      - N8N_DEPLOYMENT_ARTIFACT=docker-caddy
       - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https

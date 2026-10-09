@@ -45,7 +45,7 @@ services:
       - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
       - traefik.http.middlewares.n8n.headers.STSPreload=true
     environment:
-      - N8N_INSTALL_METHOD=docker-compose-subfolder-with-ssl
+      - N8N_DEPLOYMENT_ARTIFACT=docker-compose-subfolder-with-ssl
       - N8N_HOST=${DOMAIN_NAME}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https

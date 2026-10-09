@@ -49,7 +49,7 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_NON_ROOT_PASSWORD
-            - name: N8N_INSTALL_METHOD
+            - name: N8N_DEPLOYMENT_ARTIFACT
               value: kubernetes
             - name: N8N_PROTOCOL
               value: http

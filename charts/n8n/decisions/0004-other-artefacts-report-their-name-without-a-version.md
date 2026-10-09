@@ -5,7 +5,7 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/226
 
 ## Context
 
-n8n reads `N8N_INSTALL_METHOD` and sends it with the telemetry it already sends, so we can tell which artefact installed n8n. The chart will report `helm-chart/<chart version>` once #224 lands.
+n8n reads `N8N_DEPLOYMENT_ARTIFACT` and sends it with the telemetry it already sends, so we can tell which artefact installed n8n. The chart will report `helm-chart/<chart version>` once #224 lands.
 
 This repository has more artefacts than the chart: the Docker Compose stacks, the Docker Caddy stack, the plain Kubernetes manifests and the CloudFormation templates. Without a value, an install from any of them looks the same as a hand-written setup.
 
@@ -13,7 +13,7 @@ Only the chart has a version of its own. The release tooling versions `charts/n8
 
 ## Decision
 
-Each artefact sets `N8N_INSTALL_METHOD` to its name, with no version. A variant adds its name to the artefact's, joined with hyphens:
+Each artefact sets `N8N_DEPLOYMENT_ARTIFACT` to its name, with no version. A variant adds its name to the artefact's, joined with hyphens:
 
 | Artefact | Value |
 | --- | --- |
