@@ -332,8 +332,6 @@ matches the snapshot:
             - args:
                 - worker
                 - --concurrency=10
-              command:
-                - n8n
               env:
                 - name: TZ
                   valueFrom:
