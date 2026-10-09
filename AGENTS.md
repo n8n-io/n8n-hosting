@@ -6,6 +6,7 @@ Official deployment artefacts for self-hosted n8n. This file is for AI agents wo
 
 - `charts/n8n/`: the maintained Helm chart. Most work happens here.
 - `docker-compose/`, `docker-caddy/`, `kubernetes/`, `aws-cloudformation/`: the other artefacts. Pinned to the same n8n version as the chart; otherwise low-touch.
+- `tools/lab/`: a CLI that deploys these artefacts on minikube, EKS or AKS and smoke-tests them. It is a tool, not an artefact, and has its own [AGENTS.md](tools/lab/AGENTS.md).
 
 ## Design and decisions
 
