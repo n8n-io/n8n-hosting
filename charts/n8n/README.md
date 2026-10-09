@@ -268,15 +268,19 @@ To set a different pod securityContext for one role, set `podSecurityContext.<ro
 
 ```yaml
 # OpenShift: let the restricted SCC assign the UID and GID. Set the same for
-# worker, and for webhookProcessor when it is enabled.
+# webhookProcessor when it is enabled.
 podSecurityContext:
   main:
     runAsNonRoot: true
     seccompProfile:
       type: RuntimeDefault
+  worker:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
 ```
 
-Every container sets `allowPrivilegeEscalation: false` and drops all capabilities. These defaults are in `values.yaml` under `containerSecurityContext.<role>`, so your values merge over them. Set only the fields that change, and set a field to `null` to remove it. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
+The n8n containers and the task-runner sidecar set `allowPrivilegeEscalation: false` and drop all capabilities. Containers added with `extraContainers` or `extraInitContainers` get none of them. The defaults are in `values.yaml` under `containerSecurityContext.<role>`, so your values merge over them. Set only the fields that change, and set a field to `null` to remove it. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
 
 ```yaml
 # Run the task runner as nobody (UID and GID 65532), as n8n's hardening guide recommends.
