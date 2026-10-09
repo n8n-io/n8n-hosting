@@ -1,0 +1,63 @@
+AGENTS.md
+  s_f363062ab84ae3::t_3c170756102eb5 9
+tools/lab/.gitignore
+  s_f363062ab84ae3::t_662f681ed208d3 1-22
+tools/lab/AGENTS.md
+  s_f363062ab84ae3::t_ecac2f2831cae6 1-56
+tools/lab/README.md
+  s_f363062ab84ae3::t_68a2126804b0fd 1-280
+tools/lab/build-image.sh
+  s_f363062ab84ae3::t_03461a1fff54e4 1-64
+tools/lab/lab
+  s_f363062ab84ae3::t_5b71d473678008 1-2
+tools/lab/manifests/postgres-redis.yaml
+  s_f363062ab84ae3::t_c0d44fb926cedb 1-71
+tools/lab/package.json
+  s_f363062ab84ae3::t_607a074e53192c 1-23
+tools/lab/pnpm-lock.yaml
+  s_f363062ab84ae3::t_ddec2398b81bba 1-398
+tools/lab/src/addons.ts
+  s_f363062ab84ae3::t_91ad758f98197d 1-47
+tools/lab/src/check.ts
+  s_f363062ab84ae3::t_5e4f8c6062361a 1-86
+tools/lab/src/cli.ts
+  s_f363062ab84ae3::t_693208f327599d 1-322
+tools/lab/src/clusters.ts
+  s_f363062ab84ae3::t_a51362e2431cc0 1-53
+tools/lab/src/e2e.ts
+  s_f363062ab84ae3::t_f4bca0aae3261e 1-79
+tools/lab/src/examples.ts
+  s_f363062ab84ae3::t_9b6a95172ec70a 1-41
+tools/lab/src/kube.ts
+  s_f363062ab84ae3::t_11ff1ade54028f 1-100
+tools/lab/src/providers.ts
+  s_f363062ab84ae3::t_dc48fccb7c8f7a 1-308
+tools/lab/src/sh.ts
+  s_f363062ab84ae3::t_432caa1867c48a 1-32
+tools/lab/src/targets.ts
+  s_f363062ab84ae3::t_115fb065754fd9 1-284
+tools/lab/src/ui.ts
+  s_f363062ab84ae3::t_de71a35c3345ef 1-79
+tools/lab/src/upgrade.ts
+  s_f363062ab84ae3::t_0d26a3f038f07f 1-45
+tools/lab/tsconfig.json
+  s_f363062ab84ae3::t_9fa3dd0740e5d4 1-14
+tools/lab/values/common.yaml
+  s_f363062ab84ae3::t_958eeecf2c6f94 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08102772acc3d07ade7a80a35546bafe3bb26d1e",
+  "prompts": {},
+  "sessions": {
+    "s_f363062ab84ae3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17484020-c13a-4467-a118-d66297ee34d3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
