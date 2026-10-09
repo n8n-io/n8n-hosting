@@ -1,0 +1,63 @@
+tools/lab/README.md
+  s_f363062ab84ae3::t_39971e0bede309 97
+tools/lab/src/addons.ts
+  s_f363062ab84ae3::t_ccdf717a060deb 30-33
+tools/lab/src/cli/commands/up.ts
+  s_f363062ab84ae3::t_112bd9b2c9638c 35-36,43,111,115,117
+tools/lab/src/cli/commands/upgrade.ts
+  s_f363062ab84ae3::t_54dbe016c06627 13-17
+tools/lab/src/cli/index.ts
+  s_f363062ab84ae3::t_efe02340b41ccc 58-59
+tools/lab/src/cli/options.ts
+  s_f363062ab84ae3::t_8495334b874488 28-30
+tools/lab/src/cluster/namespaces.ts
+  s_f363062ab84ae3::t_3e2b41ecc8dd31 9-11,19-20
+tools/lab/src/cluster/settings.ts
+  s_f363062ab84ae3::t_42e69d50d4bbc0 13-24
+tools/lab/src/providers/index.ts
+  s_f363062ab84ae3::t_95f140364d5c47 13
+tools/lab/src/providers/lab.ts
+  s_f363062ab84ae3::t_d2adc122c54b0d 3-6
+tools/lab/src/support/sh.ts
+  s_f363062ab84ae3::t_4a6e905ab70371 41-42,45-46
+tools/lab/src/support/tasks.ts
+  s_f363062ab84ae3::t_7f1ae0d09e3f47 10-11
+tools/lab/src/targets/chart.ts
+  s_f363062ab84ae3::t_3a34ad084c729f 6,19,23,26
+tools/lab/src/targets/example.ts
+  s_f363062ab84ae3::t_f7461c3ad877bf 8,41,52,55
+tools/lab/src/targets/k8s.ts
+  s_f363062ab84ae3::t_ddf0bd5f787c14 8,36,40,55
+tools/lab/src/targets/steps.ts
+  s_f363062ab84ae3::t_6b03d08ed08bfc 39-53
+tools/lab/src/testing/check.ts
+  s_f363062ab84ae3::t_a2a3b33dabf0e9 8-10,12,16,36,39
+tools/lab/src/testing/e2e.ts
+  s_f363062ab84ae3::t_302216bbf239b5 5,17-18
+tools/lab/src/testing/upgrade.ts
+  s_f363062ab84ae3::t_5c8f6eb3226767 11-13,20
+tools/lab/test/options.test.ts
+  s_f363062ab84ae3::t_45bcfd4375cc80 15-20
+tools/lab/test/providers.test.ts
+  s_f363062ab84ae3::t_3819e1e78a0aa1 5,46-56
+tools/lab/test/settings.test.ts
+  s_f363062ab84ae3::t_f09fbf9100cca3 4,30-35
+tools/lab/test/targets.test.ts
+  s_f363062ab84ae3::t_a87f64086ba5ea 9,11-13,51,105-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6188fdd7798e959842fa8512607548457cf3d620",
+  "prompts": {},
+  "sessions": {
+    "s_f363062ab84ae3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17484020-c13a-4467-a118-d66297ee34d3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
