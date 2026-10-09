@@ -1,13 +1,13 @@
-# 0004. Other artefacts report their name, without a version
+# 0005. Other artefacts report their name, without a version
 
 Date: 2026-10-07
 PR: https://github.com/n8n-io/n8n-hosting/pull/226
 
 ## Context
 
-n8n reads `N8N_DEPLOYMENT_ARTIFACT` and sends it with the telemetry it already sends, so we can tell which artefact installed n8n. The chart will report `helm-chart/<chart version>` once #224 lands.
+n8n reads `N8N_DEPLOYMENT_ARTIFACT` and sends it with the telemetry it already sends, so we can tell which artefact installed n8n. The chart reports `helm-chart/<chart version>` (decision 0002).
 
-This repository has more artefacts than the chart: the Docker Compose stacks, the Docker Caddy stack, the plain Kubernetes manifests and the CloudFormation templates. Without a value, an install from any of them looks the same as a hand-written setup.
+This repository has more artefacts than the chart: the Docker Compose stacks, the Docker Caddy stack, the plain Kubernetes manifests (a quickstart, so the name does not read as every install on Kubernetes) and the CloudFormation templates. Without a value, an install from any of them looks the same as a hand-written setup.
 
 Only the chart has a version of its own. The release tooling versions `charts/n8n` and nothing else. The weekly bump keeps every artefact on the same n8n version, and n8n's telemetry already carries that version.
 
@@ -19,7 +19,7 @@ Each artefact sets `N8N_DEPLOYMENT_ARTIFACT` to the install method, with no vers
 | --- | --- |
 | `docker-compose/*` | `docker-compose` |
 | `docker-caddy` | `docker-caddy` |
-| `kubernetes` | `kubernetes` |
+| `kubernetes` | `kubernetes-quickstart` |
 | `aws-cloudformation/*` | `aws-cloudformation` |
 
 The values are deliberately coarse. Variants such as queue mode, workers, the database and the proxy are already in n8n's other telemetry, and folder names and template shapes change. A finer value would split the counts on every rename.
