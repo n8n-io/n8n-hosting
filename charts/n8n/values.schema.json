@@ -18,6 +18,18 @@
       },
       "required": ["repository"]
     },
+    "imagePullSecrets": {
+      "type": "array",
+      "description": "Existing pull Secrets for private image registries, referenced by every n8n pod and the Helm test pod",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
     "replicaCount": { "type": "integer", "minimum": 1 },
     "commonLabels": {
       "type": "object",

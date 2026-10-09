@@ -31,6 +31,10 @@ spec:
       labels:
         {{- include "n8n.podLabels" (dict "root" . "component" "main") | nindent 8 }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with include "n8n.serviceAccountName" . }}
       serviceAccountName: {{ . }}
       {{- end }}
