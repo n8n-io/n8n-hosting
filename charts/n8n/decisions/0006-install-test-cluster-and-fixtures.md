@@ -1,4 +1,4 @@
-# 0002. The install test runs examples on kind against plain Postgres and Redis
+# 0006. The install test runs examples on kind against plain Postgres and Redis
 
 Date: 2026-09-24
 PR: https://github.com/n8n-io/n8n-hosting/pull/211
