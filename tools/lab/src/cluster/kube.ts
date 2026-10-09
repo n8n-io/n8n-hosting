@@ -1,12 +1,11 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { Addon } from './addons.ts';
-import type { Options } from './options.ts';
-import type { Provider } from './providers/types.ts';
-import { ok, run, type RunOpts } from './sh.ts';
+import type { Addon } from '../addons.ts';
+import type { Provider } from '../providers/types.ts';
+import { ok, run, type RunOpts } from '../support/sh.ts';
 
-export const ROOT = join(import.meta.dirname, '..');
+export const ROOT = join(import.meta.dirname, '../..');
 
 /** Everything a command needs to know: where it runs, what to deploy from, and which cluster it is talking to. */
 export interface Env {
@@ -32,7 +31,13 @@ function defaultHosting(): string {
   return existsSync(join(around, 'charts/n8n')) ? around : join(homedir(), 'git/n8n-hosting');
 }
 
-export function envFromProcess(provider: Provider, addons: Addon[], opts: Pick<Options, 'env' | 'valuesFiles'>): Env {
+/** What the command line adds to the environment: extra n8n settings, and extra Helm values files. */
+export interface Extras {
+  env: Record<string, string>;
+  valuesFiles: string[];
+}
+
+export function envFromProcess(provider: Provider, addons: Addon[], opts: Extras): Env {
   const hosting = process.env.HOSTING || defaultHosting();
   return {
     provider,

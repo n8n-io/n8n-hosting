@@ -32,16 +32,19 @@ Node 24 or later runs the TypeScript directly. There is no build step. Check typ
 
 ## Layout
 
-- `src/cli.ts`: reads options, picks the provider and cluster, runs one command. `options.ts` parses flags, `help.ts` is the help text.
-- `src/commands/`: one small file per command (`up`, `down`, `status`, `check`, `upgrade`, `clusters`, `registry`).
-- `src/providers/`: where the lab runs. One file per provider (`minikube`, `eks`, `aks`), the interface in `types.ts`, shared lab tag and names in `lab.ts`. Add a cloud here.
-- `src/targets/`: what each target deploys. `chart.ts`, `example.ts`, `k8s.ts`, `compose.ts` are the steps for each kind, `steps.ts` the helpers they share, `names.ts` the names.
-- `src/testing/`: `check.ts` the smoke tests, `e2e.ts` and `e2e-client.js` the workflow test (the client runs inside the pod), `upgrade.ts` the upgrade test.
-- `src/kube.ts`: the `Env`, and kubectl and helm wrappers. `namespaces.ts` the lab's label and namespace cleanup. `settings.ts` the n8n settings every deployment gets.
-- `src/clusters.ts`: choosing the cluster to use, and remembering it in `.lab-state.json`.
-- `src/addons.ts`: the addon hooks. `addons/<name>/index.ts` is one addon.
-- `src/failures.ts`, `tasks.ts`, `sh.ts`, `ui.ts`: failure list, task runner, process runner, terminal styling.
-- `test/`: unit tests for the pure functions. `pnpm test`.
+`src/` is layers. A layer only imports from the layers below it, and `test/architecture.test.ts` enforces that.
+
+| Layer | What is in it |
+| --- | --- |
+| `src/cli/` | `index.ts` picks the provider and cluster and runs one command. `options.ts` flags, `help.ts` help text, `commands/` one small file per command (`up`, `down`, `status`, `check`, `upgrade`, `clusters`, `registry`). |
+| `src/testing/` | `check.ts` smoke tests, `e2e.ts` and `e2e-client.js` the workflow test (the client runs inside the pod), `upgrade.ts` the upgrade test. |
+| `src/targets/` | What each target deploys. `chart.ts`, `example.ts`, `k8s.ts`, `compose.ts` are the steps for each kind, `steps.ts` the helpers they share, `names.ts` the names, `chart-examples.ts` reads `charts/n8n/examples`. |
+| `src/providers/` | Where the lab runs. One file per provider (`minikube`, `eks`, `aks`), the interface in `types.ts`, the lab tag and name rules in `lab.ts`. Add a cloud here. |
+| `src/cluster/` | `kube.ts` the `Env` and the kubectl and helm wrappers, `namespaces.ts` the lab's label and namespace cleanup, `settings.ts` the n8n settings every deployment gets, `selection.ts` choosing and remembering a cluster. |
+| `src/support/` | `sh.ts` process runner, `ui.ts` prompts and colours, `tasks.ts` progress, `failures.ts` the failure list. Knows nothing about the lab. |
+| `src/addons.ts` | The addon hooks. `addons/<name>/index.ts` is one addon. |
+| `test/` | Unit tests for the pure functions, and the layering test. `pnpm test`. |
+
 
 ## Rules
 

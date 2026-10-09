@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import type { ListrTask } from 'listr2';
-import { type Env, ROOT, ensureSecret, helm, kubectl } from '../kube.ts';
-import { recordFailure } from '../failures.ts';
-import { UserError } from '../ui.ts';
+import { type Env, ROOT, ensureSecret, helm, kubectl } from '../cluster/kube.ts';
+import { recordFailure } from '../support/failures.ts';
+import { UserError } from '../support/ui.ts';
 
 export type Log = (line: string) => void;
 

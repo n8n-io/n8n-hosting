@@ -1,5 +1,5 @@
-import { has } from '../sh.ts';
-import { UserError } from '../ui.ts';
+import { has } from '../support/sh.ts';
+import { UserError } from '../support/ui.ts';
 import { aks } from './aks.ts';
 import { eks } from './eks.ts';
 import { minikube } from './minikube.ts';

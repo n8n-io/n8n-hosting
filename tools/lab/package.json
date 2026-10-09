@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Deploy n8n the way the n8n-hosting files deploy it, locally or on a cloud, and check it works.",
   "bin": {
-    "lab": "src/cli.ts"
+    "lab": "src/cli/index.ts"
   },
   "scripts": {
     "typecheck": "tsc",

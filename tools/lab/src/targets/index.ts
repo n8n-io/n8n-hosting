@@ -1,7 +1,7 @@
 import type { ListrTask } from 'listr2';
-import { exampleValues, isExample, needsLicense } from '../chart-examples.ts';
-import { type Env, exists } from '../kube.ts';
-import { labNamespaces, removeNamespaces } from '../namespaces.ts';
+import { exampleValues, isExample, needsLicense } from './chart-examples.ts';
+import { type Env, exists } from '../cluster/kube.ts';
+import { labNamespaces, removeNamespaces } from '../cluster/namespaces.ts';
 import { chartSteps } from './chart.ts';
 import { composeContainers, composeSteps, removeCompose } from './compose.ts';
 import { exampleSteps } from './example.ts';

@@ -1,5 +1,5 @@
-import { ok, run } from '../sh.ts';
-import { UserError } from '../ui.ts';
+import { ok, run } from '../support/sh.ts';
+import { UserError } from '../support/ui.ts';
 import { LAB_TAG, isLabTag, labName, owner, runningFor } from './lab.ts';
 import type { Log, Provider } from './types.ts';
 

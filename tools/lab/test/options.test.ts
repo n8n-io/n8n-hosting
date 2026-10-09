@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parseEnvPairs, parseOptions } from '../src/options.ts';
-import { UserError } from '../src/ui.ts';
+import { parseEnvPairs, parseOptions } from '../src/cli/options.ts';
+import { UserError } from '../src/support/ui.ts';
 
 test('--env pairs become a map, and a value may contain =', () => {
   assert.deepEqual(parseEnvPairs(['A=1', 'URL=http://x/?a=b']), { A: '1', URL: 'http://x/?a=b' });

@@ -1,6 +1,6 @@
 import type { ListrTask } from 'listr2';
-import { recordFailure } from '../failures.ts';
-import { type Env, kubectl } from '../kube.ts';
+import { recordFailure } from '../support/failures.ts';
+import { type Env, kubectl } from '../cluster/kube.ts';
 import { isCompose, namespaceOf } from '../targets/index.ts';
 import { type Exec, execFor, httpGet } from './exec.ts';
 import { retry } from './retry.ts';

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
-import type { Env } from './kube.ts';
+import type { Env } from '../cluster/kube.ts';
 
 /** Every file in the chart's examples/ folder is a target named example-<file>. */
 export const EXAMPLE_PREFIX = 'example-';

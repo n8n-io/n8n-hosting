@@ -1,5 +1,5 @@
 import type { Addon } from '../src/addons.ts';
-import type { Env } from '../src/kube.ts';
+import type { Env } from '../src/cluster/kube.ts';
 import type { Provider } from '../src/providers/types.ts';
 
 const provider = (local: boolean): Provider => ({ name: local ? 'minikube' : 'aws', local, clis: [], defaultName: () => 'x', list: async () => [], create: async () => {}, connect: async () => 'ctx', destroy: async () => {} });

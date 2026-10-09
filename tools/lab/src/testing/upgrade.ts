@@ -1,7 +1,7 @@
 import type { ListrTask } from 'listr2';
-import type { Env } from '../kube.ts';
+import type { Env } from '../cluster/kube.ts';
 import { deployedTargets, targetTask } from '../targets/index.ts';
-import { UserError } from '../ui.ts';
+import { UserError } from '../support/ui.ts';
 import { checkTask } from './check.ts';
 import { execFor } from './exec.ts';
 

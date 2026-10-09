@@ -1,7 +1,7 @@
-import { type Env, kubectl } from '../kube.ts';
-import { labNamespaces } from '../namespaces.ts';
-import { COMPOSE_TARGETS, composeContainers } from '../targets/index.ts';
-import { c, table } from '../ui.ts';
+import { type Env, kubectl } from '../../cluster/kube.ts';
+import { labNamespaces } from '../../cluster/namespaces.ts';
+import { COMPOSE_TARGETS, composeContainers } from '../../targets/index.ts';
+import { c, table } from '../../support/ui.ts';
 import type { Command } from './types.ts';
 
 interface PodList {

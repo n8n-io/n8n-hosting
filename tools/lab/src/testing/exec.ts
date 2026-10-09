@@ -1,5 +1,5 @@
-import { type Env, exists, kubectl } from '../kube.ts';
-import { run } from '../sh.ts';
+import { type Env, exists, kubectl } from '../cluster/kube.ts';
+import { run } from '../support/sh.ts';
 import { composeProject, isCompose, mainDeployment, namespaceOf } from '../targets/index.ts';
 
 /** Runs a shell command inside n8n's container and returns what it printed. */

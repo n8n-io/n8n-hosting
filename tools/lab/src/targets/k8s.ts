@@ -1,10 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ListrTask } from 'listr2';
-import { type Env, apply, kubectl } from '../kube.ts';
-import { ensureNs } from '../namespaces.ts';
-import { writeLabEnv } from '../settings.ts';
-import { UserError } from '../ui.ts';
+import { type Env, apply, kubectl } from '../cluster/kube.ts';
+import { ensureNs } from '../cluster/namespaces.ts';
+import { writeLabEnv } from '../cluster/settings.ts';
+import { UserError } from '../support/ui.ts';
 import { step, waitForRollouts } from './steps.ts';
 
 const NAMESPACE = 'lab-k8s';

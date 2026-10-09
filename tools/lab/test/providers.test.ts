@@ -4,7 +4,7 @@ import { registryName, resourceGroup } from '../src/providers/aks.ts';
 import { clusterConfig, friendly } from '../src/providers/eks.ts';
 import { LAB_TAG, isLabTag, labName, runningFor } from '../src/providers/lab.ts';
 import { getProvider } from '../src/providers/index.ts';
-import { UserError } from '../src/ui.ts';
+import { UserError } from '../src/support/ui.ts';
 
 test('lab- prefix is added once', () => {
   assert.equal(labName('demo'), 'lab-demo');

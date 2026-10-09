@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeFailure, failedScopes, failures, recordFailure } from '../src/failures.ts';
+import { describeFailure, failedScopes, failures, recordFailure } from '../src/support/failures.ts';
 
 test('a failure names its scope and step, and scopes are unique', () => {
   recordFailure('queue', 'Helm install');

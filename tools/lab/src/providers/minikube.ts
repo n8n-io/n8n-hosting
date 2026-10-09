@@ -1,5 +1,5 @@
-import { run } from '../sh.ts';
-import { UserError } from '../ui.ts';
+import { run } from '../support/sh.ts';
+import { UserError } from '../support/ui.ts';
 import type { Provider } from './types.ts';
 
 interface MinikubeProfile {

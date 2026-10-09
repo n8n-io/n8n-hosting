@@ -1,8 +1,8 @@
-import { describeFailure, failures } from '../failures.ts';
-import { runTasks } from '../tasks.ts';
-import { upgradeTasks } from '../testing/upgrade.ts';
-import { checkTargets } from '../targets/index.ts';
-import { UserError, c } from '../ui.ts';
+import { describeFailure, failures } from '../../support/failures.ts';
+import { runTasks } from '../../support/tasks.ts';
+import { upgradeTasks } from '../../testing/upgrade.ts';
+import { checkTargets } from '../../targets/index.ts';
+import { UserError, c } from '../../support/ui.ts';
 import type { Command } from './types.ts';
 
 export const upgrade: Command = async (env, args, opts) => {

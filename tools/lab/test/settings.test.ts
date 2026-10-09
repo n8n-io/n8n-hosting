@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { storageClassToDefault } from '../src/kube.ts';
-import { labEnv } from '../src/settings.ts';
+import { storageClassToDefault } from '../src/cluster/kube.ts';
+import { labEnv } from '../src/cluster/settings.ts';
 import { fakeEnv } from './helpers.ts';
 
 test('diagnostics are off by default', () => {

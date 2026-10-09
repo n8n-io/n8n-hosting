@@ -1,11 +1,11 @@
 import type { ListrTask } from 'listr2';
-import { ensureDefaultStorageClass, type Env } from '../kube.ts';
-import { pick, remember, selectCluster } from '../clusters.ts';
-import { describeFailure, failedScopes, failures } from '../failures.ts';
-import type { Provider } from '../providers/index.ts';
-import { runTasks } from '../tasks.ts';
-import { DEFAULT_TARGETS, checkTargets, hasLicenseSecret, isCompose, licensed, mainDeployment, namespaceOf, targetTask } from '../targets/index.ts';
-import { UserError, askHidden, c, confirm } from '../ui.ts';
+import { ensureDefaultStorageClass, type Env } from '../../cluster/kube.ts';
+import { pick, remember, selectCluster } from '../../cluster/selection.ts';
+import { describeFailure, failedScopes, failures } from '../../support/failures.ts';
+import type { Provider } from '../../providers/index.ts';
+import { runTasks } from '../../support/tasks.ts';
+import { DEFAULT_TARGETS, checkTargets, hasLicenseSecret, isCompose, licensed, mainDeployment, namespaceOf, targetTask } from '../../targets/index.ts';
+import { UserError, askHidden, c, confirm } from '../../support/ui.ts';
 import type { Command } from './types.ts';
 
 /** A cluster takes minutes to create, so show how long it has been and what it is doing. */

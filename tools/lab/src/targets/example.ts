@@ -1,9 +1,9 @@
 import type { ListrTask } from 'listr2';
-import { type Values, exampleFile, exampleValues, needsLicense, secretsIn } from '../chart-examples.ts';
-import { type Env, ensureSecret, exists, kubectl } from '../kube.ts';
-import { ensureNs } from '../namespaces.ts';
-import { writeLabEnv } from '../settings.ts';
-import { UserError } from '../ui.ts';
+import { type Values, exampleFile, exampleValues, needsLicense, secretsIn } from './chart-examples.ts';
+import { type Env, ensureSecret, exists, kubectl } from '../cluster/kube.ts';
+import { ensureNs } from '../cluster/namespaces.ts';
+import { writeLabEnv } from '../cluster/settings.ts';
+import { UserError } from '../support/ui.ts';
 import { namespaceOf } from './names.ts';
 import { ensureChartSecrets, helmInstall, hex, postgresAndRedis, step, waitForRollouts } from './steps.ts';
 

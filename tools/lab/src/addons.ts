@@ -1,10 +1,10 @@
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { type Env, ROOT, apply, exists, kubectl } from './kube.ts';
-import { ensureNs, removeNamespaces } from './namespaces.ts';
-import { run } from './sh.ts';
-import { UserError, c, table } from './ui.ts';
+import { type Env, ROOT, apply, exists, kubectl } from './cluster/kube.ts';
+import { ensureNs, removeNamespaces } from './cluster/namespaces.ts';
+import { run } from './support/sh.ts';
+import { UserError, c, table } from './support/ui.ts';
 
 type Log = (line: string) => void;
 

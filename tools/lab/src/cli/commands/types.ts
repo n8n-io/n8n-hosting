@@ -1,4 +1,4 @@
-import type { Env } from '../kube.ts';
+import type { Env } from '../../cluster/kube.ts';
 import type { Options } from '../options.ts';
 
 /** A command gets the environment, the words after its name, and every option. */

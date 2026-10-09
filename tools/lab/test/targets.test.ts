@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { needsLicense, secretsIn } from '../src/chart-examples.ts';
+import { needsLicense, secretsIn } from '../src/targets/chart-examples.ts';
 import { nodeMatches } from '../src/targets/example.ts';
 import { composeOverride } from '../src/targets/compose.ts';
 import { containerPatch, inLabNamespace, sized } from '../src/targets/k8s.ts';
 import { ALL_TARGETS, checkTargets, mainDeployment, namespaceOf, targetOfNamespace } from '../src/targets/index.ts';
 import { imageFlags } from '../src/targets/steps.ts';
 import { statusOf } from '../src/testing/exec.ts';
-import { UserError } from '../src/ui.ts';
+import { UserError } from '../src/support/ui.ts';
 import { fakeEnv } from './helpers.ts';
 
 test('a namespace and a target name map to each other', () => {

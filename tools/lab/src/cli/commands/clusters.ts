@@ -1,7 +1,7 @@
-import { current, forget } from '../clusters.ts';
-import type { Env } from '../kube.ts';
-import { runTasks } from '../tasks.ts';
-import { UserError, ask, c, confirm, table } from '../ui.ts';
+import { current, forget } from '../../cluster/selection.ts';
+import type { Env } from '../../cluster/kube.ts';
+import { runTasks } from '../../support/tasks.ts';
+import { UserError, ask, c, confirm, table } from '../../support/ui.ts';
 import type { Command } from './types.ts';
 
 export const clusters: Command = async (env) => {

@@ -1,7 +1,7 @@
 import type { ListrTask } from 'listr2';
-import type { Env } from '../kube.ts';
-import { ensureNs } from '../namespaces.ts';
-import { writeLabEnv } from '../settings.ts';
+import type { Env } from '../cluster/kube.ts';
+import { ensureNs } from '../cluster/namespaces.ts';
+import { writeLabEnv } from '../cluster/settings.ts';
 import { namespaceOf } from './names.ts';
 import { ensureChartSecrets, helmInstall, postgresAndRedis, step, waitForRollouts } from './steps.ts';
 

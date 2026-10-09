@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Env, ROOT } from './kube.ts';
-import type { Provider } from './providers/index.ts';
-import { UserError, ask, c, choose } from './ui.ts';
+import type { Provider } from '../providers/index.ts';
+import { UserError, ask, c, choose } from '../support/ui.ts';
 
 // The cluster last used per provider, like kubectl's current context. Generated, so it is git-ignored.
 const FILE = join(ROOT, '.lab-state.json');

@@ -1,6 +1,6 @@
-import { listExamples } from '../chart-examples.ts';
-import type { Env } from '../kube.ts';
-import { UserError } from '../ui.ts';
+import { listExamples } from './chart-examples.ts';
+import type { Env } from '../cluster/kube.ts';
+import { UserError } from '../support/ui.ts';
 
 export const CHART_TARGETS = ['single', 'queue', 'webhooks', 'multimain'];
 

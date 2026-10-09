@@ -1,7 +1,7 @@
 import type { ListrTask } from 'listr2';
-import { runTasks } from '../tasks.ts';
-import { COMPOSE_TARGETS, checkTargets, clusterTargets, removeTargets } from '../targets/index.ts';
-import { c } from '../ui.ts';
+import { runTasks } from '../../support/tasks.ts';
+import { COMPOSE_TARGETS, checkTargets, clusterTargets, removeTargets } from '../../targets/index.ts';
+import { c } from '../../support/ui.ts';
 import type { Command } from './types.ts';
 
 export const down: Command = async (env, args) => {

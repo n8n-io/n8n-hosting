@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { type Addon, loadAddons } from './addons.ts';
-import { selectCluster, use } from './clusters.ts';
+import { type Addon, loadAddons } from '../addons.ts';
+import { selectCluster, use } from '../cluster/selection.ts';
 import { check } from './commands/check.ts';
 import { cluster, clusters } from './commands/clusters.ts';
 import { down } from './commands/down.ts';
@@ -10,10 +10,10 @@ import type { Command } from './commands/types.ts';
 import { up } from './commands/up.ts';
 import { upgrade } from './commands/upgrade.ts';
 import { helpText } from './help.ts';
-import { envFromProcess, type Env } from './kube.ts';
+import { envFromProcess, type Env } from '../cluster/kube.ts';
 import { type Options, parseOptions } from './options.ts';
-import { getProvider, requireClis } from './providers/index.ts';
-import { UserError, c } from './ui.ts';
+import { getProvider, requireClis } from '../providers/index.ts';
+import { UserError, c } from '../support/ui.ts';
 
 /** Commands that choose or create the cluster themselves. */
 const STANDALONE: Record<string, Command> = { clusters, cluster, up };

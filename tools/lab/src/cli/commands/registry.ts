@@ -1,5 +1,5 @@
-import { runTasks } from '../tasks.ts';
-import { UserError, c } from '../ui.ts';
+import { runTasks } from '../../support/tasks.ts';
+import { UserError, c } from '../../support/ui.ts';
 import type { Command } from './types.ts';
 
 export const registry: Command = async (env, args) => {

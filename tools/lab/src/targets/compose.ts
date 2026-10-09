@@ -1,9 +1,9 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ListrTask } from 'listr2';
-import { type Env, ROOT } from '../kube.ts';
-import { labEnv } from '../settings.ts';
-import { ok, run } from '../sh.ts';
+import { type Env, ROOT } from '../cluster/kube.ts';
+import { labEnv } from '../cluster/settings.ts';
+import { ok, run } from '../support/sh.ts';
 import { COMPOSE } from './names.ts';
 import { type Log, step } from './steps.ts';
 

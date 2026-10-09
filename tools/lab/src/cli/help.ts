@@ -1,6 +1,6 @@
-import type { Addon } from './addons.ts';
-import { ALL_TARGETS, DESCRIPTION } from './targets/index.ts';
-import { c } from './ui.ts';
+import type { Addon } from '../addons.ts';
+import { ALL_TARGETS, DESCRIPTION } from '../targets/index.ts';
+import { c } from '../support/ui.ts';
 
 const ENV_VARS = [
   ['HOSTING', 'n8n-hosting checkout to deploy from (default: the repo the lab sits in, else ~/git/n8n-hosting)'],

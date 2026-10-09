@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { ListrTask } from 'listr2';
-import type { Env } from '../kube.ts';
+import type { Env } from '../cluster/kube.ts';
 import { checker } from './check.ts';
 import { type Exec, execFor, httpGet } from './exec.ts';
 

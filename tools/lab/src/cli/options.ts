@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { UserError } from './ui.ts';
+import { UserError } from '../support/ui.ts';
 
 /** Everything typed on the command line. */
 export interface Options {
