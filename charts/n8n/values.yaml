@@ -64,7 +64,7 @@ webhookProcessor:
   #     value: "debug"
   extraEnv: []
 
-# ----- Multi-main (optional, requires queue mode) -----
+# ----- Multi-main (optional, requires queue mode and license.enabled) -----
 multiMain:
   enabled: false
   replicas: 2
@@ -180,6 +180,7 @@ strategy: {}
 podLabels: {}
 
 # ----- Main replicas (when multi-main is disabled) -----
+# Keep this at 1. To run several mains, enable multiMain and set multiMain.replicas.
 replicaCount: 1
 
 # ----- Service -----
@@ -498,7 +499,7 @@ lifecycle:
 
 # ----- Autoscaling -----
 hpa:
-  # Main pods autoscaling (UI/API pods)
+  # Main pods autoscaling (UI/API pods). When enabled, maxReplicas above 1 requires multiMain.enabled
   main:
     enabled: false
     minReplicas: 1
