@@ -42,6 +42,11 @@ export async function clusterTargets(env: Env): Promise<string[]> {
   return (await labNamespaces(env)).filter((n) => n.startsWith('lab-')).map(targetOfNamespace);
 }
 
+/** Whether a target has anything deployed, even a stopped Compose stack, whose volumes a new install would reuse. */
+export async function isDeployed(env: Env, t: string): Promise<boolean> {
+  return isCompose(t) ? (await composeContainers(t)).length > 0 : (await clusterTargets(env)).includes(t);
+}
+
 /** Targets that are deployed right now: the lab's namespaces, and Compose stacks with a running container. */
 export async function deployedTargets(env: Env): Promise<string[]> {
   const found = await clusterTargets(env);

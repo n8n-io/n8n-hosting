@@ -14,7 +14,7 @@
 #   BASE_IMAGE   image the changed files are copied onto. Default: n8nio/n8n:nightly.
 set -euo pipefail
 
-[ $# -eq 2 ] || { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+[ $# -eq 2 ] || { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 WT=$1
 NAME=$2
 BASE_REF=${BASE_REF:-origin/master}
@@ -26,31 +26,40 @@ N8N=/usr/local/lib/node_modules/n8n
 # Workspace packages live under node_modules/.pnpm in the image, named after their CI build path.
 pkg_dir() { echo "$N8N/node_modules/.pnpm/$1@file++++home+runner+_work+n8n+n8n+packages+$2/node_modules/$3"; }
 
+# The source files this branch changed. Deleted files are left out (there is nothing to copy), and tests are not shipped.
+# `|| true`: grep exits 1 when nothing is left, and the check below gives the real message.
+FILES=$(git -C "$WT" diff --name-only --diff-filter=d "$BASE_REF"...HEAD -- 'packages/*.ts' | grep -vE '__tests__|/test/|\.test\.ts$' || true)
+[ -n "$FILES" ] || { echo "No changed source files between $BASE_REF and HEAD in $WT" >&2; exit 1; }
+
+# Only the committed diff picks the files. Uncommitted edits to those files are in the build, edits to others are not.
+if [ -n "$(git -C "$WT" status --porcelain --untracked-files=no -- 'packages/*.ts')" ]; then
+  echo "Warning: $WT has uncommitted changes. Files that are not in the committed diff are not in the image." >&2
+fi
+
 # Map each changed source file to its compiled file and its path in the image.
 {
   echo "FROM $BASE_IMAGE"
-  git -C "$WT" diff --name-only "$BASE_REF"...HEAD -- 'packages/*.ts' |
-    grep -vE '__tests__|/test/|\.test\.ts$' |
-    while read -r src; do
-      case "$src" in
-        packages/cli/src/*)            rel=${src#packages/cli/src/};                 dst="$N8N/dist" ;;
-        packages/@n8n/config/src/*)    rel=${src#packages/@n8n/config/src/};         dst="$(pkg_dir @n8n+config @n8n+config @n8n/config)/dist" ;;
-        packages/@n8n/db/src/*)        rel=${src#packages/@n8n/db/src/};             dst="$(pkg_dir @n8n+db @n8n+db @n8n/db)/dist" ;;
-        packages/@n8n/telemetry/src/*)rel=${src#packages/@n8n/telemetry/src/};      dst="$(pkg_dir @n8n+telemetry @n8n+telemetry @n8n/telemetry)/dist" ;;
-        packages/@n8n/decorators/src/*) rel=${src#packages/@n8n/decorators/src/};    dst="$(pkg_dir @n8n+decorators @n8n+decorators @n8n/decorators)/dist" ;;
-        packages/@n8n/nodes-langchain/*) rel=${src#packages/@n8n/nodes-langchain/};  dst="$(pkg_dir @n8n+n8n-nodes-langchain @n8n+nodes-langchain @n8n/n8n-nodes-langchain)/dist" ;;
-        *) echo "Package not supported yet, add it to the case in build-image.sh: $src" >&2; exit 1 ;;
-      esac
-      js=${rel%.ts}.js
-      base=${src%/src/*}; [ "$base" = "$src" ] && base=packages/@n8n/nodes-langchain
-      [ -f "$WT/$base/dist/$js" ] || { echo "Not built: $WT/$base/dist/$js. Run: pnpm --filter ./$base build" >&2; exit 1; }
-      mkdir -p "$CTX/$(dirname "$src")"
-      cp "$WT/$base/dist/$js" "$CTX/${src%.ts}.js"
-      echo "COPY ${src%.ts}.js $dst/$js"
-    done
+  while read -r src; do
+    case "$src" in
+      packages/cli/src/*)            rel=${src#packages/cli/src/};                 dst="$N8N/dist" ;;
+      packages/@n8n/config/src/*)    rel=${src#packages/@n8n/config/src/};         dst="$(pkg_dir @n8n+config @n8n+config @n8n/config)/dist" ;;
+      packages/@n8n/db/src/*)        rel=${src#packages/@n8n/db/src/};             dst="$(pkg_dir @n8n+db @n8n+db @n8n/db)/dist" ;;
+      packages/@n8n/telemetry/src/*)rel=${src#packages/@n8n/telemetry/src/};      dst="$(pkg_dir @n8n+telemetry @n8n+telemetry @n8n/telemetry)/dist" ;;
+      packages/@n8n/decorators/src/*) rel=${src#packages/@n8n/decorators/src/};    dst="$(pkg_dir @n8n+decorators @n8n+decorators @n8n/decorators)/dist" ;;
+      packages/@n8n/nodes-langchain/*) rel=${src#packages/@n8n/nodes-langchain/};  dst="$(pkg_dir @n8n+n8n-nodes-langchain @n8n+nodes-langchain @n8n/n8n-nodes-langchain)/dist" ;;
+      *) echo "Package not supported yet, add it to the case in build-image.sh: $src" >&2; exit 1 ;;
+    esac
+    js=${rel%.ts}.js
+    base=${src%/src/*}; [ "$base" = "$src" ] && base=packages/@n8n/nodes-langchain
+    built="$WT/$base/dist/$js"
+    [ -f "$built" ] || { echo "Not built: $built. Run: pnpm --filter ./$base build" >&2; exit 1; }
+    # A build older than its source would put old code in the image without saying so.
+    [ "$built" -nt "$WT/$src" ] || { echo "Stale build: $built is older than $src. Run: pnpm --filter ./$base build" >&2; exit 1; }
+    mkdir -p "$CTX/$(dirname "$src")"
+    cp "$built" "$CTX/${src%.ts}.js"
+    echo "COPY ${src%.ts}.js $dst/$js"
+  done <<< "$FILES"
 } > "$CTX/Dockerfile"
-
-[ "$(wc -l < "$CTX/Dockerfile")" -gt 1 ] || { echo "No changed source files between $BASE_REF and HEAD in $WT" >&2; exit 1; }
 
 cat "$CTX/Dockerfile"
 if [ -n "${REGISTRY:-}" ]; then

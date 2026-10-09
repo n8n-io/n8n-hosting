@@ -1,3 +1,4 @@
+import { UserError } from '../support/ui.ts';
 import { type Env, apply, kubectl } from './kube.ts';
 
 /** Marks a namespace as the lab's. `down` and `status` only touch namespaces that carry it, whatever their name. */
@@ -5,9 +6,18 @@ export const LAB_LABEL = 'app.kubernetes.io/managed-by=n8n-hosting-lab';
 const [LAB_KEY, LAB_VALUE] = LAB_LABEL.split('=');
 const ADDON_KEY = 'n8n-hosting-lab/addon';
 
-/** An addon's namespace passes its name, so it is not mistaken for a target. */
-export const ensureNs = (env: Env, name: string, addon?: string) =>
-  apply(env, { apiVersion: 'v1', kind: 'Namespace', metadata: { name, labels: { [LAB_KEY]: LAB_VALUE, ...(addon ? { [ADDON_KEY]: addon } : {}) } } });
+/**
+ * Creates the namespace, labelled as the lab's. A namespace that already exists without the label is not ours, and
+ * labelling it would let `down` delete it, so it is refused. An addon's namespace passes its name, so it is not
+ * mistaken for a target.
+ */
+export async function ensureNs(env: Env, name: string, addon?: string): Promise<void> {
+  const found = await kubectl(env, ['get', 'ns', name, '--ignore-not-found', '-o', 'json']);
+  if (found.trim() && (JSON.parse(found).metadata.labels ?? {})[LAB_KEY] !== LAB_VALUE) {
+    throw new UserError(`Namespace ${name} already exists and the lab did not create it, so it is left alone. If it is the lab's, label it:\n  kubectl label ns ${name} ${LAB_LABEL}`);
+  }
+  await apply(env, { apiVersion: 'v1', kind: 'Namespace', metadata: { name, labels: { [LAB_KEY]: LAB_VALUE, ...(addon ? { [ADDON_KEY]: addon } : {}) } } });
+}
 
 interface NamespaceList {
   items: { metadata: { name: string; labels?: Record<string, string> } }[];

@@ -29,16 +29,20 @@ export type LabApi = typeof labApi;
 
 /** A bare name is addons/<name>/ in this repo. Anything with a slash, `.` or `~` is a path to a folder or a file. */
 function locate(spec: string): string {
-  if (!/[/\\]|^[.~]/.test(spec)) return join(ROOT, 'addons', spec, 'index.ts');
+  if (!/[/\\]|^[.~]|\.[cm]?[jt]s$/.test(spec)) return join(ROOT, 'addons', spec, 'index.ts');
   const path = resolve(spec.replace(/^~/, homedir()));
   return /\.[cm]?[jt]s$/.test(path) ? path : join(path, 'index.ts');
 }
 
 export async function loadAddons(specs: string[]): Promise<Addon[]> {
   const addons: Addon[] = [];
+  const loaded = new Set<string>();
   for (const spec of specs) {
+    const path = locate(spec);
+    if (loaded.has(path)) continue; // given twice, for example by --addon and LAB_ADDONS
+    loaded.add(path);
     try {
-      addons.push((await import(pathToFileURL(locate(spec)).href)).default(labApi));
+      addons.push(await (await import(pathToFileURL(path).href)).default(labApi));
     } catch (e) {
       throw new UserError(`Addon '${spec}' could not be loaded: ${e instanceof Error ? e.message : e}`);
     }

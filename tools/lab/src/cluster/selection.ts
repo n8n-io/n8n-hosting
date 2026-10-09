@@ -38,7 +38,8 @@ export async function pick(provider: Provider, flag?: string): Promise<{ name: s
   const options = [...existing.map((e) => `${e.name}${e.name === fallback ? c.dim('  (current)') : ''}  ${c.dim(e.detail ?? '')}`), c.green('Create a new cluster')];
   const index = await choose(`${provider.name} clusters`, options, names.indexOf(fallback));
   if (index < existing.length) return { name: names[index], isNew: false };
-  return { name: normalize(provider, await ask('Name for the new cluster', provider.defaultName())), isNew: true };
+  const name = normalize(provider, await ask('Name for the new cluster', provider.defaultName()));
+  return { name, isNew: !names.includes(name) };
 }
 
 /** For every other command: the cluster named by --cluster, else the current one, else the only one. */

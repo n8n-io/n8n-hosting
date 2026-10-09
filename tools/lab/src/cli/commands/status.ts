@@ -30,7 +30,7 @@ async function printDeployments(env: Env): Promise<boolean> {
     console.log(c.bold(ns));
     console.log(indented(await podRows(env, ns), ['POD', 'READY', 'STATUS']) + '\n');
   }
-  for (const t of COMPOSE_TARGETS) {
+  for (const t of env.provider.local ? COMPOSE_TARGETS : []) {
     const containers = await composeContainers(t);
     if (!containers.length) continue;
     shown = true;

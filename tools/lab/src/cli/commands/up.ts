@@ -28,18 +28,27 @@ async function confirmCost(provider: Provider, name: string, yes: boolean): Prom
   if (!yes && !(await confirm('Create it?'))) throw new UserError('Cancelled. Pass --yes to skip this question.');
 }
 
-/** Picks a cluster (or creates one), connects to it, and makes it the env's cluster. */
-async function ensureCluster(env: Env, requested: string | undefined, yes: boolean): Promise<void> {
+interface ClusterChoice {
+  name: string;
+  /** The cluster does not exist yet, or is stopped, so it has to be created or started. */
+  needsCreate: boolean;
+}
+
+/** Which cluster to use, and whether it has to be created first. Creates nothing. */
+async function chooseCluster(env: Env, requested: string | undefined): Promise<ClusterChoice> {
+  const choice = await pick(env.provider, requested);
+  const found = (await env.provider.list()).find((e) => e.name === choice.name);
+  return { name: choice.name, needsCreate: choice.isNew || !found?.running };
+}
+
+/** Creates the cluster if needed, connects to it, and makes it the env's cluster. */
+async function connectCluster(env: Env, choice: ClusterChoice): Promise<void> {
   const { provider } = env;
-  const choice = await pick(provider, requested);
-  const found = (await provider.list()).find((e) => e.name === choice.name);
-  const needsCreate = choice.isNew || !found?.running;
-  if (needsCreate && !provider.local) await confirmCost(provider, choice.name, yes);
   await runTasks([
     {
       title: `${provider.name} cluster ${choice.name}`,
       task: async (_, task) => {
-        if (needsCreate) await createWithTimer(provider, choice.name, task);
+        if (choice.needsCreate) await createWithTimer(provider, choice.name, task);
         await selectCluster(env, choice.name);
         if (!provider.local) await ensureDefaultStorageClass(env, (line) => (task.output = line));
         remember(provider, choice.name);
@@ -48,10 +57,13 @@ async function ensureCluster(env: Env, requested: string | undefined, yes: boole
   ]);
 }
 
-/** Licensed targets need an Enterprise key, unless their namespace already holds one. Returns the targets that can run. */
-async function withLicenceKeys(env: Env, targets: string[]): Promise<string[]> {
+/**
+ * Licensed targets need an Enterprise key, unless their namespace already holds one (`hasSecret`). Asks for the key
+ * when it is missing and there is a terminal. Returns the targets that can run, and leaves the rest out.
+ */
+async function withLicenceKeys(env: Env, targets: string[], hasSecret: (t: string) => Promise<boolean>): Promise<string[]> {
   const missing: string[] = [];
-  for (const t of targets.filter((t) => licensed(env, t))) if (!(await hasLicenseSecret(env, t))) missing.push(t);
+  for (const t of targets.filter((t) => licensed(env, t))) if (!(await hasSecret(t))) missing.push(t);
   if (missing.length && !env.licenseKey && process.stdin.isTTY) {
     env.licenseKey = (await askHidden(`Enterprise licence key for ${missing.join(', ')} ${c.dim('(Enter to skip)')}: `)) || undefined;
   }
@@ -90,8 +102,19 @@ function report(env: Env, targets: string[]): void {
 
 export const up: Command = async (env, args, opts) => {
   const requested = checkTargets(env, args.length ? args : DEFAULT_TARGETS);
-  await ensureCluster(env, opts.cluster, opts.yes);
-  const targets = await withLicenceKeys(env, requested);
+  const choice = await chooseCluster(env, opts.cluster);
+
+  // A new cluster has no licence secrets, so settle the key before paying for it. Nothing to deploy means no cluster.
+  let targets = requested;
+  if (choice.needsCreate) {
+    targets = await withLicenceKeys(env, requested, async () => false);
+    if (!targets.length) throw new UserError('Nothing to deploy: every target needs an Enterprise licence key (N8N_LICENSE_KEY). No cluster was created.');
+    if (!env.provider.local) await confirmCost(env.provider, choice.name, opts.yes);
+  }
+  await connectCluster(env, choice);
+  if (!choice.needsCreate) targets = await withLicenceKeys(env, requested, (t) => hasLicenseSecret(env, t));
+  if (!targets.length) throw new UserError('Nothing to deploy: every target needs an Enterprise licence key (N8N_LICENSE_KEY).');
+
   await runTasks(deployTasks(env, targets));
   report(env, targets);
 };

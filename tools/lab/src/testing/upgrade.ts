@@ -1,6 +1,7 @@
 import type { ListrTask } from 'listr2';
 import type { Env } from '../cluster/kube.ts';
-import { deployedTargets, targetTask } from '../targets/index.ts';
+import { failures } from '../support/failures.ts';
+import { hasLicenseSecret, isDeployed, licensed, targetTask } from '../targets/index.ts';
 import { UserError } from '../support/ui.ts';
 import { checkTask } from './check.ts';
 import { execFor } from './exec.ts';
@@ -12,7 +13,8 @@ const MARKER = 'labmarker0001';
  * it still works and the workflow is still there. This is where real installs break: the database migrations.
  */
 export async function upgradeTasks(env: Env, t: string, from: string, to?: string): Promise<ListrTask[]> {
-  if ((await deployedTargets(env)).includes(t)) throw new UserError(`${t} is already deployed. Start from a clean install:  ./lab down ${t}`);
+  if (await isDeployed(env, t)) throw new UserError(`${t} is already deployed. Start from a clean install:  ./lab down ${t}`);
+  if (licensed(env, t) && !env.licenseKey && !(await hasLicenseSecret(env, t))) throw new UserError(`${t} needs an Enterprise licence key. Set N8N_LICENSE_KEY.`);
   const { main } = execFor(env, t);
   const old = { ...env, tag: from };
   const next = { ...env, tag: to };
@@ -31,6 +33,13 @@ export async function upgradeTasks(env: Env, t: string, from: string, to?: strin
     { ...targetTask(old, t), title: `Install ${from}` },
     version('from'),
     { ...checkTask(old, t), title: `Check ${from}` },
+    {
+      // Checks record their failures instead of throwing, so this is what stops an upgrade from an unhealthy baseline.
+      title: 'The baseline is healthy',
+      task: () => {
+        if (failures().length) throw new Error('The old version failed its checks, so the upgrade was not attempted.');
+      },
+    },
     {
       title: 'Save a marker workflow',
       task: () => main(`echo '{"id":"${MARKER}","name":"lab-upgrade-marker","nodes":[],"connections":{},"active":false}' > /tmp/marker.json && n8n import:workflow --input=/tmp/marker.json`),

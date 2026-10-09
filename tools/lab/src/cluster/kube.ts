@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { Addon } from '../addons.ts';
 import type { Provider } from '../providers/types.ts';
 import { ok, run, type RunOpts } from '../support/sh.ts';
+import { UserError } from '../support/ui.ts';
 
 export const ROOT = join(import.meta.dirname, '../..');
 
@@ -70,7 +71,9 @@ export const apply = (env: Env, manifest: object | string, opts?: RunOpts) =>
 
 /** Created once, so a rerun never changes an encryption key under a running install. Values travel on stdin. */
 export async function ensureSecret(env: Env, namespace: string, name: string, data: () => Record<string, string>): Promise<void> {
-  if (await exists(env, '-n', namespace, 'secret', name)) return;
+  // --ignore-not-found: a missing secret prints nothing, any other failure (unreachable API, no access) throws,
+  // so a failed lookup can never be mistaken for "missing" and overwrite an encryption key.
+  if ((await kubectl(env, ['-n', namespace, 'get', 'secret', name, '--ignore-not-found', '-o', 'name'])).trim()) return;
   await apply(env, { apiVersion: 'v1', kind: 'Secret', metadata: { name, namespace }, stringData: data() });
 }
 
@@ -80,10 +83,17 @@ interface StorageClass {
   metadata: { name: string; annotations?: Record<string, string> };
 }
 
-/** The class to make the default, or nothing when the cluster already has one or has no class at all. Prefers gp2. */
+/**
+ * The class to make the default, or nothing when the cluster already has one. Only gp2 or a single class is chosen:
+ * guessing among several could pick one that is wrong for a database. No class at all means no volumes can bind.
+ */
 export function storageClassToDefault(classes: StorageClass[]): string | undefined {
-  if (!classes.length || classes.some((sc) => sc.metadata.annotations?.[DEFAULT_CLASS] === 'true')) return undefined;
-  return (classes.find((sc) => sc.metadata.name === 'gp2') ?? classes[0]).metadata.name;
+  if (!classes.length) throw new UserError('The cluster has no storage class, so no volume can be created. Install a storage provisioner and make one class the default.');
+  if (classes.some((sc) => sc.metadata.annotations?.[DEFAULT_CLASS] === 'true')) return undefined;
+  const gp2 = classes.find((sc) => sc.metadata.name === 'gp2');
+  if (gp2) return gp2.metadata.name;
+  if (classes.length === 1) return classes[0].metadata.name;
+  throw new UserError(`The cluster has no default storage class and several candidates (${classes.map((c) => c.metadata.name).join(', ')}). Make one the default:\n  kubectl patch sc <name> -p '{"metadata":{"annotations":{"${DEFAULT_CLASS}":"true"}}}'`);
 }
 
 /** A cluster without a default storage class leaves every volume claim that names none Pending forever. */

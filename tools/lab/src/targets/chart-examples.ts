@@ -11,8 +11,9 @@ const dir = (env: Env) => join(env.chart, 'examples');
 export function listExamples(env: Env): string[] {
   try {
     return readdirSync(dir(env)).filter((f) => f.endsWith('.yaml')).map((f) => EXAMPLE_PREFIX + f.slice(0, -5));
-  } catch {
-    return [];
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw e;
   }
 }
 

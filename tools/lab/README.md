@@ -76,7 +76,7 @@ A cloud cluster keeps costing until you delete it with `./lab cluster delete <na
 | `multimain` | `webhooks` plus multi-main (needs `N8N_LICENSE_KEY`) |
 | `k8s` | the `kubernetes/` manifests, in namespace `lab-k8s` so a real install is never touched |
 | `compose-with-postgres`, `compose-with-postgres-and-worker`, `compose-caddy`, `compose-subfolder-with-ssl` | the Compose stacks, run as shipped with a generated override (minikube provider only) |
-| `example-<name>` | any file in `charts/n8n/examples/`, with random secrets and autoscalers off |
+| `example-<name>` | any file in `charts/n8n/examples/`, with random secrets (the licence key comes from `N8N_LICENSE_KEY`) and autoscalers off |
 
 `./lab up` with no target runs `single queue webhooks multimain`. Name several to run them side by side.
 
@@ -88,7 +88,7 @@ A cloud cluster keeps costing until you delete it with `./lab cluster delete <na
 
 ## Careful by default
 
-The lab only deletes what it created: namespaces carry `app.kubernetes.io/managed-by=n8n-hosting-lab` and `down` only removes those, and clouds carry a `lab=n8n-hosting-lab` tag. minikube lists every profile, so deleting one needs its name typed. `kubectl` and `helm` refuse to run without an explicit context, secrets travel on stdin and are never printed, and n8n diagnostics are off unless you turn them on with `--env`.
+The lab only deletes what it created, and refuses a namespace it did not: namespaces carry `app.kubernetes.io/managed-by=n8n-hosting-lab` and `down` only removes those, and clouds carry a `lab=n8n-hosting-lab` tag. minikube lists every profile, so deleting one needs its name typed. `kubectl` and `helm` refuse to run without an explicit context, secrets travel on stdin and are never printed, and n8n diagnostics are off unless you turn them on with `--env`.
 
 ## Common snags
 
