@@ -1,0 +1,38 @@
+# Shared by every lab namespace. Topology switches are --set flags in src/targets.ts.
+secretRefs:
+  existingSecret: n8n-core-secrets
+
+config:
+  # Extra n8n settings (--env and addons). ./lab writes the lab-env ConfigMap per namespace.
+  extraEnvFrom:
+    - configMapRef:
+        name: lab-env
+
+database:
+  host: postgres
+  passwordSecret:
+    name: n8n-db-secret
+    key: password
+
+redis:
+  host: redis
+
+queueMode:
+  workerReplicaCount: 2
+  workerConcurrency: 5
+
+webhookProcessor:
+  replicaCount: 2
+
+# Small requests so four installs fit on one minikube node. Main and worker get a 500m CPU limit (the chart's
+# default is 1). The webhook processor keeps the chart's 500m. The Compose targets have no limits at all.
+resources:
+  main:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 1Gi }
+  worker:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 1Gi }
+  webhookProcessor:
+    requests: { cpu: 50m, memory: 192Mi }
+    limits: { memory: 512Mi }

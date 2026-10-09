@@ -1,0 +1,23 @@
+{
+  "name": "n8n-hosting-lab",
+  "private": true,
+  "type": "module",
+  "description": "Deploy n8n the way the n8n-hosting files deploy it, locally or on a cloud, and check it works.",
+  "bin": {
+    "lab": "src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "listr2": "^11.1.1",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,47 @@
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { type Env, ROOT, apply, ensureNs, exists, kubectl } from './kube.ts';
+import { removeNamespaces } from './targets.ts';
+import { run } from './sh.ts';
+import { UserError, c, table } from './ui.ts';
+
+type Log = (line: string) => void;
+
+/**
+ * An addon adds something to the lab without the lab knowing about it: extra n8n settings, extra things to deploy,
+ * extra commands. Every hook is optional. Load one with `--addon <name|path>` or LAB_ADDONS=<a>:<b>.
+ */
+export interface Addon {
+  name: string;
+  /** Extra n8n settings for one target. `source` names the target, and `compose` says it runs in Docker, outside the cluster. */
+  env?(ctx: { source: string; compose: boolean }): Record<string, string>;
+  beforeUp?(env: Env, log: Log): Promise<void>;
+  afterUp?(env: Env, targets: string[], log: Log): Promise<void>;
+  /** `all` is true when `down` was run without a target. */
+  afterDown?(env: Env, all: boolean, log: Log): Promise<void>;
+  commands?: Record<string, { help: string; run(env: Env, args: string[]): Promise<void> }>;
+}
+
+/** What an addon may use from the lab. It is handed in, so an addon can live anywhere. */
+export const labApi = { ROOT, kubectl, apply, ensureNs, exists, removeNamespaces, run, UserError, c, table };
+export type LabApi = typeof labApi;
+
+/** A bare name is addons/<name>/ in this repo. Anything with a slash, `.` or `~` is a path to a folder or a file. */
+function locate(spec: string): string {
+  if (!/[/\\]|^[.~]/.test(spec)) return join(ROOT, 'addons', spec, 'index.ts');
+  const path = resolve(spec.replace(/^~/, homedir()));
+  return /\.[cm]?[jt]s$/.test(path) ? path : join(path, 'index.ts');
+}
+
+export async function loadAddons(specs: string[]): Promise<Addon[]> {
+  const addons: Addon[] = [];
+  for (const spec of specs) {
+    try {
+      addons.push((await import(pathToFileURL(locate(spec)).href)).default(labApi));
+    } catch (e) {
+      throw new UserError(`Addon '${spec}' could not be loaded: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  return addons;
+}
