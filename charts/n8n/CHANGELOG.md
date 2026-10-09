@@ -4,6 +4,22 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.16.0](https://github.com/n8n-io/n8n-hosting/compare/v1.15.0...v1.16.0) (2026-10-09)
+
+
+### Features
+
+* **artefacts:** report the deployment artifact from every other artefact ([#226](https://github.com/n8n-io/n8n-hosting/issues/226)) ([dc49b73](https://github.com/n8n-io/n8n-hosting/commit/dc49b73677134609e105b029c3de7e3dd4440715))
+* **chart:** add a liveness probe to the task-runner sidecar ([#223](https://github.com/n8n-io/n8n-hosting/issues/223)) ([12dbcf7](https://github.com/n8n-io/n8n-hosting/commit/12dbcf78c074924cd27461cab420ed4d9184ec22))
+* **chart:** report the deployment artifact to n8n telemetry ([#224](https://github.com/n8n-io/n8n-hosting/issues/224)) ([97eebcd](https://github.com/n8n-io/n8n-hosting/commit/97eebcdf1b0fe05e8a6ecdf2e41276e2b4934eec))
+* **chart:** support encryption key files and extra objects ([#183](https://github.com/n8n-io/n8n-hosting/issues/183)) ([3dda2e1](https://github.com/n8n-io/n8n-hosting/commit/3dda2e1b3e1480358f9ab3cdb4d43a693909604d))
+
+
+### Bug Fixes
+
+* **chart:** give the Artifact Hub logo a square, full-size icon ([#231](https://github.com/n8n-io/n8n-hosting/issues/231)) ([76c2d96](https://github.com/n8n-io/n8n-hosting/commit/76c2d96749c1654f5aee3cda6bb20108a4c79bcf))
+* **chart:** skip the main PDB on single-replica installs, so node drains are not blocked ([#228](https://github.com/n8n-io/n8n-hosting/issues/228)) ([487977c](https://github.com/n8n-io/n8n-hosting/commit/487977c5a70053eb6207b3d6fd39c67070ec6e52))
+
 ## [1.15.0](https://github.com/n8n-io/n8n-hosting/compare/v1.14.0...v1.15.0) (2026-10-07)
 
 
