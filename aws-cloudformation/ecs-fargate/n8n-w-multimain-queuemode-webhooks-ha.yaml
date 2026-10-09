@@ -1197,6 +1197,8 @@ Resources:
             - Name: QUEUE_BULL_REDIS_PASSWORD
               ValueFrom: !Ref RedisPasswordSecret
           Environment:
+            - Name: N8N_DEPLOYMENT_ARTIFACT
+              Value: aws-cloudformation
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord
             - Name: N8N_PROTOCOL
@@ -1482,6 +1484,8 @@ Resources:
             - Name: QUEUE_BULL_REDIS_PASSWORD
               ValueFrom: !Ref RedisPasswordSecret               
           Environment:
+            - Name: N8N_DEPLOYMENT_ARTIFACT
+              Value: aws-cloudformation
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord
             - Name: N8N_PORT
@@ -1952,6 +1956,8 @@ Resources:
             - Name: QUEUE_BULL_REDIS_PASSWORD
               ValueFrom: !Ref RedisPasswordSecret
           Environment:
+            - Name: N8N_DEPLOYMENT_ARTIFACT
+              Value: aws-cloudformation
             - Name: N8N_HOST
               Value: !Ref N8nHostRecord
             - Name: N8N_PROTOCOL
