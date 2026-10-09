@@ -122,6 +122,81 @@ jobs:
         if: matrix.example == 'charts/n8n/examples/minimal.yaml'
         run: helm template test charts/n8n -f charts/n8n/examples/minimal.yaml -f charts/n8n/ci/extraContainers-values.yaml --dry-run=client > /dev/null
 
+  # helm template proves the chart produces YAML, not that the API server
+  # accepts it. This checks every example against the Kubernetes schemas for
+  # the chart's minimum version and the newest one with published schemas,
+  # and the CRDs the examples use against the community catalogue. A kind
+  # with no schema is an error, so a new CRD needs a schema source.
+  kubeconform:
+    runs-on: ubuntu-latest
+    env:
+      KUBECONFORM_VERSION: v0.8.0
+      KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+      # The newest Kubernetes release in kubernetes-json-schema. The minimum
+      # comes from kubeVersion in Chart.yaml.
+      KUBERNETES_NEWEST: 1.37.1
+      # Both schema sources are pinned to a commit, so results do not move
+      # under a pull request.
+      K8S_SCHEMAS: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/8df8a883b68a24a104b4a9e43c1288090ae60b3b/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json
+      CRD_SCHEMAS: https://raw.githubusercontent.com/datreeio/CRDs-catalog/fd90051867733c60d32d16450556e9cd18459aef/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.17.0"
+
+      - name: Install kubeconform
+        run: |
+          set -euo pipefail
+          curl -sSfLo kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum -c -
+          tar -xzf kubeconform.tar.gz -C /usr/local/bin kubeconform
+          rm kubeconform.tar.gz
+          kubeconform -v
+
+      - name: Validate every example
+        run: |
+          set -euo pipefail
+
+          minimum=$(grep -E '^kubeVersion:' charts/n8n/Chart.yaml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+          if [[ -z "$minimum" ]]; then
+            echo "::error file=charts/n8n/Chart.yaml::Could not read the minimum Kubernetes version from kubeVersion."
+            exit 1
+          fi
+
+          if [[ "$(printf '%s\n' "$minimum" "$KUBERNETES_NEWEST" | sort -V | head -1)" != "$minimum" ]]; then
+            echo "::error::KUBERNETES_NEWEST ($KUBERNETES_NEWEST) is older than the chart's minimum ($minimum). Raise it."
+            exit 1
+          fi
+
+          # Without this, a version with no published schemas fails every
+          # example with a message that hides the cause.
+          for version in "$minimum" "$KUBERNETES_NEWEST"; do
+            if ! probe=$(printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: probe\n' |
+                 kubeconform -strict -kubernetes-version "$version" -schema-location "$K8S_SCHEMAS" - 2>&1); then
+              echo "::error::Could not load the Kubernetes $version schemas from the pinned kubernetes-json-schema commit: ${probe//$'\n'/ }"
+              exit 1
+            fi
+          done
+
+          failed=0
+          for version in "$minimum" "$KUBERNETES_NEWEST"; do
+            for f in charts/n8n/examples/*.yaml; do
+              echo "Validating $f against Kubernetes $version"
+              if ! helm template test charts/n8n -f "$f" --kube-version "$version" |
+                   kubeconform -strict -summary \
+                     -kubernetes-version "$version" \
+                     -schema-location "$K8S_SCHEMAS" \
+                     -schema-location "$CRD_SCHEMAS" -; then
+                echo "::error file=$f::$f does not validate against Kubernetes $version."
+                failed=1
+              fi
+            done
+          done
+
+          exit "$failed"
+
   install-test:
     runs-on: ubuntu-latest
     needs: gate
@@ -213,7 +288,7 @@ jobs:
   ci-ok:
     runs-on: ubuntu-latest
     if: always()
-    needs: [gate, lint, unittest, template-validation, install-test, security-scan]
+    needs: [gate, lint, unittest, template-validation, kubeconform, install-test, security-scan]
     steps:
       - name: Check the other jobs
         env:
@@ -221,6 +296,7 @@ jobs:
           LINT: ${{ needs.lint.result }}
           UNITTEST: ${{ needs.unittest.result }}
           TEMPLATES: ${{ needs['template-validation'].result }}
+          KUBECONFORM: ${{ needs.kubeconform.result }}
           SECURITY: ${{ needs['security-scan'].result }}
           INSTALL: ${{ needs['install-test'].result }}
           INSTALL_REQUIRED: ${{ needs.gate.outputs.install-test }}
@@ -229,7 +305,7 @@ jobs:
 
           failed=0
 
-          for job in "gate:$GATE" "lint:$LINT" "unittest:$UNITTEST" "template-validation:$TEMPLATES" "security-scan:$SECURITY"; do
+          for job in "gate:$GATE" "lint:$LINT" "unittest:$UNITTEST" "template-validation:$TEMPLATES" "kubeconform:$KUBECONFORM" "security-scan:$SECURITY"; do
             if [[ "${job#*:}" != "success" ]]; then
               echo "::error::${job%%:*} did not pass, it was ${job#*:}."
               failed=1
