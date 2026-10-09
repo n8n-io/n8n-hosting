@@ -664,7 +664,7 @@
       "type": "object",
       "properties": {
         "timezone": { "type": "string" },
-        "installMethod": { "type": "string" },
+        "deploymentArtifact": { "type": "string" },
         "extraEnv": { "type": "array" },
         "extraEnvFrom": { "type": "array" }
       }

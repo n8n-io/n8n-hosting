@@ -584,9 +584,9 @@ executions:
 # ----- App config -----
 config:
   timezone: UTC
-  # Sets N8N_INSTALL_METHOD, which n8n's telemetry reports as the artefact that installed it.
+  # Sets N8N_DEPLOYMENT_ARTIFACT, which n8n's telemetry reports as the artifact that installed it.
   # Empty means helm-chart/<chart version>. A chart that wraps this one, such as a marketplace listing, sets its own name and version.
-  installMethod: ""
+  deploymentArtifact: ""
   # Additional environment variables for n8n container
   # All n8n environment variables can be set here including:
   # Proxy: HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY

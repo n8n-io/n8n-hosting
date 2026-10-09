@@ -13,7 +13,7 @@ data:
   # ----- Shared Configuration (used by all components: main, worker, webhook-processor) -----
   TZ: {{ .Values.config.timezone | quote }}
   # Tells n8n's telemetry which artefact installed it.
-  N8N_INSTALL_METHOD: {{ .Values.config.installMethod | default (printf "helm-chart/%s" .Chart.Version) | quote }}
+  N8N_DEPLOYMENT_ARTIFACT: {{ .Values.config.deploymentArtifact | default (printf "helm-chart/%s" .Chart.Version) | quote }}
 
   # Database configuration
   DB_TYPE: {{ .Values.database.type | quote }}

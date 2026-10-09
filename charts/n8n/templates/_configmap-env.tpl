@@ -8,11 +8,11 @@ Environment variables from ConfigMap for all components
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: TZ
-- name: N8N_INSTALL_METHOD
+- name: N8N_DEPLOYMENT_ARTIFACT
   valueFrom:
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
-      key: N8N_INSTALL_METHOD
+      key: N8N_DEPLOYMENT_ARTIFACT
 - name: DB_TYPE
   valueFrom:
     configMapKeyRef:
