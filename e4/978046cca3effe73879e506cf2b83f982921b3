@@ -1,0 +1,49 @@
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks-ha.yaml
+  s_4972e6e3ce6944::t_320e669ac6817e 1200-1201,1487-1488,1959-1960
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks.yaml
+  s_4972e6e3ce6944::t_c5fb6cff9a070c 1127-1128,1414-1415,1886-1887
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode.yaml
+  s_4972e6e3ce6944::t_bd0a0089cc8327 1048-1049,1256-1257
+charts/n8n/decisions/0002-chart-reports-deployment-artifact.md
+  s_4972e6e3ce6944::t_5758915588145e 1-23
+charts/n8n/decisions/0005-other-artefacts-report-their-name-without-a-version.md
+  s_4972e6e3ce6944::t_ee563d7c97acfb 1-38
+charts/n8n/templates/_configmap-env.tpl
+  s_4972e6e3ce6944::t_c4cf2c2f87af00 12-16
+charts/n8n/templates/configmap.yaml
+  s_4972e6e3ce6944::t_a017f266d69f18 15-17
+charts/n8n/tests/__snapshot__/default-render_test.yaml.snap
+  s_4972e6e3ce6944::t_a152cf67e954ab 35,81,98-102,321,343-347
+charts/n8n/tests/deployment-artifact_test.yaml
+  s_4972e6e3ce6944::t_5904e05e2948b8 1-49
+charts/n8n/values.schema.json
+  s_4972e6e3ce6944::t_87c2377ed92058 691
+charts/n8n/values.yaml
+  s_4972e6e3ce6944::t_116680cf79be0d 619-621
+docker-caddy/docker-compose.yml
+  s_4972e6e3ce6944::t_7acfe132d05d94 19
+docker-compose/subfolderWithSSL/docker-compose.yml
+  s_4972e6e3ce6944::t_efeceed4f2cbe1 48
+docker-compose/withPostgres/docker-compose.yml
+  s_4972e6e3ce6944::t_fe29288281988b 31
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_4972e6e3ce6944::t_23cda81304f6e3 10
+kubernetes/n8n-deployment.yaml
+  s_4972e6e3ce6944::t_1ca14da00e3a81 52-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e4978046cca3effe73879e506cf2b83f982921b3",
+  "prompts": {},
+  "sessions": {
+    "s_4972e6e3ce6944": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1fc53b3f-a524-45af-999e-1340e4eb4ddd",
+        "model": "unknown"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
