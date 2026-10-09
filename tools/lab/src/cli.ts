@@ -14,7 +14,7 @@ import { current, forget, pick, remember, use } from './clusters.ts';
 import { UserError, ask, askHidden, c, confirm, table } from './ui.ts';
 
 const ENV_VARS = [
-  ['HOSTING', 'n8n-hosting checkout to deploy from (default ~/git/n8n-hosting)'],
+  ['HOSTING', 'n8n-hosting checkout to deploy from (default: the repo the lab sits in, else ~/git/n8n-hosting)'],
   ['CHART', 'chart path (default $HOSTING/charts/n8n)'],
   ['N8N_IMAGE', 'image to deploy. On a cloud provider it must be in a registry'],
   ['N8N_TAG', 'image tag'],
@@ -73,7 +73,7 @@ ${c.bold('Examples')}
 ${EXAMPLES.map(([cmd, what]) => `  ${c.dim('# ' + what)}\n  ${c.dim('$')} ${c.cyan(cmd)}`).join('\n\n')}
 
 ${c.bold('Environment')}
-${ENV_VARS.map(([name, what]) => `  ${name.padEnd(18)}${c.dim(what)}`).join('\n')}
+${ENV_VARS.map(([name, what]) => `  ${name.padEnd(21)}${c.dim(what)}`).join('\n')}
 `;
 
 const { values, positionals } = parseArgs({
