@@ -1,0 +1,53 @@
+tools/lab/AGENTS.md
+  s_f363062ab84ae3::t_c070365b87503a 62
+tools/lab/README.md
+  s_f363062ab84ae3::t_0b6ade227abdd9 79,91
+tools/lab/build-image.sh
+  s_f363062ab84ae3::t_24385f6bcc6079 17,29-38,42-61
+tools/lab/src/addons.ts
+  s_f363062ab84ae3::t_48ebd73ea5b0cb 32,39,41-43,45
+tools/lab/src/cli/commands/status.ts
+  s_f363062ab84ae3::t_7bbfe556219560 33
+tools/lab/src/cli/commands/up.ts
+  s_f363062ab84ae3::t_0cde382998014a 31-45,51,60-64,66,105-117
+tools/lab/src/cli/commands/upgrade.ts
+  s_f363062ab84ae3::t_76d5913d3ebe86 12-13
+tools/lab/src/cluster/kube.ts
+  s_f363062ab84ae3::t_29e380a6f8c416 7,74-76,86-89,91-96
+tools/lab/src/cluster/namespaces.ts
+  s_f363062ab84ae3::t_ee54624afd70c4 1,9-20
+tools/lab/src/cluster/selection.ts
+  s_f363062ab84ae3::t_3caf27e28e8030 41-42
+tools/lab/src/support/sh.ts
+  s_f363062ab84ae3::t_6b65394bf49f38 15-34,41-44,46
+tools/lab/src/support/tasks.ts
+  s_f363062ab84ae3::t_6bbc5809c1a582 4-9
+tools/lab/src/support/ui.ts
+  s_f363062ab84ae3::t_2bdd65b1e91b53 28,33-46,55-63,71-77,84,95
+tools/lab/src/targets/chart-examples.ts
+  s_f363062ab84ae3::t_a3efc4dfd786ea 14-16
+tools/lab/src/targets/index.ts
+  s_f363062ab84ae3::t_a49fe0561cbcc7 45-49
+tools/lab/src/testing/upgrade.ts
+  s_f363062ab84ae3::t_5b88b1f0cb7d8a 3-4,16-17,36-42
+tools/lab/test/io.test.ts
+  s_f363062ab84ae3::t_678f19ffcc518a 1-31
+tools/lab/test/settings.test.ts
+  s_f363062ab84ae3::t_0d36c042dc49e3 23-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "25e74f7530fafae4fb84b13464067076ef40fb29",
+  "prompts": {},
+  "sessions": {
+    "s_f363062ab84ae3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17484020-c13a-4467-a118-d66297ee34d3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
