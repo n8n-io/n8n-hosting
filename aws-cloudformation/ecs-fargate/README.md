@@ -61,6 +61,8 @@ Fargate tasks get their tags only when they start. A stack update does not chang
 
 A stack created before this parameter existed gains the tag on its first update with these templates, because CloudFormation applies the parameter's default. To opt out, set the parameter to an empty value on that update.
 
+The empty value lasts for one update. A later update that leaves the parameter out applies the default again and adds the tag back. When you script updates, pass `ParameterKey=AwsPartnerAttributionTag,UsePreviousValue=true`. This keeps your current value, including the empty one.
+
 ## Worker Scaling
 
 The worker ECS service uses Application Auto Scaling target tracking. On the base template it scales on ECS service average CPU and memory (the `-webhooks` and `-ha` templates add queue-depth scaling on top, see below):
