@@ -86,11 +86,21 @@ seccompProfile:
 {{/*
 Container securityContext for a role (main, worker, webhookProcessor,
 taskRunner). The defaults live in values.yaml, so Helm merges user values over
-them and a null removes a field.
+them and a null removes a field. helm upgrade --reuse-values renders with the
+previous chart's values.yaml, which may have no containerSecurityContext, so
+the hardened default is rendered when the map is missing.
 */}}
 {{- define "n8n.containerSecurityContext" -}}
-{{- with index (.root.Values.containerSecurityContext | default dict) .role -}}
+{{- $roles := .root.Values.containerSecurityContext -}}
+{{- if kindIs "map" $roles -}}
+{{- with index $roles .role -}}
 {{- toYaml . -}}
+{{- end -}}
+{{- else -}}
+allowPrivilegeEscalation: false
+capabilities:
+  drop:
+    - ALL
 {{- end -}}
 {{- end -}}
 

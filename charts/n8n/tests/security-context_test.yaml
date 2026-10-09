@@ -191,6 +191,18 @@ tests:
       - notExists:
           path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
 
+  - it: renders the hardened container default when containerSecurityContext is missing
+    template: templates/deployment-worker.yaml
+    set:
+      containerSecurityContext: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+
   - it: rejects an unknown role key
     template: templates/deployment-main.yaml
     set:
