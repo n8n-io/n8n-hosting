@@ -1,0 +1,22 @@
+.github/workflows/ci.yml
+  s_b318fb6b34226c::t_d713c3806bacba 236
+  s_b318fb6b34226c::t_3c1661e7d3691c 78-91
+  s_b318fb6b34226c::t_bc43920a099723 247
+  s_b318fb6b34226c::t_3ff4d71480baa5 230
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eacb83e3a0377ab636c8861804dc6cdee0a677ca",
+  "prompts": {},
+  "sessions": {
+    "s_b318fb6b34226c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "802db0ec-5e03-44ce-8122-0f5b5f9f2ffe",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
