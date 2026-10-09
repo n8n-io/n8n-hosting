@@ -1,0 +1,73 @@
+# Overlay for installing examples/production-s3.yaml on kind. It replaces the
+# placeholders with the fixtures in ../fixtures/, reads the licence from the
+# n8n-license Secret CI creates, and scales the example down to fit a hosted
+# runner. The fixture Postgres has no TLS, so database.ssl is off. extraEnv
+# keeps the example's other settings.
+multiMain:
+  replicas: 2
+queueMode:
+  workerReplicaCount: 1
+webhookProcessor:
+  replicaCount: 1
+hpa:
+  main:
+    minReplicas: 2
+    maxReplicas: 2
+  worker:
+    minReplicas: 1
+    maxReplicas: 1
+  webhookProcessor:
+    minReplicas: 1
+    maxReplicas: 1
+license:
+  activationKey: null
+  existingSecret:
+    name: n8n-license
+    key: license-key
+database:
+  host: postgres
+  ssl:
+    enabled: false
+redis:
+  host: redis
+s3:
+  bucket:
+    name: n8n-ci
+    host: s3mock:9090
+  auth:
+    autoDetect: false
+    accessKeyId: ci
+    secretAccessKeySecret:
+      name: n8n-s3-secret
+      key: secret-access-key
+  storage:
+    forcePathStyle: true
+    extraEnv:
+      - name: N8N_EXTERNAL_STORAGE_S3_PROTOCOL
+        value: http
+resources:
+  main:
+    requests:
+      memory: 512Mi
+      cpu: 200m
+  worker:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+  webhookProcessor:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+config:
+  extraEnv:
+    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+      value: "true"
+    - name: N8N_LOG_LEVEL
+      value: "info"
+    - name: N8N_LOG_OUTPUT
+      value: "console"
+    - name: N8N_LICENSE_TENANT_ID
+      valueFrom:
+        secretKeyRef:
+          name: n8n-license
+          key: tenant-id

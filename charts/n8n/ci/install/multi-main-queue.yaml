@@ -1,0 +1,70 @@
+# Overlay for installing examples/multi-main-queue.yaml on kind. It replaces
+# the placeholders with the fixtures in ../fixtures/ and the Secrets CI
+# creates, reads the licence from the n8n-license Secret, and scales the
+# example down to fit a hosted runner. The fixture Postgres has no TLS, so
+# database.ssl is off. extraEnv keeps the example's other settings. The
+# chart's NetworkPolicy allows egress only to the database, Redis and port
+# 443, so the S3 mock on 9090 is unreachable here. S3 stays off, and
+# production-s3 covers it.
+multiMain:
+  replicas: 2
+queueMode:
+  workerReplicaCount: 1
+webhookProcessor:
+  replicaCount: 1
+hpa:
+  main:
+    minReplicas: 2
+    maxReplicas: 2
+  worker:
+    minReplicas: 1
+    maxReplicas: 1
+  webhookProcessor:
+    minReplicas: 1
+    maxReplicas: 1
+license:
+  activationKey: null
+  existingSecret:
+    name: n8n-license
+    key: license-key
+secretRefs:
+  existingSecret: n8n-core-secrets
+database:
+  host: postgres
+  ssl:
+    enabled: false
+  database: n8n
+  passwordSecret:
+    name: n8n-db-secret
+redis:
+  host: redis
+s3:
+  enabled: false
+resources:
+  main:
+    requests:
+      memory: 512Mi
+      cpu: 200m
+  worker:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+  webhookProcessor:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+config:
+  extraEnv:
+    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+      value: "true"
+    - name: N8N_LOG_LEVEL
+      value: "info"
+    - name: N8N_LOG_OUTPUT
+      value: "json"
+    - name: N8N_ENTERPRISE_LICENSE_ENABLED
+      value: "true"
+    - name: N8N_LICENSE_TENANT_ID
+      valueFrom:
+        secretKeyRef:
+          name: n8n-license
+          key: tenant-id

@@ -1,0 +1,9 @@
+# Overlay for installing examples/extra-objects.yaml on kind. It replaces the
+# placeholders with the fixtures in ../fixtures/ and scales the example down
+# to fit a hosted runner. The extraObjects entries stay as they are.
+queueMode:
+  workerReplicaCount: 1
+database:
+  host: postgres
+redis:
+  host: redis

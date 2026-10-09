@@ -1,0 +1,24 @@
+# One node per pool in examples/node-placement.yaml, plus a node in neither
+# pool, so a pod that loses its nodeSelector can land somewhere wrong. The
+# workers node carries the taint the example's worker toleration expects.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+  - role: worker
+    labels:
+      pool: none
+  - role: worker
+    labels:
+      pool: n8n-frontend
+  - role: worker
+    labels:
+      pool: n8n-workers
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          taints:
+            - key: dedicated
+              value: n8n-workers
+              effect: NoSchedule
