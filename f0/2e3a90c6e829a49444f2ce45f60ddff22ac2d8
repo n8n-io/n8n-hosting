@@ -1,0 +1,19 @@
+aws-cloudformation/ecs-fargate/README.md
+  s_b318fb6b34226c::t_2f547ca7fb6455 64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f02e3a90c6e829a49444f2ce45f60ddff22ac2d8",
+  "prompts": {},
+  "sessions": {
+    "s_b318fb6b34226c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "802db0ec-5e03-44ce-8122-0f5b5f9f2ffe",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
