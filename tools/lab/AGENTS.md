@@ -32,6 +32,8 @@ Node 24 or later runs the TypeScript directly. There is no build step. Check typ
 
 ## Layout
 
+The full picture, with diagrams, is in [docs/architecture.md](docs/architecture.md). Adding something: [docs/extending.md](docs/extending.md).
+
 `src/` is layers. A layer only imports from the layers below it, and `test/architecture.test.ts` enforces that.
 
 | Layer | What is in it |
