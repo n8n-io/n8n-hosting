@@ -1,0 +1,27 @@
+tools/lab/docs/architecture.md
+  s_f363062ab84ae3::t_90034b4cd19b00 1-183
+tools/lab/docs/extending.md
+  s_f363062ab84ae3::t_2026888f2cd8df 1-94
+tools/lab/docs/reference.md
+  s_f363062ab84ae3::t_1f24a1c1457e18 1-157
+tools/lab/AGENTS.md
+  s_f363062ab84ae3::t_8064c6e93f3912 35-36
+tools/lab/README.md
+  s_f363062ab84ae3::t_eedafea570042e 13,17,19,23-26,32,43,52,60,62,73,77,83,85,87,89,91,93-99,101,105,107,109,111,115,117,121,123,125-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b81073ee4357c7311aec72b31d207160d03df1c",
+  "prompts": {},
+  "sessions": {
+    "s_f363062ab84ae3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17484020-c13a-4467-a118-d66297ee34d3",
+        "model": "unknown"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
