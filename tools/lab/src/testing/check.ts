@@ -5,12 +5,15 @@ import { isCompose, namespaceOf } from '../targets/index.ts';
 import { type Exec, execFor, httpGet } from './exec.ts';
 import { retry } from './retry.ts';
 
+/** The subfolder stack serves everything under a path prefix, so only its health is checked. */
+export const isPrefixed = (t: string) => t === 'compose-subfolder-with-ssl';
+
 /** A check named `title`, for a target. It retries, and records its failure so the exit code tells the truth. */
-export const checker = (target: string) => (title: string, fn: () => Promise<unknown>): ListrTask => ({
+export const checker = (target: string) => (title: string, fn: () => Promise<unknown>, attempts = 10): ListrTask => ({
   title,
   task: async () => {
     try {
-      await retry(fn);
+      await retry(fn, { attempts });
     } catch (e) {
       recordFailure(target, title);
       throw e;
@@ -30,11 +33,10 @@ export const checkTask = (env: Env, t: string): ListrTask => ({
   task: (_, task) => {
     const { main, webhook } = execFor(env, t);
     const check = checker(t);
-    // The subfolder stack serves everything under a path prefix, so only health is checked there.
-    const prefixed = t === 'compose-subfolder-with-ssl';
+    const prefixed = isPrefixed(t);
     return task.newListr(
       [
-        ...(isCompose(t) ? [] : [check('Pods ready', () => kubectl(env, ['-n', namespaceOf(t), 'wait', '--for=condition=Available', 'deploy', '--all', '--timeout=30s']))]),
+        ...(isCompose(t) ? [] : [check('Pods ready', () => kubectl(env, ['-n', namespaceOf(t), 'wait', '--for=condition=Available', 'deploy', '--all', '--timeout=30s']), 3)]), // the wait is already time-bounded, so it is not retried ten times
         check('Health', () => expectStatus(main, '/healthz', 200)),
         check('Readiness (database reachable)', () => expectStatus(main, '/healthz/readiness', 200)),
         ...(prefixed ? [] : [check('Editor loads', () => expectStatus(main, '/', 200, 'n8n')), check('Webhook route answers', () => expectStatus(webhook, '/webhook/lab-check', 404))]),

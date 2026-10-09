@@ -10,6 +10,15 @@ export const labEnv = (env: Env, source: string, compose = false): Record<string
   ...env.extraEnv,
 });
 
-/** The settings every n8n pod in a namespace reads. Always written, so the chart and manifests can rely on them. */
-export const writeLabEnv = (env: Env, namespace: string, source: string) =>
-  apply(env, { apiVersion: 'v1', kind: 'ConfigMap', metadata: { name: 'lab-env', namespace }, data: labEnv(env, source) });
+export type Applied = 'created' | 'configured' | 'unchanged';
+
+/** What `kubectl apply` did, from its one line of output ("configmap/lab-env configured"). */
+export const appliedAs = (output: string): Applied => (/\bconfigured\b/.test(output) ? 'configured' : /\bcreated\b/.test(output) ? 'created' : 'unchanged');
+
+/**
+ * The settings every n8n pod in a namespace reads. Always written, so the chart and manifests can rely on them.
+ * Says whether they changed, because pods only read them when they start.
+ */
+export async function writeLabEnv(env: Env, namespace: string, source: string): Promise<Applied> {
+  return appliedAs(await apply(env, { apiVersion: 'v1', kind: 'ConfigMap', metadata: { name: 'lab-env', namespace }, data: labEnv(env, source) }));
+}

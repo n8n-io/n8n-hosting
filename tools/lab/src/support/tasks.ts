@@ -7,6 +7,7 @@ import { UserError } from './ui.ts';
  */
 export async function runTasks(tasks: ListrTask[], opts: { concurrent?: boolean; exitOnError?: boolean } = {}): Promise<void> {
   const list = new Listr(tasks, { concurrent: opts.concurrent ?? false, exitOnError: opts.exitOnError ?? false, collectErrors: true, rendererOptions: { collapseSubtasks: false, collapseErrors: false } });
-  await list.run();
+  // With exitOnError, listr2 rejects with the task's own error. The details are on screen, so report it the same way.
+  await list.run().catch(() => {});
   if (list.errors?.length) throw new UserError('Something failed, see above.');
 }

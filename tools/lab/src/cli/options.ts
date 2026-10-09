@@ -25,7 +25,9 @@ export function parseEnvPairs(pairs: string[] = []): Record<string, string> {
     pairs.map((pair) => {
       const i = pair.indexOf('=');
       if (i < 1) throw new UserError(`--env wants KEY=VALUE, got '${pair}'`);
-      return [pair.slice(0, i), pair.slice(i + 1)];
+      const key = pair.slice(0, i);
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) throw new UserError(`--env name '${key}' is not a valid environment variable name`);
+      return [key, pair.slice(i + 1)];
     }),
   );
 }

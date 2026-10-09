@@ -3,7 +3,7 @@ import type { Env } from '../cluster/kube.ts';
 import { ensureNs } from '../cluster/namespaces.ts';
 import { writeLabEnv } from '../cluster/settings.ts';
 import { namespaceOf } from './names.ts';
-import { ensureChartSecrets, helmInstall, postgresAndRedis, step, waitForRollouts } from './steps.ts';
+import { ensureChartSecrets, helmInstall, postgresAndRedis, reloadPods, step, waitForRollouts } from './steps.ts';
 
 /** The Helm values that make each topology. Everything else comes from values/common.yaml. */
 const TOPOLOGY: Record<string, string[]> = {
@@ -16,12 +16,14 @@ const TOPOLOGY: Record<string, string[]> = {
 /** The Helm chart as one of its four topologies. */
 export function chartSteps(env: Env, t: string): ListrTask[] {
   const ns = namespaceOf(t);
+  let settingsChanged = false;
   return [
     step('Namespace', () => ensureNs(env, ns)),
     step('Secrets', () => ensureChartSecrets(env, ns, t === 'multimain')),
-    step('Settings', () => writeLabEnv(env, ns, ns)),
+    step('Settings', async () => void (settingsChanged = (await writeLabEnv(env, ns, ns)) === 'configured')),
     ...(t === 'single' ? [] : [postgresAndRedis(env, ns)]),
     helmInstall(env, ns, [], TOPOLOGY[t]),
+    reloadPods(env, ns, () => settingsChanged),
     waitForRollouts(env, ns),
   ];
 }

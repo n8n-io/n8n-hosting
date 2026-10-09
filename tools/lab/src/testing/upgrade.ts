@@ -8,13 +8,16 @@ import { execFor } from './exec.ts';
 
 const MARKER = 'labmarker0001';
 
+/** A licensed target needs a key, unless its namespace already holds one. */
+export const licenceKeyMissing = (isLicensed: boolean, hasKey: boolean, hasSecret: boolean) => isLicensed && !hasKey && !hasSecret;
+
 /**
  * Installs a target at one version, checks it, saves a workflow, upgrades to another version, and checks that
  * it still works and the workflow is still there. This is where real installs break: the database migrations.
  */
 export async function upgradeTasks(env: Env, t: string, from: string, to?: string): Promise<ListrTask[]> {
   if (await isDeployed(env, t)) throw new UserError(`${t} is already deployed. Start from a clean install:  ./lab down ${t}`);
-  if (licensed(env, t) && !env.licenseKey && !(await hasLicenseSecret(env, t))) throw new UserError(`${t} needs an Enterprise licence key. Set N8N_LICENSE_KEY.`);
+  if (licenceKeyMissing(licensed(env, t), !!env.licenseKey, await hasLicenseSecret(env, t))) throw new UserError(`${t} needs an Enterprise licence key. Set N8N_LICENSE_KEY.`);
   const { main } = execFor(env, t);
   const old = { ...env, tag: from };
   const next = { ...env, tag: to };

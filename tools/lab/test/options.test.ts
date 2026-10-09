@@ -12,6 +12,12 @@ test('--env without KEY=VALUE is a user error', () => {
   assert.throws(() => parseEnvPairs(['=x']), UserError);
 });
 
+test('--env names must be valid environment variable names', () => {
+  assert.throws(() => parseEnvPairs(['N8N LOG LEVEL=debug']), UserError);
+  assert.throws(() => parseEnvPairs(['1A=x']), UserError);
+  assert.deepEqual(parseEnvPairs(['_OK_1=x']), { _OK_1: 'x' });
+});
+
 test('options: command, targets, flags', () => {
   const o = parseOptions(['up', 'queue', 'k8s', '--provider', 'aws', '--env', 'A=1', '--env', 'B=2', '-y', '--addon', './x']);
   assert.equal(o.command, 'up');

@@ -55,6 +55,8 @@ async function main(opts: Options): Promise<void> {
 
   const handler = lookup(ON_CLUSTER, command) ?? lookup(addonCommands(addons), command);
   if (!handler) throw new UserError(`Unknown command '${command}'. Run ./lab --help`);
+  // Deleting the registry needs no cluster: it outlives them, and is often removed after the last one is gone.
+  if (command === 'registry' && args[0] === 'delete') return handler(env, args, opts);
   if (!(await connect(env, opts.cluster))) {
     if (command === 'down') return console.log(c.dim(`No ${env.provider.name} cluster exists, nothing to remove.\n`));
     throw new UserError(`No ${env.provider.name} cluster exists. Create one with ./lab up`);

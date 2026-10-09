@@ -94,7 +94,7 @@ The lab only deletes what it created, and refuses a namespace it did not: namesp
 
 - **`up` waits on a licence question.** Set `N8N_LICENSE_KEY`, or run with `</dev/null` to skip licensed targets.
 - **`kubectl` is refused (local).** Start your Docker runtime and minikube, for example `colima start && minikube start`.
-- **minikube has too little memory.** The lab needs about 6 GiB. `up` prints the `docker update` command that fixes it.
+- **minikube has too little memory.** The lab uses about 6 GiB, but minikube needs at least 8 GiB. `up` prints the `docker update` command that fixes it.
 - **A Compose target fails on `!override`.** The generated override needs Docker Compose 2.24 or later.
 - **An example needs KEDA or labelled nodes.** The lab stops early and prints the command to install or label.
 

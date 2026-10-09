@@ -38,10 +38,12 @@ export function run(cmd: string, args: string[], opts: RunOpts = {}): Promise<st
     const p = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, ...opts.env } });
     let out = '';
     let err = '';
+    p.stdout.setEncoding('utf8'); // stateful, so a multi-byte character split across chunks stays whole
+    p.stderr.setEncoding('utf8');
     const stdoutLines = lineBuffer((l) => opts.onLine?.(l));
     const stderrLines = lineBuffer((l) => opts.onLine?.(l));
-    p.stdout.on('data', (d: Buffer) => ((out += d), stdoutLines.push(d.toString())));
-    p.stderr.on('data', (d: Buffer) => ((err += d), stderrLines.push(d.toString())));
+    p.stdout.on('data', (d: string) => ((out += d), stdoutLines.push(d)));
+    p.stderr.on('data', (d: string) => ((err += d), stderrLines.push(d)));
     p.on('error', (e: NodeJS.ErrnoException) => reject(e.code === 'ENOENT' ? new Error(`${cmd} is not installed`) : e));
     p.on('close', (code) => (stdoutLines.flush(), stderrLines.flush(), code === 0 ? resolve(out) : reject(new CmdError(cmd, code, err || out))));
     p.stdin.on('error', () => {}); // the command may exit before reading its input

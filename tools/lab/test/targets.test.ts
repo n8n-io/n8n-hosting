@@ -6,7 +6,11 @@ import { composeOverride } from '../src/targets/compose.ts';
 import { containerPatch, inLabNamespace, sized } from '../src/targets/k8s.ts';
 import { ALL_TARGETS, checkTargets, mainDeployment, namespaceOf, targetOfNamespace } from '../src/targets/index.ts';
 import { imageFlags } from '../src/targets/steps.ts';
+import { isPrefixed } from '../src/testing/check.ts';
 import { statusOf } from '../src/testing/exec.ts';
+import { licenceKeyMissing } from '../src/testing/upgrade.ts';
+import { isN8nDeployment } from '../src/targets/steps.ts';
+import { ownedByLab } from '../src/cluster/namespaces.ts';
 import { UserError } from '../src/support/ui.ts';
 import { fakeEnv } from './helpers.ts';
 
@@ -44,6 +48,7 @@ test('the shipped Postgres is shrunk on a cloud and left alone locally', () => {
 test('the n8n container patch carries the settings, a CPU limit with a request, and the image', () => {
   const plain = containerPatch(fakeEnv());
   assert.deepEqual(plain.envFrom, [{ configMapRef: { name: 'lab-env' } }]);
+  assert.deepEqual(plain.resources, { requests: { cpu: '50m' }, limits: { cpu: '500m' } });
   assert.equal(plain.image, undefined);
   const local = containerPatch(fakeEnv({ image: 'n8n-mine', tag: 'latest' }));
   assert.equal(local.image, 'n8n-mine:latest');
@@ -96,4 +101,28 @@ test('secrets an example names are found, with the keys it reads', () => {
   assert.deepEqual([...(found.get('s3-secret') ?? [])], ['access']);
   assert.deepEqual([...(found.get('other') ?? [])], ['k']);
   assert.equal(found.has('x'), false);
+});
+
+test('only a namespace with the lab label is the lab\'s', () => {
+  assert.ok(ownedByLab({ 'app.kubernetes.io/managed-by': 'n8n-hosting-lab' }));
+  assert.ok(!ownedByLab({ 'app.kubernetes.io/managed-by': 'Helm' }));
+  assert.ok(!ownedByLab({}));
+  assert.ok(!ownedByLab(undefined));
+});
+
+test('a settings change restarts n8n\'s deployments and never Postgres or Redis', () => {
+  for (const name of ['deployment.apps/n8n', 'deployment.apps/n8n-main', 'deployment.apps/n8n-worker', 'deployment.apps/n8n-webhook-processor']) assert.ok(isN8nDeployment(name), name);
+  for (const name of ['deployment.apps/postgres', 'deployment.apps/redis', 'deployment.apps/n8nx', 'deployment.apps/collector']) assert.ok(!isN8nDeployment(name), name);
+});
+
+test('an upgrade of a licensed target needs a key, or a namespace that already holds one', () => {
+  assert.ok(licenceKeyMissing(true, false, false));
+  assert.ok(!licenceKeyMissing(true, true, false));
+  assert.ok(!licenceKeyMissing(true, false, true));
+  assert.ok(!licenceKeyMissing(false, false, false));
+});
+
+test('only the subfolder stack is served under a path prefix', () => {
+  assert.ok(isPrefixed('compose-subfolder-with-ssl'));
+  assert.ok(!isPrefixed('compose-caddy'));
 });

@@ -5,7 +5,7 @@ import { ensureNs } from '../cluster/namespaces.ts';
 import { writeLabEnv } from '../cluster/settings.ts';
 import { UserError } from '../support/ui.ts';
 import { namespaceOf } from './names.ts';
-import { ensureChartSecrets, helmInstall, hex, postgresAndRedis, step, waitForRollouts } from './steps.ts';
+import { ensureChartSecrets, helmInstall, hex, postgresAndRedis, reloadPods, step, waitForRollouts } from './steps.ts';
 
 /** Secrets the lab already makes for every chart install. */
 const SHARED_SECRETS = ['n8n-core-secrets', 'n8n-db-secret', 'n8n-license'];
@@ -38,6 +38,7 @@ export function exampleSteps(env: Env, t: string): ListrTask[] {
   const ns = namespaceOf(t);
   const values = exampleValues(env, t);
   const licensed = needsLicense(values);
+  let settingsChanged = false;
   const sets = [...(licensed ? ['license.enabled=true', 'license.existingSecret.name=n8n-license'] : []), ...['main', 'worker', 'webhookProcessor'].map((x) => `hpa.${x}.enabled=false`)];
   return [
     step('Prerequisites', () => checkPrerequisites(env, values)),
@@ -48,9 +49,10 @@ export function exampleSteps(env: Env, t: string): ListrTask[] {
         if (!SHARED_SECRETS.includes(name)) await ensureSecret(env, ns, name, () => Object.fromEntries([...keys].map((k) => [k, hex(16)])));
       }
     }),
-    step('Settings', () => writeLabEnv(env, ns, ns)),
+    step('Settings', async () => void (settingsChanged = (await writeLabEnv(env, ns, ns)) === 'configured')),
     ...(values.database?.type === 'sqlite' ? [] : [postgresAndRedis(env, ns)]),
     helmInstall(env, ns, [exampleFile(env, t)], sets),
+    reloadPods(env, ns, () => settingsChanged),
     waitForRollouts(env, ns),
   ];
 }

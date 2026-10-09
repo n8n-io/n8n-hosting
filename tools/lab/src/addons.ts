@@ -27,7 +27,10 @@ export interface Addon {
 export const labApi = { ROOT, kubectl, apply, ensureNs, exists, removeNamespaces, run, UserError, c, table };
 export type LabApi = typeof labApi;
 
-/** A bare name is addons/<name>/ in this repo. Anything with a slash, `.` or `~` is a path to a folder or a file. */
+/**
+ * A bare name is addons/<name>/ in this repo. Anything with a slash, starting with `.` or `~`, or ending in a script
+ * extension is a path to a folder or a file. A relative path is relative to where you run the lab, like any flag.
+ */
 function locate(spec: string): string {
   if (!/[/\\]|^[.~]|\.[cm]?[jt]s$/.test(spec)) return join(ROOT, 'addons', spec, 'index.ts');
   const path = resolve(spec.replace(/^~/, homedir()));

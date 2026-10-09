@@ -36,6 +36,21 @@ export const waitForRollouts = (env: Env, ns: string): ListrTask =>
     for (const name of names) await kubectl(env, ['-n', ns, 'rollout', 'status', name, '--timeout=10m'], { onLine: log });
   });
 
+/** n8n's own deployments, not the lab's Postgres and Redis, whose storage is throwaway. */
+export const isN8nDeployment = (name: string) => /^(deployment\.apps\/)?n8n(-|$)/.test(name);
+
+/**
+ * Pods read their settings when they start, so a rerun with a changed --env or addon setting restarts n8n's pods.
+ * It only restarts n8n, and only when the settings changed. After rebuilding a local image under the same tag,
+ * restart by hand: `kubectl -n <namespace> rollout restart deploy/<name>`.
+ */
+export const reloadPods = (env: Env, ns: string, settingsChanged: () => boolean): ListrTask =>
+  step('Reload pods if the settings changed', async (log) => {
+    if (!settingsChanged()) return;
+    const names = (await kubectl(env, ['-n', ns, 'get', 'deploy', '-o', 'name'])).split('\n').filter(isN8nDeployment);
+    if (names.length) await kubectl(env, ['-n', ns, 'rollout', 'restart', ...names], { onLine: log });
+  });
+
 /** The keys every chart install reads. Random, and created once. The licence secret is only made when one is needed. */
 export async function ensureChartSecrets(env: Env, ns: string, withLicense: boolean): Promise<void> {
   await ensureSecret(env, ns, 'n8n-core-secrets', () => ({ N8N_ENCRYPTION_KEY: hex(32), N8N_HOST: 'localhost', N8N_PORT: '5678', N8N_PROTOCOL: 'http' }));

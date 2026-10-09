@@ -1,7 +1,9 @@
 import { userInfo } from 'node:os';
 
-/** Who is running the lab. It ends up in cloud tags and default cluster names, so it is made safe for both. */
-export const owner = userInfo().username.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+/** A username made safe for cloud tags and cluster names: lowercase letters, digits and inner hyphens only. */
+export const safeOwner = (username: string) => username.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '') || 'user';
+
+export const owner = safeOwner(userInfo().username);
 
 /** The tag on everything the lab creates in a cloud. Clusters made before the rename carry the old value. */
 export const LAB_TAG = 'n8n-hosting-lab';

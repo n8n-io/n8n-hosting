@@ -5,7 +5,7 @@ import { type Env, apply, kubectl } from '../cluster/kube.ts';
 import { ensureNs } from '../cluster/namespaces.ts';
 import { writeLabEnv } from '../cluster/settings.ts';
 import { UserError } from '../support/ui.ts';
-import { step, waitForRollouts } from './steps.ts';
+import { reloadPods, step, waitForRollouts } from './steps.ts';
 
 const NAMESPACE = 'lab-k8s';
 
@@ -33,10 +33,11 @@ export function containerPatch(env: Pick<Env, 'image' | 'tag' | 'provider'>): Re
 /** The kubernetes/ manifests as shipped, with the namespace changed so the lab never touches a real install. */
 export function k8sSteps(env: Env): ListrTask[] {
   const dir = join(env.hosting, 'kubernetes');
+  let settingsChanged = false;
   return [
     step('Namespace and settings', async () => {
       await ensureNs(env, NAMESPACE);
-      await writeLabEnv(env, NAMESPACE, 'k8s');
+      settingsChanged = (await writeLabEnv(env, NAMESPACE, 'k8s')) === 'configured';
     }),
     step('Manifests', async (log) => {
       let deployment: string;
@@ -51,6 +52,7 @@ export function k8sSteps(env: Env): ListrTask[] {
       const patched = await kubectl(env, ['patch', '--local', '-f', '-', '-o', 'yaml', '-p', patch], { input: inLabNamespace(deployment) });
       await apply(env, patched, { onLine: log });
     }),
+    reloadPods(env, NAMESPACE, () => settingsChanged),
     waitForRollouts(env, NAMESPACE),
   ];
 }

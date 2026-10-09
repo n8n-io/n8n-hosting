@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { storageClassToDefault } from '../src/cluster/kube.ts';
-import { labEnv } from '../src/cluster/settings.ts';
+import { appliedAs, labEnv } from '../src/cluster/settings.ts';
 import { fakeEnv } from './helpers.ts';
 
 test('diagnostics are off by default', () => {
@@ -26,4 +26,10 @@ test('a storage class is only made the default when the cluster has none, and gp
 test('a cluster with no storage class, or several and no clear choice, is an error and not a guess', () => {
   assert.throws(() => storageClassToDefault([]), /no storage class/);
   assert.throws(() => storageClassToDefault([sc('a'), sc('b')]), /several candidates \(a, b\)/);
+});
+
+test('kubectl apply output says whether the settings changed', () => {
+  assert.equal(appliedAs('configmap/lab-env configured\n'), 'configured');
+  assert.equal(appliedAs('configmap/lab-env created\n'), 'created');
+  assert.equal(appliedAs('configmap/lab-env unchanged\n'), 'unchanged');
 });

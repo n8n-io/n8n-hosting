@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { ListrTask } from 'listr2';
 import type { Env } from '../cluster/kube.ts';
-import { checker } from './check.ts';
+import { checker, isPrefixed } from './check.ts';
 import { type Exec, execFor, httpGet } from './exec.ts';
 
 const CLIENT = Buffer.from(readFileSync(new URL('./e2e-client.js', import.meta.url))).toString('base64');
@@ -14,6 +14,8 @@ const runClient = (exec: Exec, args: string) => exec(`echo ${CLIENT} | base64 -d
 export const e2eTask = (env: Env, t: string, smoke: ListrTask): ListrTask => ({
   title: t,
   task: (_, task) => {
+    // The subfolder stack serves the REST API and webhooks under a path prefix, which the client does not use.
+    if (isPrefixed(t)) return task.newListr([{ ...smoke, title: 'Smoke checks' }, { title: 'Workflow test', task: (_, skipped) => skipped.skip('this stack is served under a path prefix') }]);
     const { main, webhook } = execFor(env, t);
     const check = checker(t);
     const nonce = randomUUID().slice(0, 8);

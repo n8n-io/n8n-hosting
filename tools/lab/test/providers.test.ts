@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { registryName, resourceGroup } from '../src/providers/aks.ts';
 import { clusterConfig, friendly } from '../src/providers/eks.ts';
-import { LAB_TAG, isLabTag, labName, runningFor } from '../src/providers/lab.ts';
+import { LAB_TAG, isLabTag, labName, runningFor, safeOwner } from '../src/providers/lab.ts';
 import { getProvider } from '../src/providers/index.ts';
 import { UserError } from '../src/support/ui.ts';
 
@@ -41,6 +41,17 @@ test('the Azure registry name is global-safe: no dashes, 6 characters of the sub
   assert.equal(registryName('a-b', '123456789'), 'labab123456');
   assert.equal(registryName('x'.repeat(80), 'abcdef').length, 50);
   assert.equal(resourceGroup('lab-x'), 'lab-x-rg');
+});
+
+test('a username becomes a name a cloud accepts: no edge hyphens, never empty', () => {
+  assert.equal(safeOwner('Jane.Doe'), 'jane-doe');
+  assert.equal(safeOwner('build_'), 'build');
+  assert.equal(safeOwner('_'), 'user');
+});
+
+test('inherited object keys are not providers', () => {
+  assert.throws(() => getProvider('constructor'), UserError);
+  assert.throws(() => getProvider('toString'), UserError);
 });
 
 test('an unknown provider lists the known ones', () => {

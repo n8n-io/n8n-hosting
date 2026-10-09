@@ -6,6 +6,9 @@ export const LAB_LABEL = 'app.kubernetes.io/managed-by=n8n-hosting-lab';
 const [LAB_KEY, LAB_VALUE] = LAB_LABEL.split('=');
 const ADDON_KEY = 'n8n-hosting-lab/addon';
 
+/** A namespace is the lab's only when it carries the lab's label. Anything else belongs to someone else. */
+export const ownedByLab = (labels: Record<string, string> | undefined) => labels?.[LAB_KEY] === LAB_VALUE;
+
 /**
  * Creates the namespace, labelled as the lab's. A namespace that already exists without the label is not ours, and
  * labelling it would let `down` delete it, so it is refused. An addon's namespace passes its name, so it is not
@@ -13,8 +16,8 @@ const ADDON_KEY = 'n8n-hosting-lab/addon';
  */
 export async function ensureNs(env: Env, name: string, addon?: string): Promise<void> {
   const found = await kubectl(env, ['get', 'ns', name, '--ignore-not-found', '-o', 'json']);
-  if (found.trim() && (JSON.parse(found).metadata.labels ?? {})[LAB_KEY] !== LAB_VALUE) {
-    throw new UserError(`Namespace ${name} already exists and the lab did not create it, so it is left alone. If it is the lab's, label it:\n  kubectl label ns ${name} ${LAB_LABEL}`);
+  if (found.trim() && !ownedByLab(JSON.parse(found).metadata.labels)) {
+    throw new UserError(`Namespace ${name} already exists and the lab did not create it, so it is left alone. The lab only manages namespaces it labelled itself: remove that namespace yourself, or use a different target name.`);
   }
   await apply(env, { apiVersion: 'v1', kind: 'Namespace', metadata: { name, labels: { [LAB_KEY]: LAB_VALUE, ...(addon ? { [ADDON_KEY]: addon } : {}) } } });
 }

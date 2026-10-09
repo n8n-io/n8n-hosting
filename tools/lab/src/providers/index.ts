@@ -10,7 +10,7 @@ export type { Cluster, Provider } from './types.ts';
 const PROVIDERS: Record<string, () => Provider> = { minikube: () => minikube, aws: eks, azure: aks };
 
 export function getProvider(name: string): Provider {
-  const make = PROVIDERS[name];
+  const make = Object.hasOwn(PROVIDERS, name) ? PROVIDERS[name] : undefined; // `constructor` is not a provider
   if (!make) throw new UserError(`Unknown provider '${name}'. Providers: ${Object.keys(PROVIDERS).join(', ')}`);
   return make();
 }

@@ -32,13 +32,15 @@ interface ClusterChoice {
   name: string;
   /** The cluster does not exist yet, or is stopped, so it has to be created or started. */
   needsCreate: boolean;
+  /** The cluster does not exist at all. A stopped one comes back with its secrets. */
+  isNew: boolean;
 }
 
 /** Which cluster to use, and whether it has to be created first. Creates nothing. */
 async function chooseCluster(env: Env, requested: string | undefined): Promise<ClusterChoice> {
   const choice = await pick(env.provider, requested);
   const found = (await env.provider.list()).find((e) => e.name === choice.name);
-  return { name: choice.name, needsCreate: choice.isNew || !found?.running };
+  return { name: choice.name, needsCreate: choice.isNew || !found?.running, isNew: choice.isNew };
 }
 
 /** Creates the cluster if needed, connects to it, and makes it the env's cluster. */
@@ -106,13 +108,13 @@ export const up: Command = async (env, args, opts) => {
 
   // A new cluster has no licence secrets, so settle the key before paying for it. Nothing to deploy means no cluster.
   let targets = requested;
-  if (choice.needsCreate) {
+  if (choice.isNew) {
     targets = await withLicenceKeys(env, requested, async () => false);
     if (!targets.length) throw new UserError('Nothing to deploy: every target needs an Enterprise licence key (N8N_LICENSE_KEY). No cluster was created.');
-    if (!env.provider.local) await confirmCost(env.provider, choice.name, opts.yes);
   }
+  if (choice.needsCreate && !env.provider.local) await confirmCost(env.provider, choice.name, opts.yes);
   await connectCluster(env, choice);
-  if (!choice.needsCreate) targets = await withLicenceKeys(env, requested, (t) => hasLicenseSecret(env, t));
+  if (!choice.isNew) targets = await withLicenceKeys(env, requested, (t) => hasLicenseSecret(env, t));
   if (!targets.length) throw new UserError('Nothing to deploy: every target needs an Enterprise licence key (N8N_LICENSE_KEY).');
 
   await runTasks(deployTasks(env, targets));

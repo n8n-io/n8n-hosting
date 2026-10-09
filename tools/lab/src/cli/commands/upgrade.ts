@@ -10,7 +10,10 @@ export const upgrade: Command = async (env, args, opts) => {
   if (!t || args.length > 1) throw new UserError('Pass one target: ./lab upgrade queue --from 2.39.0');
   if (!opts.from) throw new UserError('Pass the version to start from: --from <version>');
   // Each step needs the one before it, so the first failure stops the run.
-  await runTasks(await upgradeTasks(env, t, opts.from, opts.to), { exitOnError: true });
-  if (failures().length) throw new UserError(`Upgrade of ${t} failed: ${failures().map(describeFailure).join(', ')}`);
+  const failedUpgrade = () => new UserError(`Upgrade of ${t} failed${failures().length ? `: ${failures().map(describeFailure).join(', ')}` : ', see above'}.`);
+  await runTasks(await upgradeTasks(env, t, opts.from, opts.to), { exitOnError: true }).catch(() => {
+    throw failedUpgrade();
+  });
+  if (failures().length) throw failedUpgrade();
   console.log(`\n${c.green('Upgrade passed.')} ${c.dim(`./lab down ${t} removes it.`)}\n`);
 };
