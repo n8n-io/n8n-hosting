@@ -1,6 +1,6 @@
 apiVersion: v2
 name: n8n
-version: 1.15.0  # x-release-please-version
+version: 1.16.0  # x-release-please-version
 kubeVersion: ">=1.25.0-0"
 # Artifact Hub fits the logo into a square box and only ever scales images
 # down, so the icon is a square drawn at 320px. It lives in this repository so
