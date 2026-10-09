@@ -1,0 +1,21 @@
+tools/lab/README.md
+  s_f363062ab84ae3::t_486fd1de7b1ac1 91
+tools/lab/src/cli/help.ts
+  s_f363062ab84ae3::t_df5251f40abdbb 55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f1a5f6a4e842c9a64e43daf1a081b702f7038841",
+  "prompts": {},
+  "sessions": {
+    "s_f363062ab84ae3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17484020-c13a-4467-a118-d66297ee34d3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
