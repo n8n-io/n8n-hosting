@@ -157,33 +157,54 @@ spec:
           {{- end }}
 
           # Worker Health Probes
-          {{- if .Values.probes.worker.readiness.enabled }}
-          readinessProbe:
-            {{- if and .Values.redis.healthCheck.enabled (eq .Values.probes.worker.readiness.type "httpGet") }}
+          {{- $healthPort := .Values.redis.healthCheck.port }}
+          {{- with .Values.probes.worker.startup }}
+          {{- if and .enabled $.Values.redis.healthCheck.enabled }}
+          startupProbe:
             httpGet:
-              path: {{ .Values.probes.worker.readiness.path | default "/healthz" }}
-              port: {{ .Values.redis.healthCheck.port | default 5678 }}
+              path: {{ .path }}
+              port: {{ $healthPort }}
+            failureThreshold: {{ .failureThreshold }}
+            periodSeconds: {{ .periodSeconds }}
+          {{- end }}
+          {{- end }}
+
+          {{- with .Values.probes.worker.readiness }}
+          {{- if .enabled }}
+          readinessProbe:
+            {{- if eq .type "httpGet" }}
+            httpGet:
+              path: {{ .path }}
+              port: {{ $healthPort }}
             {{- else }}
             exec:
               command:
-                {{- toYaml .Values.probes.worker.readiness.command | nindent 16 }}
+                {{- toYaml .command | nindent 16 }}
             {{- end }}
-            initialDelaySeconds: {{ .Values.probes.worker.readiness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.worker.readiness.periodSeconds }}
-            timeoutSeconds: {{ .Values.probes.worker.readiness.timeoutSeconds }}
-            failureThreshold: {{ .Values.probes.worker.readiness.failureThreshold }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            timeoutSeconds: {{ .timeoutSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
           {{- end }}
 
-          {{- if .Values.probes.worker.liveness.enabled }}
+          {{- with .Values.probes.worker.liveness }}
+          {{- if .enabled }}
           livenessProbe:
-            # Workers don't expose an HTTP endpoint; only exec probes are supported here.
+            {{- if eq .type "httpGet" }}
+            httpGet:
+              path: {{ .path }}
+              port: {{ $healthPort }}
+            {{- else }}
             exec:
               command:
-                {{- toYaml .Values.probes.worker.liveness.command | nindent 16 }}
-            initialDelaySeconds: {{ .Values.probes.worker.liveness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.worker.liveness.periodSeconds }}
-            timeoutSeconds: {{ .Values.probes.worker.liveness.timeoutSeconds }}
-            failureThreshold: {{ .Values.probes.worker.liveness.failureThreshold }}
+                {{- toYaml .command | nindent 16 }}
+            {{- end }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            timeoutSeconds: {{ .timeoutSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
           {{- end }}
 
           resources:

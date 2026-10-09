@@ -114,14 +114,6 @@ spec:
             {{- end }}
             {{- end }}
 
-            # Health check settings
-            {{- if .Values.redis.healthCheck.enabled }}
-            - name: QUEUE_HEALTH_CHECK_ACTIVE
-              value: "true"
-            - name: QUEUE_HEALTH_CHECK_PORT
-              value: "{{ .Values.redis.healthCheck.port }}"
-            {{- end }}
-
             # Redis-specific extra environment variables
             {{- with .Values.redis.extraEnv }}
             {{- toYaml . | nindent 12 }}

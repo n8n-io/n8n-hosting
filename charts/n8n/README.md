@@ -114,10 +114,10 @@ See [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/
 |---|---:|---|
 | main | `service.port` (default `5678`) | HTTP liveness `/healthz`; readiness `/healthz/readiness` |
 | webhook-processor | `service.port` (default `5678`) | HTTP liveness `/healthz`; readiness `/healthz/readiness` |
-| worker | no Service | exec probe checks the `n8n worker` process |
+| worker | `redis.healthCheck.port` (default `5678`), no Service | HTTP startup and liveness `/healthz`; readiness `/healthz/readiness` |
 | task runner broker | `taskRunners.broker.port` (default `5679`) | localhost broker used by task runner sidecars |
 
-Workers consume jobs from Redis and do not receive inbound HTTP traffic, so the chart intentionally does not create a Kubernetes Service for worker pods.
+Workers consume jobs from Redis and do not receive inbound HTTP traffic, so the chart intentionally does not create a Kubernetes Service for worker pods. The worker port serves health checks only. Worker readiness fails until the worker has its database, migrations and Redis connection.
 
 ## Scaling Guidance
 

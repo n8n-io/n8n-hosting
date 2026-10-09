@@ -430,6 +430,10 @@ matches the snapshot:
                     secretKeyRef:
                       key: password
                       name: n8n-db-password
+                - name: QUEUE_HEALTH_CHECK_ACTIVE
+                  value: "true"
+                - name: QUEUE_HEALTH_CHECK_PORT
+                  value: "5678"
                 - name: EXECUTIONS_TIMEOUT_MAX
                   value: "3600"
                 - name: EXECUTIONS_DATA_SAVE_ON_ERROR
@@ -467,23 +471,19 @@ matches the snapshot:
                       - -c
                       - sleep 10
               livenessProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - pgrep -f 'n8n worker' > /dev/null
                 failureThreshold: 3
+                httpGet:
+                  path: /healthz
+                  port: 5678
                 initialDelaySeconds: 60
                 periodSeconds: 30
                 timeoutSeconds: 5
               name: n8n-worker
               readinessProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - pgrep -f 'n8n worker' > /dev/null
                 failureThreshold: 6
+                httpGet:
+                  path: /healthz/readiness
+                  port: 5678
                 initialDelaySeconds: 30
                 periodSeconds: 10
                 timeoutSeconds: 3
@@ -499,6 +499,12 @@ matches the snapshot:
                 capabilities:
                   drop:
                     - ALL
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: 5678
+                periodSeconds: 10
               volumeMounts: null
           securityContext:
             fsGroup: 1000
