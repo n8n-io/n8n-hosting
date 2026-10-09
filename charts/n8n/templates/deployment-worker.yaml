@@ -53,6 +53,10 @@ spec:
       dnsConfig:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 
       {{- with .Values.lifecycle.worker.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ . }}
