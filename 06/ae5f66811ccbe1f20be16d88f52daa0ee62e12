@@ -1,0 +1,21 @@
+tools/lab/README.md
+  s_f363062ab84ae3::t_b4ac17045164d9 13,15,17,19,31,40,42,44,57,59,67,69,77-79,81,83,85,87,89,91,93,95-99,101,103-106,108
+tools/lab/AGENTS.md
+  s_f363062ab84ae3::t_d4be54ddeb82f1 35,46-54,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06ae5f66811ccbe1f20be16d88f52daa0ee62e12",
+  "prompts": {},
+  "sessions": {
+    "s_f363062ab84ae3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17484020-c13a-4467-a118-d66297ee34d3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
