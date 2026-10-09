@@ -13,16 +13,16 @@ Only the chart has a version of its own. The release tooling versions `charts/n8
 
 ## Decision
 
-Each artefact sets `N8N_DEPLOYMENT_ARTIFACT` to its name, with no version. A variant adds its name to the artefact's, joined with hyphens:
+Each artefact sets `N8N_DEPLOYMENT_ARTIFACT` to the install method, with no version and no variant:
 
 | Artefact | Value |
 | --- | --- |
-| `docker-compose/withPostgres` | `docker-compose-with-postgres` |
-| `docker-compose/withPostgresAndWorker` | `docker-compose-with-postgres-and-worker` |
-| `docker-compose/subfolderWithSSL` | `docker-compose-subfolder-with-ssl` |
+| `docker-compose/*` | `docker-compose` |
 | `docker-caddy` | `docker-caddy` |
 | `kubernetes` | `kubernetes` |
-| `aws-cloudformation/ecs-fargate` | `aws-cloudformation-ecs-fargate-queuemode`, `aws-cloudformation-ecs-fargate-queuemode-webhooks`, `aws-cloudformation-ecs-fargate-queuemode-webhooks-ha` |
+| `aws-cloudformation/*` | `aws-cloudformation` |
+
+The values are deliberately coarse. Variants such as queue mode, workers, the database and the proxy are already in n8n's other telemetry, and folder names and template shapes change. A finer value would split the counts on every rename.
 
 The format is `<artefact>[/<version>]`. The slash is the version separator, so a name never contains one. If an artefact gets a version later, append `/<version>` to its name.
 
@@ -30,8 +30,9 @@ The variable goes on the n8n containers only: main, worker and webhook processor
 
 ## Consequences
 
-- Install counts per artefact and variant work from the first release of n8n that reads the variable. Older n8n versions ignore it, so these files can ship first.
+- Install counts per artefact work from the first release of n8n that reads the variable. Older n8n versions ignore it, so these files can ship first.
 - We cannot tell which revision of an artefact an install used. The n8n version is the closest signal.
 - Existing installs report the value only after the user pulls the new files and recreates the containers or tasks. For ECS, a stack update rolls the tasks once.
 - `N8N_DIAGNOSTICS_ENABLED=false` stops this value along with the rest of the telemetry.
+- Topology is not in this value. Join it from the telemetry that already carries it.
 - Renaming a value later splits the counts. Treat these names as stable.
