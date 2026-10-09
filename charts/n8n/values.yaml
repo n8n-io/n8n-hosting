@@ -742,8 +742,12 @@ s3:
       key: ""                                  # <-- Key inside the secret
   # Storage configuration
   storage:
-    # Binary data storage mode (filesystem or s3 (filesystem))
-    mode: "filesystem"
+    # Binary data storage mode. Leave empty to store binary data in S3 whenever
+    # s3.enabled=true. With S3 enabled, any value other than "s3" fails the render.
+    # S3 binary data storage requires an n8n Business or Enterprise licence, and
+    # n8n exits at boot without one. With S3 off, this value is unused: the chart sets no mode
+    # and n8n picks one for the topology.
+    mode: ""
     # S3 specific settings
     forcePathStyle: false                      # <-- Force path-style URLs (for S3-compatible providers)
     # Additional S3 environment variables

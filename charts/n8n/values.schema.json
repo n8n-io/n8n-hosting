@@ -822,8 +822,8 @@
           "properties": {
             "mode": { 
               "type": "string",
-              "enum": ["filesystem", "s3"],
-              "description": "Binary data storage mode"
+              "enum": ["", "filesystem", "s3"],
+              "description": "Binary data storage mode. Empty follows s3.enabled."
             },
             "forcePathStyle": { "type": "boolean" },
             "extraEnv": {
@@ -837,8 +837,7 @@
                 "required": ["name", "value"]
               }
             }
-          },
-          "required": ["mode"]
+          }
         }
       },
       "required": ["enabled"]
@@ -1031,8 +1030,7 @@
         "properties": {
           "s3": {
             "properties": {
-              "bucket": { "required": ["name", "region"] },
-              "storage": { "required": ["mode"] }
+              "bucket": { "required": ["name", "region"] }
             },
             "anyOf": [
               {
