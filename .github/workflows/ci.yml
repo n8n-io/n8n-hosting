@@ -75,6 +75,20 @@ jobs:
       - name: Run chart-testing (lint)
         run: ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false
 
+  cfn-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Lint the CloudFormation templates
+        run: |
+          pip install cfn-lint==1.57.2
+          cfn-lint aws-cloudformation/ecs-fargate/*.yaml
+
   unittest:
     runs-on: ubuntu-latest
     steps:
@@ -213,12 +227,13 @@ jobs:
   ci-ok:
     runs-on: ubuntu-latest
     if: always()
-    needs: [gate, lint, unittest, template-validation, install-test, security-scan]
+    needs: [gate, lint, cfn-lint, unittest, template-validation, install-test, security-scan]
     steps:
       - name: Check the other jobs
         env:
           GATE: ${{ needs.gate.result }}
           LINT: ${{ needs.lint.result }}
+          CFN_LINT: ${{ needs.cfn-lint.result }}
           UNITTEST: ${{ needs.unittest.result }}
           TEMPLATES: ${{ needs['template-validation'].result }}
           SECURITY: ${{ needs['security-scan'].result }}
@@ -229,7 +244,7 @@ jobs:
 
           failed=0
 
-          for job in "gate:$GATE" "lint:$LINT" "unittest:$UNITTEST" "template-validation:$TEMPLATES" "security-scan:$SECURITY"; do
+          for job in "gate:$GATE" "lint:$LINT" "cfn-lint:$CFN_LINT" "unittest:$UNITTEST" "template-validation:$TEMPLATES" "security-scan:$SECURITY"; do
             if [[ "${job#*:}" != "success" ]]; then
               echo "::error::${job%%:*} did not pass, it was ${job#*:}."
               failed=1
