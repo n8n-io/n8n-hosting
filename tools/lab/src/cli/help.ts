@@ -52,7 +52,7 @@ ${c.bold('Commands')}
   upgrade <target>    install --from a version, upgrade it, and check nothing broke
 
 ${c.bold('Options')}
-  --env KEY=VALUE     up: an extra n8n setting for every target. Repeat it. n8n diagnostics are off unless you set them
+  --env KEY=VALUE     up: an extra n8n setting for every target (stored in a ConfigMap, not for secrets). Repeat it
   --values <file>     up: a Helm values file laid over the lab's own. Repeat it
   --addon <name|path> load an addon: a folder in addons/ or a path. Repeat it. Also LAB_ADDONS
   --e2e               check: also run a workflow through a webhook and read the result

@@ -88,7 +88,7 @@ A cloud cluster keeps costing until you delete it with `./lab cluster delete <na
 
 ## Careful by default
 
-The lab only deletes what it created, and refuses a namespace it did not: namespaces carry `app.kubernetes.io/managed-by=n8n-hosting-lab` and `down` only removes those, and clouds carry a `lab=n8n-hosting-lab` tag. minikube lists every profile, so deleting one needs its name typed. `kubectl` and `helm` refuse to run without an explicit context, secrets travel on stdin and are never printed, and n8n diagnostics are off unless you turn them on with `--env`.
+The lab only deletes what it created, and refuses a namespace it did not: namespaces carry `app.kubernetes.io/managed-by=n8n-hosting-lab` and `down` only removes those, and clouds carry a `lab=n8n-hosting-lab` tag. minikube lists every profile, so deleting one needs its name typed. `kubectl` and `helm` refuse to run without an explicit context, secrets travel on stdin and are never printed, and n8n diagnostics are off unless you turn them on with `--env`. `--env` values are stored in a ConfigMap, so use them for settings, not secrets.
 
 ## Common snags
 
