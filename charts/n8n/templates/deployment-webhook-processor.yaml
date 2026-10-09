@@ -62,7 +62,6 @@ spec:
         - name: n8n-webhook-processor
           image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["n8n"]
           args: ["webhook"]
           {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "webhookProcessor") }}
           securityContext:

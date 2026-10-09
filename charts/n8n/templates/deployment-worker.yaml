@@ -62,7 +62,6 @@ spec:
         - name: n8n-worker
           image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["n8n"]
           args:
             - "worker"
             - "--concurrency={{ .Values.queueMode.workerConcurrency }}"
