@@ -174,6 +174,9 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
+| `securityContext` | Pod securityContext for all n8n pods (`fsGroup`, `runAsUser`, `runAsGroup`) | enabled, `1000` |
+| `podSecurityContext.<role>` | Pod securityContext for `main`, `worker` or `webhookProcessor`; replaces `securityContext` for that role | `{}` |
+| `containerSecurityContext.<role>` | Container securityContext for `main`, `worker`, `webhookProcessor` or `taskRunner` | no privilege escalation, all capabilities dropped |
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
@@ -256,6 +259,51 @@ nodePlacement:
 > **Note:** When `multiMain.enabled=true`, the chart emits an automatic pod-anti-affinity rule to spread main replicas across nodes. Setting `nodePlacement.main.affinity` replaces that auto rule — include your own pod-anti-affinity term if you still want main replicas spread.
 
 See [`examples/node-placement.yaml`](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
+
+## Security Context
+
+Every n8n pod runs with `securityContext`: UID, GID and `fsGroup` 1000, `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. Set `securityContext.enabled: false` to drop these defaults.
+
+To set a different pod securityContext for one role, set `podSecurityContext.<role>`. The block replaces the defaults for that role and is rendered as written, so include every field you want.
+
+```yaml
+# OpenShift: let the restricted SCC assign the UID and GID. Set the same for
+# webhookProcessor when it is enabled.
+podSecurityContext:
+  main:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  worker:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+```
+
+The n8n containers and the task-runner sidecar set `allowPrivilegeEscalation: false` and drop all capabilities. Containers added with `extraContainers` or `extraInitContainers` get none of them. The defaults are in `values.yaml` under `containerSecurityContext.<role>`, so your values merge over them. Set only the fields that change, and set a field to `null` to remove it. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
+
+```yaml
+# Run the task runner as nobody (UID and GID 65532), as n8n's hardening guide recommends.
+containerSecurityContext:
+  taskRunner:
+    runAsUser: 65532
+    runAsGroup: 65532
+```
+
+To give several containers the same setting, use a YAML anchor:
+
+```yaml
+containerSecurityContext:
+  main: &n8n
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+    readOnlyRootFilesystem: true
+  worker: *n8n
+  webhookProcessor: *n8n
+```
+
+`readOnlyRootFilesystem` needs writable volumes at the paths n8n writes to, such as `/tmp` and `~/.n8n`. `extraVolumes` and `extraVolumeMounts` add them to the n8n containers. They do not reach the task-runner sidecar, so leave `readOnlyRootFilesystem` off `taskRunner`.
 
 ## Task Runners
 

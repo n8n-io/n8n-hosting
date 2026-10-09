@@ -360,6 +360,27 @@
         "runAsGroup": { "type": "integer", "minimum": 0 }
       }
     },
+    "podSecurityContext": {
+      "type": "object",
+      "description": "Pod securityContext per role. A role block replaces securityContext for that role and is rendered as written.",
+      "properties": {
+        "main": { "type": "object" },
+        "worker": { "type": "object" },
+        "webhookProcessor": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "description": "Container securityContext per container. User values merge over the defaults in values.yaml, and a null removes a field. taskRunner applies to the task-runner sidecar on main and worker pods.",
+      "properties": {
+        "main": { "type": "object" },
+        "worker": { "type": "object" },
+        "webhookProcessor": { "type": "object" },
+        "taskRunner": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
     "serviceAccount": {
       "type": "object",
       "properties": {

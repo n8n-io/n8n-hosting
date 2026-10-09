@@ -173,11 +173,8 @@ secretRefs:
 
 # Enterprise security settings
 securityContext:
-  runAsNonRoot: true
   runAsUser: 1000
   fsGroup: 1000
-  seccompProfile:
-    type: RuntimeDefault
 
 # Pod disruption budget for high availability
 podDisruptionBudget:

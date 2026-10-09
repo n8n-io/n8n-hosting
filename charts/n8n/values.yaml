@@ -370,14 +370,63 @@ nodePlacement: {}
 #         effect: NoSchedule
 
 # ----- Security -----
-# Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
-# ~/.n8n/, /tmp/, and other paths at runtime. Enabling it would require
-# extensive volumeMount overrides and is not practical for this workload.
+# Pod securityContext for every n8n pod. When enabled, the chart also sets
+# runAsNonRoot: true and seccompProfile.type: RuntimeDefault.
+# Set enabled: false to drop these defaults.
 securityContext:
   enabled: true
   fsGroup: 1000
   runAsUser: 1000
   runAsGroup: 1000
+
+# Pod securityContext per role. A role block replaces the securityContext
+# defaults above for that role and is rendered as written, so include every
+# field you want, runAsNonRoot and seccompProfile among them.
+# Example for OpenShift, where the restricted SCC assigns the UID and GID:
+#   podSecurityContext:
+#     main:
+#       runAsNonRoot: true
+#       seccompProfile:
+#         type: RuntimeDefault
+podSecurityContext:
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+
+# Container securityContext per container. Your values merge over these
+# defaults, so set only the fields you want to change. Set a field to null
+# to remove it. taskRunner applies to the task-runner sidecar on main and on
+# worker pods.
+# readOnlyRootFilesystem is not set by default. n8n writes to ~/.n8n/, /tmp/
+# and other paths at runtime, so enabling it needs writable volumes mounted
+# at those paths.
+# Example that runs the task runner as nobody (UID and GID 65532), as
+# n8n's task-runner hardening guide recommends:
+#   containerSecurityContext:
+#     taskRunner:
+#       runAsUser: 65532
+#       runAsGroup: 65532
+containerSecurityContext:
+  main:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  worker:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  webhookProcessor:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  taskRunner:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 
 # ----- RBAC ServiceAccount & Network Policy -----
 rbac:

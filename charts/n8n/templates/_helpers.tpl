@@ -64,6 +64,47 @@ always set by the chart.
 {{- end -}}
 
 {{/*
+Pod securityContext for a role (main, worker, webhookProcessor). A role's
+podSecurityContext block replaces the chart-wide securityContext for that
+role, so the block is rendered exactly as written.
+*/}}
+{{- define "n8n.podSecurityContext" -}}
+{{- $root := .root -}}
+{{- $override := index ($root.Values.podSecurityContext | default dict) .role -}}
+{{- if $override -}}
+{{- toYaml $override -}}
+{{- else if $root.Values.securityContext.enabled -}}
+fsGroup: {{ $root.Values.securityContext.fsGroup }}
+runAsUser: {{ $root.Values.securityContext.runAsUser }}
+runAsGroup: {{ $root.Values.securityContext.runAsGroup }}
+runAsNonRoot: true
+seccompProfile:
+  type: RuntimeDefault
+{{- end -}}
+{{- end -}}
+
+{{/*
+Container securityContext for a role (main, worker, webhookProcessor,
+taskRunner). The defaults live in values.yaml, so Helm merges user values over
+them and a null removes a field. helm upgrade --reuse-values renders with the
+previous chart's values.yaml, which may have no entry for the role, so the
+hardened default is rendered when the role is missing.
+*/}}
+{{- define "n8n.containerSecurityContext" -}}
+{{- $roles := .root.Values.containerSecurityContext | default dict -}}
+{{- if hasKey $roles .role -}}
+{{- with index $roles .role -}}
+{{- toYaml . -}}
+{{- end -}}
+{{- else -}}
+allowPrivilegeEscalation: false
+capabilities:
+  drop:
+    - ALL
+{{- end -}}
+{{- end -}}
+
+{{/*
 Selector labels
 */}}
 {{- define "n8n.selectorLabels" -}}
@@ -102,11 +143,10 @@ pods (queue mode) so both sidecars stay the same.
 - name: task-runner
   image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
   imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
+  {{- with include "n8n.containerSecurityContext" (dict "root" . "role" "taskRunner") }}
   securityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
+    {{- . | nindent 4 }}
+  {{- end }}
   env:
     {{- include "n8n.taskRunnerSidecarEnv" . | nindent 4 }}
   resources:
