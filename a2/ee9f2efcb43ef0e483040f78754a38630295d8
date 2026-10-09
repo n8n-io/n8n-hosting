@@ -1,0 +1,31 @@
+charts/n8n/decisions/0002-chart-reports-deployment-artifact.md
+  s_a83d2cf6f7bdca::t_d89f5e39602dea 8,10,14,16,22
+charts/n8n/templates/_configmap-env.tpl
+  s_a83d2cf6f7bdca::t_545d2b309f8471 11,15
+charts/n8n/templates/configmap.yaml
+  s_a83d2cf6f7bdca::t_fa74811722d7ca 16
+charts/n8n/tests/__snapshot__/default-render_test.yaml.snap
+  s_a83d2cf6f7bdca::t_21093f51b64f5c 35,81,98,101,321,343,346
+charts/n8n/tests/deployment-artifact_test.yaml
+  s_a83d2cf6f7bdca::t_4d02b3c44f56e6 1,24,36,40,45,48
+charts/n8n/values.schema.json
+  s_a83d2cf6f7bdca::t_c0d324c30598d5 667
+charts/n8n/values.yaml
+  s_a83d2cf6f7bdca::t_8022a41a241d93 587,589
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a2ee9f2efcb43ef0e483040f78754a38630295d8",
+  "prompts": {},
+  "sessions": {
+    "s_a83d2cf6f7bdca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0cbed283-342a-4bad-b590-212620c02319",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
