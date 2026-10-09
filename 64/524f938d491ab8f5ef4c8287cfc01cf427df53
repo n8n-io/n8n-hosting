@@ -1,0 +1,19 @@
+charts/n8n/decisions/0004-other-artefacts-report-their-name-without-a-version.md
+  s_c9e4b11e432a13::t_f50563868ca712 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "64524f938d491ab8f5ef4c8287cfc01cf427df53",
+  "prompts": {},
+  "sessions": {
+    "s_c9e4b11e432a13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef4701cb-b626-4daa-81d1-b72194933b28",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}

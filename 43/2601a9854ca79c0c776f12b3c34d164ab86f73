@@ -1,0 +1,35 @@
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks-ha.yaml
+  s_a83d2cf6f7bdca::t_245c09203ca292 1200,1487,1959
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks.yaml
+  s_a83d2cf6f7bdca::t_e31cd75019e0ba 1127,1414,1886
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode.yaml
+  s_a83d2cf6f7bdca::t_49dfbe56bda455 1048,1256
+charts/n8n/decisions/0004-other-artefacts-report-their-name-without-a-version.md
+  s_a83d2cf6f7bdca::t_0641b7340106fe 8,16
+docker-caddy/docker-compose.yml
+  s_a83d2cf6f7bdca::t_f026811942e380 19
+docker-compose/subfolderWithSSL/docker-compose.yml
+  s_a83d2cf6f7bdca::t_b84c87b26a6057 48
+docker-compose/withPostgres/docker-compose.yml
+  s_a83d2cf6f7bdca::t_2b49a381e99e7d 31
+docker-compose/withPostgresAndWorker/docker-compose.yml
+  s_a83d2cf6f7bdca::t_87717f8cc6e8cb 10
+kubernetes/n8n-deployment.yaml
+  s_a83d2cf6f7bdca::t_7f3e2db1b10901 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "432601a9854ca79c0c776f12b3c34d164ab86f73",
+  "prompts": {},
+  "sessions": {
+    "s_a83d2cf6f7bdca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0cbed283-342a-4bad-b590-212620c02319",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
