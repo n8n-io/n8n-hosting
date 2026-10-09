@@ -1,0 +1,115 @@
+tools/lab/AGENTS.md
+  s_f363062ab84ae3::t_8806e22da5088d 12,35-40,43-44,48,54-55
+tools/lab/README.md
+  s_f363062ab84ae3::t_8fdf13fa57e777 109,119,121-122,307,309-340,343,345-347,355-360,362,366,372,385,389,392,396-399,474-475
+tools/lab/package.json
+  s_f363062ab84ae3::t_bef4270c8d8418 10-11
+tools/lab/src/addons.ts
+  s_f363062ab84ae3::t_7f216b5d6a6c63 4-5
+tools/lab/src/chart-examples.ts
+  s_f363062ab84ae3::t_32cc5acc51caa0 21
+tools/lab/src/cli.ts
+  s_f363062ab84ae3::t_a3565ffca22037 3-32,35-38,40-41,44-46,48-50,52-54,56-60,62,65-66
+tools/lab/src/clusters.ts
+  s_f363062ab84ae3::t_5f39c2c07ebf6a 3-4,54-59
+tools/lab/src/commands/check.ts
+  s_f363062ab84ae3::t_027dbce1c6f4c0 1-15
+tools/lab/src/commands/clusters.ts
+  s_f363062ab84ae3::t_242eecafa0b05b 1-34
+tools/lab/src/commands/down.ts
+  s_f363062ab84ae3::t_836d0dbda0e99e 1-18
+tools/lab/src/commands/registry.ts
+  s_f363062ab84ae3::t_7aa2060e2d7c78 1-15
+tools/lab/src/commands/status.ts
+  s_f363062ab84ae3::t_8def270709f040 1-47
+tools/lab/src/commands/types.ts
+  s_f363062ab84ae3::t_cc82ce3735ca37 1-5
+tools/lab/src/commands/up.ts
+  s_f363062ab84ae3::t_809e0a672fc9b3 1-97
+tools/lab/src/commands/upgrade.ts
+  s_f363062ab84ae3::t_e14463e7d467cf 1-15
+tools/lab/src/failures.ts
+  s_f363062ab84ae3::t_79ff6ec415f65f 1-15
+tools/lab/src/help.ts
+  s_f363062ab84ae3::t_62330b601ccb2f 1-75
+tools/lab/src/kube.ts
+  s_f363062ab84ae3::t_4980120d133da3 3,5-7,11,14-15,29-36,39,42-43,57,60,62,67,72-75,78-82,84-91
+tools/lab/src/namespaces.ts
+  s_f363062ab84ae3::t_f325d81fc19592 1-38
+tools/lab/src/options.ts
+  s_f363062ab84ae3::t_9cdfd972f58bf5 1-65
+tools/lab/src/providers/aks.ts
+  s_f363062ab84ae3::t_8b909c368e154f 1-113
+tools/lab/src/providers/eks.ts
+  s_f363062ab84ae3::t_4319abb382110d 1-4,6-7,19-29,31,33,37,39-45,47-68,74,76,79-80,83-85,87-88,91,97,100,103-104,109-111,115
+tools/lab/src/providers/index.ts
+  s_f363062ab84ae3::t_f88c920eec5ba4 1-35
+tools/lab/src/providers/lab.ts
+  s_f363062ab84ae3::t_e60473c27fb154 1-19
+tools/lab/src/providers/minikube.ts
+  s_f363062ab84ae3::t_5ecacfb285a40c 1-48
+tools/lab/src/providers/types.ts
+  s_f363062ab84ae3::t_fc8a0ba942147c 1-44
+tools/lab/src/settings.ts
+  s_f363062ab84ae3::t_f993cd53ffe9e1 1-15
+tools/lab/src/targets/chart.ts
+  s_f363062ab84ae3::t_674672a8f4cfde 1-27
+tools/lab/src/targets/compose.ts
+  s_f363062ab84ae3::t_b04646efcc52a1 1-95
+tools/lab/src/targets/example.ts
+  s_f363062ab84ae3::t_a967b18217f7e3 1-56
+tools/lab/src/targets/index.ts
+  s_f363062ab84ae3::t_b5841d514b41a2 1-50
+tools/lab/src/targets/k8s.ts
+  s_f363062ab84ae3::t_bdfe0bd38311dc 1-56
+tools/lab/src/targets/names.ts
+  s_f363062ab84ae3::t_d7ef8affe00c56 1-3,11-17,23,40-47,49-50,55
+tools/lab/src/targets/steps.ts
+  s_f363062ab84ae3::t_ad3966a410cd0c 1-73
+tools/lab/src/tasks.ts
+  s_f363062ab84ae3::t_5813b65a36f883 1-9
+tools/lab/src/testing/check.ts
+  s_f363062ab84ae3::t_6b1c2a3ece9dff 2-9,13,15,21-24,27,32
+tools/lab/src/testing/e2e-client.js
+  s_f363062ab84ae3::t_5b3daae20db606 1-69
+tools/lab/src/testing/e2e.ts
+  s_f363062ab84ae3::t_d01fa51697cee5 2,4-6,8-11,18,20,24,26,29
+tools/lab/src/testing/exec.ts
+  s_f363062ab84ae3::t_262cf0983c6706 1-36
+tools/lab/src/testing/retry.ts
+  s_f363062ab84ae3::t_fc1771d6c0663b 1-11
+tools/lab/src/testing/upgrade.ts
+  s_f363062ab84ae3::t_7d48b793c13136 2-6,19-20,29
+tools/lab/test/failures.test.ts
+  s_f363062ab84ae3::t_86a6bbab30efea 1-12
+tools/lab/test/helpers.ts
+  s_f363062ab84ae3::t_07bf3e68924322 1-18
+tools/lab/test/options.test.ts
+  s_f363062ab84ae3::t_41f11a1deaf170 1-34
+tools/lab/test/providers.test.ts
+  s_f363062ab84ae3::t_b8c7b166b6ba0f 1-53
+tools/lab/test/retry.test.ts
+  s_f363062ab84ae3::t_63c09c76353379 1-16
+tools/lab/test/settings.test.ts
+  s_f363062ab84ae3::t_456fd21ef772b3 1-25
+tools/lab/test/targets.test.ts
+  s_f363062ab84ae3::t_87714b5341a8da 1-99
+tools/lab/tsconfig.json
+  s_f363062ab84ae3::t_69b06d9ad98b21 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d80fa3288fbd1ced26307b0d738df54f0b6bdad2",
+  "prompts": {},
+  "sessions": {
+    "s_f363062ab84ae3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17484020-c13a-4467-a118-d66297ee34d3",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
