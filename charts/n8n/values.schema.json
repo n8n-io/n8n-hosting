@@ -679,6 +679,16 @@
       "description": "Additional Kubernetes objects rendered as part of the Helm release. Each entry is a map or a YAML string, and is passed through Helm tpl",
       "items": { "type": ["object", "string"] }
     },
+    "extraVolumes": {
+      "type": "array",
+      "description": "Additional volumes for main, worker, and webhook-processor pods",
+      "items": { "type": "object" }
+    },
+    "extraVolumeMounts": {
+      "type": "array",
+      "description": "Additional volume mounts for the n8n container in main, worker, and webhook-processor pods",
+      "items": { "type": "object" }
+    },
     "extraContainers": {
       "type": "array",
       "description": "Additional containers (sidecars) for main, worker, and webhook-processor pods",
@@ -699,6 +709,13 @@
         "existingSecret": { "type": "string" },
         "env": {
           "type": "object",
+          "properties": {
+            "N8N_ENCRYPTION_KEY_FILE": {
+              "type": "string",
+              "pattern": "^(/.*)?$",
+              "description": "Absolute path of a mounted encryption key file. When set, n8n containers read the key from this file instead of N8N_ENCRYPTION_KEY"
+            }
+          },
           "additionalProperties": { "type": "string" }
         }
       }

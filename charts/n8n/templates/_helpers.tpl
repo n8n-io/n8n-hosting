@@ -300,8 +300,12 @@ per mistake.
 {{- end -}}
 
 {{/* --- Encryption key --- */}}
-{{- if and (not .Values.secretRefs.existingSecret) (eq .Values.secretRefs.env.N8N_ENCRYPTION_KEY "change-me-to-a-long-random-key") -}}
-{{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret" -}}
+{{- $encryptionKeyFile := .Values.secretRefs.env.N8N_ENCRYPTION_KEY_FILE | default "" -}}
+{{- if and $encryptionKeyFile (not (hasPrefix "/" $encryptionKeyFile)) -}}
+{{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY_FILE must be an absolute path" -}}
+{{- end -}}
+{{- if and (not $encryptionKeyFile) (not .Values.secretRefs.existingSecret) (eq .Values.secretRefs.env.N8N_ENCRYPTION_KEY "change-me-to-a-long-random-key") -}}
+{{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, provide secretRefs.existingSecret with your own Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY_FILE" -}}
 {{- end -}}
 
 {{/* --- Service account --- */}}
