@@ -254,6 +254,8 @@ jobs:
             --set redis.host=redis-master \
             --set secretRefs.existingSecret=n8n-core-secrets \
             --set queueMode.workerReplicaCount=1 \
+            --set webhookProcessor.enabled=true \
+            --set webhookProcessor.replicaCount=1 \
             --set hpa.main.enabled=false \
             --set hpa.worker.enabled=false \
             --wait --timeout 300s
