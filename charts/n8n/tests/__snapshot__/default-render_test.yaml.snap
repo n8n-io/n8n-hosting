@@ -32,7 +32,6 @@ matches the snapshot:
       DB_POSTGRESDB_USER: n8n
       DB_TYPE: postgresdb
       EXECUTIONS_MODE: queue
-      N8N_DEPLOYMENT_ARTIFACT: helm-chart/0.0.0
       N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "30"
       N8N_WEBHOOK_TIMEOUT: "120000"
       OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
@@ -78,7 +77,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: 36076679cae82f6b76a4854ad4748f1c4595acdd0a68c82a8ff67dff6a9ef3f4
+            checksum/config: b853d556b426cb3c46641413064e1b669ac1e2c815ac9e399629770cb5c75932
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: main
@@ -94,11 +93,6 @@ matches the snapshot:
                   valueFrom:
                     configMapKeyRef:
                       key: TZ
-                      name: RELEASE-NAME-n8n
-                - name: N8N_DEPLOYMENT_ARTIFACT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: N8N_DEPLOYMENT_ARTIFACT
                       name: RELEASE-NAME-n8n
                 - name: DB_TYPE
                   valueFrom:
@@ -318,7 +312,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: 36076679cae82f6b76a4854ad4748f1c4595acdd0a68c82a8ff67dff6a9ef3f4
+            checksum/config: b853d556b426cb3c46641413064e1b669ac1e2c815ac9e399629770cb5c75932
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: worker
@@ -339,11 +333,6 @@ matches the snapshot:
                   valueFrom:
                     configMapKeyRef:
                       key: TZ
-                      name: RELEASE-NAME-n8n
-                - name: N8N_DEPLOYMENT_ARTIFACT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: N8N_DEPLOYMENT_ARTIFACT
                       name: RELEASE-NAME-n8n
                 - name: DB_TYPE
                   valueFrom:
