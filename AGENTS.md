@@ -22,9 +22,10 @@ Most work here is a chart change. Take it in this order:
 1. Read the templates, `values.yaml`, `values.schema.json` and the examples your change touches, and write in the style already there.
 2. Check the change against `charts/n8n/DESIGN.md`.
 3. Render before and after, and read the diff. Anything in it you did not mean to change is a defect in the change, so fix it before opening the PR.
-4. Decide whether the change is breaking. A change is breaking when an install that works today needs new values or manual steps to upgrade, or when its unchanged values start doing something different. Breaking changes land on a major as `feat(chart)!:`.
-   - Breaking: renaming or removing a values key, changing a default in a way a running install would notice, adding a value with no working default, changing an immutable field (selectors, resource names, StatefulSet `volumeClaimTemplates`), and raising the minimum Kubernetes version.
+4. Decide whether the change is breaking. A change is breaking when an install that works today needs new values or manual steps to upgrade. Breaking changes land on a major as `feat(chart)!:`.
+   - Breaking: renaming or removing a values key, adding a value with no working default, changing an immutable field (selectors, resource names, StatefulSet `volumeClaimTemplates`), and raising the minimum Kubernetes version.
    - Not breaking: pods rolling on upgrade, which is how `helm upgrade` works here. A bug fix that makes the chart do what its values already say. A new `fail` that rejects a combination of values that never worked, because those installs were already broken and the message names the fix.
+   - Take care when changing a default. A new default that meaningfully changes a deployment's performance or behaviour, in a way a user would not reasonably expect from a minor or patch release, belongs on a major.
    - Give a new value a default that leaves today's render unchanged.
    - Call out a roll or a new `fail` in the PR description so it reaches the changelog.
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.
