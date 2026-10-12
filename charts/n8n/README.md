@@ -185,14 +185,14 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `image.tag` | n8n version | `""` (uses the chart's `appVersion`) |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
 | `queueMode.workerConcurrency` | Jobs per worker | `10` |
-| `multiMain.enabled` | Multi-main HA (Enterprise) | `false` |
+| `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
 | `taskRunners.enabled` | Task runner sidecars | `false` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
 | `strategy` | Deployment update strategy | `{}` (k8s default) |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
-| `hpa.main.enabled` | HPA for main pods | `false` |
+| `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |

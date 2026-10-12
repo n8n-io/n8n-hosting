@@ -240,6 +240,16 @@ per mistake.
 {{- if and .Values.multiMain.enabled (lt (int .Values.multiMain.replicas) 2) -}}
 {{- $errs = append $errs "multiMain.enabled=true requires multiMain.replicas >= 2" -}}
 {{- end -}}
+{{- if and .Values.multiMain.enabled (not .Values.license.enabled) -}}
+{{- $errs = append $errs "multiMain.enabled=true requires license.enabled=true. Multi-main is an n8n Enterprise feature. Set license.activationKey or license.existingSecret.name, or set license.enabled=true alone if the licence reaches n8n another way." -}}
+{{- end -}}
+{{/* Mains only coordinate in multi-main; without it, every main acts as leader and the instance splits. */}}
+{{- if and (gt (int .Values.replicaCount) 1) (not .Values.multiMain.enabled) -}}
+{{- $errs = append $errs "replicaCount > 1 requires multiMain.enabled=true. Without multi-main, each extra main runs schedules and triggers on its own. Set multiMain.enabled=true, or set replicaCount to 1." -}}
+{{- end -}}
+{{- if and .Values.hpa.main.enabled (gt (int .Values.hpa.main.maxReplicas) 1) (not .Values.multiMain.enabled) -}}
+{{- $errs = append $errs "hpa.main.enabled=true with hpa.main.maxReplicas > 1 requires multiMain.enabled=true. Without multi-main, each extra main runs schedules and triggers on its own. Set multiMain.enabled=true, or set hpa.main.enabled=false." -}}
+{{- end -}}
 
 {{/* --- Database TLS from an existing Secret --- */}}
 {{- $ssl := .Values.database.ssl -}}
