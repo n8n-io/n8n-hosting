@@ -311,6 +311,19 @@ per mistake.
 {{- $errs = append $errs (printf "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT in taskRunners.extraEnv must be a port number from 1 to 65535, got %q. The sidecar's liveness probe uses it." $healthPort) -}}
 {{- end -}}
 {{- end -}}
+{{- /* A digest on one image only lets a chart upgrade move the other, so the
+runner and n8n drift onto different versions. */ -}}
+{{- if and .Values.taskRunners.enabled .Values.image.digest (not .Values.taskRunners.image.digest) -}}
+{{- $errs = append $errs "image.digest is set but taskRunners.image.digest is not. Pin the runner image by digest too, from the same n8n version, or remove image.digest." -}}
+{{- end -}}
+{{- if and .Values.taskRunners.enabled .Values.taskRunners.image.digest (not .Values.image.digest) -}}
+{{- $errs = append $errs "taskRunners.image.digest is set but image.digest is not. Pin the n8n image by digest too, from the same n8n version, or remove taskRunners.image.digest." -}}
+{{- end -}}
+
+{{/* --- Persistence --- */}}
+{{- if and .Values.persistence.annotations .Values.persistence.existingClaim -}}
+{{- $errs = append $errs (printf "persistence.annotations has no effect with persistence.existingClaim, because the chart does not create that PVC. Annotate %s directly, or remove persistence.annotations." .Values.persistence.existingClaim) -}}
+{{- end -}}
 
 {{/* --- S3 --- */}}
 {{- if .Values.s3.enabled -}}

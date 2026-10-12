@@ -184,7 +184,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `image.repository` | n8n image | `docker.n8n.io/n8nio/n8n` |
 | `image.tag` | n8n version | `""` (uses the chart's `appVersion`) |
 | `image.digest` | Pin the n8n image by digest (`sha256:...`); replaces `image.tag` when set | `""` |
-| `taskRunners.image.digest` | Pin the runner image by digest; replaces `taskRunners.image.tag` when set | `""` |
+| `taskRunners.image.digest` | Pin the runner image by digest; replaces `taskRunners.image.tag` when set. With task runners enabled, set both digests or neither | `""` |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
 | `queueMode.workerConcurrency` | Jobs per worker | `10` |
 | `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
@@ -192,7 +192,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `taskRunners.enabled` | Task runner sidecars | `false` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
-| `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations` | `{}` |
+| `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
 | `strategy` | Deployment update strategy | `{}` (k8s default) |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
 | `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |

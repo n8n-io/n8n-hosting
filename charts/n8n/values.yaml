@@ -100,9 +100,10 @@ taskRunners:
     # Set explicitly only if you need a different version (not recommended)
     tag: ""
     # Pin the runner image by digest, e.g. "sha256:9a2b...". When set, tag is
-    # ignored. image.digest does not apply here because the runner is a
-    # separate image, so set both to pin both. Keep the two on the same n8n
-    # version. The weekly n8n bump does not move this digest either.
+    # ignored. The runner is a separate image, so image.digest does not
+    # apply here. With task runners enabled, set both digests or neither, from
+    # the same n8n version; the render fails otherwise. The weekly n8n bump
+    # does not move this digest either.
     digest: ""
     pullPolicy: IfNotPresent
 
@@ -246,7 +247,8 @@ persistence:
   storageClassName: ""
   # Annotations on the chart-managed PVC only, merged over commonAnnotations.
   # Useful for backup and retention tooling, e.g. helm.sh/resource-policy: keep.
-  # Not applied with existingClaim, because the chart does not render that PVC.
+  # The render fails if this is set with existingClaim, because the chart does
+  # not create that PVC. Annotate your own claim directly instead.
   annotations: {}
 
 # ----- Additional Kubernetes resources -----
