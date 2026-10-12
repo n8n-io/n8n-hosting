@@ -1,7 +1,7 @@
 # 0006. Public URLs default to https and are overridden by value
 
 Date: 2026-10-09
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/243
 
 ## Context
 
