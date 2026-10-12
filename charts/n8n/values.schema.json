@@ -609,6 +609,16 @@
       },
       "required": ["enabled"]
     },
+    "editor": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^(https?://.+)?$",
+          "description": "Public base URL of the editor, rendered as N8N_EDITOR_BASE_URL. Empty derives it from the ingress host."
+        }
+      }
+    },
     "license": {
       "type": "object",
       "properties": {

@@ -117,7 +117,11 @@ data:
   
   # Editor Base URL (for proper webhook URL display in UI)
   # Only set when external access is configured to avoid issues with internal-only deployments
-  {{- if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) }}
+  {{- /* editor.url wins when set. The ingress fallback uses https://, which
+  assumes TLS ends at the ingress or in front of it. */}}
+  {{- if .Values.editor.url }}
+  N8N_EDITOR_BASE_URL: {{ .Values.editor.url | quote }}
+  {{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) }}
   N8N_EDITOR_BASE_URL: "https://{{ (index .Values.ingress.hosts 0).host }}"
   {{- else if .Values.webhook.url }}
   # If custom webhook URL is set, use it as editor base URL (since webhook.url is the domain)

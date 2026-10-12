@@ -579,7 +579,8 @@ webhook:
   # Custom webhook URL base domain (if not set, will use ingress host)
   # Format: https://your-domain.com (n8n adds /webhook path automatically)
   # Rendered as N8N_WEBHOOK_URL, which sets the base URL for both test and
-  # production webhooks.
+  # production webhooks. The URL derived from the ingress host always uses
+  # https://. If n8n is served over plain HTTP, set this and editor.url.
   url: ""
   # Timeout for webhook requests in milliseconds
   timeout: 120000
@@ -587,6 +588,15 @@ webhook:
   # Applied to BOTH main and webhook-processor pods. For variables that should
   # only apply to webhook-processor pods, use `webhookProcessor.extraEnv` instead.
   extraEnv: []
+
+# ----- Editor config -----
+editor:
+  # Public base URL of the n8n editor, for example https://n8n.example.com.
+  # Rendered as N8N_EDITOR_BASE_URL. n8n builds OAuth redirect URLs and links
+  # in emails from it. When empty, the chart uses https:// and the first
+  # ingress host, or webhook.url when ingress is off. Set it when n8n is
+  # served over plain HTTP or on a different host.
+  url: ""
 
 # ----- Executions config -----
 executions:
