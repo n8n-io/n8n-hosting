@@ -357,6 +357,21 @@ so workers handle code execution and main pods do not need runner sidecars.
 {{- end -}}
 
 {{/*
+The public editor URL, rendered as N8N_EDITOR_BASE_URL and printed by NOTES.txt.
+editor.url wins. The ingress fallback uses https://, which assumes TLS ends at
+the ingress or in front of it. Empty when no public URL is configured.
+*/}}
+{{- define "n8n.editorBaseUrl" -}}
+{{- if .Values.editor.url -}}
+{{ .Values.editor.url }}
+{{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
+https://{{ (index .Values.ingress.hosts 0).host }}
+{{- else if and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString)) -}}
+{{ .Values.webhook.url }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Whether KEDA will actually scale a component, and so whether a ScaledObject
 renders for it. Empty triggers mean no scaler: KEDA requires spec.triggers and
 rejects an object without them, so the chart renders none and the component

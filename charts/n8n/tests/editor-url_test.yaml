@@ -140,3 +140,11 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "at '/editor/url': 'n8n.internal' does not match pattern"
+
+  - it: rejects an editor.url with a scheme other than http or https
+    template: templates/configmap.yaml
+    set:
+      editor.url: ftp://n8n.internal
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/editor/url': 'ftp://n8n.internal' does not match pattern"

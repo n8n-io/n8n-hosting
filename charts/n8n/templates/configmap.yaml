@@ -117,8 +117,9 @@ data:
   
   # Editor Base URL (for proper webhook URL display in UI)
   # Only set when external access is configured to avoid issues with internal-only deployments
-  {{- /* editor.url wins when set. The ingress fallback uses https://, which
-  assumes TLS ends at the ingress or in front of it. */}}
+  {{- /* Same order as n8n.editorBaseUrl, which the env refs and NOTES.txt
+  read. The branches stay inline because any change to this rendered text,
+  comments included, changes checksum/config and restarts the pods. */}}
   {{- if .Values.editor.url }}
   N8N_EDITOR_BASE_URL: {{ .Values.editor.url | quote }}
   {{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) }}

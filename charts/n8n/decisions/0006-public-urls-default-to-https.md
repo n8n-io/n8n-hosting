@@ -19,5 +19,6 @@ This sits under "One place to set anything, and a defined winner". For `N8N_EDIT
 
 - Installs that do not set `editor.url` render as before.
 - Plain-HTTP installs set `webhook.url` and `editor.url`. The README shows both.
+- `NOTES.txt` prints the editor URL the chart sets, so the install output and n8n agree.
 - The schema rejects an `editor.url` without `http://` or `https://`.
 - Deriving the scheme later would change URLs for upstream-TLS installs, so it needs a major version.

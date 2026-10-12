@@ -577,7 +577,8 @@ webhook:
   # Enable webhook functionality
   enabled: true
   # Custom webhook URL base domain (if not set, will use ingress host)
-  # Format: https://your-domain.com (n8n adds /webhook path automatically)
+  # Format: https://your-domain.com, or http:// when n8n is served over plain
+  # HTTP (n8n adds /webhook path automatically)
   # Rendered as N8N_WEBHOOK_URL, which sets the base URL for both test and
   # production webhooks. The URL derived from the ingress host always uses
   # https://. If n8n is served over plain HTTP, set this and editor.url.
