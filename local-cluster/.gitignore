@@ -1,0 +1,16 @@
+# Isolated kubeconfig (managed by `make cluster` / `make delete-cluster`)
+.kubeconfig
+
+# Port-forward process IDs (managed by `make forward` / `make unforward`)
+.pids
+
+# Port-forward output logs (managed by `make forward`)
+logs/
+
+# Local environment overrides (optional — see .env.example)
+.env
+
+# Generated token-exchange key pair (regenerated on every make up)
+.keys/
+
+.DS_Store
