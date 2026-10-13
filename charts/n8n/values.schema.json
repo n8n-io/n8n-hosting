@@ -645,6 +645,16 @@
       },
       "required": ["enabled"]
     },
+    "editor": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^(https?://.+)?$",
+          "description": "Public base URL of the editor, rendered as N8N_EDITOR_BASE_URL. Empty uses the first ingress host when configured, otherwise webhook.url when set."
+        }
+      }
+    },
     "license": {
       "type": "object",
       "properties": {

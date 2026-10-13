@@ -1,0 +1,56 @@
+# NOTES.txt prints the editor URL the chart sets as N8N_EDITOR_BASE_URL, so
+# the install output and n8n agree on where the instance lives.
+suite: 'notes: URL'
+templates:
+  - templates/NOTES.txt
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  ingress.enabled: true
+  ingress.hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+tests:
+  - it: prints the https URL with ingress TLS
+    set:
+      ingress.tls:
+        - secretName: n8n-tls
+          hosts:
+            - n8n.example.com
+    asserts:
+      - matchRegexRaw:
+          pattern: 'available at:\n  https://n8n\.example\.com\n'
+
+  - it: prints the https URL the chart sets without ingress TLS
+    asserts:
+      - matchRegexRaw:
+          pattern: 'available at:\n  https://n8n\.example\.com\n'
+      - notMatchRegexRaw:
+          pattern: 'http://n8n\.example\.com'
+
+  - it: prints editor.url when it is set
+    set:
+      editor.url: http://n8n.internal
+    asserts:
+      - matchRegexRaw:
+          pattern: 'available at:\n  http://n8n\.internal\n'
+
+  - it: prints webhook.url when ingress is off
+    set:
+      ingress.enabled: false
+      webhook.url: https://hooks.example.com
+    asserts:
+      - matchRegexRaw:
+          pattern: 'available at:\n  https://hooks\.example\.com\n'
+      - notMatchRegexRaw:
+          pattern: 'port-forward'
+
+  - it: prints port-forward steps when no public URL is set
+    set:
+      ingress.enabled: false
+    asserts:
+      - matchRegexRaw:
+          pattern: 'kubectl port-forward service/RELEASE-NAME-n8n-main'
+      - notMatchRegexRaw:
+          pattern: 'available at:'
