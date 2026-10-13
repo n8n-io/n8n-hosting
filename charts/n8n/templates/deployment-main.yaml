@@ -62,7 +62,7 @@ spec:
 
       containers:
         - name: n8n-main
-          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
+          image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "main") }}
           securityContext:

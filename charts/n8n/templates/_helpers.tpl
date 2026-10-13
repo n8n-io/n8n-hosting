@@ -136,12 +136,36 @@ appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
 {{- end -}}
 
 {{/*
+n8n image reference. A digest, when set, replaces the tag, so the image is
+pinned by content and nothing is resolved by tag at pull time.
+*/}}
+{{- define "n8n.image" -}}
+{{- if .Values.image.digest -}}
+{{- printf "%s@%s" .Values.image.repository .Values.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.image.repository (include "n8n.imageTag" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Task runner image reference. Takes only taskRunners.image.digest: the runner is
+a different image, so the n8n digest can never apply to it.
+*/}}
+{{- define "n8n.taskRunnerImage" -}}
+{{- if .Values.taskRunners.image.digest -}}
+{{- printf "%s@%s" .Values.taskRunners.image.repository .Values.taskRunners.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.taskRunners.image.repository (include "n8n.taskRunnerImageTag" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Task-runner sidecar container, shared by the main pod (standalone) and worker
 pods (queue mode) so both sidecars stay the same.
 */}}
 {{- define "n8n.taskRunnerContainer" -}}
 - name: task-runner
-  image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
+  image: {{ include "n8n.taskRunnerImage" . | quote }}
   imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
   {{- with include "n8n.containerSecurityContext" (dict "root" . "role" "taskRunner") }}
   securityContext:
@@ -326,6 +350,19 @@ per mistake.
 {{- if and $healthPort (or (not (regexMatch "^[0-9]+$" $healthPort)) (lt (atoi $healthPort) 1) (gt (atoi $healthPort) 65535)) -}}
 {{- $errs = append $errs (printf "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT in taskRunners.extraEnv must be a port number from 1 to 65535, got %q. The sidecar's liveness probe uses it." $healthPort) -}}
 {{- end -}}
+{{- end -}}
+{{- /* A digest on one image only lets a chart upgrade move the other, so the
+runner and n8n drift onto different versions. */ -}}
+{{- if and .Values.taskRunners.enabled .Values.image.digest (not .Values.taskRunners.image.digest) -}}
+{{- $errs = append $errs "image.digest is set but taskRunners.image.digest is not. Pin the runner image by digest too, from the same n8n version, or remove image.digest." -}}
+{{- end -}}
+{{- if and .Values.taskRunners.enabled .Values.taskRunners.image.digest (not .Values.image.digest) -}}
+{{- $errs = append $errs "taskRunners.image.digest is set but image.digest is not. Pin the n8n image by digest too, from the same n8n version, or remove taskRunners.image.digest." -}}
+{{- end -}}
+
+{{/* --- Persistence --- */}}
+{{- if and .Values.persistence.annotations .Values.persistence.existingClaim -}}
+{{- $errs = append $errs (printf "persistence.annotations has no effect with persistence.existingClaim, because the chart does not create that PVC. Annotate %s directly, or remove persistence.annotations." .Values.persistence.existingClaim) -}}
 {{- end -}}
 
 {{/* --- S3 --- */}}
