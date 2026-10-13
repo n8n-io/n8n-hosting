@@ -1,0 +1,13 @@
+# Overlay for installing examples/keda-autoscaling.yaml on kind. It replaces
+# the placeholders with the fixtures in ../fixtures/ and scales the example
+# down to fit a hosted runner. The Redis trigger address derives from
+# redis.host, and KEDA resolves it from its own namespace, so the host is the
+# fixture's full Service name.
+keda:
+  worker:
+    minReplicaCount: 1
+    maxReplicaCount: 2
+database:
+  host: postgres
+redis:
+  host: redis.default.svc.cluster.local

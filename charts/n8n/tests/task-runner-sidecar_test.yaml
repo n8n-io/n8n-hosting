@@ -1,0 +1,127 @@
+suite: 'render: task-runner sidecar'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+  - templates/secret-task-runners.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.enabled: true
+  taskRunners.authToken.existingSecret: n8n-runner-token
+tests:
+  - it: probes the launcher health endpoint on the worker sidecar
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: task-runner
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe
+          value:
+            httpGet:
+              path: /healthz
+              port: 5680
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 30
+            failureThreshold: 6
+
+  - it: probes the launcher health endpoint on the standalone main sidecar
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: task-runner
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet
+          value:
+            path: /healthz
+            port: 5680
+
+  - it: takes probe timings from values
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.probes.liveness.periodSeconds: 30
+      taskRunners.probes.liveness.failureThreshold: 3
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.periodSeconds
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.failureThreshold
+          value: 3
+
+  - it: follows the launcher health check port set in extraEnv
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.extraEnv:
+        - name: N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT
+          value: "5690"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet.port
+          value: 5690
+
+  - it: omits the probe when the health check port comes from valueFrom
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.extraEnv:
+        - name: N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: runner-ports
+              key: health
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[1].livenessProbe
+
+  - it: omits the probe when it is disabled
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.probes.liveness.enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[1].livenessProbe
+
+  - it: renders without a probes block
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.probes: null
+    asserts:
+      - notFailedTemplate: {}
+      - notExists:
+          path: spec.template.spec.containers[1].livenessProbe
+
+  - it: passes a NODE_OPTIONS from extraEnv through once
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.extraEnv:
+        - name: NODE_OPTIONS
+          value: --max-old-space-size=700
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: NODE_OPTIONS
+            value: --max-old-space-size=700
+          count: 1
+
+  - it: renders without a memory limit
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.resources: null
+    asserts:
+      - notFailedTemplate: {}
+      - exists:
+          path: spec.template.spec.containers[1].livenessProbe
+
+  - it: rejects an unknown probe key
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.probes.liveness.failureTreshold: 3
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/taskRunners/probes/liveness': additional properties 'failureTreshold' not allowed"

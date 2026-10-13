@@ -223,7 +223,7 @@ Environment variables from ConfigMap for main pods only
       key: N8N_WEBHOOK_TIMEOUT
 {{- end }}
 {{- end }}
-{{- if or (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) (and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString))) }}
+{{- if include "n8n.editorBaseUrl" . }}
 - name: N8N_EDITOR_BASE_URL
   valueFrom:
     configMapKeyRef:
@@ -283,7 +283,7 @@ Environment variables from ConfigMap for webhook processor pods (similar to main
       key: N8N_WEBHOOK_TIMEOUT
 {{- end }}
 {{- end }}
-{{- if or (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) (and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString))) }}
+{{- if include "n8n.editorBaseUrl" . }}
 - name: N8N_EDITOR_BASE_URL
   valueFrom:
     configMapKeyRef:
@@ -305,7 +305,7 @@ Environment variables from ConfigMap for worker pods (webhook URL for resume/wai
       key: N8N_WEBHOOK_URL
 {{- end }}
 {{- end }}
-{{- if or (and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0)) (and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString))) }}
+{{- if include "n8n.editorBaseUrl" . }}
 - name: N8N_EDITOR_BASE_URL
   valueFrom:
     configMapKeyRef:

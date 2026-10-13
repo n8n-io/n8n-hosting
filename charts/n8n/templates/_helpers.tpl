@@ -64,6 +64,47 @@ always set by the chart.
 {{- end -}}
 
 {{/*
+Pod securityContext for a role (main, worker, webhookProcessor). A role's
+podSecurityContext block replaces the chart-wide securityContext for that
+role, so the block is rendered exactly as written.
+*/}}
+{{- define "n8n.podSecurityContext" -}}
+{{- $root := .root -}}
+{{- $override := index ($root.Values.podSecurityContext | default dict) .role -}}
+{{- if $override -}}
+{{- toYaml $override -}}
+{{- else if $root.Values.securityContext.enabled -}}
+fsGroup: {{ $root.Values.securityContext.fsGroup }}
+runAsUser: {{ $root.Values.securityContext.runAsUser }}
+runAsGroup: {{ $root.Values.securityContext.runAsGroup }}
+runAsNonRoot: true
+seccompProfile:
+  type: RuntimeDefault
+{{- end -}}
+{{- end -}}
+
+{{/*
+Container securityContext for a role (main, worker, webhookProcessor,
+taskRunner). The defaults live in values.yaml, so Helm merges user values over
+them and a null removes a field. helm upgrade --reuse-values renders with the
+previous chart's values.yaml, which may have no entry for the role, so the
+hardened default is rendered when the role is missing.
+*/}}
+{{- define "n8n.containerSecurityContext" -}}
+{{- $roles := .root.Values.containerSecurityContext | default dict -}}
+{{- if hasKey $roles .role -}}
+{{- with index $roles .role -}}
+{{- toYaml . -}}
+{{- end -}}
+{{- else -}}
+allowPrivilegeEscalation: false
+capabilities:
+  drop:
+    - ALL
+{{- end -}}
+{{- end -}}
+
+{{/*
 Selector labels
 */}}
 {{- define "n8n.selectorLabels" -}}
@@ -92,6 +133,97 @@ appVersion, so the sidecar tracks the n8n image unless deliberately overridden.
 */}}
 {{- define "n8n.taskRunnerImageTag" -}}
 {{- default (include "n8n.imageTag" .) .Values.taskRunners.image.tag -}}
+{{- end -}}
+
+{{/*
+n8n image reference. A digest, when set, replaces the tag, so the image is
+pinned by content and nothing is resolved by tag at pull time.
+*/}}
+{{- define "n8n.image" -}}
+{{- if .Values.image.digest -}}
+{{- printf "%s@%s" .Values.image.repository .Values.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.image.repository (include "n8n.imageTag" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Task runner image reference. Takes only taskRunners.image.digest: the runner is
+a different image, so the n8n digest can never apply to it.
+*/}}
+{{- define "n8n.taskRunnerImage" -}}
+{{- if .Values.taskRunners.image.digest -}}
+{{- printf "%s@%s" .Values.taskRunners.image.repository .Values.taskRunners.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.taskRunners.image.repository (include "n8n.taskRunnerImageTag" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Task-runner sidecar container, shared by the main pod (standalone) and worker
+pods (queue mode) so both sidecars stay the same.
+*/}}
+{{- define "n8n.taskRunnerContainer" -}}
+- name: task-runner
+  image: {{ include "n8n.taskRunnerImage" . | quote }}
+  imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
+  {{- with include "n8n.containerSecurityContext" (dict "root" . "role" "taskRunner") }}
+  securityContext:
+    {{- . | nindent 4 }}
+  {{- end }}
+  env:
+    {{- include "n8n.taskRunnerSidecarEnv" . | nindent 4 }}
+  resources:
+    {{- toYaml .Values.taskRunners.resources | nindent 4 }}
+  {{- $probes := .Values.taskRunners.probes | default dict }}
+  {{- $port := include "n8n.taskRunnerHealthCheckPort" . }}
+  {{- if $port }}
+  {{- /* The launcher answers this itself, so a runner busy with a long task
+  does not fail it. The launcher restarts unhealthy runners on its own. */}}
+  {{- with $probes.liveness }}
+  {{- if .enabled }}
+  livenessProbe:
+    {{- include "n8n.taskRunnerProbe" (dict "probe" . "port" $port) | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.taskRunners.customConfig.enabled }}
+  volumeMounts:
+    - name: task-runner-config
+      mountPath: /etc/n8n-task-runners.json
+      subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
+      readOnly: true
+  {{- end }}
+{{- end -}}
+
+{{/*
+Port of the launcher's health endpoint in the task-runner sidecar. The launcher
+reads N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT, so the probe follows it when
+taskRunners.extraEnv sets it, and use the launcher's default otherwise. Empty
+when it comes from valueFrom, which the chart cannot read, so the probe is
+left out rather than pointed at the wrong port.
+*/}}
+{{- define "n8n.taskRunnerHealthCheckPort" -}}
+{{- $port := "5680" -}}
+{{- range .Values.taskRunners.extraEnv -}}
+{{- if eq (.name | default "") "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT" -}}
+{{- $port = .value | default "" | toString -}}
+{{- end -}}
+{{- end -}}
+{{- $port -}}
+{{- end -}}
+
+{{/*
+A task-runner sidecar probe against the launcher's health endpoint.
+*/}}
+{{- define "n8n.taskRunnerProbe" -}}
+httpGet:
+  path: {{ .probe.path }}
+  port: {{ .port }}
+initialDelaySeconds: {{ .probe.initialDelaySeconds }}
+periodSeconds: {{ .probe.periodSeconds }}
+timeoutSeconds: {{ .probe.timeoutSeconds }}
+failureThreshold: {{ .probe.failureThreshold }}
 {{- end -}}
 
 {{/*
@@ -172,6 +304,16 @@ per mistake.
 {{- if and .Values.multiMain.enabled (lt (int .Values.multiMain.replicas) 2) -}}
 {{- $errs = append $errs "multiMain.enabled=true requires multiMain.replicas >= 2" -}}
 {{- end -}}
+{{- if and .Values.multiMain.enabled (not .Values.license.enabled) -}}
+{{- $errs = append $errs "multiMain.enabled=true requires license.enabled=true. Multi-main is an n8n Enterprise feature. Set license.activationKey or license.existingSecret.name, or set license.enabled=true alone if the licence reaches n8n another way." -}}
+{{- end -}}
+{{/* Mains only coordinate in multi-main; without it, every main acts as leader and the instance splits. */}}
+{{- if and (gt (int .Values.replicaCount) 1) (not .Values.multiMain.enabled) -}}
+{{- $errs = append $errs "replicaCount > 1 requires multiMain.enabled=true. Without multi-main, each extra main runs schedules and triggers on its own. Set multiMain.enabled=true, or set replicaCount to 1." -}}
+{{- end -}}
+{{- if and .Values.hpa.main.enabled (gt (int .Values.hpa.main.maxReplicas) 1) (not .Values.multiMain.enabled) -}}
+{{- $errs = append $errs "hpa.main.enabled=true with hpa.main.maxReplicas > 1 requires multiMain.enabled=true. Without multi-main, each extra main runs schedules and triggers on its own. Set multiMain.enabled=true, or set hpa.main.enabled=false." -}}
+{{- end -}}
 
 {{/* --- Database TLS from an existing Secret --- */}}
 {{- $ssl := .Values.database.ssl -}}
@@ -203,6 +345,25 @@ per mistake.
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
 {{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
 {{- end -}}
+{{- if and .Values.taskRunners.enabled ((.Values.taskRunners.probes | default dict).liveness | default dict).enabled -}}
+{{- $healthPort := include "n8n.taskRunnerHealthCheckPort" . -}}
+{{- if and $healthPort (or (not (regexMatch "^[0-9]+$" $healthPort)) (lt (atoi $healthPort) 1) (gt (atoi $healthPort) 65535)) -}}
+{{- $errs = append $errs (printf "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT in taskRunners.extraEnv must be a port number from 1 to 65535, got %q. The sidecar's liveness probe uses it." $healthPort) -}}
+{{- end -}}
+{{- end -}}
+{{- /* A digest on one image only lets a chart upgrade move the other, so the
+runner and n8n drift onto different versions. */ -}}
+{{- if and .Values.taskRunners.enabled .Values.image.digest (not .Values.taskRunners.image.digest) -}}
+{{- $errs = append $errs "image.digest is set but taskRunners.image.digest is not. Pin the runner image by digest too, from the same n8n version, or remove image.digest." -}}
+{{- end -}}
+{{- if and .Values.taskRunners.enabled .Values.taskRunners.image.digest (not .Values.image.digest) -}}
+{{- $errs = append $errs "taskRunners.image.digest is set but image.digest is not. Pin the n8n image by digest too, from the same n8n version, or remove taskRunners.image.digest." -}}
+{{- end -}}
+
+{{/* --- Persistence --- */}}
+{{- if and .Values.persistence.annotations .Values.persistence.existingClaim -}}
+{{- $errs = append $errs (printf "persistence.annotations has no effect with persistence.existingClaim, because the chart does not create that PVC. Annotate %s directly, or remove persistence.annotations." .Values.persistence.existingClaim) -}}
+{{- end -}}
 
 {{/* --- S3 --- */}}
 {{- if .Values.s3.enabled -}}
@@ -226,8 +387,12 @@ per mistake.
 {{- end -}}
 
 {{/* --- Encryption key --- */}}
-{{- if and (not .Values.secretRefs.existingSecret) (eq .Values.secretRefs.env.N8N_ENCRYPTION_KEY "change-me-to-a-long-random-key") -}}
-{{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, or provide secretRefs.existingSecret with your own Secret" -}}
+{{- $encryptionKeyFile := .Values.secretRefs.env.N8N_ENCRYPTION_KEY_FILE | default "" -}}
+{{- if and $encryptionKeyFile (not (hasPrefix "/" $encryptionKeyFile)) -}}
+{{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY_FILE must be an absolute path" -}}
+{{- end -}}
+{{- if and (not $encryptionKeyFile) (not .Values.secretRefs.existingSecret) (eq .Values.secretRefs.env.N8N_ENCRYPTION_KEY "change-me-to-a-long-random-key") -}}
+{{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, provide secretRefs.existingSecret with your own Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY_FILE" -}}
 {{- end -}}
 
 {{/* --- Service account --- */}}
@@ -276,6 +441,21 @@ so workers handle code execution and main pods do not need runner sidecars.
 */}}
 {{- define "n8n.mainTaskRunnersEnabled" -}}
 {{- if and .Values.taskRunners.enabled (not .Values.queueMode.enabled) -}}true{{- end -}}
+{{- end -}}
+
+{{/*
+The public editor URL, rendered as N8N_EDITOR_BASE_URL and printed by NOTES.txt.
+editor.url wins. The ingress fallback uses https://, which assumes TLS ends at
+the ingress or in front of it. Empty when no public URL is configured.
+*/}}
+{{- define "n8n.editorBaseUrl" -}}
+{{- if .Values.editor.url -}}
+{{ .Values.editor.url }}
+{{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
+https://{{ (index .Values.ingress.hosts 0).host }}
+{{- else if and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString)) -}}
+{{ .Values.webhook.url }}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -338,4 +518,11 @@ Call with the root context and the keda.<component> values, e.g.
 {{- if $annotations -}}
 {{- toYaml $annotations -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Main pod replica count: multiMain.replicas under multi-main, otherwise replicaCount.
+*/}}
+{{- define "n8n.mainReplicas" -}}
+{{- ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled -}}
 {{- end -}}

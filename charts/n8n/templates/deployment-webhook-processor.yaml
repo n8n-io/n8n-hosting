@@ -40,14 +40,9 @@ spec:
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
-      {{- if .Values.securityContext.enabled }}
+      {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "webhookProcessor") }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- . | nindent 8 }}
       {{- end }}
 
       {{- with .Values.dnsPolicy }}
@@ -69,15 +64,14 @@ spec:
 
       containers:
         - name: n8n-webhook-processor
-          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
+          image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["n8n"]
           args: ["webhook"]
+          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "webhookProcessor") }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- . | nindent 12 }}
+          {{- end }}
 
           {{- if .Values.lifecycle.webhookProcessor.preStop.enabled }}
           lifecycle:
@@ -136,26 +130,7 @@ spec:
             {{- end }}
 
             # ----------------- Core n8n secrets -----------------
-            - name: N8N_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_ENCRYPTION_KEY
-            - name: N8N_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_HOST
-            - name: N8N_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_PORT
-            - name: N8N_PROTOCOL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_PROTOCOL
+            {{- include "n8n.coreSecretsEnv" . | nindent 12 }}
 
             # S3 External Storage
             {{- include "n8n.s3Env" . | nindent 12 }}

@@ -5,6 +5,11 @@ image:
   # chart release was built and tested against.
   # Set explicitly to run a different n8n version.
   tag: ""
+  # Pin the image by digest, e.g. "sha256:3f1c...". When set, the image is
+  # pulled as repository@digest and tag is ignored. The chart never fills
+  # this in: the weekly n8n bump moves appVersion only, so a pinned digest
+  # stays on the image you chose until you change it.
+  digest: ""
   pullPolicy: IfNotPresent
 
 # ----- Image pull secrets -----
@@ -77,7 +82,7 @@ webhookProcessor:
   #     value: "debug"
   extraEnv: []
 
-# ----- Multi-main (optional, requires queue mode) -----
+# ----- Multi-main (optional, requires queue mode and license.enabled) -----
 multiMain:
   enabled: false
   replicas: 2
@@ -107,6 +112,12 @@ taskRunners:
     # Leave empty to automatically use the same tag as the main n8n image
     # Set explicitly only if you need a different version (not recommended)
     tag: ""
+    # Pin the runner image by digest, e.g. "sha256:9a2b...". When set, tag is
+    # ignored. The runner is a separate image, so image.digest does not
+    # apply here. With task runners enabled, set both digests or neither, from
+    # the same n8n version; the render fails otherwise. The weekly n8n bump
+    # does not move this digest either.
+    digest: ""
     pullPolicy: IfNotPresent
 
   # Task runner mode (only external mode is supported in this chart)
@@ -158,6 +169,17 @@ taskRunners:
     limits:
       cpu: 500m
       memory: 512Mi
+  # Liveness probe against the launcher's health endpoint in the sidecar.
+  # It uses port 5680, or N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT when you set
+  # it in extraEnv.
+  probes:
+    liveness:
+      enabled: true
+      path: /healthz
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 30
+      failureThreshold: 6
 
   # Additional environment variables for task runners
   extraEnv: []
@@ -182,6 +204,7 @@ strategy: {}
 podLabels: {}
 
 # ----- Main replicas (when multi-main is disabled) -----
+# Keep this at 1. To run several mains, enable multiMain and set multiMain.replicas.
 replicaCount: 1
 
 # ----- Service -----
@@ -235,6 +258,11 @@ persistence:
   accessModes: ["ReadWriteOnce"]
   size: 10Gi
   storageClassName: ""
+  # Annotations on the chart-managed PVC only, merged over commonAnnotations.
+  # Useful for backup and retention tooling, e.g. helm.sh/resource-policy: keep.
+  # The render fails if this is set with existingClaim, because the chart does
+  # not create that PVC. Annotate your own claim directly instead.
+  annotations: {}
 
 # ----- Additional Kubernetes resources -----
 # Arbitrary Kubernetes objects rendered as part of this Helm release.
@@ -372,14 +400,63 @@ nodePlacement: {}
 #         effect: NoSchedule
 
 # ----- Security -----
-# Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
-# ~/.n8n/, /tmp/, and other paths at runtime. Enabling it would require
-# extensive volumeMount overrides and is not practical for this workload.
+# Pod securityContext for every n8n pod. When enabled, the chart also sets
+# runAsNonRoot: true and seccompProfile.type: RuntimeDefault.
+# Set enabled: false to drop these defaults.
 securityContext:
   enabled: true
   fsGroup: 1000
   runAsUser: 1000
   runAsGroup: 1000
+
+# Pod securityContext per role. A role block replaces the securityContext
+# defaults above for that role and is rendered as written, so include every
+# field you want, runAsNonRoot and seccompProfile among them.
+# Example for OpenShift, where the restricted SCC assigns the UID and GID:
+#   podSecurityContext:
+#     main:
+#       runAsNonRoot: true
+#       seccompProfile:
+#         type: RuntimeDefault
+podSecurityContext:
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+
+# Container securityContext per container. Your values merge over these
+# defaults, so set only the fields you want to change. Set a field to null
+# to remove it. taskRunner applies to the task-runner sidecar on main and on
+# worker pods.
+# readOnlyRootFilesystem is not set by default. n8n writes to ~/.n8n/, /tmp/
+# and other paths at runtime, so enabling it needs writable volumes mounted
+# at those paths.
+# Example that runs the task runner as nobody (UID and GID 65532), as
+# n8n's task-runner hardening guide recommends:
+#   containerSecurityContext:
+#     taskRunner:
+#       runAsUser: 65532
+#       runAsGroup: 65532
+containerSecurityContext:
+  main:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  worker:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  webhookProcessor:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  taskRunner:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 
 # ----- RBAC ServiceAccount & Network Policy -----
 rbac:
@@ -500,7 +577,7 @@ lifecycle:
 
 # ----- Autoscaling -----
 hpa:
-  # Main pods autoscaling (UI/API pods)
+  # Main pods autoscaling (UI/API pods). When enabled, maxReplicas above 1 requires multiMain.enabled
   main:
     enabled: false
     minReplicas: 1
@@ -566,6 +643,10 @@ keda:
     triggers: []
 
 # ----- Pod Disruption Budget -----
+# Covers main pods. When enabled, it renders only when main runs more than
+# one replica: replicaCount or multiMain.replicas above 1, or hpa.main.enabled
+# with hpa.main.minReplicas above 1. A single main pod can then still be
+# evicted during a node drain.
 pdb:
   enabled: true
   minAvailable: 1
@@ -575,9 +656,11 @@ webhook:
   # Enable webhook functionality
   enabled: true
   # Custom webhook URL base domain (if not set, will use ingress host)
-  # Format: https://your-domain.com (n8n adds /webhook path automatically)
+  # Format: https://your-domain.com, or http:// when n8n is served over plain
+  # HTTP (n8n adds /webhook path automatically)
   # Rendered as N8N_WEBHOOK_URL, which sets the base URL for both test and
-  # production webhooks.
+  # production webhooks. The URL derived from the ingress host always uses
+  # https://. If n8n is served over plain HTTP, set this and editor.url.
   url: ""
   # Timeout for webhook requests in milliseconds
   timeout: 120000
@@ -585,6 +668,15 @@ webhook:
   # Applied to BOTH main and webhook-processor pods. For variables that should
   # only apply to webhook-processor pods, use `webhookProcessor.extraEnv` instead.
   extraEnv: []
+
+# ----- Editor config -----
+editor:
+  # Public base URL of the n8n editor, for example https://n8n.example.com.
+  # Rendered as N8N_EDITOR_BASE_URL. n8n builds OAuth redirect URLs and links
+  # in emails from it. When empty, the chart uses https:// and the first
+  # ingress host, or webhook.url when ingress is off. Set it when n8n is
+  # served over plain HTTP or on a different host.
+  url: ""
 
 # ----- Executions config -----
 executions:
@@ -652,6 +744,10 @@ secretRefs:
   existingSecret: ""
   env:
     N8N_ENCRYPTION_KEY: "change-me-to-a-long-random-key"
+    # Set to an absolute path to use a mounted encryption key file instead.
+    # When set, N8N_ENCRYPTION_KEY is not injected into n8n containers and is left
+    # out of the chart-managed Secret. The path goes to the containers directly.
+    N8N_ENCRYPTION_KEY_FILE: ""
     N8N_HOST: "n8n.example.com"  # <-- Change to your actual domain
     N8N_PORT: "5678"
     N8N_PROTOCOL: "http"

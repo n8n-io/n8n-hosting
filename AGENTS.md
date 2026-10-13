@@ -22,12 +22,17 @@ Most work here is a chart change. Take it in this order:
 1. Read the templates, `values.yaml`, `values.schema.json` and the examples your change touches, and write in the style already there.
 2. Check the change against `charts/n8n/DESIGN.md`.
 3. Render before and after, and read the diff. Anything in it you did not mean to change is a defect in the change, so fix it before opening the PR.
-4. Keep existing installs rendering exactly as they do today. A new value needs a default that changes nothing, unless the change is a deliberate break landing on a major.
+4. Decide whether the change is breaking. A change is breaking when an install that works today needs new values or manual steps to upgrade. Breaking changes land on a major as `feat(chart)!:`.
+   - Breaking: renaming or removing a values key, adding a value with no working default, changing an immutable field (selectors, resource names, StatefulSet `volumeClaimTemplates`), and raising the minimum Kubernetes version.
+   - Not breaking: pods rolling on upgrade, which is how `helm upgrade` works here. A bug fix that makes the chart do what its values already say. A new `fail` that rejects a combination of values that never worked, because those installs were already broken and the message names the fix.
+   - Take care when changing a default. A new default that meaningfully changes a deployment's performance or behaviour, in a way a user would not reasonably expect from a minor or patch release, belongs on a major.
+   - Give a new value a default that leaves today's render unchanged.
+   - Call out a roll or a new `fail` in the PR description so it reaches the changelog.
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.
 6. Cover the rendered behaviour with a `helm-unittest` case in `charts/n8n/tests/`. A new `fail` in `n8n.validate` gets a `failedTemplate` case and a passing case for the valid shape.
 7. Leave `Chart.yaml` `version` alone. release-please owns it.
 
-Ask when the compatibility impact of a change is not something you can work out from the values, the examples and the design principles. Infer the rest.
+Ask when you cannot show that the input a new `fail` rejects never worked, or when a change sits outside the lists in step 4. Infer the rest.
 
 CI is `.github/workflows/ci.yml`. Run the cheap parts locally before pushing:
 

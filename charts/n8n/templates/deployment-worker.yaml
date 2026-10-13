@@ -40,14 +40,9 @@ spec:
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
-      {{- if .Values.securityContext.enabled }}
+      {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "worker") }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- . | nindent 8 }}
       {{- end }}
 
       {{- with .Values.dnsPolicy }}
@@ -69,17 +64,16 @@ spec:
 
       containers:
         - name: n8n-worker
-          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
+          image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["n8n"]
           args:
             - "worker"
             - "--concurrency={{ .Values.queueMode.workerConcurrency }}"
+          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "worker") }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- . | nindent 12 }}
+          {{- end }}
 
           {{- if .Values.lifecycle.worker.preStop.enabled }}
           lifecycle:
@@ -137,11 +131,7 @@ spec:
             {{- include "n8n.licenseEnv" . | nindent 12 }}
 
             # N8N encryption key
-            - name: N8N_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_ENCRYPTION_KEY
+            {{- include "n8n.encryptionKeyEnv" . | nindent 12 }}
 
             # Task Runners Configuration
             {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}
@@ -201,28 +191,7 @@ spec:
 
         {{- if .Values.taskRunners.enabled }}
         # Task Runner sidecar container
-        - name: task-runner
-          image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
-          imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-
-          env:
-            {{- include "n8n.taskRunnerSidecarEnv" . | nindent 12 }}
-
-          resources:
-            {{- toYaml .Values.taskRunners.resources | nindent 12 }}
-
-          {{- if .Values.taskRunners.customConfig.enabled }}
-          volumeMounts:
-            - name: task-runner-config
-              mountPath: /etc/n8n-task-runners.json
-              subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
-              readOnly: true
-          {{- end }}
+        {{- include "n8n.taskRunnerContainer" . | nindent 8 }}
         {{- end }}
 
         {{- with .Values.extraContainers }}

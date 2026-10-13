@@ -19,6 +19,8 @@ concurrency:
 
 jobs:
   release:
+    # A fork inherits this workflow, and it has nothing to publish to.
+    if: github.repository == 'n8n-io/n8n-hosting'
     runs-on: ubuntu-latest
     permissions:
       contents: write
