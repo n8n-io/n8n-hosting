@@ -11,6 +11,11 @@
           "type": "string",
           "description": "n8n image tag. Leave empty to use the chart's appVersion"
         },
+        "digest": {
+          "type": "string",
+          "pattern": "^(sha256:[a-f0-9]{64})?$",
+          "description": "n8n image digest. When set, the image is pulled by digest and tag is ignored"
+        },
         "pullPolicy": {
           "type": "string",
           "enum": ["Always", "IfNotPresent", "Never"]
@@ -84,6 +89,11 @@
               "type": "string",
               "description": "Task runner image tag. Leave empty to use the same tag as the main n8n image"
             },
+            "digest": {
+              "type": "string",
+              "pattern": "^(sha256:[a-f0-9]{64})?$",
+              "description": "Task runner image digest. When set, the runner image is pulled by digest and tag is ignored"
+            },
             "pullPolicy": {
               "type": "string",
               "enum": ["Always", "IfNotPresent", "Never"]
@@ -146,6 +156,25 @@
               "properties": {
                 "cpu": { "type": "string" },
                 "memory": { "type": "string" }
+              }
+            }
+          }
+        },
+        "probes": {
+          "type": "object",
+          "description": "Probes against the launcher's health endpoint in the task-runner sidecar",
+          "additionalProperties": false,
+          "properties": {
+            "liveness": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "path": { "type": "string", "minLength": 1 },
+                "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+                "periodSeconds": { "type": "integer", "minimum": 1 },
+                "timeoutSeconds": { "type": "integer", "minimum": 1 },
+                "failureThreshold": { "type": "integer", "minimum": 1 }
               }
             }
           }
@@ -270,7 +299,12 @@
         "size": { "type": "string", "pattern": "^[0-9]+Gi$" },
         "accessModes": { "type": "array", "items": { "type": "string" } },
         "storageClassName": { "type": "string" },
-        "existingClaim": { "type": "string" }
+        "existingClaim": { "type": "string" },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "default": {}
+        }
       },
       "required": ["enabled"]
     },
@@ -340,6 +374,27 @@
         "runAsUser": { "type": "integer", "minimum": 0 },
         "runAsGroup": { "type": "integer", "minimum": 0 }
       }
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "description": "Pod securityContext per role. A role block replaces securityContext for that role and is rendered as written.",
+      "properties": {
+        "main": { "type": "object" },
+        "worker": { "type": "object" },
+        "webhookProcessor": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "description": "Container securityContext per container. User values merge over the defaults in values.yaml, and a null removes a field. taskRunner applies to the task-runner sidecar on main and worker pods.",
+      "properties": {
+        "main": { "type": "object" },
+        "worker": { "type": "object" },
+        "webhookProcessor": { "type": "object" },
+        "taskRunner": { "type": "object" }
+      },
+      "additionalProperties": false
     },
     "serviceAccount": {
       "type": "object",
@@ -610,6 +665,16 @@
       },
       "required": ["enabled"]
     },
+    "editor": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^(https?://.+)?$",
+          "description": "Public base URL of the editor, rendered as N8N_EDITOR_BASE_URL. Empty uses the first ingress host when configured, otherwise webhook.url when set."
+        }
+      }
+    },
     "license": {
       "type": "object",
       "properties": {
@@ -680,6 +745,16 @@
       "description": "Additional Kubernetes objects rendered as part of the Helm release. Each entry is a map or a YAML string, and is passed through Helm tpl",
       "items": { "type": ["object", "string"] }
     },
+    "extraVolumes": {
+      "type": "array",
+      "description": "Additional volumes for main, worker, and webhook-processor pods",
+      "items": { "type": "object" }
+    },
+    "extraVolumeMounts": {
+      "type": "array",
+      "description": "Additional volume mounts for the n8n container in main, worker, and webhook-processor pods",
+      "items": { "type": "object" }
+    },
     "extraContainers": {
       "type": "array",
       "description": "Additional containers (sidecars) for main, worker, and webhook-processor pods",
@@ -699,6 +774,13 @@
         "existingSecret": { "type": "string" },
         "env": {
           "type": "object",
+          "properties": {
+            "N8N_ENCRYPTION_KEY_FILE": {
+              "type": "string",
+              "pattern": "^(/.*)?$",
+              "description": "Absolute path of a mounted encryption key file. When set, n8n containers read the key from this file instead of N8N_ENCRYPTION_KEY"
+            }
+          },
           "additionalProperties": { "type": "string" }
         }
       }

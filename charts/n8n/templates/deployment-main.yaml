@@ -12,7 +12,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled }}
+  replicas: {{ include "n8n.mainReplicas" . }}
   revisionHistoryLimit: 3
   {{- with .Values.strategy }}
   strategy:
@@ -38,14 +38,9 @@ spec:
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
-      {{- if .Values.securityContext.enabled }}
+      {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "main") }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- . | nindent 8 }}
       {{- end }}
 
       {{- with .Values.dnsPolicy }}
@@ -71,13 +66,12 @@ spec:
 
       containers:
         - name: n8n-main
-          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
+          image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "main") }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- . | nindent 12 }}
+          {{- end }}
 
           {{- if .Values.lifecycle.main.preStop.enabled }}
           lifecycle:
@@ -205,28 +199,7 @@ spec:
 
         {{- if include "n8n.mainTaskRunnersEnabled" . }}
         # Task Runner sidecar container
-        - name: task-runner
-          image: "{{ .Values.taskRunners.image.repository }}:{{ include "n8n.taskRunnerImageTag" . }}"
-          imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-
-          env:
-            {{- include "n8n.taskRunnerSidecarEnv" . | nindent 12 }}
-
-          resources:
-            {{- toYaml .Values.taskRunners.resources | nindent 12 }}
-
-          {{- if .Values.taskRunners.customConfig.enabled }}
-          volumeMounts:
-            - name: task-runner-config
-              mountPath: /etc/n8n-task-runners.json
-              subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
-              readOnly: true
-          {{- end }}
+        {{- include "n8n.taskRunnerContainer" . | nindent 8 }}
         {{- end }}
 
         {{- with .Values.extraContainers }}

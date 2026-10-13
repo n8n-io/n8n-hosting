@@ -1,0 +1,151 @@
+# A digest, when set, replaces the tag in the image reference. The n8n and
+# runner images are separate, so each has its own digest. With task runners
+# enabled, the chart pins both or neither.
+suite: 'image digest'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  image.tag: "2.40.0"
+  webhookProcessor.enabled: true
+  taskRunners.enabled: true
+tests:
+  - it: renders the tag form on every n8n container when no digest is set
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.n8n.io/n8nio/n8n:2.40.0
+
+  - it: renders the digest form on every n8n container when image.digest is set
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      taskRunners.image.digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.n8n.io/n8nio/n8n@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+  - it: renders the n8n digest form without task runners
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.enabled: false
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.n8n.io/n8nio/n8n@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+  - it: renders the runner tag form on the worker when no digest is set
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners:2.40.0
+
+  - it: renders the runner digest form on the worker when taskRunners.image.digest is set
+    template: templates/deployment-worker.yaml
+    set:
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      taskRunners.image.digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+  - it: renders the runner tag form on main outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      webhookProcessor.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners:2.40.0
+
+  - it: renders the runner digest form on main outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      webhookProcessor.enabled: false
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      taskRunners.image.digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].image
+          value: n8nio/runners@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+  - it: rejects image.digest without taskRunners.image.digest when task runners are enabled
+    template: templates/deployment-main.yaml
+    set:
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    asserts:
+      - failedTemplate:
+          errorMessage: "image.digest is set but taskRunners.image.digest is not. Pin the runner image by digest too, from the same n8n version, or remove image.digest."
+
+  - it: rejects taskRunners.image.digest without image.digest when task runners are enabled
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.image.digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    asserts:
+      - failedTemplate:
+          errorMessage: "taskRunners.image.digest is set but image.digest is not. Pin the n8n image by digest too, from the same n8n version, or remove taskRunners.image.digest."
+
+  - it: rejects a digest without the sha256 prefix
+    template: templates/deployment-main.yaml
+    set:
+      image.digest: "2.40.0"
+    asserts:
+      - failedTemplate:
+          errorPattern: "/image/digest"
+
+  - it: rejects a sha256 digest of the wrong length
+    template: templates/deployment-main.yaml
+    set:
+      image.digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    asserts:
+      - failedTemplate:
+          errorPattern: "/image/digest"
+
+  - it: rejects a sha256 digest that is not lower-case hex
+    template: templates/deployment-main.yaml
+    set:
+      image.digest: sha256:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
+    asserts:
+      - failedTemplate:
+          errorPattern: "/image/digest"
+
+  - it: rejects a runner digest without the sha256 prefix
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.image.digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    asserts:
+      - failedTemplate:
+          errorPattern: "/taskRunners/image/digest"
+
+  - it: rejects a runner sha256 digest of the wrong length
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.image.digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    asserts:
+      - failedTemplate:
+          errorPattern: "/taskRunners/image/digest"
+
+  - it: rejects a runner sha256 digest that is not lower-case hex
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.image.digest: sha256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+    asserts:
+      - failedTemplate:
+          errorPattern: "/taskRunners/image/digest"

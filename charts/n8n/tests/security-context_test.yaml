@@ -1,0 +1,232 @@
+# A role's podSecurityContext block replaces the chart-wide securityContext
+# for that role. containerSecurityContext defaults live in values.yaml, so
+# Helm merges user values over them and a null removes a field.
+suite: 'securityContext: per-role overrides'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  database.type: postgresdb
+  database.useExternal: true
+  database.host: postgres.example.com
+  queueMode.enabled: true
+  redis.host: redis.example.com
+  webhookProcessor.enabled: true
+tests:
+  - it: renders the chart-wide pod securityContext by default
+    template: templates/deployment-main.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            fsGroup: 1000
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+
+  - it: replaces the main pod securityContext with the role block
+    template: templates/deployment-main.yaml
+    set:
+      podSecurityContext.main:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+
+  - it: replaces the worker pod securityContext with the role block
+    template: templates/deployment-worker.yaml
+    set:
+      podSecurityContext.worker.supplementalGroups: [3000]
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            supplementalGroups: [3000]
+
+  - it: replaces the webhook processor pod securityContext with the role block
+    template: templates/deployment-webhook-processor.yaml
+    set:
+      podSecurityContext.webhookProcessor.runAsUser: 2000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsUser: 2000
+
+  - it: applies a role's pod block to that role only
+    template: templates/deployment-worker.yaml
+    set:
+      podSecurityContext.main.runAsUser: 2000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+
+  - it: renders a role's pod block when the chart defaults are disabled
+    template: templates/deployment-main.yaml
+    set:
+      securityContext.enabled: false
+      podSecurityContext.main.runAsNonRoot: true
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+
+  - it: renders no pod securityContext when the chart defaults are disabled and no role block is set
+    template: templates/deployment-webhook-processor.yaml
+    set:
+      securityContext.enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.securityContext
+
+  - it: merges the main container override over the defaults
+    template: templates/deployment-main.yaml
+    set:
+      containerSecurityContext.main.readOnlyRootFilesystem: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-main")].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+
+  - it: merges the worker container override over the defaults
+    template: templates/deployment-worker.yaml
+    set:
+      containerSecurityContext.worker.runAsUser: 2000
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsUser: 2000
+
+  - it: merges the webhook processor container override over the defaults
+    template: templates/deployment-webhook-processor.yaml
+    set:
+      containerSecurityContext.webhookProcessor.capabilities.add: [NET_BIND_SERVICE]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-webhook-processor")].securityContext.capabilities
+          value:
+            add: [NET_BIND_SERVICE]
+            drop: [ALL]
+
+  - it: overrides a container default with true
+    template: templates/deployment-main.yaml
+    set:
+      containerSecurityContext.main.allowPrivilegeEscalation: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-main")].securityContext.allowPrivilegeEscalation
+          value: true
+
+  - it: applies the task runner override to the worker sidecar and not to n8n
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.authToken.existingSecret: n8n-runner-token
+      containerSecurityContext.taskRunner:
+        runAsUser: 65532
+        runAsGroup: 65532
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsUser: 65532
+            runAsGroup: 65532
+      - notExists:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext.runAsUser
+
+  - it: applies the task runner override to the main sidecar in standalone mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      webhookProcessor.enabled: false
+      taskRunners.enabled: true
+      taskRunners.authToken.existingSecret: n8n-runner-token
+      containerSecurityContext.taskRunner.runAsUser: 65532
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].securityContext.runAsUser
+          value: 65532
+
+  - it: removes a container default set to null
+    template: templates/deployment-main.yaml
+    values:
+      - values/security-context-null.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-main")].securityContext
+          value:
+            capabilities:
+              drop: [ALL]
+
+  - it: renders no container securityContext when every field is set to null
+    template: templates/deployment-worker.yaml
+    values:
+      - values/security-context-null.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
+
+  - it: renders the hardened container default when containerSecurityContext is missing
+    template: templates/deployment-worker.yaml
+    set:
+      containerSecurityContext: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+
+  - it: renders the hardened container default for a role missing from the values
+    template: templates/deployment-worker.yaml
+    set:
+      containerSecurityContext.worker: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+
+  - it: rejects an unknown role key
+    template: templates/deployment-main.yaml
+    set:
+      podSecurityContext.webhook.runAsUser: 2000
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'webhook' not allowed"
+
+  - it: rejects a role value that is not a map
+    template: templates/deployment-main.yaml
+    set:
+      podSecurityContext.main: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/podSecurityContext/main'"
