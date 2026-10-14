@@ -6,7 +6,7 @@ The official Helm chart for [n8n](https://n8n.io), the workflow automation platf
 
 We release a new chart version every week. Each Wednesday, the day after n8n's weekly release, the chart moves to the latest `stable` n8n version.
 
-Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [changelog](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) to see which n8n version a release carries.
+Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [release notes](https://github.com/n8n-io/n8n-hosting/releases) to see which n8n version a release carries.
 
 Chart 1.x installs n8n 2.x. It is maintained on the [`release/n8n-2.x`](https://github.com/n8n-io/n8n-hosting/tree/release/n8n-2.x) branch, and its weekly releases stay on n8n 2.x. Chart 2.0 is being built on `main` and is published as release candidates, `2.0.0-rc.1`, `2.0.0-rc.2` and so on. Helm skips release candidates unless you pass `--devel` or name the exact version, so `helm install` and `helm upgrade` keep resolving to the latest 1.x release.
 
