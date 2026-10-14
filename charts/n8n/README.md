@@ -437,6 +437,8 @@ See [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/char
 
 Chart version bumps are automated via Release Please. Check the [CHANGELOG](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) for breaking changes before upgrading.
 
+Before you move to a new major version, read [UPGRADING.md](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md). It lists the values you must change.
+
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml
 ```

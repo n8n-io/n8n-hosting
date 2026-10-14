@@ -13,7 +13,7 @@ Official deployment artefacts for self-hosted n8n. This file is for AI agents wo
 
 The individual calls made under those principles live one per file in `charts/n8n/decisions/`, numbered and named for the call (`0001-chart-versioning.md`). Write one when a change settles a question a reviewer could reasonably reopen later, and keep it to context, decision, consequences, the date and a link to the PR. They are public and they version with the chart, so a reviewer asking why the chart version doesn't follow n8n's gets a file to read rather than a Linear thread to reconstruct. `charts/n8n/decisions/README.md` has the shape.
 
-A decision that changes what a customer sees also gets a line in `charts/n8n/UPGRADING.md` (the file does not exist yet; DEP-57 creates it), linking back to the decision. Customers need the what and the how, and the reasoning stays here for anyone who goes looking for it.
+A decision that changes what a customer sees also gets a line in `charts/n8n/UPGRADING.md`, under the heading for its topic, linking back to the decision. Customers need the what and the how, and the reasoning stays here for anyone who goes looking for it.
 
 ## Changing the chart
 
@@ -27,6 +27,7 @@ Most work here is a chart change. Take it in this order:
    - Not breaking: pods rolling on upgrade, which is how `helm upgrade` works here. A bug fix that makes the chart do what its values already say. A new `fail` that rejects a combination of values that never worked, because those installs were already broken and the message names the fix.
    - Take care when changing a default. A new default that meaningfully changes a deployment's performance or behaviour, in a way a user would not reasonably expect from a minor or patch release, belongs on a major.
    - Give a new value a default that leaves today's render unchanged.
+   - When you remove or rename a values key, add it to `n8n.retiredKeys` in `_helpers.tpl` with its replacement, in the same change. Keep it declared in `values.schema.json`, described as retired.
    - Call out a roll or a new `fail` in the PR description so it reaches the changelog.
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.
 6. Cover the rendered behaviour with a `helm-unittest` case in `charts/n8n/tests/`. A new `fail` in `n8n.validate` gets a `failedTemplate` case and a passing case for the valid shape.
