@@ -171,8 +171,7 @@ pods (queue mode) so both sidecars stay the same.
   securityContext:
     {{- . | nindent 4 }}
   {{- end }}
-  env:
-    {{- include "n8n.taskRunnerSidecarEnv" . | nindent 4 }}
+  {{- include "n8n.containerEnv" (dict "root" . "component" "taskRunner") | trim | nindent 2 }}
   resources:
     {{- toYaml .Values.taskRunners.resources | nindent 4 }}
   {{- $probes := .Values.taskRunners.probes | default dict }}
@@ -199,12 +198,17 @@ pods (queue mode) so both sidecars stay the same.
 {{/*
 Port of the launcher's health endpoint in the task-runner sidecar. The launcher
 reads N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT, so the probe follows it when
-taskRunners.extraEnv sets it, and use the launcher's default otherwise. Empty
-when it comes from valueFrom, which the chart cannot read, so the probe is
-left out rather than pointed at the wrong port.
+env.taskRunner or taskRunners.extraEnv sets it, and uses the launcher's default
+otherwise. Empty when it comes from valueFrom, which the chart cannot read, so
+the probe is left out rather than pointed at the wrong port.
 */}}
 {{- define "n8n.taskRunnerHealthCheckPort" -}}
 {{- $port := "5680" -}}
+{{- with index (.Values.env | default dict) "taskRunner" | default dict -}}
+{{- if hasKey . "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT" -}}
+{{- $port = include "n8n.envValue" (get . "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT") -}}
+{{- end -}}
+{{- end -}}
 {{- range .Values.taskRunners.extraEnv -}}
 {{- if eq (.name | default "") "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT" -}}
 {{- $port = .value | default "" | toString -}}
@@ -439,6 +443,37 @@ runner and n8n drift onto different versions. */ -}}
 {{- end -}}
 {{- if and (not $encryptionKeyFile) (not .Values.secretRefs.existingSecret) (eq .Values.secretRefs.env.N8N_ENCRYPTION_KEY "change-me-to-a-long-random-key") -}}
 {{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, provide secretRefs.existingSecret with your own Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY_FILE" -}}
+{{- end -}}
+
+{{/* --- Settings the chart no longer reads --- */}}
+{{- range $k := list "N8N_HOST" "N8N_PROTOCOL" -}}
+{{- if hasKey $.Values.secretRefs.env $k -}}
+{{- $errs = append $errs (printf "secretRefs.env.%s is no longer read. n8n builds its public URLs from editor.url and webhook.url. Remove it from secretRefs.env, and set it in env.shared if you still need it." $k) -}}
+{{- end -}}
+{{- end -}}
+{{- if hasKey .Values.secretRefs.env "N8N_PORT" -}}
+{{- $errs = append $errs "secretRefs.env.N8N_PORT is no longer read. The chart sets N8N_PORT from service.port. Remove it from secretRefs.env." -}}
+{{- end -}}
+{{- if hasKey .Values.webhook "timeout" -}}
+{{- $errs = append $errs "webhook.timeout has no effect: n8n has no setting for a webhook timeout. Remove it from your values." -}}
+{{- end -}}
+
+{{/* --- Environment --- */}}
+{{- range include "n8n.validateEnv" . | fromJsonArray -}}
+{{- $errs = append $errs . -}}
+{{- end -}}
+{{- /* n8n takes a worker's concurrency from N8N_CONCURRENCY_PRODUCTION_LIMIT
+when it is set, and ignores the --concurrency flag. */ -}}
+{{- if and .Values.queueMode.enabled .Values.queueMode.workerConcurrency -}}
+{{- $limit := .Values.executions.concurrency.productionLimit -}}
+{{- if and $limit (ne ($limit | int) -1) -}}
+{{- $errs = append $errs "queueMode.workerConcurrency and executions.concurrency.productionLimit both set each worker's concurrency, and n8n uses productionLimit. Remove one of them." -}}
+{{- end -}}
+{{- range include "n8n.userEnv" (dict "root" . "component" "worker") | fromJsonArray -}}
+{{- if and (eq .name "N8N_CONCURRENCY_PRODUCTION_LIMIT") (not (hasPrefix "chartEnvOverrides." .source)) -}}
+{{- $errs = append $errs (printf "queueMode.workerConcurrency and N8N_CONCURRENCY_PRODUCTION_LIMIT in %s both set each worker's concurrency, and n8n uses the variable. Remove one of them." .source) -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/* --- Service account --- */}}

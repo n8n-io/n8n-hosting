@@ -1,0 +1,50 @@
+# Settings the chart no longer reads fail the render and name what to do
+# instead, so an upgraded values file never carries a setting that does
+# nothing.
+suite: 'validate: settings the chart no longer reads'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: refuses secretRefs.env.N8N_HOST
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_HOST: n8n.example.com
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_HOST is no longer read. n8n builds its public URLs from editor.url and webhook.url. Remove it from secretRefs.env, and set it in env.shared if you still need it.'
+
+  - it: refuses secretRefs.env.N8N_PROTOCOL
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_PROTOCOL: http
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_PROTOCOL is no longer read. n8n builds its public URLs from editor.url and webhook.url. Remove it from secretRefs.env, and set it in env.shared if you still need it.'
+
+  - it: refuses secretRefs.env.N8N_PORT
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_PORT: "5678"
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_PORT is no longer read. The chart sets N8N_PORT from service.port. Remove it from secretRefs.env.'
+
+  - it: accepts N8N_HOST and N8N_PROTOCOL in env.shared
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_HOST: n8n.example.com
+      env.shared.N8N_PROTOCOL: https
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: refuses webhook.timeout
+    template: templates/deployment-main.yaml
+    set:
+      webhook.timeout: 120000
+    asserts:
+      - failedTemplate:
+          errorMessage: 'webhook.timeout has no effect: n8n has no setting for a webhook timeout. Remove it from your values.'

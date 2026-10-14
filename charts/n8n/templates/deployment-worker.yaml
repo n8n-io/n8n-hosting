@@ -23,7 +23,7 @@ spec:
       app.kubernetes.io/component: worker
   template:
     metadata:
-      {{- $podAnns := merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
+      {{- $podAnns := merge (dict "checksum/config" (include "n8n.envChecksum" (dict "root" $ "component" "worker")) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
       annotations:
         {{- toYaml $podAnns | nindent 8 }}
       labels:
@@ -72,7 +72,9 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "worker"
-            - "--concurrency={{ .Values.queueMode.workerConcurrency }}"
+            {{- with .Values.queueMode.workerConcurrency }}
+            - "--concurrency={{ . }}"
+            {{- end }}
           {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "worker") }}
           securityContext:
             {{- . | nindent 12 }}
@@ -86,72 +88,7 @@ spec:
                   {{- toYaml .Values.lifecycle.worker.preStop.command | nindent 18 }}
           {{- end }}
 
-          env:
-            # Shared configuration from ConfigMap
-            {{- include "n8n.sharedConfigMapEnv" . | nindent 12 }}
-
-            # Webhook URL for resume/waiting URLs
-            {{- include "n8n.workerConfigMapEnv" . | nindent 12 }}
-
-            # Database password (secret)
-            - name: DB_POSTGRESDB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.database.passwordSecret.name }}
-                  key: {{ .Values.database.passwordSecret.key }}
-
-            # Redis password (secret)
-            {{- with .Values.redis.passwordSecret }}
-            {{- if and .name .key }}
-            - name: QUEUE_BULL_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .name }}
-                  key: {{ .key }}
-            {{- end }}
-            {{- end }}
-
-            # Health check settings (not in ConfigMap as it's optional)
-            {{- if .Values.redis.healthCheck.enabled }}
-            - name: QUEUE_HEALTH_CHECK_ACTIVE
-              value: "true"
-            - name: QUEUE_HEALTH_CHECK_PORT
-              value: "{{ .Values.redis.healthCheck.port }}"
-            {{- end }}
-
-            # Redis-specific extra environment variables
-            {{- with .Values.redis.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-
-            # S3 External Storage
-            {{- include "n8n.s3Env" . | nindent 12 }}
-
-            # Executions Configuration
-            {{- include "n8n.executionsEnv" . | nindent 12 }}
-
-            # License Configuration
-            {{- include "n8n.licenseEnv" . | nindent 12 }}
-
-            # N8N encryption key
-            {{- include "n8n.encryptionKeyEnv" . | nindent 12 }}
-
-            # Task Runners Configuration
-            {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}
-
-            {{- with .Values.config.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-
-            {{- with .Values.queueMode.workerExtraEnv }}
-            # Worker-specific extra environment variables
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-
-          {{- with .Values.config.extraEnvFrom }}
-          envFrom:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "n8n.containerEnv" (dict "root" $ "component" "worker") | trim | nindent 10 }}
 
           # Worker Health Probes
           {{- with .Values.probes.worker.startup }}

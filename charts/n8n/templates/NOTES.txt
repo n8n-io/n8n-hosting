@@ -49,6 +49,21 @@ Deployment Configuration:
   - Storage: S3 ({{ .Values.s3.bucket.name }})
 {{- end }}
 
+{{- $overrides := list }}
+{{- range $c, $m := (.Values.chartEnvOverrides | default dict) }}
+{{- range $k, $_ := $m }}
+{{- $overrides = append $overrides (printf "chartEnvOverrides.%s.%s" $c $k) }}
+{{- end }}
+{{- end }}
+{{- if $overrides }}
+
+These variables replace values the chart sets. Remove each override once its
+value can express what you need:
+{{- range $overrides }}
+  - {{ . }}
+{{- end }}
+{{- end }}
+
 {{- if .Values.database.ssl.key }}
 
 WARNING: database.ssl.key is set, but the chart ignores it. To supply a client

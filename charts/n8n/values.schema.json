@@ -203,7 +203,11 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "workerReplicaCount": { "type": "integer", "minimum": 0 },
-        "workerConcurrency": { "type": "integer", "minimum": 1 },
+        "workerConcurrency": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Jobs each worker runs at once, passed as --concurrency. Null uses n8n's default."
+        },
         "workerExtraEnv": {
           "type": "array",
           "items": {
@@ -665,12 +669,6 @@
         "enabled": { "type": "boolean" },
         "url": { "type": "string" },
         "testUrl": { "type": "string" },
-        "timeout": { 
-          "type": "integer", 
-          "minimum": 1000,
-          "maximum": 600000,
-          "description": "Webhook timeout in milliseconds (1s to 10min)"
-        },
         "extraEnv": { 
           "type": "array",
           "items": {
@@ -779,6 +777,97 @@
       "type": "array",
       "description": "Additional containers (sidecars) for main, worker, and webhook-processor pods",
       "items": { "type": "object" }
+    },
+    "env": {
+      "type": "object",
+      "description": "Environment variables per component, rendered into ConfigMaps and loaded with envFrom.",
+      "properties": {
+        "shared": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "main": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "worker": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "taskRunner": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        }
+      },
+      "additionalProperties": false
+    },
+    "chartEnvOverrides": {
+      "type": "object",
+      "description": "Replacements for variables the chart sets, per component.",
+      "properties": {
+        "shared": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "main": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "worker": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "taskRunner": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        }
+      },
+      "additionalProperties": false
+    },
+    "envFrom": {
+      "type": "object",
+      "description": "ConfigMaps and Secrets loaded whole with envFrom, per component, after the chart's ConfigMaps.",
+      "properties": {
+        "shared": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "main": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "worker": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "webhookProcessor": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "taskRunner": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "additionalProperties": false
     },
     "config": {
       "type": "object",

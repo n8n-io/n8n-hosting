@@ -90,7 +90,7 @@ All three use the same n8n container image, differentiated by command/args.
 
 ## Secret Management
 
-1. **Core secrets** (`secretRefs.existingSecret`): `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL`, plus `N8N_ENCRYPTION_KEY` in env mode. For file mode, mount the encryption key file and set its path in `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`
+1. **Encryption key** (`secretRefs.existingSecret`): a Secret with the key `N8N_ENCRYPTION_KEY`. The chart reads only that key, so other keys in the Secret are ignored. For file mode, mount the encryption key file and set its path in `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`
 2. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
 3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
@@ -122,7 +122,7 @@ extraVolumeMounts:
     readOnly: true
 ```
 
-In file mode, `n8n-core-secrets` only needs the other core keys (`N8N_HOST`, `N8N_PORT`, and `N8N_PROTOCOL`). The file path is taken from Helm values even when `secretRefs.existingSecret` is set; Helm cannot inspect an externally managed Secret to select the mode automatically. Global extra volume mounts are not added to task-runner or user-supplied sidecars, which do not need the n8n encryption key; declare sidecar mounts explicitly if needed.
+In file mode, the chart reads nothing from `n8n-core-secrets`. The file path is taken from Helm values even when `secretRefs.existingSecret` is set; Helm cannot inspect an externally managed Secret to select the mode automatically. Global extra volume mounts are not added to task-runner or user-supplied sidecars, which do not need the n8n encryption key; declare sidecar mounts explicitly if needed.
 
 When the path is set, it wins, and any `N8N_ENCRYPTION_KEY` in values is ignored. The containers receive the path directly, so the chart-managed Secret never stores it. In file mode that Secret also leaves out `N8N_ENCRYPTION_KEY`, because no container reads it.
 
@@ -188,6 +188,47 @@ serviceAccount:
 
 To use the namespace's default ServiceAccount, set `name: ""`. If you set `create: false` without also changing `name` from the chart default `"n8n"`, rendering will fail with a clear error — this prevents pods from being wired to a ServiceAccount that was never created.
 
+## Environment variables
+
+Set n8n environment variables per component, as flat maps:
+
+```yaml
+env:
+  shared:            # main, worker and webhook-processor pods
+    N8N_LOG_LEVEL: info
+    NO_PROXY: "localhost,.svc,.cluster.local"
+  worker:            # worker pods only, over shared
+    N8N_LOG_LEVEL: debug
+  main: {}
+  webhookProcessor: {}
+  taskRunner: {}     # the task-runner sidecar only; shared does not reach it
+```
+
+The chart renders each map into a ConfigMap, together with the variables it computes from values, and loads them with `envFrom`. Maps merge across values files, so an overlay only needs the variables it changes. Values can be strings, numbers or booleans.
+
+Some variables are set by the chart from a value, for example `DB_POSTGRESDB_HOST` from `database.host` and `N8N_PORT` from `service.port`. Setting one of these in a map fails the render, and the error names the value to set instead. The check covers only what the chart sets in your configuration, so `AWS_ACCESS_KEY_ID` is free to use when S3 is off.
+
+To replace a variable the chart sets, when no value can express what you need, use `chartEnvOverrides` with the same component keys. It accepts only variables the chart sets in your configuration, and not ones it reads from a Secret. `NOTES.txt` lists the overrides in effect.
+
+To load whole ConfigMaps or Secrets, for example from External Secrets, list them under `envFrom` with the same component keys:
+
+```yaml
+envFrom:
+  shared:
+    - secretRef:
+        name: n8n-smtp
+```
+
+The order, from lowest to highest precedence:
+
+1. `config.extraEnvFrom`
+2. The chart's shared ConfigMap: computed variables, `env.shared`, `chartEnvOverrides.shared`
+3. The chart's component ConfigMap: computed variables, `env.<component>`, `chartEnvOverrides.<component>`
+4. `envFrom.shared`, then `envFrom.<component>`
+5. The container's `env` list: variables read from a Secret, then the `extraEnv` lists
+
+Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The chart cannot see inside them, so it cannot check for clashes, and changing them does not restart pods.
+
 ## Key Configuration
 
 | Value | Description | Default |
@@ -198,7 +239,10 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `taskRunners.image.digest` | Pin the runner image by digest; replaces `taskRunners.image.tag` when set. With task runners enabled, set both digests or neither | `""` |
 | `imagePullSecrets` | Existing pull Secrets for private image registries, as a list of `- name: <secret>` entries | `[]` |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
-| `queueMode.workerConcurrency` | Jobs per worker | `10` |
+| `queueMode.workerConcurrency` | Jobs per worker, passed as `--concurrency`. Empty uses n8n's default of 10. Fails together with `executions.concurrency.productionLimit`, which n8n uses for workers instead | `null` |
+| `env.<component>` | Environment variables for `shared`, `main`, `worker`, `webhookProcessor` or `taskRunner` | `{}` |
+| `chartEnvOverrides.<component>` | Replacements for variables the chart sets | `{}` |
+| `envFrom.<component>` | ConfigMaps and Secrets loaded whole | `[]` |
 | `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
 | `taskRunners.enabled` | Task runner sidecars | `false` |
@@ -377,7 +421,7 @@ kubectl create secret generic n8n-runner-token \
   --from-literal=auth-token=$(openssl rand -base64 32)
 ```
 
-**Health probe:** the sidecar has a liveness probe on the launcher's health endpoint, `/healthz` on port `5680`. The launcher answers this endpoint itself, so a runner busy with a long task does not fail the probe. Kubernetes restarts the sidecar only when the launcher stops responding. The launcher already restarts a runner that stops responding. Tune or disable the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `taskRunners.extraEnv`, the probe uses that port. Set it with `value`, because the chart cannot read a `valueFrom` reference and leaves the probe out in that case.
+**Health probe:** the sidecar has a liveness probe on the launcher's health endpoint, `/healthz` on port `5680`. The launcher answers this endpoint itself, so a runner busy with a long task does not fail the probe. Kubernetes restarts the sidecar only when the launcher stops responding. The launcher already restarts a runner that stops responding. Tune or disable the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `env.taskRunner` or `taskRunners.extraEnv`, the probe uses that port. Set it with `value`, because the chart cannot read a `valueFrom` reference and leaves the probe out in that case.
 
 See [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
 

@@ -54,15 +54,18 @@ commonAnnotations: {}
 queueMode:
   enabled: true
   workerReplicaCount: 2
-  # Worker concurrency (number of jobs each worker can handle simultaneously)
-  workerConcurrency: 10
+  # Jobs each worker runs at once, passed as --concurrency. Leave empty to use
+  # n8n's default of 10. n8n also takes this from
+  # executions.concurrency.productionLimit, which wins over the flag, so set
+  # one or the other; the render fails when both are set.
+  workerConcurrency: null
   # Additional environment variables injected into worker pods only.
   # Use for worker-specific tuning that must not affect main or webhook-processor pods.
   # For env vars that should apply to all pods, use `config.extraEnv` instead.
   # Example:
   # workerExtraEnv:
-  #   - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
-  #     value: "10"
+  #   - name: N8N_LOG_LEVEL
+  #     value: "debug"
   workerExtraEnv: []
 
 # ----- Webhook processors (optional scaling layer) -----
@@ -682,8 +685,6 @@ webhook:
   # production webhooks. The URL derived from the ingress host always uses
   # https://. If n8n is served over plain HTTP, set this and editor.url.
   url: ""
-  # Timeout for webhook requests in milliseconds
-  timeout: 120000
   # Additional webhook-related environment variables.
   # Applied to BOTH main and webhook-processor pods. For variables that should
   # only apply to webhook-processor pods, use `webhookProcessor.extraEnv` instead.
@@ -719,9 +720,62 @@ executions:
     softDeleteInterval: 60                      # <-- Soft delete interval in minutes
   # Concurrency settings
   concurrency:
-    productionLimit: -1                         # <-- Max concurrent production executions (-1 = disabled)
+    # Max concurrent production executions (-1 = disabled). In queue mode n8n
+    # applies it to each worker instead of queueMode.workerConcurrency.
+    productionLimit: -1
   # Additional execution environment variables
   extraEnv: []
+
+# ----- Environment variables -----
+# Variables for each component, as flat maps of NAME: value. The chart renders
+# them into one ConfigMap per component, loaded with envFrom.
+#   shared:           main, worker and webhook-processor pods
+#   main, worker, webhookProcessor: that component only, over shared
+#   taskRunner:       the task-runner sidecar only; shared does not reach it
+# Values can be strings, numbers or booleans.
+#
+# A variable the chart already sets from a value (DB_POSTGRESDB_HOST from
+# database.host, for example) fails the render here, and the error names the
+# value to set instead.
+env:
+  shared: {}
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
+# Example:
+# env:
+#   shared:
+#     N8N_LOG_LEVEL: info
+#     NO_PROXY: "localhost,.svc,.cluster.local"
+#   worker:
+#     N8N_LOG_LEVEL: debug
+
+# Replace a variable the chart sets, when its value cannot express what you
+# need. Only variables the chart sets in this configuration are accepted, and
+# not ones read from a Secret. NOTES lists the overrides in effect.
+chartEnvOverrides:
+  shared: {}
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
+
+# ConfigMaps and Secrets to load whole, with the same component keys as env.
+# They load after the chart's ConfigMaps, so their keys win over the chart's
+# values. The chart cannot see inside them, so it cannot check for clashes,
+# and changing them does not restart pods.
+envFrom:
+  shared: []
+  main: []
+  worker: []
+  webhookProcessor: []
+  taskRunner: []
+# Example:
+# envFrom:
+#   shared:
+#     - secretRef:
+#         name: n8n-smtp
 
 # ----- App config -----
 config:
@@ -768,9 +822,6 @@ secretRefs:
     # When set, N8N_ENCRYPTION_KEY is not injected into n8n containers and is left
     # out of the chart-managed Secret. The path goes to the containers directly.
     N8N_ENCRYPTION_KEY_FILE: ""
-    N8N_HOST: "n8n.example.com"  # <-- Change to your actual domain
-    N8N_PORT: "5678"
-    N8N_PROTOCOL: "http"
 
 # ----- Database (PostgreSQL - required for queue mode) -----
 database:

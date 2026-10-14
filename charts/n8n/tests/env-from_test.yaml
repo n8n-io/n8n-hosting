@@ -1,0 +1,133 @@
+# envFrom order decides the winner when the same key arrives twice: later
+# sources win, and the explicit env list wins over all of them.
+suite: 'env: envFrom delivery'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  webhookProcessor.enabled: true
+  taskRunners.enabled: true
+tests:
+  - it: loads config.extraEnvFrom, the chart's ConfigMaps, then the user's refs on main
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnvFrom:
+        - secretRef:
+            name: legacy
+      envFrom.shared:
+        - configMapRef:
+            name: overrides
+      envFrom.main:
+        - secretRef:
+            name: main-only
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: legacy
+            - configMapRef:
+                name: RELEASE-NAME-n8n
+            - configMapRef:
+                name: RELEASE-NAME-n8n-main
+            - configMapRef:
+                name: overrides
+            - secretRef:
+                name: main-only
+
+  - it: loads the worker's own ConfigMap on workers
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - configMapRef:
+                name: RELEASE-NAME-n8n
+            - configMapRef:
+                name: RELEASE-NAME-n8n-worker
+
+  - it: loads the webhook processor's own ConfigMap on webhook processors
+    template: templates/deployment-webhook-processor.yaml
+    set:
+      envFrom.worker:
+        - secretRef:
+            name: worker-only
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - configMapRef:
+                name: RELEASE-NAME-n8n
+            - configMapRef:
+                name: RELEASE-NAME-n8n-webhook-processor
+
+  - it: keeps the shared ConfigMap and envFrom.shared off the runner sidecar
+    template: templates/deployment-worker.yaml
+    set:
+      envFrom.shared:
+        - configMapRef:
+            name: overrides
+      envFrom.taskRunner:
+        - secretRef:
+            name: runner-extra
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: task-runner
+      - equal:
+          path: spec.template.spec.containers[1].envFrom
+          value:
+            - configMapRef:
+                name: RELEASE-NAME-n8n-task-runner
+            - secretRef:
+                name: runner-extra
+
+  - it: keeps env.shared out of the runner's ConfigMap
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-task-runner
+    set:
+      env.shared.N8N_LOG_LEVEL: info
+      env.taskRunner.N8N_RUNNERS_MAX_CONCURRENCY: 10
+    asserts:
+      - notExists:
+          path: data.N8N_LOG_LEVEL
+      - equal:
+          path: data.N8N_RUNNERS_MAX_CONCURRENCY
+          value: "10"
+
+  - it: points the runner probe at a health port set in env.taskRunner
+    template: templates/deployment-worker.yaml
+    set:
+      env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT: 5690
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet.port
+          value: 5690
+
+  - it: keeps only Secret references in the explicit env list
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: n8n-db-password
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: N8N_ENCRYPTION_KEY
+                  name: n8n-core-secrets
+            - name: N8N_RUNNERS_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: N8N_RUNNERS_AUTH_TOKEN
+                  name: RELEASE-NAME-n8n-task-runners
