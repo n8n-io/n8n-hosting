@@ -197,13 +197,15 @@ Maintainers can label PRs with `test-install` to run the tests with CI.
 
 The n8n version is a separate thing to the chart version. It is pinned in multiple files across the various deployment artefacts.
 
-The `bump-n8n-version` workflow runs this script every Wednesday to follow n8n's `stable` release cadence. If you do need to bump the versions by hand, you can do so by running:
+The `bump-n8n-version` workflow runs this script every Wednesday to follow n8n's `stable` release cadence, once for each release branch. Each branch stays on its own n8n major. If you do need to bump the versions by hand, you can do so by running:
 
 ```bash
 scripts/bump-n8n-version.sh 2.38.6
 ```
 
 ## Pull Requests
+
+Open your PR against `main`, which is where chart 2.0 is being built. Chart 1.x is maintained on `release/n8n-2.x`, and maintainers bring fixes across to it with the `backport release/n8n-2.x` label. Open a PR against `release/n8n-2.x` directly only when the fix is for code that no longer exists on `main`.
 
 - Add the `test-install` label to PRs that change chart templates to trigger a full install test on a kind cluster
 - All PRs must pass lint and template validation checks

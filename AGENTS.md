@@ -7,11 +7,24 @@ Official deployment artefacts for self-hosted n8n. This file is for AI agents wo
 - `charts/n8n/`: the maintained Helm chart. Most work happens here.
 - `docker-compose/`, `docker-caddy/`, `kubernetes/`, `aws-cloudformation/`: the other artefacts. Pinned to the same n8n version as the chart; otherwise low-touch.
 
+## Branches
+
+Each n8n major has a chart line, and each line has a branch.
+
+- `main` is chart 2.0, which ships with n8n 3.0. It releases `2.0.0-rc.N` until 2.0.0 ships. Breaking changes land here.
+- `release/n8n-2.x` is chart 1.x, for n8n 2.x. It takes fixes and additive features only, and never a breaking change.
+
+Branch from `main` and open the PR against it. The exception is a fix for code that exists only on a maintenance branch, for example a values key that `main` has removed. Branch from the maintenance branch, open the PR against it, and say in the description why the fix is not on `main`.
+
+A change that also applies to 1.x reaches it as a backport. Add the label `backport release/n8n-2.x` to the PR on `main`, before or after it merges. `.github/workflows/backport.yml` cherry-picks the merged commit and opens a PR against the maintenance branch with the same title. It refuses a breaking change. If the cherry-pick conflicts, it says so on the original PR, and the backport is then a PR against the maintenance branch written by hand.
+
+The files under `.github/workflows/` are identical on every branch and pick their behaviour from the branch they run on. Change them on `main` and backport the change. Only `release-please-config.json` and `.release-please-manifest.json` differ between branches.
+
 ## Design and decisions
 
 `charts/n8n/DESIGN.md` holds the design principles for the chart. Check every chart change against it before opening a PR, and cite the principle when a review comment rests on one.
 
-The individual calls made under those principles live one per file in `charts/n8n/decisions/`, numbered and named for the call (`0001-chart-versioning.md`). Write one when a change settles a question a reviewer could reasonably reopen later, and keep it to context, decision, consequences, the date and a link to the PR. They are public and they version with the chart, so a reviewer asking why the chart version doesn't follow n8n's gets a file to read rather than a Linear thread to reconstruct. `charts/n8n/decisions/README.md` has the shape.
+The individual calls made under those principles live one per file in `charts/n8n/decisions/`, numbered and named for the call (`0001-chart-versioning.md`). Take the next free number when work on the change starts, and record it on the ticket, so that two open PRs never claim the same number. Write one when a change settles a question a reviewer could reasonably reopen later, and keep it to context, decision, consequences, the date and a link to the PR. They are public and they version with the chart, so a reviewer asking why the chart version doesn't follow n8n's gets a file to read rather than a Linear thread to reconstruct. `charts/n8n/decisions/README.md` has the shape.
 
 A decision that changes what a customer sees also gets a line in `charts/n8n/UPGRADING.md` (the file does not exist yet; DEP-57 creates it), linking back to the decision. Customers need the what and the how, and the reasoning stays here for anyone who goes looking for it.
 
@@ -28,6 +41,7 @@ Most work here is a chart change. Take it in this order:
    - Take care when changing a default. A new default that meaningfully changes a deployment's performance or behaviour, in a way a user would not reasonably expect from a minor or patch release, belongs on a major.
    - Give a new value a default that leaves today's render unchanged.
    - Call out a roll or a new `fail` in the PR description so it reaches the changelog.
+   - A breaking change carries its own upgrade path in the same PR: a guard entry that fails the render on each retired key and names its replacement, the lines in `charts/n8n/UPGRADING.md` that tell users what to change, and the examples migrated to the new values.
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.
 6. Cover the rendered behaviour with a `helm-unittest` case in `charts/n8n/tests/`. A new `fail` in `n8n.validate` gets a `failedTemplate` case and a passing case for the valid shape.
 7. Leave `Chart.yaml` `version` alone. release-please owns it.
