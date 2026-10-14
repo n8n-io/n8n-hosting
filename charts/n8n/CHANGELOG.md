@@ -7,6 +7,16 @@ This file is automatically managed by [Release Please](https://github.com/google
 ## [1.16.0](https://github.com/n8n-io/n8n-hosting/compare/v1.15.0...v1.16.0) (2026-10-14)
 
 
+### Upgrade notes
+
+**Multiple main pods now require multi-main mode.** n8n only coordinates its main processes when multi-main mode is on. Without it, each main pod runs every schedule and trigger on its own, so a workflow fires once per pod and executions collide. Earlier chart versions allowed this to render, which could lead to undesired workflow execution behaviour.
+
+The chart now refuses to render with `replicaCount` above 1, or with `hpa.main` able to scale above 1, unless `multiMain.enabled` is on. Multi-main needs an enterprise licence, so the render also stops if you enable it without one. Set `replicaCount` to 1, or turn on multi-main mode.
+
+**The task-runner sidecar now has a liveness probe.** If the launcher stops answering `/healthz` on port 5680, Kubernetes restarts it after six failed checks ten seconds apart. You can override the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `taskRunners.extraEnv`, it has to be a port number, as the probe uses it.
+
+**Single-replica installs no longer get a PodDisruptionBudget.** With one pod and `minAvailable: 1`, the budget stopped nodes draining. The PDB is removed on upgrade and comes back when `replicaCount` is above 1.
+
 ### Features
 
 * **artefacts:** report the deployment artifact from every other artefact ([#226](https://github.com/n8n-io/n8n-hosting/issues/226)) ([dc49b73](https://github.com/n8n-io/n8n-hosting/commit/dc49b73677134609e105b029c3de7e3dd4440715))
