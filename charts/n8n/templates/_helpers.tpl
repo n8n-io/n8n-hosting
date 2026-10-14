@@ -256,16 +256,17 @@ Create the name of the service account to use
 Values keys the chart no longer reads. n8n.validate fails on each one a user
 still sets and names its replacement, so an old values file cannot install
 with settings that silently do nothing. Add an entry in the same change that
-removes or renames the key, keep the list sorted by path, and write the
-replacement as a full sentence. Paths are dot-separated, so a key that
+removes or renames the key, and keep the list sorted by path. Write the
+replacement as a full sentence in double quotes, because a sentence that
+names a value often contains ": ". Paths are dot-separated, so a key that
 contains a dot cannot be listed. Each key also gets a note in UPGRADING.md.
 The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_test.yaml.
 */}}
 {{- define "n8n.retiredKeys" -}}
 - path: retiredKeysTest.first
-  replacement: Set retiredKeysTest.replacement instead.
+  replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
-  replacement: Remove it; nothing replaces it.
+  replacement: "Remove it; nothing replaces it."
 {{- end -}}
 
 {{/*

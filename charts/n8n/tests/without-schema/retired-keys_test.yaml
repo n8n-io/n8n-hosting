@@ -1,5 +1,6 @@
 # The retiredKeysTest entries in n8n.retiredKeys exist only for these tests.
-# The schema does not declare them, so these tests run without it.
+# The schema does not declare them, so these tests run without it and pass
+# whether or not the schema accepts unknown root keys.
 suite: 'validate: retired keys'
 templates:
   - templates/deployment-main.yaml
@@ -14,7 +15,7 @@ tests:
       retiredKeysTest.first: false
     asserts:
       - failedTemplate:
-          errorMessage: 'retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+          errorMessage: 'retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement: true instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
 
   # helm-unittest drops the "2 problems in your values:" header line, so only
   # the list is compared.
@@ -26,7 +27,7 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: |-
-            - retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement: true instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
             - retiredKeysTest.nested.second is no longer a chart value. Remove it; nothing replaces it. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
 
   - it: lists retired keys before other problems
@@ -39,7 +40,7 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: |-
-            - retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement: true instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
             - s3.bucket.name is required when s3.enabled=true
 
   - it: ignores keys beside a retired one
