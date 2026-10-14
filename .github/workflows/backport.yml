@@ -21,9 +21,11 @@ permissions:
 jobs:
   backport:
     # A fork inherits this workflow, and it has no App to open the PR with.
-    # Any other label added to a merged PR would otherwise backport it again.
+    # Changes reach a maintenance branch from main only. Any other label added
+    # to a merged PR would otherwise backport it again.
     if: >-
       github.repository == 'n8n-io/n8n-hosting' &&
+      github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.merged &&
       contains(toJSON(github.event.pull_request.labels.*.name), '"backport ') &&
       (github.event.action == 'closed' || startsWith(github.event.label.name, 'backport '))
@@ -40,19 +42,19 @@ jobs:
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
       # A maintenance branch only ever takes changes that keep existing installs
-      # working. A breaking change there would be a major on an old line. The
-      # repo squashes with the PR title and body, so either can mark the commit
-      # as breaking.
+      # working. A breaking change there would be a major on an old line. This
+      # reads the merged commit, which is what gets cherry-picked, because the
+      # PR's title and body can still be edited after the merge.
       - name: Refuse breaking changes
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR: ${{ github.event.pull_request.number }}
-          TITLE: ${{ github.event.pull_request.title }}
-          BODY: ${{ github.event.pull_request.body }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           set -euo pipefail
-          if [[ "$TITLE" =~ ^[a-z]+(\([^\)]*\))?!: ]] ||
-             grep -qE '^BREAKING[ -]CHANGE:' <<< "$BODY"; then
+          message=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA" --jq .commit.message)
+          if [[ "$(head -n 1 <<< "$message")" =~ ^[a-z]+(\([^\)]*\))?!: ]] ||
+             grep -qE '^BREAKING[ -]CHANGE:' <<< "$message"; then
             msg="This PR is a breaking change, so it is not backported. A maintenance branch only takes changes that keep existing installs working. If part of it applies there, open a PR against the maintenance branch directly."
             gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$msg"
             echo "::error::$msg"
