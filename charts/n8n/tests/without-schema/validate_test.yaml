@@ -114,3 +114,15 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'env.main must be a map of NAME: value.'
+
+  - it: refuses an env value that is neither a literal nor a single reference
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        valueFrom:
+          secretKeyRef:
+            name: smtp
+            key: password
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N_SMTP_PASS must be a string, number or boolean, or a reference with exactly one of secretKeyRef, configMapKeyRef, fieldRef or resourceFieldRef.'

@@ -6,8 +6,10 @@ mounts with envFrom: one shared by the n8n processes (main, worker, webhook
 processor) and one per component. The explicit env list holds only variables
 read from a Secret, because envFrom would load every key in that Secret.
 
-Users add variables with env.<component> and replace chart-computed ones with
-chartEnvOverrides.<component>. n8n.validateEnv refuses a user map that sets a
+Users add variables with env.<component>, where a value is a literal or a
+reference such as {secretKeyRef: ...}, and replace chart-computed ones with
+chartEnvOverrides.<component>. Literals go in the ConfigMaps; references go in
+the explicit env list. n8n.validateEnv refuses a user map that sets a
 variable the chart sets, so a clash never resolves silently.
 */}}
 
@@ -292,43 +294,43 @@ named key is read. component is main, worker, webhookProcessor or taskRunner.
 {{- end -}}
 
 {{/*
-The extraEnv lists that reach one container, in the order they render.
-Returns a list of {source, entries}.
+Whether an env map value is a reference: a map with exactly one of the
+valueFrom sources Kubernetes accepts.
 */}}
-{{- define "n8n.envLists" -}}
+{{- define "n8n.isEnvRef" -}}
+{{- if and (kindIs "map" .) (eq (len .) 1) -}}
+{{- if has (keys . | first) (list "secretKeyRef" "configMapKeyRef" "fieldRef" "resourceFieldRef") -}}true{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The references from the user's env maps that reach one container, as a map of
+NAME: valueFrom. The shared map is merged under the component's first, so a
+component literal also hides a shared reference of the same name; otherwise
+the reference, rendered in env, would beat the component ConfigMap.
+*/}}
+{{- define "n8n.userRefEnv" -}}
 {{- $v := .root.Values -}}
-{{- $c := .component -}}
-{{- $l := list -}}
-{{- if eq $c "taskRunner" -}}
-{{- $l = append $l (dict "source" "taskRunners.extraEnv" "entries" $v.taskRunners.extraEnv) -}}
-{{- else -}}
-{{- if has $c (list "main" "webhookProcessor") -}}
-{{- $l = append $l (dict "source" "webhook.extraEnv" "entries" $v.webhook.extraEnv) -}}
+{{- $merged := dict -}}
+{{- if ne .component "taskRunner" -}}
+{{- $merged = include "n8n.envSection" (list ($v.env | default dict) "shared") | fromJson -}}
 {{- end -}}
-{{- if $v.queueMode.enabled -}}
-{{- $l = append $l (dict "source" "redis.extraEnv" "entries" $v.redis.extraEnv) -}}
+{{- range $k, $val := (include "n8n.envSection" (list ($v.env | default dict) .component) | fromJson) -}}
+{{- $_ := set $merged $k $val -}}
 {{- end -}}
-{{- if $v.s3.enabled -}}
-{{- $l = append $l (dict "source" "s3.storage.extraEnv" "entries" $v.s3.storage.extraEnv) -}}
-{{- end -}}
-{{- if has $c (list "main" "worker") -}}
-{{- $l = append $l (dict "source" "executions.extraEnv" "entries" $v.executions.extraEnv) -}}
-{{- end -}}
-{{- $l = append $l (dict "source" "config.extraEnv" "entries" $v.config.extraEnv) -}}
-{{- if eq $c "worker" -}}
-{{- $l = append $l (dict "source" "queueMode.workerExtraEnv" "entries" $v.queueMode.workerExtraEnv) -}}
-{{- end -}}
-{{- if eq $c "webhookProcessor" -}}
-{{- $l = append $l (dict "source" "webhookProcessor.extraEnv" "entries" $v.webhookProcessor.extraEnv) -}}
+{{- $refs := dict -}}
+{{- range $k, $val := $merged -}}
+{{- if include "n8n.isEnvRef" $val -}}
+{{- $_ := set $refs $k $val -}}
 {{- end -}}
 {{- end -}}
-{{- toJson $l -}}
+{{- toJson $refs -}}
 {{- end -}}
 
 {{/*
 Every variable a user sets for one container, as a list of {name, source}:
-the env maps, chartEnvOverrides and the extraEnv lists. Variables arriving
-through envFrom refs are not visible to the chart.
+the env maps and chartEnvOverrides. Variables arriving through envFrom refs
+are not visible to the chart.
 */}}
 {{- define "n8n.userEnv" -}}
 {{- $v := .root.Values -}}
@@ -342,11 +344,6 @@ through envFrom refs are not visible to the chart.
 {{- end -}}
 {{- range $k, $_ := (include "n8n.envSection" (list ($v.chartEnvOverrides | default dict) $m) | fromJson) -}}
 {{- $out = append $out (dict "name" $k "source" (printf "chartEnvOverrides.%s" $m)) -}}
-{{- end -}}
-{{- end -}}
-{{- range $list := include "n8n.envLists" . | fromJsonArray -}}
-{{- range $list.entries -}}
-{{- $out = append $out (dict "name" .name "source" $list.source) -}}
 {{- end -}}
 {{- end -}}
 {{- toJson $out -}}
@@ -367,7 +364,9 @@ component ConfigMap that envFrom loads later.
 {{- $_ := set $data $k $entry.value -}}
 {{- end -}}
 {{- range $k, $val := (include "n8n.envSection" (list ($v.env | default dict) $c) | fromJson) -}}
+{{- if not (include "n8n.isEnvRef" $val) -}}
 {{- $_ := set $data $k (include "n8n.envValue" $val) -}}
+{{- end -}}
 {{- end -}}
 {{- $overrides := $v.chartEnvOverrides | default dict -}}
 {{- if eq $c "shared" -}}
@@ -448,40 +447,34 @@ webhookProcessor or taskRunner.
 {{- $v := .root.Values -}}
 {{- $c := .component -}}
 {{- $secrets := include "n8n.secretEnv" . | fromJson -}}
-{{- $lists := include "n8n.envLists" . | fromJsonArray -}}
-{{- $hasLists := false -}}
-{{- range $lists -}}{{- if .entries -}}{{- $hasLists = true -}}{{- end -}}{{- end -}}
-{{- if or $secrets $hasLists }}
+{{- $refs := include "n8n.userRefEnv" . | fromJson -}}
+{{- if or $secrets $refs }}
 env:
   {{- range $k, $entry := $secrets }}
   - name: {{ $k }}
     valueFrom:
       {{- toYaml $entry.valueFrom | nindent 6 }}
   {{- end }}
-  {{- range $lists }}
-  {{- with .entries }}
-  {{- toYaml . | nindent 2 }}
-  {{- end }}
+  {{- range $k, $ref := $refs }}
+  - name: {{ $k }}
+    valueFrom:
+      {{- toYaml $ref | nindent 6 }}
   {{- end }}
 {{- end }}
 envFrom:
   {{- if ne $c "taskRunner" }}
-  {{- /* Before the chart's ConfigMaps, so the chart's values win over it. */}}
-  {{- with $v.config.extraEnvFrom }}
-  {{- toYaml . | nindent 2 }}
-  {{- end }}
   - configMapRef:
       name: {{ include "n8n.envConfigMapName" (dict "root" .root "component" "shared") }}
   {{- end }}
   - configMapRef:
       name: {{ include "n8n.envConfigMapName" . }}
-  {{- $refs := $v.envFrom | default dict }}
+  {{- $userFrom := $v.envFrom | default dict }}
   {{- if ne $c "taskRunner" }}
-  {{- with index $refs "shared" }}
+  {{- with index $userFrom "shared" }}
   {{- toYaml . | nindent 2 }}
   {{- end }}
   {{- end }}
-  {{- with index $refs $c }}
+  {{- with index $userFrom $c }}
   {{- toYaml . | nindent 2 }}
   {{- end }}
 {{- end -}}
@@ -510,8 +503,13 @@ n8n.validate to report.
 {{- if not (regexMatch "^[A-Za-z_][A-Za-z0-9_]*$" $k) -}}
 {{- $errs = append $errs (printf "%s.%s.%s is not a valid environment variable name. Use letters, digits and underscores, starting with a letter or underscore." $block $section $k) -}}
 {{- end -}}
-{{- if not (or (kindIs "string" $val) (kindIs "bool" $val) (kindIs "float64" $val) (kindIs "int" $val) (kindIs "int64" $val)) -}}
+{{- $scalar := or (kindIs "string" $val) (kindIs "bool" $val) (kindIs "float64" $val) (kindIs "int" $val) (kindIs "int64" $val) -}}
+{{- if eq $block "chartEnvOverrides" -}}
+{{- if not $scalar -}}
 {{- $errs = append $errs (printf "%s.%s.%s must be a string, number or boolean." $block $section $k) -}}
+{{- end -}}
+{{- else if not (or $scalar (include "n8n.isEnvRef" $val)) -}}
+{{- $errs = append $errs (printf "%s.%s.%s must be a string, number or boolean, or a reference with exactly one of secretKeyRef, configMapKeyRef, fieldRef or resourceFieldRef." $block $section $k) -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -557,23 +555,6 @@ n8n.validate to report.
 {{- end -}}
 {{- end -}}
 
-{{- /* The same variable from a map and an extraEnv list has no defined winner. */ -}}
-{{- $fromMaps := dict -}}
-{{- $userEnv := include "n8n.userEnv" $ctx | fromJsonArray -}}
-{{- range $u := $userEnv -}}
-{{- if or (hasPrefix "env." $u.source) (hasPrefix "chartEnvOverrides." $u.source) -}}
-{{- $_ := set $fromMaps $u.name $u.source -}}
-{{- end -}}
-{{- end -}}
-{{- range $u := $userEnv -}}
-{{- if and (hasKey $fromMaps $u.name) (not (or (hasPrefix "env." $u.source) (hasPrefix "chartEnvOverrides." $u.source))) -}}
-{{- $id := printf "%s/%s/%s" (get $fromMaps $u.name) $u.source $u.name -}}
-{{- if not (hasKey $reported $id) -}}
-{{- $_ := set $reported $id true -}}
-{{- $errs = append $errs (printf "%s is set in both %s and %s. Remove it from %s." $u.name (get $fromMaps $u.name) $u.source $u.source) -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
 {{- end -}}
 
 {{- /* Overrides for a component this release does not render replace nothing. */ -}}

@@ -48,3 +48,47 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'webhook.timeout has no effect: n8n has no setting for a webhook timeout. Remove it from your values.'
+
+  - it: refuses a non-empty config.extraEnv and names its map
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnv:
+        - name: N8N_LOG_LEVEL
+          value: debug
+    asserts:
+      - failedTemplate:
+          errorMessage: 'config.extraEnv is no longer read. Set these variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret.'
+
+  - it: refuses a non-empty webhook.extraEnv and names both maps
+    template: templates/deployment-main.yaml
+    set:
+      webhook.extraEnv:
+        - name: N8N_LOG_LEVEL
+          value: debug
+    asserts:
+      - failedTemplate:
+          errorMessage: 'webhook.extraEnv is no longer read. Set these variables in env.main and env.webhookProcessor as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret.'
+
+  - it: refuses a non-empty config.extraEnvFrom and names envFrom.shared
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnvFrom:
+        - secretRef:
+            name: legacy
+    asserts:
+      - failedTemplate:
+          errorMessage: 'config.extraEnvFrom is no longer read. Move its entries to envFrom.shared.'
+
+  - it: accepts the empty lists a 1.x values file carries
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnv: []
+      config.extraEnvFrom: []
+      queueMode.workerExtraEnv: []
+      webhookProcessor.extraEnv: []
+      redis.extraEnv: []
+      executions.extraEnv: []
+      s3.storage.extraEnv: []
+      taskRunners.extraEnv: []
+    asserts:
+      - notFailedTemplate: {}

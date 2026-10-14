@@ -12,12 +12,9 @@ set:
   webhookProcessor.enabled: true
   taskRunners.enabled: true
 tests:
-  - it: loads config.extraEnvFrom, the chart's ConfigMaps, then the user's refs on main
+  - it: loads the chart's ConfigMaps, then the user's refs on main
     template: templates/deployment-main.yaml
     set:
-      config.extraEnvFrom:
-        - secretRef:
-            name: legacy
       envFrom.shared:
         - configMapRef:
             name: overrides
@@ -28,8 +25,6 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].envFrom
           value:
-            - secretRef:
-                name: legacy
             - configMapRef:
                 name: RELEASE-NAME-n8n
             - configMapRef:

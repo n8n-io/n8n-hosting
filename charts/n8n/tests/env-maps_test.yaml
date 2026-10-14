@@ -304,16 +304,125 @@ tests:
       - failedTemplate:
           errorMessage: 'env.shared.DB_POSTGRESDB_PASSWORD is read by the chart from database.passwordSecret. Set database.passwordSecret instead.'
 
-  - it: refuses a variable set in both a map and an extraEnv list
+  - it: renders a reference in env and keeps it out of the ConfigMap
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_SMTP_PASS
+            valueFrom:
+              secretKeyRef:
+                name: smtp
+                key: password
+
+  - it: keeps references out of the ConfigMaps
+    template: templates/configmap.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+      env.worker.POD_NAME:
+        fieldRef:
+          fieldPath: metadata.name
+    asserts:
+      - notExists:
+          path: data.N8N_SMTP_PASS
+      - notExists:
+          path: data.POD_NAME
+
+  - it: lets a component reference win over a shared literal
+    template: templates/deployment-worker.yaml
+    set:
+      env.shared.N8N_SMTP_PASS: plain
+      env.worker.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_SMTP_PASS
+            valueFrom:
+              secretKeyRef:
+                name: smtp
+                key: password
+
+  - it: lets a component literal win over a shared reference
+    templates:
+      - templates/deployment-worker.yaml
+      - templates/deployment-main.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+      env.worker.N8N_SMTP_PASS: plain
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_SMTP_PASS
+          any: true
+        template: templates/deployment-worker.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_SMTP_PASS
+            valueFrom:
+              secretKeyRef:
+                name: smtp
+                key: password
+        template: templates/deployment-main.yaml
+
+  - it: puts the component literal in its ConfigMap when it hides a shared reference
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+      env.worker.N8N_SMTP_PASS: plain
+    asserts:
+      - equal:
+          path: data.N8N_SMTP_PASS
+          value: plain
+
+  - it: refuses a reference to a variable the chart sets
     template: templates/deployment-main.yaml
     set:
-      env.shared.N8N_LOG_LEVEL: info
-      config.extraEnv:
-        - name: N8N_LOG_LEVEL
-          value: debug
+      env.shared.DB_POSTGRESDB_HOST:
+        configMapKeyRef:
+          name: pg
+          key: host
     asserts:
       - failedTemplate:
-          errorMessage: 'N8N_LOG_LEVEL is set in both env.shared and config.extraEnv. Remove it from config.extraEnv.'
+          errorMessage: 'env.shared.DB_POSTGRESDB_HOST is set by the chart from database.host. Set database.host instead, or put it in chartEnvOverrides.shared to override the chart deliberately.'
+
+  - it: refuses an object that is not a single reference
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        valueFrom:
+          secretKeyRef:
+            name: smtp
+            key: password
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/env/shared/N8N_SMTP_PASS'"
 
   - it: refuses an unknown component key
     template: templates/deployment-main.yaml

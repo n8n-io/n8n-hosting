@@ -197,6 +197,10 @@ env:
   shared:            # main, worker and webhook-processor pods
     N8N_LOG_LEVEL: info
     NO_PROXY: "localhost,.svc,.cluster.local"
+    N8N_SMTP_PASS:   # a reference, written as you would under valueFrom
+      secretKeyRef:
+        name: smtp
+        key: password
   worker:            # worker pods only, over shared
     N8N_LOG_LEVEL: debug
   main: {}
@@ -205,6 +209,8 @@ env:
 ```
 
 The chart renders each map into a ConfigMap, together with the variables it computes from values, and loads them with `envFrom`. Maps merge across values files, so an overlay only needs the variables it changes. Values can be strings, numbers or booleans.
+
+A value can also be a reference: `secretKeyRef`, `configMapKeyRef`, `fieldRef` or `resourceFieldRef`, written as you would under `valueFrom`. References go in the container's `env` list rather than the ConfigMap. A component's value still wins over a shared one of the same name, whichever of the two is a reference.
 
 Some variables are set by the chart from a value, for example `DB_POSTGRESDB_HOST` from `database.host` and `N8N_PORT` from `service.port`. Setting one of these in a map fails the render, and the error names the value to set instead. The check covers only what the chart sets in your configuration, so `AWS_ACCESS_KEY_ID` is free to use when S3 is off.
 
@@ -221,11 +227,10 @@ envFrom:
 
 The order, from lowest to highest precedence:
 
-1. `config.extraEnvFrom`
-2. The chart's shared ConfigMap: computed variables, `env.shared`, `chartEnvOverrides.shared`
-3. The chart's component ConfigMap: computed variables, `env.<component>`, `chartEnvOverrides.<component>`
-4. `envFrom.shared`, then `envFrom.<component>`
-5. The container's `env` list: variables read from a Secret, then the `extraEnv` lists
+1. The chart's shared ConfigMap: computed variables, literals from `env.shared`, `chartEnvOverrides.shared`
+2. The chart's component ConfigMap: computed variables, literals from `env.<component>`, `chartEnvOverrides.<component>`
+3. `envFrom.shared`, then `envFrom.<component>`
+4. The container's `env` list: variables the chart reads from a Secret, and references from the `env` maps
 
 Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The chart cannot see inside them, so it cannot check for clashes, and changing them does not restart pods.
 
@@ -421,7 +426,7 @@ kubectl create secret generic n8n-runner-token \
   --from-literal=auth-token=$(openssl rand -base64 32)
 ```
 
-**Health probe:** the sidecar has a liveness probe on the launcher's health endpoint, `/healthz` on port `5680`. The launcher answers this endpoint itself, so a runner busy with a long task does not fail the probe. Kubernetes restarts the sidecar only when the launcher stops responding. The launcher already restarts a runner that stops responding. Tune or disable the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `env.taskRunner` or `taskRunners.extraEnv`, the probe uses that port. Set it with `value`, because the chart cannot read a `valueFrom` reference and leaves the probe out in that case.
+**Health probe:** the sidecar has a liveness probe on the launcher's health endpoint, `/healthz` on port `5680`. The launcher answers this endpoint itself, so a runner busy with a long task does not fail the probe. Kubernetes restarts the sidecar only when the launcher stops responding. The launcher already restarts a runner that stops responding. Tune or disable the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `env.taskRunner`, the probe uses that port. Set it as a literal, because the chart cannot read a reference and leaves the probe out in that case.
 
 See [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
 

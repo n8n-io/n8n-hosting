@@ -17,9 +17,11 @@ The chart renders one ConfigMap for shared variables and one per component. Each
 
 A user map that sets a variable the chart sets for that component fails the render. The message names the value that controls it. The check uses what the chart sets in the current configuration, not a fixed list. A variable the chart leaves alone, such as `AWS_ACCESS_KEY_ID` with S3 off, stays available. This follows *One place to set anything, and a defined winner*.
 
-`chartEnvOverrides` replaces a variable the chart sets, for cases its value cannot express. It accepts only variables the chart sets in the current configuration, and not ones read from a Secret. The override replaces the value inside the chart's ConfigMap, so the container still gets one entry. `NOTES.txt` lists overrides in effect. User `envFrom` refs load after the chart's ConfigMaps and win over them, because the chart cannot see inside them. `config.extraEnvFrom` loads before the chart's ConfigMaps, so the chart's values win over it.
+`chartEnvOverrides` replaces a variable the chart sets, for cases its value cannot express. It accepts only variables the chart sets in the current configuration, and not ones read from a Secret. The override replaces the value inside the chart's ConfigMap, so the container still gets one entry. `NOTES.txt` lists overrides in effect. User `envFrom` refs load after the chart's ConfigMaps and win over them, because the chart cannot see inside them.
 
 Map values may be strings, numbers or booleans. Whole numbers render without an exponent. Helm reads `1000000` as a float, and printing it directly gives `1e+06`.
+
+A map value may also be a reference: an object with exactly one of `secretKeyRef`, `configMapKeyRef`, `fieldRef` or `resourceFieldRef`, as written under `valueFrom`. References render in the explicit `env` list, which Kubernetes ranks above `envFrom`. So the chart merges the shared map under the component map before splitting, and a component value always wins over a shared one. One map per component keeps one place to set each variable. Charts that offer `NAME: value` maps more often put references in a separate map, as Grafana's `envValueFrom` does. Inline references follow the bjw-s common library.
 
 `secretRefs.env` keeps `N8N_ENCRYPTION_KEY` and `N8N_ENCRYPTION_KEY_FILE`. The chart sets `N8N_PORT` from `service.port` on every n8n process. It does not set `N8N_HOST` or `N8N_PROTOCOL`. n8n reads them only to build a fallback URL when `N8N_WEBHOOK_URL` and `N8N_EDITOR_BASE_URL` are unset. Deriving the protocol from ingress TLS would contradict decision 0006.
 
@@ -33,4 +35,4 @@ Map values may be strings, numbers or booleans. Whole numbers render without an 
 - Installs that set both `queueMode.workerConcurrency` and `executions.concurrency.productionLimit` in queue mode must remove one. Their workers ran at `productionLimit`.
 - Workers now receive `N8N_PORT`, like the other n8n processes.
 - An `envFrom` ConfigMap or Secret can override any chart value, and the chart cannot check it. Changing it does not restart pods.
-- The `extraEnv` lists remain until a later change removes them. A variable set in both a list and a map fails the render.
+- The nine `extraEnv` and `extraEnvFrom` lists are removed. A non-empty list fails the render and names the map that replaces it.
