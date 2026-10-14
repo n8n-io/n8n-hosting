@@ -1,7 +1,7 @@
 # 0018. Retired values keys fail the render
 
 Date: 2026-10-14
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/247
 
 ## Context
 
