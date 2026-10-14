@@ -7,7 +7,7 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/000
 
 [0001](0001-chart-versioning.md) gives each n8n major its own maintenance branch. Chart 1.x is the line for n8n 2.x, so it needs a branch once n8n 3.0 ships with chart 2.0.
 
-Chart 2.0 changes values keys and defaults. Until now every merge to `main` could go out in the next weekly 1.x release, so that work had nowhere to land. One option was a separate 2.0 branch, merged back into `main` on release. That needs regular merges between two long-lived branches, which a repository that squashes every PR cannot record.
+Chart 2.0 changes values keys and defaults. While `main` is the 1.x line, every merge to it can go out in the next weekly 1.x release, so that work cannot land there. A separate 2.0 branch merged back into `main` on release would need regular merges between two long-lived branches, which a repository that squashes every PR cannot record.
 
 ## Decision
 
@@ -27,4 +27,3 @@ Nothing merges between the branches, so chart 2.0.0 is released from `main` as i
 - To try chart 2.0 early, install a release candidate by its exact version, for example `--version 2.0.0-rc.1`. A release candidate can still change values keys before 2.0.0.
 - Chart 1.x keeps getting the weekly n8n 2.x bump and fixes for as long as n8n supports 2.x.
 - Signatures name the branch that built the release. The verification command in the README accepts `main` and any `release/n8n-<major>.x` branch.
-- Releasing 2.0.0 takes a `Release-As: 2.0.0` commit on `main`, then a change that takes `main`'s release-please config off release candidates.
