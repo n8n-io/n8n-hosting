@@ -1884,6 +1884,18 @@ Resources:
       Tags:
         - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
 
+  # Log group for the worker scaler. Without it Lambda creates an untagged
+  # /aws/lambda/<function> group on first run, with no retention limit. The name
+  # differs from that default on purpose: on an existing stack the default group
+  # already exists, and CloudFormation cannot adopt it.
+  WorkerScalerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/n8n/${AWS::StackName}/worker-scaler"
+      RetentionInDays: 7
+      Tags:
+        - !If [HasAwsPartnerAttributionTag, {Key: aws-apn-id, Value: !Ref AwsPartnerAttributionTag}, !Ref AWS::NoValue]
+
   WorkerScalerFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -1892,6 +1904,8 @@ Resources:
       Handler: index.handler
       Timeout: 30
       Role: !GetAtt WorkerScalerRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref WorkerScalerLogGroup
       VpcConfig:
         SecurityGroupIds: [ !Ref WorkerScalerSecurityGroup ]
         SubnetIds: [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]
