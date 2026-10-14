@@ -219,6 +219,7 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
+| `hostAliases` | Extra `/etc/hosts` entries for all n8n pods | `[]` |
 | `securityContext` | Pod securityContext for all n8n pods (`fsGroup`, `runAsUser`, `runAsGroup`) | enabled, `1000` |
 | `podSecurityContext.<role>` | Pod securityContext for `main`, `worker` or `webhookProcessor`; replaces `securityContext` for that role | `{}` |
 | `containerSecurityContext.<role>` | Container securityContext for `main`, `worker`, `webhookProcessor` or `taskRunner` | no privilege escalation, all capabilities dropped |
