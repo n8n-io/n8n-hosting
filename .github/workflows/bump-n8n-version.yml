@@ -234,10 +234,10 @@ jobs:
           git commit --all --message "$TYPE(chart): bump n8n to $VERSION"
           # A fixed branch, force pushed, so a stale open bump PR is updated
           # rather than a second one opened alongside it. The branch belongs to
-          # this job: it is rebuilt from its line every run, so anything pushed onto
-          # it by hand is discarded next Wednesday. Fix a red bump PR on its own
-          # branch, not on this one. No --force-with-lease for the same reason,
-          # a lease would stall the weekly bump on someone else's commit.
+          # this job: it is rebuilt from its line every run, so anything pushed
+          # onto it by hand is discarded next Wednesday. Fix a red bump PR on its
+          # own branch, not on this one. No --force-with-lease for the same
+          # reason, a lease would stall the weekly bump on someone else's commit.
           git push --force "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY" "HEAD:refs/heads/$BRANCH"
 
       - name: Open or update PR

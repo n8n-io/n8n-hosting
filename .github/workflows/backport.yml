@@ -40,22 +40,27 @@ jobs:
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
       # A maintenance branch only ever takes changes that keep existing installs
-      # working. A breaking change there would be a major on an old line.
+      # working. A breaking change there would be a major on an old line. The
+      # repo squashes with the PR title and body, so either can mark the commit
+      # as breaking.
       - name: Refuse breaking changes
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR: ${{ github.event.pull_request.number }}
           TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
         run: |
           set -euo pipefail
-          if [[ "$TITLE" =~ ^[a-z]+(\([^\)]*\))?!: ]]; then
+          if [[ "$TITLE" =~ ^[a-z]+(\([^\)]*\))?!: ]] ||
+             grep -qE '^BREAKING[ -]CHANGE:' <<< "$BODY"; then
             msg="This PR is a breaking change, so it is not backported. A maintenance branch only takes changes that keep existing installs working. If part of it applies there, open a PR against the maintenance branch directly."
             gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$msg"
             echo "::error::$msg"
             exit 1
           fi
 
-      - uses: actions/checkout@v4
+      # SHA pinned because it keeps the App token in the checkout for the push.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           token: ${{ steps.app-token.outputs.token }}
 
