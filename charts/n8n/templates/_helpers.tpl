@@ -253,6 +253,22 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
+Values keys the chart no longer reads. n8n.validate fails on each one a user
+still sets and names its replacement, so an old values file cannot install
+with settings that silently do nothing. Add an entry in the same change that
+removes or renames the key, keep the list sorted by path, and write the
+replacement as a full sentence. Paths are dot-separated, so a key that
+contains a dot cannot be listed. Each key also gets a note in UPGRADING.md.
+The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_test.yaml.
+*/}}
+{{- define "n8n.retiredKeys" -}}
+- path: retiredKeysTest.first
+  replacement: Set retiredKeysTest.replacement instead.
+- path: retiredKeysTest.nested.second
+  replacement: Remove it; nothing replaces it.
+{{- end -}}
+
+{{/*
 Validate values. Called once from deployment-main.yaml to fail on bad config.
 Every check adds its message to $errs instead of failing on the spot, so one
 render reports every problem rather than making the user fix and re-run once
@@ -260,6 +276,24 @@ per mistake.
 */}}
 {{- define "n8n.validate" -}}
 {{- $errs := list -}}
+
+{{/* --- Retired keys --- */}}
+{{/* First, because later checks may read the keys that replaced them. */}}
+{{- $upgradingDoc := "https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md" -}}
+{{- range $retired := include "n8n.retiredKeys" . | fromYamlArray -}}
+{{- $node := $.Values -}}
+{{- $set := true -}}
+{{- range $part := splitList "." $retired.path -}}
+{{- if and $set (kindIs "map" $node) (hasKey $node $part) -}}
+{{- $node = index $node $part -}}
+{{- else -}}
+{{- $set = false -}}
+{{- end -}}
+{{- end -}}
+{{- if $set -}}
+{{- $errs = append $errs (printf "%s is no longer a chart value. %s See %s" $retired.path $retired.replacement $upgradingDoc) -}}
+{{- end -}}
+{{- end -}}
 
 {{/* --- Queue mode infrastructure --- */}}
 {{- if .Values.queueMode.enabled -}}

@@ -1,0 +1,63 @@
+# The retiredKeysTest entries in n8n.retiredKeys exist only for these tests.
+# The schema does not declare them, so these tests run without it.
+suite: 'validate: retired keys'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: names the replacement for a retired key
+    template: templates/deployment-main.yaml
+    set:
+      retiredKeysTest.first: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  # helm-unittest drops the "2 problems in your values:" header line, so only
+  # the list is compared.
+  - it: reports every retired key in one render
+    template: templates/deployment-main.yaml
+    set:
+      retiredKeysTest.first: true
+      retiredKeysTest.nested.second: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: |-
+            - retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - retiredKeysTest.nested.second is no longer a chart value. Remove it; nothing replaces it. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+
+  - it: lists retired keys before other problems
+    template: templates/deployment-main.yaml
+    set:
+      retiredKeysTest.first: true
+      s3.enabled: true
+      s3.bucket.region: eu-west-1
+      s3.auth.accessKeyId: key
+    asserts:
+      - failedTemplate:
+          errorMessage: |-
+            - retiredKeysTest.first is no longer a chart value. Set retiredKeysTest.replacement instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - s3.bucket.name is required when s3.enabled=true
+
+  - it: ignores keys beside a retired one
+    template: templates/deployment-main.yaml
+    set:
+      retiredKeysTest.other: true
+      retiredKeysTest.nested.other: true
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: ignores a retired path whose parent is not a map
+    template: templates/deployment-main.yaml
+    set:
+      retiredKeysTest.nested: "not a map"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: renders a values file with no retired keys
+    template: templates/deployment-main.yaml
+    asserts:
+      - notFailedTemplate: {}
