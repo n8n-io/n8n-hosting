@@ -4,6 +4,33 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.16.0](https://github.com/n8n-io/n8n-hosting/compare/v1.15.0...v1.16.0) (2026-10-14)
+
+
+### Features
+
+* **artefacts:** report the deployment artifact from every other artefact ([#226](https://github.com/n8n-io/n8n-hosting/issues/226)) ([dc49b73](https://github.com/n8n-io/n8n-hosting/commit/dc49b73677134609e105b029c3de7e3dd4440715))
+* **chart:** add a liveness probe to the task-runner sidecar ([#223](https://github.com/n8n-io/n8n-hosting/issues/223)) ([12dbcf7](https://github.com/n8n-io/n8n-hosting/commit/12dbcf78c074924cd27461cab420ed4d9184ec22))
+* **chart:** add editor.url to set N8N_EDITOR_BASE_URL ([#243](https://github.com/n8n-io/n8n-hosting/issues/243)) ([e97706e](https://github.com/n8n-io/n8n-hosting/commit/e97706e2037b66874f9c4ef165a982888b73b7b2))
+* **chart:** add hostAliases support to main, worker, and webhook-processor pods ([#167](https://github.com/n8n-io/n8n-hosting/issues/167)) ([87a9812](https://github.com/n8n-io/n8n-hosting/commit/87a9812601e13d9449b12681e759e39dca26a3f8))
+* **chart:** add PVC annotations and pin images by digest ([#240](https://github.com/n8n-io/n8n-hosting/issues/240)) ([6e2bf86](https://github.com/n8n-io/n8n-hosting/commit/6e2bf86046bea52f15a6c55b8d32cea4772f6af4))
+* **chart:** bump n8n to 2.43.5 ([#245](https://github.com/n8n-io/n8n-hosting/issues/245)) ([14d31cd](https://github.com/n8n-io/n8n-hosting/commit/14d31cdef55199eeda284303804f726c6e31f8df))
+* **chart:** report the deployment artifact to n8n telemetry ([#224](https://github.com/n8n-io/n8n-hosting/issues/224)) ([97eebcd](https://github.com/n8n-io/n8n-hosting/commit/97eebcdf1b0fe05e8a6ecdf2e41276e2b4934eec))
+* **chart:** set pod and container securityContext per role ([#236](https://github.com/n8n-io/n8n-hosting/issues/236)) ([280f887](https://github.com/n8n-io/n8n-hosting/commit/280f88762c3c5ca88508fa96c99ff9d25ec8f31b))
+* **chart:** support encryption key files and extra objects ([#183](https://github.com/n8n-io/n8n-hosting/issues/183)) ([3dda2e1](https://github.com/n8n-io/n8n-hosting/commit/3dda2e1b3e1480358f9ab3cdb4d43a693909604d))
+
+
+### Bug Fixes
+
+* **chart:** fail the render when several mains would run without multi-main and a licence ([#229](https://github.com/n8n-io/n8n-hosting/issues/229)) ([06d5dbe](https://github.com/n8n-io/n8n-hosting/commit/06d5dbeb071d2930311f64b9fce1f842bf419098))
+* **chart:** give the Artifact Hub logo a square, full-size icon ([#231](https://github.com/n8n-io/n8n-hosting/issues/231)) ([76c2d96](https://github.com/n8n-io/n8n-hosting/commit/76c2d96749c1654f5aee3cda6bb20108a4c79bcf))
+* **chart:** skip the main PDB on single-replica installs, so node drains are not blocked ([#228](https://github.com/n8n-io/n8n-hosting/issues/228)) ([487977c](https://github.com/n8n-io/n8n-hosting/commit/487977c5a70053eb6207b3d6fd39c67070ec6e52))
+
+
+### Reverts
+
+* report the deployment artifact from the chart and other artefacts ([#238](https://github.com/n8n-io/n8n-hosting/issues/238)) ([108f37a](https://github.com/n8n-io/n8n-hosting/commit/108f37af6bf8b7d9251f23af0c7fba6596daa932))
+
 ## [1.15.0](https://github.com/n8n-io/n8n-hosting/compare/v1.14.0...v1.15.0) (2026-10-07)
 
 
