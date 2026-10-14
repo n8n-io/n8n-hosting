@@ -59,6 +59,8 @@ The `AwsPartnerAttributionTag` parameter sets the tag value. To remove the tag, 
 
 Fargate tasks get their tags only when they start. A stack update does not change tasks that are already running. They keep or lack the tag until ECS replaces them, for example on the next deployment.
 
+On the `-webhooks` and `-ha` templates, the worker scaler Lambda function writes to its own log group, `/n8n/<stack name>/worker-scaler`, which keeps logs for 7 days and gets the `aws-apn-id` tag unless `AwsPartnerAttributionTag` is empty. Before this group existed, Lambda created an untagged `/aws/lambda/<stack name>-worker-scaler` group with no retention limit. A stack that has already run keeps that old group after an update. CloudFormation does not manage it, so it stays untagged. Delete it yourself if you do not need its logs.
+
 A stack created before this parameter existed gains the tag on its first update with these templates, because CloudFormation applies the parameter's default. To opt out, set the parameter to an empty value on that update.
 
 The empty value lasts for one update. A later update that leaves the parameter out applies the default again and adds the tag back. When you script updates, pass `ParameterKey=AwsPartnerAttributionTag,UsePreviousValue=true`. This keeps your current value, including the empty one.
