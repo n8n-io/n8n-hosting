@@ -1,7 +1,7 @@
 # 0012. Environment variables are per-component maps delivered with envFrom
 
 Date: 2026-10-14
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/250
 
 ## Context
 
