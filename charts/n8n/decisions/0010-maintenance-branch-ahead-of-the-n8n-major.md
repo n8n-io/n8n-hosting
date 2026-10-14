@@ -1,7 +1,7 @@
 # 0010. Chart 1.x moves to its maintenance branch before n8n 3.0 ships
 
 Date: 2026-10-14
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/248
 
 ## Context
 
