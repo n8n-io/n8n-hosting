@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release/**"]
   # No base-branch filter, so a pull request stacked on another one gets CI
   # too.
   pull_request:
@@ -23,7 +23,7 @@ jobs:
   # Where the install-test policy lives, in one place, so that the job's
   # condition and the ci-ok check below cannot drift apart.
   #
-  # It runs automatically for the version bump PR and for release-please's PRs,
+  # It runs automatically for the version bump PRs and for release-please's PRs,
   # both of which auto-merge or release off the back of it, and on demand for
   # anything else a maintainer labels. Only write access can add a label, and
   # the branch names are only honoured on a branch in this repository, so a
@@ -76,7 +76,7 @@ jobs:
             if [[ "$LABELLED" == "true" ]]; then
               run=true
             elif [[ "$SAME_REPO" == "true" ]] &&
-                 [[ "$HEAD_REF" == "automated/bump-n8n" || "$HEAD_REF" == release-please--* ]]; then
+                 [[ "$HEAD_REF" == automated/bump-n8n* || "$HEAD_REF" == release-please--* ]]; then
               run=true
             fi
           fi
