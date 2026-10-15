@@ -123,15 +123,19 @@ taskRunners:
   # Task runner mode (only external mode is supported in this chart)
   mode: external
 
-  # Authentication token for task runners to connect to the broker
-  # This should be a random secure shared secret
-  # You can generate one with: openssl rand -base64 32
+  # Authentication token for task runners to connect to the broker.
+  # Required when task runners are enabled: set existingSecret, value or
+  # generate. Generate a token with: openssl rand -base64 32
   authToken:
     # Use existing secret for auth token
     existingSecret: ""
     existingSecretKey: ""
     # Or provide the token directly (not recommended for production)
     value: ""
+    # Or let the chart generate the token and keep it in the cluster. This
+    # needs Helm to reach the cluster on every render. Under Argo CD or
+    # helm template the token changes on each render, so use existingSecret.
+    generate: false
 
   # Task broker configuration (runs within n8n main/worker containers)
   broker:

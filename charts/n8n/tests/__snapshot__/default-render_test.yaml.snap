@@ -545,21 +545,6 @@ matches the snapshot:
         namespace: NAMESPACE
   7: |
     apiVersion: v1
-    data:
-      N8N_RUNNERS_AUTH_TOKEN: c25hcHNob3QtdGVzdC10b2tlbg==
-    kind: Secret
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: n8n
-        app.kubernetes.io/version: 0.0.0
-        helm.sh/chart: n8n-0.0.0
-      name: RELEASE-NAME-n8n-task-runners
-      namespace: NAMESPACE
-    type: Opaque
-  8: |
-    apiVersion: v1
     kind: Service
     metadata:
       labels:
@@ -580,7 +565,7 @@ matches the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: n8n
       type: ClusterIP
-  9: |
+  8: |
     apiVersion: v1
     kind: ServiceAccount
     metadata:
@@ -592,7 +577,7 @@ matches the snapshot:
         helm.sh/chart: n8n-0.0.0
       name: n8n
       namespace: NAMESPACE
-  10: |
+  9: |
     apiVersion: v1
     kind: Pod
     metadata:

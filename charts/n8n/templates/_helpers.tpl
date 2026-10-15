@@ -380,6 +380,12 @@ per mistake.
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
 {{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
 {{- end -}}
+{{- /* Generating the token is opt-in: a generated value changes on every
+render without a cluster, and the runner and broker then disagree. */ -}}
+{{- $token := .Values.taskRunners.authToken -}}
+{{- if and .Values.taskRunners.enabled (not $token.existingSecret) (not $token.value) (not $token.generate) -}}
+{{- $errs = append $errs "taskRunners.enabled=true requires an auth token. Create a Secret with \"kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32)\" and set taskRunners.authToken.existingSecret: n8n-runner-token and taskRunners.authToken.existingSecretKey: auth-token. Or set taskRunners.authToken.value to a token. Or set taskRunners.authToken.generate: true to have the chart generate one, which only stays stable when Helm can reach the cluster." -}}
+{{- end -}}
 {{- if and .Values.taskRunners.enabled ((.Values.taskRunners.probes | default dict).liveness | default dict).enabled -}}
 {{- $healthPort := include "n8n.taskRunnerHealthCheckPort" . -}}
 {{- if and $healthPort (or (not (regexMatch "^[0-9]+$" $healthPort)) (lt (atoi $healthPort) 1) (gt (atoi $healthPort) 65535)) -}}

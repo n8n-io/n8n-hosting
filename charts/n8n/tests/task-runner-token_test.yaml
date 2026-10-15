@@ -1,0 +1,132 @@
+suite: 'task-runner auth token'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+  - templates/secret-task-runners.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: fails when task runners are enabled with no token
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'taskRunners.enabled=true requires an auth token. Create a Secret with "kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32)" and set taskRunners.authToken.existingSecret: n8n-runner-token and taskRunners.authToken.existingSecretKey: auth-token. Or set taskRunners.authToken.value to a token. Or set taskRunners.authToken.generate: true to have the chart generate one, which only stays stable when Helm can reach the cluster.'
+
+  - it: renders the Secret from authToken.value
+    template: templates/secret-task-runners.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.authToken.value: test-token
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-task-runners
+      - equal:
+          path: data.N8N_RUNNERS_AUTH_TOKEN
+          value: dGVzdC10b2tlbg==
+
+  - it: reads the token from authToken.value
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      taskRunners.enabled: true
+      taskRunners.authToken.value: test-token
+    asserts:
+      - notFailedTemplate: {}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_RUNNERS_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-n8n-task-runners
+                key: N8N_RUNNERS_AUTH_TOKEN
+
+  - it: renders no Secret with authToken.existingSecret
+    template: templates/secret-task-runners.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.authToken.existingSecret: n8n-runner-token
+      taskRunners.authToken.existingSecretKey: auth-token
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: reads the token from authToken.existingSecret
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      taskRunners.enabled: true
+      taskRunners.authToken.existingSecret: n8n-runner-token
+      taskRunners.authToken.existingSecretKey: auth-token
+    asserts:
+      - notFailedTemplate: {}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_RUNNERS_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: n8n-runner-token
+                key: auth-token
+
+  - it: generates a token with authToken.generate
+    template: templates/secret-task-runners.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.authToken.generate: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - matchRegex:
+          path: data.N8N_RUNNERS_AUTH_TOKEN
+          pattern: ^[A-Za-z0-9+/]{43}=$
+
+  - it: prefers authToken.value over authToken.generate
+    template: templates/secret-task-runners.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.authToken.generate: true
+      taskRunners.authToken.value: test-token
+    asserts:
+      - equal:
+          path: data.N8N_RUNNERS_AUTH_TOKEN
+          value: dGVzdC10b2tlbg==
+
+  - it: accepts authToken.generate as the token source
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.authToken.generate: true
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: renders no Secret with authToken.generate and authToken.existingSecret
+    template: templates/secret-task-runners.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.authToken.generate: true
+      taskRunners.authToken.existingSecret: n8n-runner-token
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no Secret when task runners are disabled
+    template: templates/secret-task-runners.yaml
+    set:
+      taskRunners.enabled: false
+      taskRunners.authToken.value: test-token
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no Secret by default
+    template: templates/secret-task-runners.yaml
+    asserts:
+      - hasDocuments:
+          count: 0

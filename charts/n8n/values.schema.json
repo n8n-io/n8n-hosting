@@ -123,7 +123,8 @@
           "properties": {
             "existingSecret": { "type": "string" },
             "existingSecretKey": { "type": "string" },
-            "value": { "type": "string" }
+            "value": { "type": "string" },
+            "generate": { "type": "boolean" }
           }
         },
         "broker": {

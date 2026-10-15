@@ -10,6 +10,7 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
   image.tag: "2.40.0"
   webhookProcessor.enabled: true
   taskRunners.enabled: true

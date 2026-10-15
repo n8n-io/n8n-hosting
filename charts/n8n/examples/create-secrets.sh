@@ -30,6 +30,7 @@ echo "This script will create the following secrets:"
 echo "  • n8n-core-secrets (encryption key, host, protocol)"
 echo "  • n8n-db-secret (database password)"
 echo "  • s3-credentials (AWS S3 secret key, optional)"
+echo "  • n8n-runner-token (task runner auth token, optional)"
 echo
 
 if ! command -v kubectl &> /dev/null; then
@@ -77,6 +78,19 @@ fi
 
 echo
 
+echo "=== Task Runners (Optional) ==="
+echo "Task runners need an auth token. Do you want to generate one? (y/N)"
+read -p "Generate a task runner token? [N]: " configure_runners
+
+if [[ "$configure_runners" =~ ^[Yy]$ ]]; then
+    N8N_RUNNERS_AUTH_TOKEN=$(openssl rand -base64 32)
+    CREATE_RUNNER_SECRET=true
+else
+    CREATE_RUNNER_SECRET=false
+fi
+
+echo
+
 
 echo "  Review your configuration:"
 echo "  Host: $N8N_HOST"
@@ -86,6 +100,9 @@ echo "  Encryption key: Generated"
 echo "  Database password: [HIDDEN]"
 if [ "$CREATE_S3_SECRET" = true ]; then
     echo "  S3 secret key: [HIDDEN]"
+fi
+if [ "$CREATE_RUNNER_SECRET" = true ]; then
+    echo "  Task runner token: Generated"
 fi
 
 echo
@@ -122,18 +139,30 @@ if [ "$CREATE_S3_SECRET" = true ]; then
         --dry-run=client -o yaml | kubectl apply -f -
 fi
 
+# Create task runner token secret if requested
+if [ "$CREATE_RUNNER_SECRET" = true ]; then
+    echo "Creating n8n-runner-token..."
+    kubectl create secret generic n8n-runner-token \
+        --from-literal=auth-token="$N8N_RUNNERS_AUTH_TOKEN" \
+        --dry-run=client -o yaml | kubectl apply -f -
+fi
+
 echo
 echo "   Secrets created successfully!"
 echo
 
 # Show what was created
 echo "  Created secrets:"
-kubectl get secrets n8n-core-secrets n8n-db-secret $([ "$CREATE_S3_SECRET" = true ] && echo "s3-credentials") 2>/dev/null || true
+kubectl get secrets n8n-core-secrets n8n-db-secret $([ "$CREATE_S3_SECRET" = true ] && echo "s3-credentials") $([ "$CREATE_RUNNER_SECRET" = true ] && echo "n8n-runner-token") 2>/dev/null || true
 
 echo
 echo "  Next steps:"
 echo "  1. Choose a values file from the examples/ directory"
 echo "  2. Customize it for your environment"
+if [ "$CREATE_RUNNER_SECRET" = true ]; then
+    echo "     For task runners, set taskRunners.authToken.existingSecret: n8n-runner-token"
+    echo "     and taskRunners.authToken.existingSecretKey: auth-token"
+fi
 echo "  3. Deploy with: helm install n8n ./charts/n8n -f your-values.yaml"
 echo
 

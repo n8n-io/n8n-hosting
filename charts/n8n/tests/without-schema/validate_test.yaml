@@ -51,6 +51,7 @@ tests:
     set:
       taskRunners.enabled: true
       taskRunners.mode: internal
+      taskRunners.authToken.existingSecret: n8n-runner-token
     asserts:
       - failedTemplate:
           errorMessage: 'taskRunners.mode must be ''external''. This chart only supports external task runner sidecars.'

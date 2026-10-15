@@ -28,6 +28,36 @@ If your values file sets a key the chart no longer reads, the render fails. The 
 
 ### Task runners
 
+Task runners are on by default. In queue mode, each worker pod gains a `task-runner` container that requests 100m CPU and 128Mi of memory. In standalone mode, the main pod gains it instead. Plan node capacity for the extra requests, or adjust them under `taskRunners.resources`. To keep code running inside the n8n process, set `taskRunners.enabled: false`. See [decision 0014](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0014-task-runners-on-by-default.md).
+
+With task runners enabled, an auth token source is required. The chart generates a token only when you ask it to, and the render fails without a source. See [decision 0019](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0019-task-runner-token-generation-is-opt-in.md).
+
+If you already set `taskRunners.authToken.existingSecret` or `taskRunners.authToken.value`, there is nothing to do.
+
+Otherwise, create a Secret with a new token:
+
+```bash
+kubectl create secret generic n8n-runner-token \
+  --from-literal=auth-token=$(openssl rand -base64 32)
+```
+
+Then point the chart at it:
+
+```yaml
+taskRunners:
+  authToken:
+    existingSecret: n8n-runner-token
+    existingSecretKey: auth-token
+```
+
+Or set `taskRunners.authToken.value` to a token, and the chart creates the Secret.
+
+To keep the token the chart generated before, set `taskRunners.authToken.generate: true`. This only stays stable when Helm can reach the cluster. Under Argo CD or `helm template`, use `existingSecret`.
+
+Do not name the Secret the chart created, which ends in `-task-runners`, in `existingSecret`. Helm deletes that Secret on upgrade, because the chart does not render it when `existingSecret` is set.
+
+With task runners disabled, the chart does not render the task-runner Secret, and Helm removes it on upgrade.
+
 ### Binary data and S3
 
 ### Ingress and cloud integration
@@ -39,5 +69,8 @@ If your values file sets a key the chart no longer reads, the render fails. The 
 ### Persistence
 
 ### Changed defaults
+
+- `taskRunners.enabled` is now `true`. See [Task runners](#task-runners).
+- `taskRunners.resources.requests.memory` is now `128Mi`, down from `256Mi`. The limit stays `512Mi`.
 
 ### n8n 3.0
