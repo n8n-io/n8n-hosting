@@ -1,4 +1,4 @@
-# 0014. Generating the task-runner token is opt-in
+# 0019. Generating the task-runner token is opt-in
 
 Date: 2026-10-15
 PR: https://github.com/n8n-io/n8n-hosting/pull/252

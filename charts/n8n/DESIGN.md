@@ -36,7 +36,7 @@ A value that doesn't do what it appears to do is a bug, not a documentation gap.
 **Renders deterministically without a cluster.**
 
 `helm template` and Argo CD produce the same output as `helm install`. By default there is no `lookup`, no generated secret and no random value. Anything unique to an install (the encryption key, the task-runner token) is supplied by the user or read from an existing Secret, and the chart fails without it. A value that generates one instead is opt-in, off by default, and says in `values.yaml` that it needs Helm to reach the cluster.
-*How we check it:* with the default values, two consecutive `helm template` runs diff clean.
+*How we check it:* with the default values and a token from an existing Secret, two consecutive `helm template` runs diff clean.
 
 **Upgrades are in place, across majors included.**
 
