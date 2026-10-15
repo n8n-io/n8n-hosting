@@ -4,7 +4,7 @@ metadata:
   labels:
     service: n8n
   name: n8n
-  namespace: n8n
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
