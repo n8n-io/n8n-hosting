@@ -498,10 +498,9 @@
                 "enabled": { "type": "boolean" },
                 "type": { 
                   "type": "string",
-                  "enum": ["httpGet", "exec"]
+                  "enum": ["", "httpGet", "exec"]
                 },
                 "path": { "type": "string" },
-                "port": { "type": "integer" },
                 "command": { 
                   "type": "array",
                   "items": { "type": "string" }
@@ -518,7 +517,7 @@
                 "enabled": { "type": "boolean" },
                 "type": {
                   "type": "string",
-                  "enum": ["httpGet", "exec"]
+                  "enum": ["", "httpGet", "exec"]
                 },
                 "path": { "type": "string" },
                 "command": {

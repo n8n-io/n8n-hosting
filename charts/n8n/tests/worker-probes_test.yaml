@@ -168,14 +168,10 @@ tests:
       - notExists:
           path: spec.template.spec.containers[0].livenessProbe.httpGet
 
-  - it: renders exec probes and no health endpoint when both are switched off
+  - it: falls back to the process check when the health endpoint is off
     template: templates/deployment-worker.yaml
     set:
       redis.healthCheck.enabled: false
-      probes.worker.liveness.type: exec
-      probes.worker.liveness.command: ["/bin/true"]
-      probes.worker.readiness.type: exec
-      probes.worker.readiness.command: ["/bin/true"]
     asserts:
       - notExists:
           path: spec.template.spec.containers[0].startupProbe
@@ -184,72 +180,92 @@ tests:
           content:
             name: QUEUE_HEALTH_CHECK_ACTIVE
             value: "true"
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
+
+  - it: keeps rendering a values file copied from an older chart
+    template: templates/deployment-worker.yaml
+    set:
+      redis.healthCheck.enabled: false
+      probes.worker.liveness:
+        type: exec
+        command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
+      probes.worker.readiness:
+        type: exec
+        command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
+
+  - it: runs the process check for an exec probe with no command
+    template: templates/deployment-worker.yaml
+    set:
+      probes.worker.liveness.type: exec
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
       - exists:
-          path: spec.template.spec.containers[0].livenessProbe.exec
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+
+  - it: runs a command set without a type as an exec probe
+    template: templates/deployment-worker.yaml
+    set:
+      probes.worker.liveness.command: ["/bin/true"]
+      probes.worker.readiness.command: ["/bin/false"]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value: ["/bin/true"]
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: ["/bin/false"]
+      - exists:
+          path: spec.template.spec.containers[0].startupProbe
 
   - it: rejects an HTTP liveness probe with the health endpoint off
     template: templates/deployment-main.yaml
     set:
       redis.healthCheck.enabled: false
-      probes.worker.readiness.enabled: false
+      probes.worker.liveness.type: httpGet
     asserts:
       - failedTemplate:
-          errorMessage: 'probes.worker.liveness.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or set probes.worker.liveness.type=exec with a command.'
+          errorMessage: 'probes.worker.liveness.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or remove probes.worker.liveness.type to let the chart choose.'
 
   - it: rejects an HTTP readiness probe with the health endpoint off
     template: templates/deployment-main.yaml
     set:
       redis.healthCheck.enabled: false
-      probes.worker.liveness.enabled: false
+      probes.worker.readiness.type: httpGet
     asserts:
       - failedTemplate:
-          errorMessage: 'probes.worker.readiness.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or set probes.worker.readiness.type=exec with a command.'
+          errorMessage: 'probes.worker.readiness.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or remove probes.worker.readiness.type to let the chart choose.'
 
   - it: accepts a disabled HTTP probe with the health endpoint off
     template: templates/deployment-main.yaml
     set:
       redis.healthCheck.enabled: false
-      probes.worker.liveness.enabled: false
-      probes.worker.readiness.enabled: false
+      probes.worker.liveness:
+        enabled: false
+        type: httpGet
     asserts:
       - notFailedTemplate: {}
-
-  - it: rejects an exec liveness probe with no command
-    template: templates/deployment-main.yaml
-    set:
-      probes.worker.liveness.type: exec
-    asserts:
-      - failedTemplate:
-          errorMessage: 'probes.worker.liveness.type=exec requires probes.worker.liveness.command. Set a command, or set probes.worker.liveness.type=httpGet.'
-
-  - it: rejects an exec readiness probe with no command
-    template: templates/deployment-main.yaml
-    set:
-      probes.worker.readiness.type: exec
-    asserts:
-      - failedTemplate:
-          errorMessage: 'probes.worker.readiness.type=exec requires probes.worker.readiness.command. Set a command, or set probes.worker.readiness.type=httpGet.'
-
-  - it: rejects a command on an HTTP liveness probe
-    template: templates/deployment-main.yaml
-    set:
-      probes.worker.liveness.command: ["/bin/true"]
-    asserts:
-      - failedTemplate:
-          errorMessage: 'probes.worker.liveness.command is set but probes.worker.liveness.type is httpGet, so the command would not run. Set probes.worker.liveness.type=exec to run it, or remove the command.'
-
-  - it: rejects a command on an HTTP readiness probe
-    template: templates/deployment-main.yaml
-    set:
-      probes.worker.readiness.command: ["/bin/true"]
-    asserts:
-      - failedTemplate:
-          errorMessage: 'probes.worker.readiness.command is set but probes.worker.readiness.type is httpGet, so the command would not run. Set probes.worker.readiness.type=exec to run it, or remove the command.'
 
   - it: skips the probe checks when there are no worker pods
     template: templates/deployment-main.yaml
     set:
       queueMode.workerReplicaCount: 0
       redis.healthCheck.enabled: false
+      probes.worker.liveness.type: httpGet
     asserts:
       - notFailedTemplate: {}

@@ -154,13 +154,12 @@ spec:
           {{- end }}
 
           # Worker Health Probes
-          {{- $healthPort := .Values.redis.healthCheck.port }}
           {{- with .Values.probes.worker.startup }}
           {{- if and .enabled $.Values.redis.healthCheck.enabled }}
           startupProbe:
             httpGet:
               path: {{ .path }}
-              port: {{ $healthPort }}
+              port: {{ $.Values.redis.healthCheck.port }}
             failureThreshold: {{ .failureThreshold }}
             periodSeconds: {{ .periodSeconds }}
           {{- end }}
@@ -169,15 +168,7 @@ spec:
           {{- with .Values.probes.worker.readiness }}
           {{- if .enabled }}
           readinessProbe:
-            {{- if eq .type "httpGet" }}
-            httpGet:
-              path: {{ .path }}
-              port: {{ $healthPort }}
-            {{- else }}
-            exec:
-              command:
-                {{- toYaml .command | nindent 16 }}
-            {{- end }}
+            {{- include "n8n.workerProbeHandler" (dict "probe" . "root" $) | nindent 12 }}
             initialDelaySeconds: {{ .initialDelaySeconds }}
             periodSeconds: {{ .periodSeconds }}
             timeoutSeconds: {{ .timeoutSeconds }}
@@ -188,15 +179,7 @@ spec:
           {{- with .Values.probes.worker.liveness }}
           {{- if .enabled }}
           livenessProbe:
-            {{- if eq .type "httpGet" }}
-            httpGet:
-              path: {{ .path }}
-              port: {{ $healthPort }}
-            {{- else }}
-            exec:
-              command:
-                {{- toYaml .command | nindent 16 }}
-            {{- end }}
+            {{- include "n8n.workerProbeHandler" (dict "probe" . "root" $) | nindent 12 }}
             initialDelaySeconds: {{ .initialDelaySeconds }}
             periodSeconds: {{ .periodSeconds }}
             timeoutSeconds: {{ .timeoutSeconds }}
