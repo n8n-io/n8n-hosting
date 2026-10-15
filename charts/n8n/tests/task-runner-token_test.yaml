@@ -7,13 +7,11 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: fails when task runners are enabled with no token
+  - it: fails with no token source, which the default values leave unset
     template: templates/deployment-main.yaml
-    set:
-      taskRunners.enabled: true
     asserts:
       - failedTemplate:
-          errorMessage: 'taskRunners.enabled=true requires an auth token. Create a Secret with "kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32)" and set taskRunners.authToken.existingSecret: n8n-runner-token and taskRunners.authToken.existingSecretKey: auth-token. Or set taskRunners.authToken.value to a token. Or set taskRunners.authToken.generate: true to have the chart generate one, which only stays stable when Helm can reach the cluster.'
+          errorMessage: 'taskRunners.enabled=true requires an auth token. Create a Secret with: kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32). Then set taskRunners.authToken.existingSecret: n8n-runner-token and taskRunners.authToken.existingSecretKey: auth-token. Or set taskRunners.authToken.value to a token. Or set taskRunners.authToken.generate: true, which keeps the token stable only when Helm can reach the cluster.'
 
   - it: renders the Secret from authToken.value
     template: templates/secret-task-runners.yaml
@@ -124,9 +122,3 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
-
-  - it: fails on the default values, which enable task runners
-    template: templates/deployment-main.yaml
-    asserts:
-      - failedTemplate:
-          errorPattern: '^taskRunners.enabled=true requires an auth token\.'

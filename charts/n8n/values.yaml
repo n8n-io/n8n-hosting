@@ -128,7 +128,7 @@ taskRunners:
 
   # Authentication token for task runners to connect to the broker.
   # Required when task runners are enabled: set existingSecret, value or
-  # generate. Generate a token with: openssl rand -base64 32
+  # generate. Create a token with: openssl rand -base64 32
   authToken:
     # Use existing secret for auth token
     existingSecret: ""
