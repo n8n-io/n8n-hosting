@@ -2,6 +2,40 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "n8n values schema",
   "type": "object",
+  "definitions": {
+    "envKeySelector": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "key": { "type": "string", "minLength": 1 },
+        "optional": { "type": "boolean" }
+      },
+      "required": ["name", "key"],
+      "additionalProperties": false
+    },
+    "envFromSource": {
+      "type": "object",
+      "properties": {
+        "configMapRef": { "$ref": "#/definitions/envFromRef" },
+        "secretRef": { "$ref": "#/definitions/envFromRef" },
+        "prefix": { "type": "string" }
+      },
+      "oneOf": [
+        { "required": ["configMapRef"], "not": { "required": ["secretRef"] } },
+        { "required": ["secretRef"], "not": { "required": ["configMapRef"] } }
+      ],
+      "additionalProperties": false
+    },
+    "envFromRef": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "optional": { "type": "boolean" }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    }
+  },
   "properties": {
     "image": {
       "type": "object",
@@ -743,10 +777,27 @@
               "minProperties": 1,
               "maxProperties": 1,
               "properties": {
-                "secretKeyRef": { "type": "object" },
-                "configMapKeyRef": { "type": "object" },
-                "fieldRef": { "type": "object" },
-                "resourceFieldRef": { "type": "object" }
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }
@@ -764,10 +815,27 @@
               "minProperties": 1,
               "maxProperties": 1,
               "properties": {
-                "secretKeyRef": { "type": "object" },
-                "configMapKeyRef": { "type": "object" },
-                "fieldRef": { "type": "object" },
-                "resourceFieldRef": { "type": "object" }
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }
@@ -785,10 +853,27 @@
               "minProperties": 1,
               "maxProperties": 1,
               "properties": {
-                "secretKeyRef": { "type": "object" },
-                "configMapKeyRef": { "type": "object" },
-                "fieldRef": { "type": "object" },
-                "resourceFieldRef": { "type": "object" }
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }
@@ -806,10 +891,27 @@
               "minProperties": 1,
               "maxProperties": 1,
               "properties": {
-                "secretKeyRef": { "type": "object" },
-                "configMapKeyRef": { "type": "object" },
-                "fieldRef": { "type": "object" },
-                "resourceFieldRef": { "type": "object" }
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }
@@ -827,10 +929,27 @@
               "minProperties": 1,
               "maxProperties": 1,
               "properties": {
-                "secretKeyRef": { "type": "object" },
-                "configMapKeyRef": { "type": "object" },
-                "fieldRef": { "type": "object" },
-                "resourceFieldRef": { "type": "object" }
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }
@@ -878,23 +997,23 @@
       "properties": {
         "shared": {
           "type": "array",
-          "items": { "type": "object" }
+          "items": { "$ref": "#/definitions/envFromSource" }
         },
         "main": {
           "type": "array",
-          "items": { "type": "object" }
+          "items": { "$ref": "#/definitions/envFromSource" }
         },
         "worker": {
           "type": "array",
-          "items": { "type": "object" }
+          "items": { "$ref": "#/definitions/envFromSource" }
         },
         "webhookProcessor": {
           "type": "array",
-          "items": { "type": "object" }
+          "items": { "$ref": "#/definitions/envFromSource" }
         },
         "taskRunner": {
           "type": "array",
-          "items": { "type": "object" }
+          "items": { "$ref": "#/definitions/envFromSource" }
         }
       },
       "additionalProperties": false

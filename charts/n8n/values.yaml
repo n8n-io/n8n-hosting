@@ -157,7 +157,8 @@ taskRunners:
       memory: 512Mi
   # Liveness probe against the launcher's health endpoint in the sidecar.
   # It uses port 5680, or N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT when you set
-  # it in env.taskRunner.
+  # it as a literal in env.taskRunner. The chart cannot read a port set through
+  # envFrom.taskRunner, so set it in env.taskRunner, or disable this probe.
   probes:
     liveness:
       enabled: true
@@ -698,7 +699,8 @@ executions:
 
 # ----- Environment variables -----
 # Variables for each component, as flat maps of NAME: value. The chart renders
-# them into one ConfigMap per component, loaded with envFrom.
+# them into ConfigMaps loaded with envFrom: one shared by main, worker and
+# webhook-processor pods, and one for each component.
 #   shared:           main, worker and webhook-processor pods
 #   main, worker, webhookProcessor: that component only, over shared
 #   taskRunner:       the task-runner sidecar only; shared does not reach it

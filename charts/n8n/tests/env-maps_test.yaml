@@ -27,8 +27,15 @@ tests:
   - it: puts env.worker in the worker ConfigMap only
     template: templates/configmap.yaml
     set:
+      env.shared.N8N_LOG_LEVEL: info
       env.worker.N8N_LOG_LEVEL: debug
     asserts:
+      - equal:
+          path: data.N8N_LOG_LEVEL
+          value: info
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n
       - equal:
           path: data.N8N_LOG_LEVEL
           value: debug
@@ -40,6 +47,21 @@ tests:
         documentSelector:
           path: metadata.name
           value: RELEASE-NAME-n8n-main
+
+  # envFrom loads the component ConfigMap after the shared one, so the worker's
+  # value above wins; env-from_test pins that order.
+
+  - it: renders no worker ConfigMap when there are no worker pods
+    template: templates/configmap.yaml
+    set:
+      queueMode.workerReplicaCount: 0
+    asserts:
+      - containsDocument:
+          kind: ConfigMap
+          apiVersion: v1
+          name: RELEASE-NAME-n8n-worker
+        not: true
+        any: true
 
   - it: renders numbers and booleans as plain strings
     template: templates/configmap.yaml
@@ -411,6 +433,24 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'env.shared.DB_POSTGRESDB_HOST is set by the chart from database.host. Set database.host instead, or put it in chartEnvOverrides.shared to override the chart deliberately.'
+
+  - it: refuses a reference without its required fields
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.POD_NAME:
+        fieldRef: {}
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/env/shared/POD_NAME'"
+
+  - it: refuses a malformed envFrom entry
+    template: templates/deployment-main.yaml
+    set:
+      envFrom.shared:
+        - secretRef: {}
+    asserts:
+      - failedTemplate:
+          errorPattern: "missing property 'name'"
 
   - it: refuses an object that is not a single reference
     template: templates/deployment-main.yaml

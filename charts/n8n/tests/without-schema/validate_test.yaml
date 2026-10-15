@@ -126,3 +126,12 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'env.shared.N8N_SMTP_PASS must be a string, number or boolean, or a reference with exactly one of secretKeyRef, configMapKeyRef, fieldRef or resourceFieldRef.'
+
+  - it: refuses a reference whose source is not a map
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef: smtp
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N_SMTP_PASS must be a string, number or boolean, or a reference with exactly one of secretKeyRef, configMapKeyRef, fieldRef or resourceFieldRef.'

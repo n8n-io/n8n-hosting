@@ -86,6 +86,7 @@ tests:
       config.extraEnvFrom: []
       queueMode.workerExtraEnv: []
       webhookProcessor.extraEnv: []
+      webhook.extraEnv: []
       redis.extraEnv: []
       executions.extraEnv: []
       s3.storage.extraEnv: []

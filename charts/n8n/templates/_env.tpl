@@ -41,8 +41,10 @@ The n8n components this release renders.
 */}}
 {{- define "n8n.envComponents" -}}
 {{- $c := list "main" -}}
-{{- if .Values.queueMode.enabled -}}{{- $c = append $c "worker" -}}{{- end -}}
-{{- if .Values.webhookProcessor.enabled -}}{{- $c = append $c "webhookProcessor" -}}{{- end -}}
+{{- /* The same conditions as the Deployments, so no ConfigMap is rendered for
+pods that do not exist. */ -}}
+{{- if and .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) -}}{{- $c = append $c "worker" -}}{{- end -}}
+{{- if and .Values.webhookProcessor.enabled .Values.queueMode.enabled -}}{{- $c = append $c "webhookProcessor" -}}{{- end -}}
 {{- toJson $c -}}
 {{- end -}}
 
@@ -295,11 +297,12 @@ named key is read. component is main, worker, webhookProcessor or taskRunner.
 
 {{/*
 Whether an env map value is a reference: a map with exactly one of the
-valueFrom sources Kubernetes accepts.
+valueFrom sources Kubernetes accepts, holding a map.
 */}}
 {{- define "n8n.isEnvRef" -}}
 {{- if and (kindIs "map" .) (eq (len .) 1) -}}
-{{- if has (keys . | first) (list "secretKeyRef" "configMapKeyRef" "fieldRef" "resourceFieldRef") -}}true{{- end -}}
+{{- $source := keys . | first -}}
+{{- if and (has $source (list "secretKeyRef" "configMapKeyRef" "fieldRef" "resourceFieldRef")) (kindIs "map" (get . $source)) -}}true{{- end -}}
 {{- end -}}
 {{- end -}}
 

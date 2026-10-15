@@ -90,7 +90,7 @@ All three use the same n8n container image, differentiated by command/args.
 
 ## Secret Management
 
-1. **Encryption key** (`secretRefs.existingSecret`): a Secret with the key `N8N_ENCRYPTION_KEY`. The chart reads only that key, so other keys in the Secret are ignored. For file mode, mount the encryption key file and set its path in `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`
+1. **Encryption key** (`secretRefs.existingSecret`): in env mode, a Secret with the key `N8N_ENCRYPTION_KEY`. The chart reads only that key, so other keys in the Secret are ignored. In file mode the chart reads no Secret: mount the encryption key file and set its path in `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`
 2. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
 3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
