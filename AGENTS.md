@@ -18,7 +18,7 @@ Branch from `main` and open the PR against it. The exception is a fix for code t
 
 A change that also applies to 1.x reaches it as a backport. Add the label `backport release/n8n-2.x` to the PR on `main`, before or after it merges. `.github/workflows/backport.yml` cherry-picks the merged commit and opens a PR against the maintenance branch with the same title. It refuses a breaking change. If the cherry-pick conflicts, it says so on the original PR, and the backport is then a PR against the maintenance branch written by hand.
 
-The files under `.github/workflows/` are identical on every branch and pick their behaviour from the branch they run on. Change them on `main` and backport the change. The release-please files are the exception: each branch keeps its own `release-please-config.json` and `.release-please-manifest.json`.
+The files under `.github/workflows/` are identical on every branch and pick their behaviour from the branch they run on. Change them on `main`, then open the same change against each maintenance branch as a PR of its own. The backport label cannot do this, because the App it pushes with has no permission to change workflow files. The release-please files are the exception: each branch keeps its own `release-please-config.json` and `.release-please-manifest.json`.
 
 ## Design and decisions
 
