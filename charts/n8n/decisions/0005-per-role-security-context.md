@@ -1,7 +1,7 @@
 # 0005. Security context is shared, with per-role overrides
 
 Date: 2026-10-15
-PR: https://github.com/n8n-io/n8n-hosting/pull/236
+PR: https://github.com/n8n-io/n8n-hosting/pull/236, https://github.com/n8n-io/n8n-hosting/pull/254
 
 ## Context
 
