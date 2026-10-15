@@ -135,3 +135,11 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'env.shared.N8N_SMTP_PASS must be a string, number or boolean, or a reference with exactly one of secretKeyRef, configMapKeyRef, fieldRef or resourceFieldRef.'
+
+  - it: refuses an env block that is not a map
+    template: templates/deployment-main.yaml
+    values:
+      - ../values/env-not-a-map.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env must be a map with the keys shared, main, worker, webhookProcessor and taskRunner.'

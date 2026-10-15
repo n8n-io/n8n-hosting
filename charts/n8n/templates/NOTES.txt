@@ -50,8 +50,8 @@ Deployment Configuration:
 {{- end }}
 
 {{- $overrides := list }}
-{{- range $c, $m := (.Values.chartEnvOverrides | default dict) }}
-{{- range $k, $_ := $m }}
+{{- range $c, $_ := (include "n8n.envSection" (list (dict "x" .Values.chartEnvOverrides) "x") | fromJson) }}
+{{- range $k, $_ := (include "n8n.envSection" (list $.Values.chartEnvOverrides $c) | fromJson) }}
 {{- $overrides = append $overrides (printf "chartEnvOverrides.%s.%s" $c $k) }}
 {{- end }}
 {{- end }}

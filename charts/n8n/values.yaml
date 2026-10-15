@@ -763,7 +763,9 @@ config:
 license:
   # Set to true if using n8n Enterprise
   enabled: false
-  # License activation key (leave empty to use secret)
+  # License activation key (leave empty to use secret). The chart stores it in
+  # its own Secret. For production, prefer existingSecret, so the key stays out
+  # of the Helm release.
   activationKey: ""
   # Or reference existing secret containing the license key
   existingSecret:

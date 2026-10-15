@@ -32,7 +32,9 @@ missing or not a map, so the other helpers can range over it safely. The
 validation reports a section that is not a map. Call with (list <block> <name>).
 */}}
 {{- define "n8n.envSection" -}}
-{{- $m := index (index . 0 | default dict) (index . 1) -}}
+{{- $block := index . 0 -}}
+{{- $m := dict -}}
+{{- if kindIs "map" $block -}}{{- $m = index $block (index . 1) -}}{{- end -}}
 {{- if kindIs "map" $m -}}{{- toJson $m -}}{{- else -}}{}{{- end -}}
 {{- end -}}
 
@@ -152,9 +154,6 @@ rather than queueMode.enabled. */ -}}
 {{- end -}}
 {{- with include "n8n.editorBaseUrl" .root -}}
 {{- $_ := set $e "N8N_EDITOR_BASE_URL" (dict "value" . "from" "editor.url") -}}
-{{- end -}}
-{{- if and $v.license.enabled $v.license.activationKey -}}
-{{- $_ := set $e "N8N_LICENSE_ACTIVATION_KEY" (dict "value" $v.license.activationKey "from" "license.activationKey") -}}
 {{- end -}}
 {{- if $v.s3.enabled -}}
 {{- $_ := set $e "N8N_DEFAULT_BINARY_DATA_MODE" (dict "value" $v.s3.storage.mode "from" "s3.storage.mode") -}}
@@ -285,7 +284,9 @@ named key is read. component is main, worker, webhookProcessor or taskRunner.
 {{- $_ := set $e "N8N_EXTERNAL_STORAGE_S3_ACCESS_SECRET" $ref -}}
 {{- $_ := set $e "AWS_SECRET_ACCESS_KEY" (deepCopy $ref) -}}
 {{- end -}}
-{{- if and $v.license.enabled (not $v.license.activationKey) $v.license.existingSecret.name -}}
+{{- if and $v.license.enabled $v.license.activationKey -}}
+{{- $_ := set $e "N8N_LICENSE_ACTIVATION_KEY" (dict "valueFrom" (dict "secretKeyRef" (dict "name" (include "n8n.fullname" .root) "key" "N8N_LICENSE_ACTIVATION_KEY")) "from" "license.activationKey") -}}
+{{- else if and $v.license.enabled $v.license.existingSecret.name -}}
 {{- $_ := set $e "N8N_LICENSE_ACTIVATION_KEY" (dict "valueFrom" (dict "secretKeyRef" (dict "name" $v.license.existingSecret.name "key" $v.license.existingSecret.key)) "from" "license.existingSecret") -}}
 {{- end -}}
 {{- if include "n8n.hasTaskRunner" . -}}
@@ -472,6 +473,7 @@ envFrom:
   - configMapRef:
       name: {{ include "n8n.envConfigMapName" . }}
   {{- $userFrom := $v.envFrom | default dict }}
+  {{- if not (kindIs "map" $userFrom) }}{{- $userFrom = dict }}{{- end }}
   {{- if ne $c "taskRunner" }}
   {{- with index $userFrom "shared" }}
   {{- toYaml . | nindent 2 }}
@@ -490,8 +492,15 @@ n8n.validate to report.
 {{- $root := . -}}
 {{- $v := .Values -}}
 {{- $errs := list -}}
+{{- range $block := list "env" "chartEnvOverrides" "envFrom" -}}
+{{- if not (kindIs "map" (index $v $block | default dict)) -}}
+{{- $errs = append $errs (printf "%s must be a map with the keys shared, main, worker, webhookProcessor and taskRunner." $block) -}}
+{{- end -}}
+{{- end -}}
 {{- $env := $v.env | default dict -}}
+{{- if not (kindIs "map" $env) -}}{{- $env = dict -}}{{- end -}}
 {{- $overrides := $v.chartEnvOverrides | default dict -}}
+{{- if not (kindIs "map" $overrides) -}}{{- $overrides = dict -}}{{- end -}}
 {{- $sections := list "shared" "main" "worker" "webhookProcessor" "taskRunner" -}}
 
 {{- /* Keys and values. The schema checks these too; this covers renders without it. */ -}}

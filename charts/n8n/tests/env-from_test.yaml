@@ -34,8 +34,15 @@ tests:
             - secretRef:
                 name: main-only
 
-  - it: loads the worker's own ConfigMap on workers
+  - it: loads the worker's own ConfigMap and refs on workers
     template: templates/deployment-worker.yaml
+    set:
+      envFrom.worker:
+        - secretRef:
+            name: worker-only
+      envFrom.webhookProcessor:
+        - secretRef:
+            name: webhook-only
     asserts:
       - equal:
           path: spec.template.spec.containers[0].envFrom
@@ -44,13 +51,18 @@ tests:
                 name: RELEASE-NAME-n8n
             - configMapRef:
                 name: RELEASE-NAME-n8n-worker
+            - secretRef:
+                name: worker-only
 
-  - it: loads the webhook processor's own ConfigMap on webhook processors
+  - it: loads the webhook processor's own ConfigMap and refs on webhook processors
     template: templates/deployment-webhook-processor.yaml
     set:
       envFrom.worker:
         - secretRef:
             name: worker-only
+      envFrom.webhookProcessor:
+        - secretRef:
+            name: webhook-only
     asserts:
       - equal:
           path: spec.template.spec.containers[0].envFrom
@@ -59,6 +71,8 @@ tests:
                 name: RELEASE-NAME-n8n
             - configMapRef:
                 name: RELEASE-NAME-n8n-webhook-processor
+            - secretRef:
+                name: webhook-only
 
   - it: keeps the shared ConfigMap and envFrom.shared off the runner sidecar
     template: templates/deployment-worker.yaml

@@ -91,8 +91,9 @@ All three use the same n8n container image, differentiated by command/args.
 ## Secret Management
 
 1. **Encryption key** (`secretRefs.existingSecret`): in env mode, a Secret with the key `N8N_ENCRYPTION_KEY`. The chart reads only that key, so other keys in the Secret are ignored. In file mode the chart reads no Secret: mount the encryption key file and set its path in `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`
-2. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
-3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
+2. **Licence key** (`license.existingSecret`): the activation key from a Secret you manage. An inline `license.activationKey` goes in the chart's own Secret instead, never in a ConfigMap
+3. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
+4. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
 For production, use an external secrets operator (e.g., [External Secrets Operator](https://external-secrets.io/)) rather than storing secrets in values files.
 
@@ -227,8 +228,8 @@ envFrom:
 
 The order, from lowest to highest precedence:
 
-1. The chart's shared ConfigMap: computed variables, literals from `env.shared`, `chartEnvOverrides.shared`
-2. The chart's component ConfigMap: computed variables, literals from `env.<component>`, `chartEnvOverrides.<component>`
+1. The chart's shared ConfigMap: computed variables, literals from `env.shared`, and `chartEnvOverrides.shared` for variables the chart sets there
+2. The chart's component ConfigMap: computed variables, literals from `env.<component>`, `chartEnvOverrides.shared` for variables the chart sets only on that component, and `chartEnvOverrides.<component>`
 3. `envFrom.shared`, then `envFrom.<component>`
 4. The container's `env` list: variables the chart reads from a Secret, and references from the `env` maps
 

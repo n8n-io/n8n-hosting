@@ -120,9 +120,8 @@ tests:
       - equal:
           path: data.N8N_EDITOR_BASE_URL
           value: https://n8n.example.com
-      - equal:
+      - notExists:
           path: data.N8N_LICENSE_ACTIVATION_KEY
-          value: test-key
       - notExists:
           path: data.N8N_HOST
       - notExists:

@@ -430,6 +430,11 @@ runner and n8n drift onto different versions. */ -}}
 {{- if and .Values.license.enabled .Values.license.activationKey .Values.license.existingSecret.name -}}
 {{- $errs = append $errs "license.activationKey and license.existingSecret.name are mutually exclusive. Use one or the other." -}}
 {{- end -}}
+{{- /* An inline key goes in the chart's Secret, which would collide with an
+existing Secret of the same name. */ -}}
+{{- if and .Values.license.enabled .Values.license.activationKey (eq .Values.secretRefs.existingSecret (include "n8n.fullname" .)) -}}
+{{- $errs = append $errs (printf "license.activationKey is stored in the chart's Secret %q, but secretRefs.existingSecret uses that name. Put the key in a Secret of your own and set license.existingSecret instead." (include "n8n.fullname" .)) -}}
+{{- end -}}
 
 {{/* --- Encryption key --- */}}
 {{- $encryptionKeyFile := .Values.secretRefs.env.N8N_ENCRYPTION_KEY_FILE | default "" -}}
