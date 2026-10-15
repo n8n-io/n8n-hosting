@@ -1132,8 +1132,6 @@ Resources:
               Value: https
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
@@ -1423,8 +1421,6 @@ Resources:
               Value: worker
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
@@ -1891,8 +1887,6 @@ Resources:
               Value: https
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
