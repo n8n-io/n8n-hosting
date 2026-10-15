@@ -79,6 +79,12 @@ jobs:
               upgrades+=("$example")
             fi
           done
+          for previous in previous/charts/n8n/ci/install/*.yaml; do
+            example=$(basename "$previous" .yaml)
+            if [[ ! -f "charts/n8n/ci/install/${example}.yaml" ]]; then
+              echo "::notice::No upgrade leg for ${example}: this branch has no overlay for it."
+            fi
+          done
           json=$(printf '%s\n' "${examples[@]}" | jq -R 'select(length > 0)' | jq -sc .)
           echo "examples=$json" >> "$GITHUB_OUTPUT"
           echo "install-test examples: $json"
@@ -92,6 +98,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'test-install') }}
           UPGRADE_LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'test-upgrade') }}
+          UPGRADE_EXAMPLES: ${{ steps.examples.outputs.upgrade-examples }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
@@ -114,7 +121,7 @@ jobs:
           # Only main is a major ahead of UPGRADE_FROM. A maintenance branch
           # has no newer major to upgrade to.
           upgrade=false
-          if [[ "$EVENT" == "pull_request" && "$UPGRADE_LABELLED" == "true" && "$BASE_REF" == "main" ]]; then
+          if [[ "$EVENT" == "pull_request" && "$UPGRADE_LABELLED" == "true" && "$BASE_REF" == "main" && "$UPGRADE_EXAMPLES" != "[]" ]]; then
             upgrade=true
           fi
 
@@ -339,7 +346,8 @@ jobs:
   # example and overlay, then upgrades it in place to this pull request's
   # chart with this pull request's example and overlay, as a customer who has
   # migrated their values would. The cluster add-ons and hooks come from this
-  # pull request: CI plays the cluster the customer upgrades into.
+  # pull request, because CI stands in for the cluster the customer
+  # upgrades into.
   upgrade-test:
     name: upgrade-test (${{ matrix.example }})
     runs-on: ubuntu-latest
@@ -430,7 +438,7 @@ jobs:
 
           failed=0
           for key in "${retired[@]}"; do
-            if ! grep -qF "${key} is no longer a chart value." <<< "$output"; then
+            if ! grep -qF " ${key} is no longer a chart value." <<< "$output"; then
               echo "::error::helm upgrade failed on the unmigrated ${EXAMPLE}.yaml without naming ${key}."
               failed=1
             fi

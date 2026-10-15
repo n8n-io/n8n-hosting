@@ -35,6 +35,6 @@ else
   echo "No licence secrets on this run."
 fi
 
-kubectl apply -f "$(dirname "$0")/fixtures/"
+kubectl apply -f charts/n8n/ci/fixtures/
 kubectl rollout status deployment/postgres --timeout=120s
 kubectl rollout status deployment/redis --timeout=120s

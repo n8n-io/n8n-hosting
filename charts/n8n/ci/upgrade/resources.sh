@@ -21,7 +21,7 @@ usage() {
 }
 
 [[ $# -eq 3 ]] || usage
-command=$1 release=$2 file=$3
+action=$1 release=$2 file=$3
 
 snapshot() {
   {
@@ -35,7 +35,7 @@ snapshot() {
     }] | unique_by(.key)'
 }
 
-case "$command" in
+case "$action" in
   snapshot)
     snapshot > "$file"
     echo "Recorded $(jq length "$file") objects from release ${release}."
