@@ -157,11 +157,6 @@ executions:
 secretRefs:
   existingSecret: "n8n-enterprise-secrets"
 
-# Enterprise security settings
-securityContext:
-  runAsUser: 1000
-  fsGroup: 1000
-
 # Pod disruption budget for high availability
 podDisruptionBudget:
   enabled: true
