@@ -1,8 +1,12 @@
+# Each branch releases its own line from its own release-please config and
+# manifest: main the current chart major, and each release/n8n-<major>.x branch
+# the chart line for that n8n major. The file itself is the same on every
+# branch, so a change here is made on main and backported.
 name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release/**"]
     paths:
       - "charts/**"
       - "release-please-config.json"
@@ -13,8 +17,11 @@ on:
 # token the chart is signed with.
 permissions: {}
 
+# One group per branch. A group keeps a single pending run and cancels the one
+# it replaces, so a shared group would let a push to one line cancel another
+# line's release that was waiting its turn.
 concurrency:
-  group: release
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -57,6 +64,7 @@ jobs:
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          target-branch: ${{ github.ref_name }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
@@ -120,12 +128,14 @@ jobs:
 
       # The command the README gives users, by version tag as they run it. This
       # checks the tag resolves to the signed digest as well as the signature,
-      # and fails the release if either is wrong.
+      # and fails the release if either is wrong. The README matches any
+      # release branch; this pins the one that just published.
       - name: Verify the signature
         env:
           CHART: ghcr.io/n8n-io/n8n-helm-chart/n8n:${{ needs.release.outputs.version }}
+          IDENTITY: https://github.com/n8n-io/n8n-hosting/.github/workflows/release.yml@${{ github.ref }}
         run: |
           cosign verify "$CHART" \
-            --certificate-identity "https://github.com/n8n-io/n8n-hosting/.github/workflows/release.yml@refs/heads/main" \
+            --certificate-identity "$IDENTITY" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             > /dev/null

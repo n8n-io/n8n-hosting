@@ -6,7 +6,9 @@ The official Helm chart for [n8n](https://n8n.io), the workflow automation platf
 
 We release a new chart version every week. Each Wednesday, the day after n8n's weekly release, the chart moves to the latest `stable` n8n version.
 
-Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [changelog](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) to see which n8n version a release carries.
+Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [release notes](https://github.com/n8n-io/n8n-hosting/releases) to see which n8n version a release carries.
+
+Chart 1.x installs n8n 2.x. It is maintained on the [`release/n8n-2.x`](https://github.com/n8n-io/n8n-hosting/tree/release/n8n-2.x) branch, and its weekly releases stay on n8n 2.x. Chart 2.0 is being built on `main` and is published as release candidates, `2.0.0-rc.1`, `2.0.0-rc.2` and so on. Helm skips release candidates unless you pass `--devel` or name the exact version, so `helm install` and `helm upgrade` keep resolving to the latest 1.x release.
 
 ## Prerequisites
 
@@ -25,13 +27,13 @@ helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-v
 
 ### Verify the chart
 
-Each release is signed with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) keyless signing. The signature records that the chart was built by this repository's release workflow on `main`. No key is involved, so there is nothing for you to download first.
+Each release is signed with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) keyless signing. The signature records that the chart was built by this repository's release workflow, on `main` or on a `release/n8n-<major>.x` maintenance branch. No key is involved, so there is nothing for you to download first.
 
 To check a chart version before you install it, run the command below. Replace `<chart-version>` with the version you pass to `helm install --version`, for example `1.14.0`. This is the chart version, not the n8n version.
 
 ```bash
 cosign verify ghcr.io/n8n-io/n8n-helm-chart/n8n:<chart-version> \
-  --certificate-identity "https://github.com/n8n-io/n8n-hosting/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-identity-regexp '^https://github\.com/n8n-io/n8n-hosting/\.github/workflows/release\.yml@refs/heads/(main|release/n8n-[0-9]+\.x)$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 

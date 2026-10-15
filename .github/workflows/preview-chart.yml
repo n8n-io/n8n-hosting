@@ -1,8 +1,8 @@
 # Publishes a one-off preview chart from the preview/worker-pools branch.
 #
 # Manual only, and never on a release path: release.yml runs release-please on
-# pushes to main and is untouched by this branch, so nothing here can cut a
-# real release or move the chart's version.
+# pushes to main and release/** and is untouched by this branch, so nothing here
+# can cut a real release or move the chart's version.
 #
 # The published version is the chart's current version with a prerelease
 # suffix, e.g. 1.11.0-preview.workerpools.1. Helm ignores prerelease versions
