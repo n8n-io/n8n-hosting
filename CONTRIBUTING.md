@@ -208,7 +208,7 @@ scripts/bump-n8n-version.sh 2.38.6
 Open your PR against `main`, which is where chart 2.0 is being built. Chart 1.x is maintained on `release/n8n-2.x`, and maintainers bring fixes across to it with the `backport release/n8n-2.x` label. Open a PR against `release/n8n-2.x` directly only when the fix is for code that no longer exists on `main`, or when a backport conflicts and has to be written by hand.
 
 - Add the `test-install` label to PRs that change chart templates to trigger a full install test on a kind cluster
-- Add the `test-upgrade` label to PRs against `main` that change chart templates or examples. It installs the last 1.x release on a kind cluster with each example from `release/n8n-2.x`, then upgrades it in place to the PR's chart and examples
+- Add the `test-upgrade` label to PRs against `main` that change chart templates or examples. It installs the last 1.x release on a kind cluster with each example that has a `ci/install/` overlay on both branches, then upgrades it in place to the PR's chart and examples
 - All PRs must pass lint and template validation checks
 
 ## License

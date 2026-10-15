@@ -423,7 +423,10 @@ jobs:
         run: |
           set -euo pipefail
           files=("${PREVIOUS}/examples/${EXAMPLE}.yaml" "${PREVIOUS}/ci/install/${EXAMPLE}.yaml")
-          mapfile -t retired < <(bash charts/n8n/ci/upgrade/retired-keys.sh charts/n8n "${files[@]}")
+          # Captured first, because a failure inside < <(...) would read as
+          # an empty list and skip the check.
+          keys=$(bash charts/n8n/ci/upgrade/retired-keys.sh charts/n8n "${files[@]}")
+          mapfile -t retired < <(printf '%s' "$keys" | sed '/^$/d')
           if [[ ${#retired[@]} -eq 0 ]]; then
             echo "The unmigrated ${EXAMPLE}.yaml sets no retired key."
             exit 0
