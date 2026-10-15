@@ -125,8 +125,8 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: renders no Secret by default
-    template: templates/secret-task-runners.yaml
+  - it: fails on the default values, which enable task runners
+    template: templates/deployment-main.yaml
     asserts:
-      - hasDocuments:
-          count: 0
+      - failedTemplate:
+          errorPattern: '^taskRunners.enabled=true requires an auth token\.'

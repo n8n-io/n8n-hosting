@@ -24,3 +24,10 @@ persistence:
 #   --from-literal=N8N_PROTOCOL=http
 secretRefs:
   existingSecret: "n8n-secrets"
+
+# Task runner sidecars are on by default and need an auth token. generate lets
+# the chart create one, which suits a quick start with helm install. Under
+# Argo CD or helm template, use existingSecret instead; see task-runners.yaml.
+taskRunners:
+  authToken:
+    generate: true

@@ -5,6 +5,7 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   - it: accepts a custom string label
     template: templates/deployment-main.yaml

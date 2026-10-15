@@ -65,3 +65,11 @@ ingress:
       nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+
+# Task runner sidecars are on by default and need an auth token. Create the
+# Secret first:
+#   kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32)
+taskRunners:
+  authToken:
+    existingSecret: "n8n-runner-token"
+    existingSecretKey: "auth-token"

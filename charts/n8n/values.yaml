@@ -103,7 +103,10 @@ taskRunners:
   # When enabled, a sidecar container (n8nio/runners) is added to:
   #   - worker pods in queue mode (main offloads manual executions to workers)
   #   - main pods in standalone mode (queueMode.enabled=false)
-  enabled: false
+  # Requires an auth token source; see authToken below.
+  # Set to false to run code inside the n8n process instead (internal mode,
+  # which n8n deprecates from 3.0).
+  enabled: true
 
   # Task runner image configuration
   image:
@@ -169,7 +172,7 @@ taskRunners:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 128Mi
     limits:
       cpu: 500m
       memory: 512Mi

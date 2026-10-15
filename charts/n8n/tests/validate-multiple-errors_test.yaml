@@ -5,6 +5,7 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   # A check that calls fail directly stops at the first problem, so this
   # render would report one problem, not six. helm-unittest drops the

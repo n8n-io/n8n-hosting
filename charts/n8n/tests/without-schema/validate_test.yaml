@@ -8,6 +8,7 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   - it: requires an external database in queue mode
     template: templates/deployment-main.yaml
@@ -51,7 +52,6 @@ tests:
     set:
       taskRunners.enabled: true
       taskRunners.mode: internal
-      taskRunners.authToken.existingSecret: n8n-runner-token
     asserts:
       - failedTemplate:
           errorMessage: 'taskRunners.mode must be ''external''. This chart only supports external task runner sidecars.'
