@@ -2,6 +2,7 @@ suite: 'validate: license'
 templates:
   - templates/deployment-main.yaml
   - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
   - templates/configmap.yaml
   - templates/secrets.yaml
 set:
@@ -40,7 +41,9 @@ tests:
     templates:
       - templates/deployment-main.yaml
       - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
     set:
+      webhookProcessor.enabled: true
       license.enabled: true
       license.activationKey: example-key
     asserts:
