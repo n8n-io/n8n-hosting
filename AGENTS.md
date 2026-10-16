@@ -58,7 +58,7 @@ helm unittest --strict charts/n8n
 helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
 ```
 
-`ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false` matches the CI lint job if `ct` is installed. The kind install test runs in CI only, on labelled PRs and the automated bump and release PRs.
+`ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false` matches the CI lint job if `ct` is installed. The kind install test runs in CI only, on labelled PRs and the automated bump and release PRs. The kind upgrade test, from the last release of the previous major to the PR, runs in CI only, on PRs to `main` labelled `test-upgrade`.
 
 The unit tests need the `helm-unittest` plugin at the version CI pins in the `unittest` job. Where `values.schema.json` rejects an input before the templates render, assert the schema error in the main suite and the `fail` message in `tests/without-schema/`. `tests/default-render_test.yaml` snapshots the default output. When a change alters that output on purpose, run `helm unittest -u charts/n8n` and commit the updated snapshot with the change.
 
