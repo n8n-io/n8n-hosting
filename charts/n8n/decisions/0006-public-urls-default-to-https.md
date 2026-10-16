@@ -1,7 +1,7 @@
 # 0006. n8n has one public address, which defaults to https
 
 Date: 2026-10-16
-PR: https://github.com/n8n-io/n8n-hosting/pull/243
+PR: https://github.com/n8n-io/n8n-hosting/pull/258
 
 ## Context
 
