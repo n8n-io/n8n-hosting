@@ -59,3 +59,43 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)'
+
+  - it: rejects a filesystem mode with S3 on
+    template: templates/deployment-main.yaml
+    set:
+      s3.storage.mode: filesystem
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+    asserts:
+      - failedTemplate:
+          errorMessage: 's3.storage.mode is "filesystem" but s3.enabled=true, so binary data is written to each pod''s local disk and not to S3. Set s3.storage.mode to "s3", or remove it to follow s3.enabled. S3 binary data storage requires an n8n Business or Enterprise licence.'
+
+  - it: points a binary data mode in env at chartEnvOverrides with S3 on
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+      env.shared.N8N_DEFAULT_BINARY_DATA_MODE: database
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N_DEFAULT_BINARY_DATA_MODE is set by the chart from s3.storage.mode. Set s3.storage.mode instead, or put it in chartEnvOverrides.shared to override the chart deliberately.'
+
+  # Keeps the bucket for execution data while binary data goes elsewhere.
+  - it: accepts a database mode in chartEnvOverrides with S3 on
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+      chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE: database
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects a filesystem mode in chartEnvOverrides with S3 on in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+      chartEnvOverrides.worker.N8N_DEFAULT_BINARY_DATA_MODE: filesystem
+    asserts:
+      - failedTemplate:
+          errorMessage: 'chartEnvOverrides.worker.N8N_DEFAULT_BINARY_DATA_MODE is filesystem, but queueMode.enabled=true. Pods do not share a filesystem, so binary data one pod writes cannot be read by another. Remove it so the chart''s S3 mode applies, or set it to "database".'
