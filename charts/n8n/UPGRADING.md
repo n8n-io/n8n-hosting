@@ -18,7 +18,7 @@ The render fails on every values key that 2.0 retired, and names the replacement
 
 ### Values validation
 
-If your values file sets a key the chart no longer reads, the render fails. The message names each such key and what replaces it, all in one render. The chart stops rather than ignoring the key, so a setting cannot quietly stop working. See [decision 0010](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0010-retired-values-keys-fail-the-render.md).
+If your values file sets a key the chart no longer reads, the render fails. The message names each such key and what replaces it, all in one render. The chart stops rather than ignoring the key, so a setting cannot quietly stop working. See [decision 0020](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0020-retired-values-keys-fail-the-render.md).
 
 ### Database
 
