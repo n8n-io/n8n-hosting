@@ -1,6 +1,6 @@
 # N8N_EDITOR_BASE_URL comes from editor.url when it is set. Otherwise the
-# chart derives it from the first ingress host with https://, or falls back
-# to webhook.url when ingress is off.
+# chart derives it from the first ingress host with https://. webhook.url
+# never sets it, because it names where webhooks arrive, not the editor.
 suite: 'editor: URL'
 templates:
   - templates/configmap.yaml
@@ -90,6 +90,20 @@ tests:
       - equal:
           path: data.N8N_WEBHOOK_URL
           value: http://hooks.internal
+
+  - it: sets no editor URL from webhook.url alone
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      webhook.url: https://hooks.example.com
+    asserts:
+      - notExists:
+          path: data.N8N_EDITOR_BASE_URL
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://hooks.example.com
 
   - it: sets both URLs to plain http with webhook.url and editor.url
     template: templates/configmap.yaml

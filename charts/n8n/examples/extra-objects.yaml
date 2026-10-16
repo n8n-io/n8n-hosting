@@ -39,7 +39,7 @@ queueMode:
   workerReplicaCount: 2
   workerConcurrency: 10
 
-webhook:
+editor:
   url: "https://n8n.example.com"
 
 # The IngressRoute replaces the chart's Ingress.

@@ -43,9 +43,6 @@ webhookProcessor:
   replicaCount: 3
   disableProductionWebhooksOnMainProcess: true
 
-webhook:
-  url: "https://n8n.example.com"
-
 ingress:
   enabled: true
   className: nginx
