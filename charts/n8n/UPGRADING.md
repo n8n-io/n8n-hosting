@@ -33,7 +33,7 @@ The chart's Secret holds only secrets. Host, port and protocol are no longer rea
 
 If you use `secretRefs.existingSecret`, the Secret needs only the `N8N_ENCRYPTION_KEY` key, or no key at all if you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. The chart reads that one key by name and ignores the rest of the Secret. A Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` still renders, but n8n no longer receives those values.
 
-In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` and `webhook.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`. After that, you can delete the three keys from the Secret.
+In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`. After that, you can delete the three keys from the Secret.
 
 If you set `license.activationKey` inline, the chart now stores it in the chart's Secret and the containers read it from there. You do not need to change anything. If `secretRefs.existingSecret` names the chart's own Secret (the release's full name), the render fails. Put the licence key in a Secret of your own and set `license.existingSecret` instead.
 
@@ -94,6 +94,16 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 ### Binary data and S3
 
 ### Ingress and cloud integration
+
+Webhooks now follow the editor URL unless `webhook.url` is set, and `webhook.url` no longer sets the editor URL. See [decision 0006](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0006-public-urls-default-to-https.md).
+
+| If your values set | What changes | Do this |
+|---|---|---|
+| `editor.url` with `http://` and an ingress, without `webhook.url` | Webhook URLs move from `https://` to `http://`, matching the editor. | Nothing, unless webhooks must stay on `https://`. Then set `webhook.url`. |
+| `editor.url` on a different host from the ingress, without `webhook.url` | Webhook URLs move to the `editor.url` host. | Nothing, unless webhooks must stay on the ingress host. Then set `webhook.url` to it. |
+| `editor.url` with no ingress, without `webhook.url` | n8n gets a webhook URL. In 1.x it showed `http://localhost:5678`. | Nothing. |
+| `webhook.url` with no ingress, without `editor.url` | The chart no longer sets an editor URL, so n8n builds it from `localhost`. | Set `editor.url`. Remove `webhook.url` if it holds the same address. |
+| `webhook.url` set to the same address as `editor.url` or the ingress host | Nothing. | Remove `webhook.url`. It now repeats the default. |
 
 ### Security contexts
 

@@ -133,14 +133,18 @@ When the path is set, it wins, and any `N8N_ENCRYPTION_KEY` in values is ignored
 
 Set `ingress.enabled=true` to create the main Ingress for the n8n UI, API, and test webhooks. Configure `ingress.className`, controller-specific `ingress.annotations`, and `ingress.tls` for HTTPS termination. For cert-manager, add the issuer annotation and set `ingress.tls[].secretName` to the certificate Secret cert-manager should create.
 
-The chart sets n8n's public URLs from the first ingress host, always with `https://`. This assumes TLS ends at the ingress or in front of it, for example at a cloud load balancer. If n8n is served over plain HTTP, or on another host, set both URLs yourself:
+n8n has one public address. The chart takes it from `editor.url`, or else from the first ingress host with `https://`. It renders the address as `N8N_EDITOR_BASE_URL`, and webhooks follow it as `N8N_WEBHOOK_URL`. The `https://` default assumes TLS ends at the ingress or in front of it, for example at a cloud load balancer.
+
+If n8n is served over plain HTTP, has no ingress, or is reached at another host, set `editor.url`:
 
 ```yaml
-webhook:
-  url: http://n8n.internal   # N8N_WEBHOOK_URL
 editor:
-  url: http://n8n.internal   # N8N_EDITOR_BASE_URL
+  url: http://n8n.internal
 ```
+
+Set `webhook.url` only when webhooks arrive at an address the chart does not route, such as a separate load balancer or API gateway. The editor keeps its own URL.
+
+The chart does not set `N8N_HOST` or `N8N_PROTOCOL`. n8n reads them only to build a fallback URL when neither URL is set.
 
 When `webhookProcessor.enabled=true`, enable `ingress.webhookProcessor.enabled` to create a second Ingress for production webhook traffic. The webhook processor Ingress routes `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/`, and `/mcp/` to webhook processor pods. Test paths such as `/webhook-test/` and `/mcp-test/` stay on the main Ingress.
 
