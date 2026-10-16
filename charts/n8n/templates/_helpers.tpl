@@ -312,6 +312,17 @@ per mistake.
 {{- end -}}
 {{- end -}}
 
+{{/* --- Worker probes --- */}}
+{{/* Same condition as deployment-worker.yaml: no worker pods, nothing to probe. */}}
+{{- if and .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) -}}
+{{- range $name := list "liveness" "readiness" -}}
+{{- $probe := index $.Values.probes.worker $name -}}
+{{- if and $probe.enabled (eq $probe.type "httpGet") (not $.Values.redis.healthCheck.enabled) -}}
+{{- $errs = append $errs (printf "probes.worker.%s.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or remove probes.worker.%s.type to let the chart choose." $name $name) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{/* --- Standalone mode constraints --- */}}
 {{- if not .Values.queueMode.enabled -}}
 {{- if and (not .Values.persistence.enabled) (not .Values.database.useExternal) -}}
@@ -560,4 +571,43 @@ Main pod replica count: multiMain.replicas under multi-main, otherwise replicaCo
 */}}
 {{- define "n8n.mainReplicas" -}}
 {{- ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled -}}
+{{- end -}}
+
+{{/*
+Probe type for a worker liveness or readiness probe. An explicit type wins.
+Otherwise a command means exec, and the health endpoint means httpGet, so
+partial overrides keep rendering the probe they asked for.
+
+Call with (dict "probe" .Values.probes.worker.liveness "root" .)
+*/}}
+{{- define "n8n.workerProbeType" -}}
+{{- if .probe.type -}}
+{{- .probe.type -}}
+{{- else if .probe.command -}}
+exec
+{{- else if .root.Values.redis.healthCheck.enabled -}}
+httpGet
+{{- else -}}
+exec
+{{- end -}}
+{{- end -}}
+
+{{/*
+Handler for a worker liveness or readiness probe. With the health endpoint
+off and no command, it falls back to a process check. pgrep matches its own
+shell, so that check passes whenever the container can run a shell; the
+health endpoint is the real check.
+
+Call with (dict "probe" .Values.probes.worker.liveness "root" .)
+*/}}
+{{- define "n8n.workerProbeHandler" -}}
+{{- if eq (include "n8n.workerProbeType" .) "httpGet" -}}
+httpGet:
+  path: {{ .probe.path }}
+  port: {{ .root.Values.redis.healthCheck.port }}
+{{- else -}}
+exec:
+  command:
+    {{- toYaml (.probe.command | default (list "/bin/sh" "-c" "pgrep -f 'n8n worker' > /dev/null")) | nindent 4 }}
+{{- end -}}
 {{- end -}}
