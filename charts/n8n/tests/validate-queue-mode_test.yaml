@@ -44,3 +44,42 @@ tests:
       # The schema catches this first; without-schema/ covers the fail.
       - failedTemplate:
           errorPattern: "at '/redis/host': minLength"
+
+  - it: rejects a filesystem binary data mode in config.extraEnv
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnv:
+        - name: N8N_DEFAULT_BINARY_DATA_MODE
+          value: filesystem
+    asserts:
+      - failedTemplate:
+          errorMessage: 'config.extraEnv sets N8N_DEFAULT_BINARY_DATA_MODE=filesystem, but queueMode.enabled=true. Worker pods do not share a filesystem, so binary data one pod writes cannot be read by another. Remove the variable to let n8n choose, set it to "database", or store binary data in S3 with s3.enabled=true.'
+
+  - it: rejects a filesystem binary data mode in queueMode.workerExtraEnv
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.workerExtraEnv:
+        - name: N8N_DEFAULT_BINARY_DATA_MODE
+          value: filesystem
+    asserts:
+      - failedTemplate:
+          errorMessage: 'queueMode.workerExtraEnv sets N8N_DEFAULT_BINARY_DATA_MODE=filesystem, but queueMode.enabled=true. Worker pods do not share a filesystem, so binary data one pod writes cannot be read by another. Remove the variable to let n8n choose, set it to "database", or store binary data in S3 with s3.enabled=true.'
+
+  - it: accepts a database binary data mode
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnv:
+        - name: N8N_DEFAULT_BINARY_DATA_MODE
+          value: database
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects a filesystem binary data mode in any letter case
+    template: templates/deployment-main.yaml
+    set:
+      executions.extraEnv:
+        - name: N8N_DEFAULT_BINARY_DATA_MODE
+          value: Filesystem
+    asserts:
+      - failedTemplate:
+          errorMessage: 'executions.extraEnv sets N8N_DEFAULT_BINARY_DATA_MODE=filesystem, but queueMode.enabled=true. Worker pods do not share a filesystem, so binary data one pod writes cannot be read by another. Remove the variable to let n8n choose, set it to "database", or store binary data in S3 with s3.enabled=true.'

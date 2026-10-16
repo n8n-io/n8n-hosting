@@ -9,7 +9,6 @@ set:
   secretRefs.existingSecret: n8n-core-secrets
   webhookProcessor.enabled: true
   s3.enabled: true
-  s3.storage.mode: s3
   s3.bucket.name: n8n-data
   s3.bucket.region: eu-west-1
   s3.auth.autoDetect: true
@@ -55,6 +54,29 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: N8N_AVAILABLE_BINARY_DATA_MODES
+          any: true
+
+  - it: keeps an explicit s3 mode
+    template: templates/deployment-main.yaml
+    set:
+      s3.storage.mode: s3
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_DEFAULT_BINARY_DATA_MODE
+            value: s3
+
+  # Without S3 the chart leaves the mode to n8n, which picks one per topology.
+  - it: sets no binary data mode when S3 is off
+    template: templates/deployment-worker.yaml
+    set:
+      s3.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_DEFAULT_BINARY_DATA_MODE
           any: true
 
   # The schema allows unknown keys under s3.storage, so values files written
