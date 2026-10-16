@@ -20,6 +20,10 @@ matches the snapshot:
         - Database: PostgreSQL (your-postgres-hostname)
         - Cache: Redis (your-redis-hostname)
 
+      WARNING: No public URL is set, so n8n builds its webhook and OAuth callback
+      URLs from localhost. If users reach n8n at another address, set editor.url
+      and webhook.url.
+
       Documentation: https://docs.n8n.io/
       Issues: https://github.com/n8n-io/n8n-hosting/issues
   2: |

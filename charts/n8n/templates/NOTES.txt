@@ -64,6 +64,21 @@ value can express what you need:
 {{- end }}
 {{- end }}
 
+{{- /* With no public URL, n8n builds its webhook and OAuth callback URLs from
+N8N_HOST, which defaults to localhost. */}}
+{{- if not (include "n8n.editorBaseUrl" .) }}
+{{- $urlEnv := false }}
+{{- range include "n8n.userEnv" (dict "root" . "component" "main") | fromJsonArray }}
+{{- if has .name (list "N8N_EDITOR_BASE_URL" "N8N_HOST") }}{{- $urlEnv = true }}{{- end }}
+{{- end }}
+{{- if not $urlEnv }}
+
+WARNING: No public URL is set, so n8n builds its webhook and OAuth callback
+URLs from localhost. If users reach n8n at another address, set editor.url
+and webhook.url.
+{{- end }}
+{{- end }}
+
 {{- if .Values.database.ssl.key }}
 
 WARNING: database.ssl.key is set, but the chart ignores it. To supply a client
