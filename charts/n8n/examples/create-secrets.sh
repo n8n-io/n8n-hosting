@@ -21,6 +21,7 @@ echo "This script will create the following secrets:"
 echo "  • n8n-core-secrets (encryption key)"
 echo "  • n8n-db-secret (database password)"
 echo "  • s3-credentials (AWS S3 secret key, optional)"
+echo "  • n8n-runner-token (task runner auth token)"
 echo
 
 if ! command -v kubectl &> /dev/null; then
@@ -44,6 +45,9 @@ echo "=== Core n8n Configuration ==="
 
 N8N_ENCRYPTION_KEY=$(openssl rand -base64 32)
 echo "Generated new encryption key: ${N8N_ENCRYPTION_KEY:0:16}..."
+
+N8N_RUNNERS_AUTH_TOKEN=$(openssl rand -base64 32)
+echo "Generated new task runner auth token"
 
 echo
 
@@ -72,6 +76,7 @@ echo "  Database password: [HIDDEN]"
 if [ "$CREATE_S3_SECRET" = true ]; then
     echo "  S3 secret key: [HIDDEN]"
 fi
+echo "  Task runner token: Generated"
 
 echo
 read -p "Create these secrets? (y/N): " confirm
@@ -104,18 +109,26 @@ if [ "$CREATE_S3_SECRET" = true ]; then
         --dry-run=client -o yaml | kubectl apply -f -
 fi
 
+# Create task runner token secret
+echo "Creating n8n-runner-token..."
+kubectl create secret generic n8n-runner-token \
+    --from-literal=auth-token="$N8N_RUNNERS_AUTH_TOKEN" \
+    --dry-run=client -o yaml | kubectl apply -f -
+
 echo
 echo "   Secrets created successfully!"
 echo
 
 # Show what was created
 echo "  Created secrets:"
-kubectl get secrets n8n-core-secrets n8n-db-secret $([ "$CREATE_S3_SECRET" = true ] && echo "s3-credentials") 2>/dev/null || true
+kubectl get secrets n8n-core-secrets n8n-db-secret $([ "$CREATE_S3_SECRET" = true ] && echo "s3-credentials") n8n-runner-token 2>/dev/null || true
 
 echo
 echo "  Next steps:"
 echo "  1. Choose a values file from the examples/ directory"
 echo "  2. Customize it for your environment"
+echo "     For task runners, set taskRunners.authToken.existingSecret: n8n-runner-token"
+echo "     and taskRunners.authToken.existingSecretKey: auth-token"
 echo "  3. Deploy with: helm install n8n ./charts/n8n -f your-values.yaml"
 echo
 

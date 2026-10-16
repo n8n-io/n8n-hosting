@@ -6,6 +6,7 @@ templates:
   - templates/pdb.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   - it: renders nothing with the default single replica
     asserts:

@@ -16,7 +16,9 @@ queueMode:
   workerReplicaCount: 3
   workerConcurrency: 10
 
-# Enable task runner sidecars on worker pods (queue mode offloads execution from main)
+# Task runner sidecars are on by default; enabled is set here to show the key.
+# In queue mode they run on worker pods, because main offloads executions to
+# workers.
 taskRunners:
   enabled: true
 

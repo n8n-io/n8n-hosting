@@ -8,6 +8,7 @@ templates:
 set:
   webhookProcessor.enabled: true
   secretRefs.env.N8N_ENCRYPTION_KEY_FILE: /run/secrets/n8n/encryption-key
+  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   - it: passes the key file path in the shared ConfigMap
     template: templates/configmap.yaml

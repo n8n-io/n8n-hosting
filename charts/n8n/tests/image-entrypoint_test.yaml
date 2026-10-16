@@ -10,6 +10,7 @@ templates:
   - templates/deployment-webhook-processor.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
   queueMode.enabled: true
   webhookProcessor.enabled: true
 tests:

@@ -9,6 +9,7 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.value: test-token
   webhookProcessor.enabled: true
   taskRunners.enabled: true
 tests:

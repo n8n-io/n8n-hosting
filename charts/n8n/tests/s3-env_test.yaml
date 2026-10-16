@@ -7,6 +7,7 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
   webhookProcessor.enabled: true
   s3.enabled: true
   s3.storage.mode: s3

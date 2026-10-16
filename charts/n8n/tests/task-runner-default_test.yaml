@@ -1,0 +1,84 @@
+suite: 'task runners on by default'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
+tests:
+  - it: adds the sidecar to workers in queue mode
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: task-runner
+      - equal:
+          path: spec.template.spec.containers[1].resources
+          value:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+  - it: adds no sidecar to main in queue mode
+    template: templates/deployment-main.yaml
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+
+  - it: adds the sidecar to main in standalone mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: task-runner
+      - equal:
+          path: spec.template.spec.containers[1].resources.requests.memory
+          value: 128Mi
+
+  - it: sets external mode in the worker ConfigMap
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
+    asserts:
+      - equal:
+          path: data.N8N_RUNNERS_MODE
+          value: external
+
+  - it: adds no sidecar to workers with taskRunners.enabled false
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.enabled: false
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+
+  - it: adds no sidecar to standalone main with taskRunners.enabled false
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      taskRunners.enabled: false
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+
+  - it: leaves the runner mode unset with taskRunners.enabled false
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
+    set:
+      taskRunners.enabled: false
+    asserts:
+      - notExists:
+          path: data.N8N_RUNNERS_MODE

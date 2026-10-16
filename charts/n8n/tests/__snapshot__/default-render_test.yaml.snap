@@ -19,6 +19,7 @@ matches the snapshot:
         - Main pods: 1
         - Database: PostgreSQL (your-postgres-hostname)
         - Cache: Redis (your-redis-hostname)
+        - Task runners: sidecar on worker pods, token from Secret n8n-runner-token
 
       WARNING: No public URL is set, so n8n builds its webhook and OAuth callback
       URLs from localhost. If users reach n8n at another address, set editor.url
@@ -96,6 +97,9 @@ matches the snapshot:
       EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
       EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
       EXECUTIONS_TIMEOUT_MAX: "3600"
+      N8N_NATIVE_PYTHON_RUNNER: "true"
+      N8N_RUNNERS_BROKER_LISTEN_ADDRESS: 0.0.0.0
+      N8N_RUNNERS_MODE: external
       QUEUE_HEALTH_CHECK_ACTIVE: "true"
       QUEUE_HEALTH_CHECK_PORT: "5678"
     kind: ConfigMap
@@ -110,6 +114,23 @@ matches the snapshot:
       name: RELEASE-NAME-n8n-worker
       namespace: NAMESPACE
   5: |
+    apiVersion: v1
+    data:
+      N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT: "15"
+      N8N_RUNNERS_LAUNCHER_LOG_LEVEL: info
+      N8N_RUNNERS_TASK_BROKER_URI: http://localhost:5679
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/component: task-runner
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-task-runner
+      namespace: NAMESPACE
+  6: |
     apiVersion: apps/v1
     kind: Deployment
     metadata:
@@ -222,7 +243,7 @@ matches the snapshot:
           volumes:
             - emptyDir: {}
               name: data
-  6: |
+  7: |
     apiVersion: apps/v1
     kind: Deployment
     metadata:
@@ -246,7 +267,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: f672491395a3c51b17d652c5b267e8c1d6b3a4ffe119ccfc640feb48bf97fe43
+            checksum/config: 7c235ad41eed656cdbf04d4f660dd3553b6adbcd3ac2e1b342120c5c4ad11a43
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: worker
@@ -270,6 +291,11 @@ matches the snapshot:
                     secretKeyRef:
                       key: N8N_ENCRYPTION_KEY
                       name: n8n-core-secrets
+                - name: N8N_RUNNERS_AUTH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: N8N_RUNNERS_AUTH_TOKEN
+                      name: n8n-runner-token
               envFrom:
                 - configMapRef:
                     name: RELEASE-NAME-n8n
@@ -320,6 +346,38 @@ matches the snapshot:
                   port: 5678
                 periodSeconds: 10
               volumeMounts: null
+            - env:
+                - name: N8N_RUNNERS_AUTH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: N8N_RUNNERS_AUTH_TOKEN
+                      name: n8n-runner-token
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-n8n-task-runner
+              image: n8nio/runners:0.0.0
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 6
+                httpGet:
+                  path: /healthz
+                  port: 5680
+                initialDelaySeconds: 5
+                periodSeconds: 10
+                timeoutSeconds: 30
+              name: task-runner
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
           securityContext:
             fsGroup: 1000
             runAsGroup: 1000
@@ -330,7 +388,7 @@ matches the snapshot:
           serviceAccountName: n8n
           terminationGracePeriodSeconds: 60
           volumes: null
-  7: |
+  8: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     metadata:
@@ -356,7 +414,7 @@ matches the snapshot:
           - secrets
         verbs:
           - get
-  8: |
+  9: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     metadata:
@@ -376,21 +434,6 @@ matches the snapshot:
       - kind: ServiceAccount
         name: n8n
         namespace: NAMESPACE
-  9: |
-    apiVersion: v1
-    data:
-      N8N_RUNNERS_AUTH_TOKEN: c25hcHNob3QtdGVzdC10b2tlbg==
-    kind: Secret
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: n8n
-        app.kubernetes.io/version: 0.0.0
-        helm.sh/chart: n8n-0.0.0
-      name: RELEASE-NAME-n8n-task-runners
-      namespace: NAMESPACE
-    type: Opaque
   10: |
     apiVersion: v1
     kind: Service
