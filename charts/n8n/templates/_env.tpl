@@ -153,7 +153,7 @@ rather than queueMode.enabled. */ -}}
 {{- end -}}
 {{- end -}}
 {{- with include "n8n.editorBaseUrl" .root -}}
-{{- $_ := set $e "N8N_EDITOR_BASE_URL" (dict "value" . "from" "editor.url (or the first ingress host)") -}}
+{{- $_ := set $e "N8N_EDITOR_BASE_URL" (dict "value" . "from" "editor.url (or the first ingress host or route hostname)") -}}
 {{- end -}}
 {{- if $v.s3.enabled -}}
 {{- /* s3.enabled cannot choose another mode, so only an override can. */ -}}
