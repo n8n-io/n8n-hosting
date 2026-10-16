@@ -10,7 +10,6 @@ multiMain:
 queueMode:
   enabled: true
   workerReplicaCount: 10
-  workerConcurrency: 20
 
 webhookProcessor:
   enabled: true
@@ -123,24 +122,23 @@ resources:
 # Enterprise configuration
 config:
   timezone: UTC
-  extraEnv:
+
+env:
+  shared:
     # Security settings
-    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
-      value: "true"
-    
+    N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+
     # Enterprise logging
-    - name: N8N_LOG_LEVEL
-      value: "info"
-    - name: N8N_LOG_OUTPUT
-      value: "json"  # Structured logging for enterprise
-    
+    N8N_LOG_LEVEL: info
+    N8N_LOG_OUTPUT: json  # Structured logging for enterprise
+
     # Enterprise features
-    - name: N8N_ENTERPRISE_LICENSE_ENABLED
-      value: "true"
+    N8N_ENTERPRISE_LICENSE_ENABLED: true
 
 # Advanced execution settings
 executions:
   concurrency:
+    # In queue mode n8n uses this as each worker's concurrency.
     productionLimit: 100
   timeout: 7200  # 2 hours
   dataRetention:
@@ -154,10 +152,6 @@ executions:
     hardDeleteBuffer: 24  # 24 hours
     pruneHardDeleteInterval: "0 2 * * *"  # Daily at 2 AM
     pruneSoftDeleteInterval: "0 3 * * *"  # Daily at 3 AM
-
-# Webhook configuration
-webhook:
-  timeout: 300000  # 5 minutes for enterprise workloads
 
 # Core secrets
 secretRefs:

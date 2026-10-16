@@ -25,7 +25,7 @@ spec:
       app.kubernetes.io/component: main
   template:
     metadata:
-      {{- $podAnns := merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
+      {{- $podAnns := merge (dict "checksum/config" (include "n8n.envChecksum" (dict "root" $ "component" "main")) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
       annotations:
         {{- toYaml $podAnns | nindent 8 }}
       labels:
@@ -85,68 +85,7 @@ spec:
                   {{- toYaml .Values.lifecycle.main.preStop.command | nindent 18 }}
           {{- end }}
 
-          env:
-            {{- with .Values.webhook.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-
-            # Shared configuration from ConfigMap
-            {{- include "n8n.sharedConfigMapEnv" . | nindent 12 }}
-            
-            # Main-specific configuration from ConfigMap
-            {{- include "n8n.mainConfigMapEnv" . | nindent 12 }}
-            
-            {{- if .Values.database.useExternal }}
-            # Database password (secret)
-            - name: DB_POSTGRESDB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.database.passwordSecret.name }}
-                  key: {{ .Values.database.passwordSecret.key }}
-            {{- end }}
-            {{- if .Values.queueMode.enabled }}
-            # Redis password (secret)
-            {{- with .Values.redis.passwordSecret }}
-            {{- if and .name .key }}
-            - name: QUEUE_BULL_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .name }}
-                  key: {{ .key }}
-            {{- end }}
-            {{- end }}
-
-            # Redis-specific extra environment variables
-            {{- with .Values.redis.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-            {{- end }}
-
-            # S3 External Storage
-            {{- include "n8n.s3Env" . | nindent 12 }}
-
-            # Executions Configuration  
-            {{- include "n8n.executionsEnv" . | nindent 12 }}
-
-            # License Configuration
-            {{- include "n8n.licenseEnv" . | nindent 12 }}
-
-            # Core n8n secrets
-            {{- include "n8n.coreSecretsEnv" . | nindent 12 }}
-
-            # Task Runners Configuration (standalone mode only; queue mode offloads execution to workers)
-            {{- if include "n8n.mainTaskRunnersEnabled" . }}
-            {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}
-            {{- end }}
-
-            {{- with .Values.config.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-
-          {{- with .Values.config.extraEnvFrom }}
-          envFrom:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "n8n.containerEnv" (dict "root" $ "component" "main") | trim | nindent 10 }}
 
           ports:
             - containerPort: {{ .Values.service.port }}

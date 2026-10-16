@@ -54,16 +54,11 @@ commonAnnotations: {}
 queueMode:
   enabled: true
   workerReplicaCount: 2
-  # Worker concurrency (number of jobs each worker can handle simultaneously)
-  workerConcurrency: 10
-  # Additional environment variables injected into worker pods only.
-  # Use for worker-specific tuning that must not affect main or webhook-processor pods.
-  # For env vars that should apply to all pods, use `config.extraEnv` instead.
-  # Example:
-  # workerExtraEnv:
-  #   - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
-  #     value: "10"
-  workerExtraEnv: []
+  # Jobs each worker runs at once, passed as --concurrency. Leave empty to use
+  # n8n's default of 10. n8n also takes this from
+  # executions.concurrency.productionLimit, which wins over the flag, so set
+  # one or the other; the render fails when both are set.
+  workerConcurrency: null
 
 # ----- Webhook processors (optional scaling layer) -----
 webhookProcessor:
@@ -72,15 +67,6 @@ webhookProcessor:
   replicaCount: 2
   # Disable webhook processing in main process when webhook processors are enabled
   disableProductionWebhooksOnMainProcess: true
-  # Additional environment variables injected into webhook-processor pods only.
-  # Use this when a variable must NOT also be set on the main pod.
-  # For webhook-related env vars that apply to both webhook-handling pods
-  # (main + webhook-processor), use `webhook.extraEnv` instead.
-  # Example:
-  # extraEnv:
-  #   - name: N8N_LOG_LEVEL
-  #     value: "debug"
-  extraEnv: []
 
 # ----- Multi-main (optional, requires queue mode and license.enabled) -----
 multiMain:
@@ -171,7 +157,8 @@ taskRunners:
       memory: 512Mi
   # Liveness probe against the launcher's health endpoint in the sidecar.
   # It uses port 5680, or N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT when you set
-  # it in extraEnv.
+  # it as a literal in env.taskRunner. The chart cannot read a port set through
+  # envFrom.taskRunner, so set it in env.taskRunner, or disable this probe.
   probes:
     liveness:
       enabled: true
@@ -180,13 +167,6 @@ taskRunners:
       periodSeconds: 10
       timeoutSeconds: 30
       failureThreshold: 6
-
-  # Additional environment variables for task runners
-  extraEnv: []
-  # Example:
-  # extraEnv:
-  #   - name: N8N_RUNNERS_LAUNCHER_LOG_LEVEL
-  #     value: debug
 
 # ----- Deployment Strategy -----
 # Set to { type: Recreate } when using persistence with a RWO PVC (e.g. SQLite)
@@ -682,12 +662,6 @@ webhook:
   # production webhooks. The URL derived from the ingress host always uses
   # https://. If n8n is served over plain HTTP, set this and editor.url.
   url: ""
-  # Timeout for webhook requests in milliseconds
-  timeout: 120000
-  # Additional webhook-related environment variables.
-  # Applied to BOTH main and webhook-processor pods. For variables that should
-  # only apply to webhook-processor pods, use `webhookProcessor.extraEnv` instead.
-  extraEnv: []
 
 # ----- Editor config -----
 editor:
@@ -719,40 +693,79 @@ executions:
     softDeleteInterval: 60                      # <-- Soft delete interval in minutes
   # Concurrency settings
   concurrency:
-    productionLimit: -1                         # <-- Max concurrent production executions (-1 = disabled)
-  # Additional execution environment variables
-  extraEnv: []
+    # Max concurrent production executions (-1 = disabled). In queue mode n8n
+    # applies it to each worker instead of queueMode.workerConcurrency.
+    productionLimit: -1
+
+# ----- Environment variables -----
+# Variables for each component, as flat maps of NAME: value. The chart renders
+# them into ConfigMaps loaded with envFrom: one shared by main, worker and
+# webhook-processor pods, and one for each component.
+#   shared:           main, worker and webhook-processor pods
+#   main, worker, webhookProcessor: that component only, over shared
+#   taskRunner:       the task-runner sidecar only; shared does not reach it
+# Values can be strings, numbers or booleans. A value can also be a reference,
+# written as you would under valueFrom: secretKeyRef, configMapKeyRef, fieldRef
+# or resourceFieldRef. References go in the container's env list instead.
+#
+# A variable the chart already sets from a value (DB_POSTGRESDB_HOST from
+# database.host, for example) fails the render here, and the error names the
+# value to set instead.
+env:
+  shared: {}
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
+# Example:
+# env:
+#   shared:
+#     N8N_LOG_LEVEL: info
+#     NO_PROXY: "localhost,.svc,.cluster.local"
+#     N8N_SMTP_PASS:
+#       secretKeyRef:
+#         name: smtp
+#         key: password
+#   worker:
+#     N8N_LOG_LEVEL: debug
+
+# Replace a variable the chart sets, when its value cannot express what you
+# need. Only variables the chart sets in this configuration are accepted, and
+# not ones read from a Secret. NOTES lists the overrides in effect.
+chartEnvOverrides:
+  shared: {}
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
+
+# ConfigMaps and Secrets to load whole, with the same component keys as env.
+# They load after the chart's ConfigMaps, so their keys win over the chart's
+# values. The chart cannot see inside them, so it cannot check for clashes,
+# and changing them does not restart pods.
+envFrom:
+  shared: []
+  main: []
+  worker: []
+  webhookProcessor: []
+  taskRunner: []
+# Example:
+# envFrom:
+#   shared:
+#     - secretRef:
+#         name: n8n-smtp
 
 # ----- App config -----
 config:
   timezone: UTC
-  # Additional environment variables for n8n container
-  # All n8n environment variables can be set here including:
-  # Proxy: HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY
-  # Core: N8N_EDITOR_BASE_URL, N8N_CONFIG_FILES, N8N_USER_FOLDER, etc.
-  # Features: N8N_DISABLE_UI, N8N_PREVIEW_MODE, N8N_TEMPLATES_ENABLED, etc.
-  # Network: N8N_LISTEN_ADDRESS, N8N_SSL_KEY, N8N_SSL_CERT, etc.
-  # Telemetry: N8N_DIAGNOSTICS_ENABLED, N8N_VERSION_NOTIFICATIONS_ENABLED, etc.
-  # API: N8N_PUBLIC_API_DISABLED, N8N_PUBLIC_API_ENDPOINT, etc.
-  # System: N8N_GRACEFUL_SHUTDOWN_TIMEOUT, N8N_PROXY_HOPS, etc.
-  # Dev: N8N_DEV_RELOAD, N8N_REINSTALL_MISSING_PACKAGES, etc.
-  # See documentation for complete list of supported variables
-  extraEnv: []
-  # Example:
-  # extraEnv:
-  #   - name: HTTP_PROXY
-  #     value: "http://proxy.example.com:8080"
-  #   - name: N8N_EDITOR_BASE_URL
-  #     value: "https://n8n.example.com"
-  #   - name: N8N_DISABLE_UI
-  #     value: "false"
-  extraEnvFrom: []
 
 # ----- License (for n8n Enterprise) -----
 license:
   # Set to true if using n8n Enterprise
   enabled: false
-  # License activation key (leave empty to use secret)
+  # License activation key (leave empty to use secret). The chart stores it in
+  # its own Secret. For production, prefer existingSecret, so the key stays out
+  # of the Helm release.
   activationKey: ""
   # Or reference existing secret containing the license key
   existingSecret:
@@ -768,9 +781,6 @@ secretRefs:
     # When set, N8N_ENCRYPTION_KEY is not injected into n8n containers and is left
     # out of the chart-managed Secret. The path goes to the containers directly.
     N8N_ENCRYPTION_KEY_FILE: ""
-    N8N_HOST: "n8n.example.com"  # <-- Change to your actual domain
-    N8N_PORT: "5678"
-    N8N_PROTOCOL: "http"
 
 # ----- Database (PostgreSQL - required for queue mode) -----
 database:
@@ -833,8 +843,6 @@ redis:
   healthCheck:
     enabled: true                                  # <-- Serve /healthz and /healthz/readiness on workers
     port: 5678                                     # <-- Port the worker health endpoint listens on
-  # Additional Redis environment variables
-  extraEnv: []
 
 # ----- S3 External Storage (required for queue mode with binary data) -----
 s3:
@@ -857,5 +865,3 @@ s3:
     mode: "filesystem"
     # S3 specific settings
     forcePathStyle: false                      # <-- Force path-style URLs (for S3-compatible providers)
-    # Additional S3 environment variables
-    extraEnv: []

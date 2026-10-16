@@ -2,6 +2,40 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "n8n values schema",
   "type": "object",
+  "definitions": {
+    "envKeySelector": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "key": { "type": "string", "minLength": 1 },
+        "optional": { "type": "boolean" }
+      },
+      "required": ["name", "key"],
+      "additionalProperties": false
+    },
+    "envFromSource": {
+      "type": "object",
+      "properties": {
+        "configMapRef": { "$ref": "#/definitions/envFromRef" },
+        "secretRef": { "$ref": "#/definitions/envFromRef" },
+        "prefix": { "type": "string" }
+      },
+      "oneOf": [
+        { "required": ["configMapRef"], "not": { "required": ["secretRef"] } },
+        { "required": ["secretRef"], "not": { "required": ["configMapRef"] } }
+      ],
+      "additionalProperties": false
+    },
+    "envFromRef": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "optional": { "type": "boolean" }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    }
+  },
   "properties": {
     "image": {
       "type": "object",
@@ -190,10 +224,6 @@
               }
             }
           }
-        },
-        "extraEnv": {
-          "type": "array",
-          "items": { "type": "object" }
         }
       },
       "required": ["enabled"]
@@ -203,18 +233,10 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "workerReplicaCount": { "type": "integer", "minimum": 0 },
-        "workerConcurrency": { "type": "integer", "minimum": 1 },
-        "workerExtraEnv": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "value": { "type": "string" },
-              "valueFrom": { "type": "object" }
-            },
-            "required": ["name"]
-          }
+        "workerConcurrency": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Jobs each worker runs at once, passed as --concurrency. Null uses n8n's default."
         }
       }
     },
@@ -223,19 +245,7 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "replicaCount": { "type": "integer", "minimum": 1 },
-        "disableProductionWebhooksOnMainProcess": { "type": "boolean" },
-        "extraEnv": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "value": { "type": "string" },
-              "valueFrom": { "type": "object" }
-            },
-            "required": ["name"]
-          }
-        }
+        "disableProductionWebhooksOnMainProcess": { "type": "boolean" }
       }
     },
     "service": {
@@ -664,24 +674,7 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "url": { "type": "string" },
-        "testUrl": { "type": "string" },
-        "timeout": { 
-          "type": "integer", 
-          "minimum": 1000,
-          "maximum": 600000,
-          "description": "Webhook timeout in milliseconds (1s to 10min)"
-        },
-        "extraEnv": { 
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "value": { "type": "string" }
-            },
-            "required": ["name", "value"]
-          }
-        }
+        "testUrl": { "type": "string" }
       },
       "required": ["enabled"]
     },
@@ -746,17 +739,6 @@
           "properties": {
             "productionLimit": { "type": "integer" }
           }
-        },
-        "extraEnv": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "value": { "type": "string" }
-            },
-            "required": ["name", "value"]
-          }
         }
       }
     },
@@ -780,12 +762,266 @@
       "description": "Additional containers (sidecars) for main, worker, and webhook-processor pods",
       "items": { "type": "object" }
     },
+    "env": {
+      "type": "object",
+      "description": "Environment variables per component. Literals are rendered into ConfigMaps loaded with envFrom. References (secretKeyRef, configMapKeyRef, fieldRef, resourceFieldRef) go in the container's env list.",
+      "properties": {
+        "shared": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": {
+            "oneOf": [
+              { "type": ["string", "number", "boolean"] },
+              {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+            ]
+          }
+        },
+        "main": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": {
+            "oneOf": [
+              { "type": ["string", "number", "boolean"] },
+              {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+            ]
+          }
+        },
+        "worker": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": {
+            "oneOf": [
+              { "type": ["string", "number", "boolean"] },
+              {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+            ]
+          }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": {
+            "oneOf": [
+              { "type": ["string", "number", "boolean"] },
+              {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+            ]
+          }
+        },
+        "taskRunner": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": {
+            "oneOf": [
+              { "type": ["string", "number", "boolean"] },
+              {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "secretKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "configMapKeyRef": { "$ref": "#/definitions/envKeySelector" },
+                "fieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "fieldPath": { "type": "string", "minLength": 1 },
+                    "apiVersion": { "type": "string" }
+                  },
+                  "required": ["fieldPath"],
+                  "additionalProperties": false
+                },
+                "resourceFieldRef": {
+                  "type": "object",
+                  "properties": {
+                    "resource": { "type": "string", "minLength": 1 },
+                    "containerName": { "type": "string" },
+                    "divisor": { "type": ["string", "number"] }
+                  },
+                  "required": ["resource"],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "chartEnvOverrides": {
+      "type": "object",
+      "description": "Replacements for variables the chart sets, per component.",
+      "properties": {
+        "shared": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "main": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "worker": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        },
+        "taskRunner": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        }
+      },
+      "additionalProperties": false
+    },
+    "envFrom": {
+      "type": "object",
+      "description": "ConfigMaps and Secrets loaded whole with envFrom, per component, after the chart's ConfigMaps.",
+      "properties": {
+        "shared": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/envFromSource" }
+        },
+        "main": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/envFromSource" }
+        },
+        "worker": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/envFromSource" }
+        },
+        "webhookProcessor": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/envFromSource" }
+        },
+        "taskRunner": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/envFromSource" }
+        }
+      },
+      "additionalProperties": false
+    },
     "config": {
       "type": "object",
       "properties": {
-        "timezone": { "type": "string" },
-        "extraEnv": { "type": "array" },
-        "extraEnvFrom": { "type": "array" }
+        "timezone": { "type": "string" }
       }
     },
     "secretRefs": {
@@ -877,17 +1113,6 @@
             "enabled": { "type": "boolean" },
             "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
           }
-        },
-        "extraEnv": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "value": { "type": "string" }
-            },
-            "required": ["name", "value"]
-          }
         }
       }
     },
@@ -927,18 +1152,7 @@
               "enum": ["filesystem", "s3"],
               "description": "Binary data storage mode"
             },
-            "forcePathStyle": { "type": "boolean" },
-            "extraEnv": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "name": { "type": "string", "minLength": 1 },
-                  "value": { "type": "string" }
-                },
-                "required": ["name", "value"]
-              }
-            }
+            "forcePathStyle": { "type": "boolean" }
           },
           "required": ["mode"]
         }

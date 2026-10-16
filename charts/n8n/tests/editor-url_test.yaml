@@ -18,6 +18,9 @@ set:
 tests:
   - it: derives https from the ingress host when editor.url is empty
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     set:
       ingress.enabled: true
       ingress.hosts:
@@ -32,6 +35,9 @@ tests:
 
   - it: derives https from the ingress host when ingress TLS is set
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     set:
       ingress.enabled: true
       ingress.hosts:
@@ -53,6 +59,9 @@ tests:
 
   - it: uses editor.url over the ingress host
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     set:
       editor.url: http://n8n.internal
       ingress.enabled: true
@@ -68,6 +77,9 @@ tests:
 
   - it: uses editor.url over webhook.url when ingress is off
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     set:
       editor.url: http://n8n.internal
       webhook.url: http://hooks.internal
@@ -81,6 +93,9 @@ tests:
 
   - it: sets both URLs to plain http with webhook.url and editor.url
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     set:
       editor.url: http://n8n.internal
       webhook.url: http://n8n.internal
@@ -107,13 +122,10 @@ tests:
       editor.url: http://n8n.internal
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: N8N_EDITOR_BASE_URL
-            valueFrom:
-              configMapKeyRef:
-                name: RELEASE-NAME-n8n
-                key: N8N_EDITOR_BASE_URL
+            configMapRef:
+              name: RELEASE-NAME-n8n
 
   - it: passes N8N_EDITOR_BASE_URL from editor.url with webhooks disabled
     templates:
@@ -125,13 +137,10 @@ tests:
       webhook.enabled: false
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: N8N_EDITOR_BASE_URL
-            valueFrom:
-              configMapKeyRef:
-                name: RELEASE-NAME-n8n
-                key: N8N_EDITOR_BASE_URL
+            configMapRef:
+              name: RELEASE-NAME-n8n
 
   - it: rejects an editor.url without a scheme
     template: templates/configmap.yaml

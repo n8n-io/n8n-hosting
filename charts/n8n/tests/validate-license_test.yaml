@@ -1,6 +1,8 @@
 suite: 'validate: license'
 templates:
   - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
   - templates/configmap.yaml
   - templates/secrets.yaml
 set:
@@ -23,3 +25,43 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'license.activationKey and license.existingSecret.name are mutually exclusive. Use one or the other.'
+
+  - it: stores an inline activation key in the chart's Secret
+    template: templates/secrets.yaml
+    set:
+      license.enabled: true
+      license.activationKey: example-key
+    asserts:
+      - equal:
+          path: stringData
+          value:
+            N8N_LICENSE_ACTIVATION_KEY: example-key
+
+  - it: reads an inline activation key from the chart's Secret on every n8n container
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      webhookProcessor.enabled: true
+      license.enabled: true
+      license.activationKey: example-key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_LICENSE_ACTIVATION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-n8n
+                key: N8N_LICENSE_ACTIVATION_KEY
+
+  - it: refuses an inline activation key when the existing Secret has the chart's name
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.existingSecret: RELEASE-NAME-n8n
+      license.enabled: true
+      license.activationKey: example-key
+    asserts:
+      - failedTemplate:
+          errorMessage: 'license.activationKey is stored in the chart''s Secret "RELEASE-NAME-n8n", but secretRefs.existingSecret uses that name. Put the key in a Secret of your own and set license.existingSecret instead.'
