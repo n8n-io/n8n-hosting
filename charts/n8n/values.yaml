@@ -698,8 +698,9 @@ editor:
   # Public base URL of the n8n editor, for example https://n8n.example.com.
   # Rendered as N8N_EDITOR_BASE_URL. n8n builds OAuth redirect URLs and links
   # in emails from it, and webhooks follow it unless webhook.url is set. When
-  # empty, the chart uses https:// and the first ingress host. Set it when n8n
-  # is served over plain HTTP, has no ingress, or is reached at another host.
+  # empty, the chart uses https:// and the first ingress host or HTTPRoute
+  # hostname. Set it when n8n is served over plain HTTP, has no ingress or
+  # route, or is reached at another host.
   url: ""
 
 # ----- Executions config -----

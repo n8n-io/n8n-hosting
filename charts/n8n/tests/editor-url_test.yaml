@@ -1,6 +1,5 @@
 # N8N_EDITOR_BASE_URL comes from editor.url when it is set. Otherwise the
-# chart derives it from the first ingress host with https://. webhook.url
-# never sets it, because it names where webhooks arrive, not the editor.
+# chart derives it from the first ingress host with https://.
 suite: 'editor: URL'
 templates:
   - templates/configmap.yaml
