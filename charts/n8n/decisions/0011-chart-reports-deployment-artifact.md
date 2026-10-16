@@ -1,4 +1,4 @@
-# 0002. The chart tells n8n it installed it
+# 0011. The chart tells n8n it installed it
 
 Date: 2026-10-05
 PR: https://github.com/n8n-io/n8n-hosting/pull/224

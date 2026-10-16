@@ -49,20 +49,22 @@ service:
     enabled: true
 
 # Minimal resources
+# n8n runs out of JavaScript heap below a 1Gi limit, because Node sizes its
+# heap from the container's memory.
 resources:
   main:
     requests:
-      memory: "256Mi"
+      memory: "512Mi"
       cpu: "200m"
     limits:
-      memory: "512Mi"
+      memory: "1Gi"
       cpu: "500m"
   worker:
     requests:
-      memory: "128Mi"
+      memory: "256Mi"
       cpu: "100m"
     limits:
-      memory: "256Mi"
+      memory: "1Gi"
       cpu: "300m"
 
 # Basic configuration  

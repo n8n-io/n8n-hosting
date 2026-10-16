@@ -1,11 +1,11 @@
-# 0005. Other artefacts report their name, without a version
+# 0015. Other artefacts report their name, without a version
 
 Date: 2026-10-07
 PR: https://github.com/n8n-io/n8n-hosting/pull/226
 
 ## Context
 
-n8n reads `N8N_DEPLOYMENT_ARTIFACT` and sends it with the telemetry it already sends, so we can tell which artefact installed n8n. The chart reports `helm-chart/<chart version>` (decision 0002).
+n8n reads `N8N_DEPLOYMENT_ARTIFACT` and sends it with the telemetry it already sends, so we can tell which artefact installed n8n. The chart reports `helm-chart/<chart version>` (decision 0011).
 
 This repository has more artefacts than the chart: the Docker Compose stacks, the Docker Caddy stack, the plain Kubernetes manifests (a quickstart, so the name does not read as every install on Kubernetes) and the CloudFormation templates. Without a value, an install from any of them looks the same as a hand-written setup.
 

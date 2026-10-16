@@ -31,6 +31,10 @@ spec:
       labels:
         {{- include "n8n.podLabels" (dict "root" . "component" "main") | nindent 8 }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with include "n8n.serviceAccountName" . }}
       serviceAccountName: {{ . }}
       {{- end }}
@@ -38,14 +42,9 @@ spec:
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
-      {{- if .Values.securityContext.enabled }}
+      {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "main") }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- . | nindent 8 }}
       {{- end }}
 
       {{- with .Values.dnsPolicy }}
@@ -53,6 +52,10 @@ spec:
       {{- end }}
       {{- with .Values.dnsConfig }}
       dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
@@ -67,13 +70,12 @@ spec:
 
       containers:
         - name: n8n-main
-          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
+          image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "main") }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- . | nindent 12 }}
+          {{- end }}
 
           {{- if .Values.lifecycle.main.preStop.enabled }}
           lifecycle:

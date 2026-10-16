@@ -1,16 +1,10 @@
-{{- if .Values.ingress.enabled }}
-{{- range .Values.ingress.hosts }}
+{{- with include "n8n.editorBaseUrl" . }}
 
 n8n has been successfully deployed!
 
 Your n8n instance is available at:
-{{- if $.Values.ingress.tls }}
-  https://{{ .host }}
-{{- else }}
-  http://{{ .host }}
-{{- end }}
+  {{ . }}
 
-{{- end }}
 {{- else }}
 
 n8n has been successfully deployed!

@@ -1,0 +1,78 @@
+# Opens a backport PR for a merged PR labelled `backport <branch>`.
+#
+# Fixes land on main first. The label, added before or after the merge, is how
+# one reaches a maintenance branch: this cherry-picks the squashed commit onto
+# the branch the label names and opens a PR against it, which then goes
+# through CI and review like any other. A conflict is reported on the original
+# PR rather than resolved here.
+name: Backport
+
+on:
+  # pull_request_target so that a merged PR from a fork can be backported with
+  # this repository's credentials. Nothing from the PR is ever run: the job
+  # checks out the base branch and only cherry-picks the merged commit.
+  pull_request_target:
+    types: [closed, labeled]
+
+# The App token below does every write.
+permissions:
+  contents: read
+
+jobs:
+  backport:
+    # A fork inherits this workflow, and it has no App to open the PR with.
+    # Changes reach a maintenance branch from main only. Any other label added
+    # to a merged PR would otherwise backport it again.
+    if: >-
+      github.repository == 'n8n-io/n8n-hosting' &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.merged &&
+      contains(toJSON(github.event.pull_request.labels.*.name), '"backport ') &&
+      (github.event.action == 'closed' || startsWith(github.event.label.name, 'backport '))
+    runs-on: ubuntu-latest
+    steps:
+      # A PR opened under GITHUB_TOKEN gets no pull_request event, and so no
+      # CI. Opening it as the App is what makes the backport PR testable.
+      - name: Mint bot token
+        id: app-token
+        # SHA pinned because this one is handed a private key.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      # A maintenance branch only ever takes changes that keep existing installs
+      # working. A breaking change there would be a major on an old line. This
+      # reads the merged commit, which is what gets cherry-picked, because the
+      # PR's title and body can still be edited after the merge.
+      - name: Refuse breaking changes
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          message=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA" --jq .commit.message)
+          if [[ "$(head -n 1 <<< "$message")" =~ ^[a-z]+(\([^\)]*\))?!: ]] ||
+             grep -qE '^BREAKING[ -]CHANGE:' <<< "$message"; then
+            msg="This PR is a breaking change, so it is not backported. A maintenance branch only takes changes that keep existing installs working. If part of it applies there, open a PR against the maintenance branch directly."
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$msg"
+            echo "::error::$msg"
+            exit 1
+          fi
+
+      # SHA pinned because it keeps the App token in the checkout for the push.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Open backport PRs
+        # SHA pinned because it is handed a token that can push to the repo.
+        uses: korthout/backport-action@8560fb503c275d433c56f05a2f64850093baa9f7 # v4.7.0
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          git_committer_name: ${{ steps.app-token.outputs.app-slug }}[bot]
+          git_committer_email: ${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com
+          # The repo squashes with the PR title, and release-please reads the
+          # chart increment from it, so the backport keeps the original title.
+          pull_title: ${pull_title}

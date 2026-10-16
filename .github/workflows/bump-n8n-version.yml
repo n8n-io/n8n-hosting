@@ -1,17 +1,22 @@
-# Opens the weekly n8n version bump PR.
+# Opens the weekly n8n version bump PRs, one per release line.
 #
-# Every Wednesday this resolves what n8n's `stable` release points at and, if it
-# has moved, rewrites the eleven version pins through scripts/bump-n8n-version.sh
-# and opens one auto-merging PR. Release-please then cuts the chart release from
-# the squashed commit, so the weekly chart release also picks up whatever chart
-# work merged during the week.
+# Every Wednesday this runs once for main and once for each maintenance branch.
+# Each line resolves the newest n8n release in the major its appVersion is on:
+# what n8n's `stable` release points at while that is in the same major, and the
+# highest non-prerelease release of that major once `stable` has moved past it.
+# If the line is behind, it rewrites the eleven version pins through that
+# branch's scripts/bump-n8n-version.sh and opens one auto-merging PR against the
+# branch. Release-please then cuts the chart release from the squashed commit,
+# so the weekly chart release also picks up whatever chart work merged during
+# the week.
 #
 # The repo squashes with PR_TITLE and PR_BODY, so the PR title is the exact
 # conventional commit subject release-please parses for the chart increment, and
-# the PR body becomes the commit body on main. Both are kept accordingly.
+# the PR body becomes the commit body on the branch. Both are kept accordingly.
 #
-# The job only ever moves forwards within the current n8n major. A rollback, or
-# crossing a major, is a hand-written PR calling the script directly.
+# The job only ever moves forwards within a line's current n8n major. A
+# rollback, or crossing a major, is a hand-written PR calling the script
+# directly.
 name: Bump n8n version
 
 on:
@@ -20,8 +25,16 @@ on:
     - cron: "0 9 * * 3"
   workflow_dispatch:
     inputs:
+      # The lines here and in the matrix default below are the same list. A new
+      # maintenance branch is added to both.
+      line:
+        description: "Release line to bump. all is what the weekly run does."
+        required: true
+        type: choice
+        options: [all, main, release/n8n-2.x]
+        default: all
       version:
-        description: "n8n version to bump to, for example 2.38.6. Leave empty to resolve stable."
+        description: "n8n version to bump to, for example 2.38.6. Needs a single line. Leave empty to resolve it."
         required: false
         type: string
 
@@ -32,34 +45,60 @@ concurrency:
   group: bump-n8n-version
   cancel-in-progress: false
 
-env:
-  BRANCH: automated/bump-n8n
-
 jobs:
   bump:
     # A fork inherits this workflow, and it has no App to open the PR with.
     if: github.repository == 'n8n-io/n8n-hosting'
     runs-on: ubuntu-latest
+    strategy:
+      # One line failing to resolve says nothing about the others.
+      fail-fast: false
+      matrix:
+        line: ${{ fromJSON(inputs.line && inputs.line != 'all' && format('["{0}"]', inputs.line) || '["main", "release/n8n-2.x"]') }}
+    env:
+      LINE: ${{ matrix.line }}
     steps:
       - uses: actions/checkout@v4
         with:
+          # Each line is bumped from its own branch, with that branch's script
+          # and pins.
+          ref: ${{ matrix.line }}
           # The push below uses the App token, not this job's GITHUB_TOKEN, so
           # there is nothing to gain from leaving credentials in the checkout.
           persist-credentials: false
 
       - name: Resolve current version
         id: current
+        env:
+          REQUESTED: ${{ inputs.version }}
+          LINE_INPUT: ${{ inputs.line }}
         run: |
           set -euo pipefail
 
           # Only from the default branch. workflow_dispatch lets the caller pick
-          # any ref, and a bump PR built from an arbitrary branch's script is not
-          # something to hand auto-merge. Loud rather than a job-level `if`,
+          # any ref, and a bump PR built from an arbitrary branch's workflow is
+          # not something to hand auto-merge. Loud rather than a job-level `if`,
           # which would skip a mistaken dispatch green and say nothing.
           if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
             echo "::error::this job only runs from main, but $GITHUB_REF was dispatched."
             exit 1
           fi
+
+          # A version is one line's decision. Applied to every line it would
+          # cross a major on all but one of them.
+          if [[ -n "$REQUESTED" && "$LINE_INPUT" == "all" ]]; then
+            echo "::error::a version was given for every line. Pick the one line it is for."
+            exit 1
+          fi
+
+          # Git cannot hold automated/bump-n8n alongside automated/bump-n8n/...,
+          # so a maintenance line's branch flattens the line into the name.
+          if [[ "$LINE" == "main" ]]; then
+            branch=automated/bump-n8n
+          else
+            branch="automated/bump-n8n-${LINE//\//-}"
+          fi
+          echo "BRANCH=$branch" >> "$GITHUB_ENV"
 
           current=$(awk '$1 == "appVersion:" { gsub(/"/, "", $2); print $2 }' charts/n8n/Chart.yaml)
           if [[ ! "$current" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
@@ -78,6 +117,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          version_re='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          IFS=. read -r cur_major cur_minor cur_patch <<< "$CURRENT"
+
           if [[ -n "${REQUESTED:-}" ]]; then
             target=$REQUESTED
             source="the version input"
@@ -87,14 +129,26 @@ jobs:
             # branch, for example release/2.38.6.
             target=$(gh api repos/n8n-io/n8n/releases/tags/stable --jq .target_commitish | sed 's|^release/||')
             source="n8n's stable release"
+
+            # Once stable has moved to a newer major, this line follows the
+            # newest release still in its own. n8n publishes its beta builds as
+            # GitHub prereleases, so leaving those out leaves the releases that
+            # were stable in their time. Patch releases of an older minor can be
+            # published after a newer minor, so this takes the highest version,
+            # not the most recent.
+            if [[ "$target" =~ $version_re ]] && (( 10#${target%%.*} > 10#$cur_major )); then
+              target=$(gh api --paginate 'repos/n8n-io/n8n/releases?per_page=100' \
+                --jq ".[] | select(.prerelease == false and .draft == false) | .tag_name | select(test(\"^n8n@${cur_major}\\\\.[0-9]+\\\\.[0-9]+$\")) | ltrimstr(\"n8n@\")" |
+                sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)
+              source="the highest n8n ${cur_major}.x release, as stable is on a newer major,"
+            fi
           fi
 
-          if [[ ! "$target" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+          if [[ ! "$target" =~ $version_re ]]; then
             echo "::error::$source resolved to '$target', which is not a concrete version."
             exit 1
           fi
 
-          IFS=. read -r cur_major cur_minor cur_patch <<< "$CURRENT"
           IFS=. read -r new_major new_minor new_patch <<< "$target"
 
           # A string compare is exact here because the format check above
@@ -180,10 +234,10 @@ jobs:
           git commit --all --message "$TYPE(chart): bump n8n to $VERSION"
           # A fixed branch, force pushed, so a stale open bump PR is updated
           # rather than a second one opened alongside it. The branch belongs to
-          # this job: it is rebuilt from main every run, so anything pushed onto
-          # it by hand is discarded next Wednesday. Fix a red bump PR on its own
-          # branch, not on this one. No --force-with-lease for the same reason,
-          # a lease would stall the weekly bump on someone else's commit.
+          # this job: it is rebuilt from its line every run, so anything pushed
+          # onto it by hand is discarded next Wednesday. Fix a red bump PR on its
+          # own branch, not on this one. No --force-with-lease for the same
+          # reason, a lease would stall the weekly bump on someone else's commit.
           git push --force "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY" "HEAD:refs/heads/$BRANCH"
 
       - name: Open or update PR
@@ -200,7 +254,7 @@ jobs:
 
           title="$TYPE(chart): bump n8n to $VERSION"
 
-          # This lands on main as the squash commit body, so it stays to the
+          # This lands on the line as the squash commit body, so it stays to the
           # facts. Nothing in it is footer shaped, which would otherwise let the
           # body override the increment the title asks for.
           body=$(cat <<EOF
@@ -218,7 +272,7 @@ jobs:
           # retitled, relabelled and handed auto-merge. Only ever act on a PR
           # from this repository. Qualifying --head as owner:branch does not
           # work, it matches nothing at all, so filter on the PR instead.
-          pr=$(gh pr list --head "$BRANCH" --base main --state open \
+          pr=$(gh pr list --head "$BRANCH" --base "$LINE" --state open \
             --json number,isCrossRepository \
             --jq 'map(select(.isCrossRepository == false)) | .[0].number // empty')
 
@@ -229,7 +283,7 @@ jobs:
             # the PR exists, so it is not in the `opened` event and does not by
             # itself make install-test run. ci.yml's gate job does that, off the
             # branch name, so install-test runs from the opened event onwards.
-            pr=$(gh pr create --base main --head "$BRANCH" --title "$title" --body "$body" --label test-install)
+            pr=$(gh pr create --base "$LINE" --head "$BRANCH" --title "$title" --body "$body" --label test-install)
           else
             gh pr edit "$pr" --title "$title" --body "$body" --add-label test-install
           fi

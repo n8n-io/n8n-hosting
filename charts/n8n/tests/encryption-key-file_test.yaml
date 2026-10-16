@@ -1,0 +1,75 @@
+suite: 'render: encryption key file'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  webhookProcessor.enabled: true
+  secretRefs.env.N8N_ENCRYPTION_KEY_FILE: /run/secrets/n8n/encryption-key
+tests:
+  - it: reads the key from the file on main
+    template: templates/deployment-main.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY_FILE
+            value: /run/secrets/n8n/encryption-key
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY
+          any: true
+
+  - it: reads the key from the file on workers
+    template: templates/deployment-worker.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY_FILE
+            value: /run/secrets/n8n/encryption-key
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY
+          any: true
+
+  - it: reads the key from the file on webhook processors
+    template: templates/deployment-webhook-processor.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY_FILE
+            value: /run/secrets/n8n/encryption-key
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY
+          any: true
+
+  - it: leaves both key variables out of the chart-managed Secret
+    template: templates/secrets.yaml
+    asserts:
+      - notExists:
+          path: stringData.N8N_ENCRYPTION_KEY
+      - notExists:
+          path: stringData.N8N_ENCRYPTION_KEY_FILE
+      - equal:
+          path: stringData.N8N_HOST
+          value: n8n.example.com
+
+  - it: keeps the key in the chart-managed Secret without a file path
+    template: templates/secrets.yaml
+    set:
+      secretRefs.env.N8N_ENCRYPTION_KEY_FILE: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: a-long-random-key-for-tests
+    asserts:
+      - equal:
+          path: stringData.N8N_ENCRYPTION_KEY
+          value: a-long-random-key-for-tests
+      - notExists:
+          path: stringData.N8N_ENCRYPTION_KEY_FILE

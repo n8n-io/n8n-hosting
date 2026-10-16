@@ -29,6 +29,10 @@ spec:
       labels:
         {{- include "n8n.podLabels" (dict "root" . "component" "worker") | nindent 8 }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with include "n8n.serviceAccountName" . }}
       serviceAccountName: {{ . }}
       {{- end }}
@@ -36,14 +40,9 @@ spec:
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
 
-      {{- if .Values.securityContext.enabled }}
+      {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "worker") }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- . | nindent 8 }}
       {{- end }}
 
       {{- with .Values.dnsPolicy }}
@@ -51,6 +50,10 @@ spec:
       {{- end }}
       {{- with .Values.dnsConfig }}
       dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
@@ -65,17 +68,15 @@ spec:
 
       containers:
         - name: n8n-worker
-          image: "{{ .Values.image.repository }}:{{ include "n8n.imageTag" . }}"
+          image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["n8n"]
           args:
             - "worker"
             - "--concurrency={{ .Values.queueMode.workerConcurrency }}"
+          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "worker") }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- . | nindent 12 }}
+          {{- end }}
 
           {{- if .Values.lifecycle.worker.preStop.enabled }}
           lifecycle:
@@ -133,11 +134,7 @@ spec:
             {{- include "n8n.licenseEnv" . | nindent 12 }}
 
             # N8N encryption key
-            - name: N8N_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ if .Values.secretRefs.existingSecret }}{{ .Values.secretRefs.existingSecret }}{{ else }}{{ include "n8n.fullname" . }}{{ end }}
-                  key: N8N_ENCRYPTION_KEY
+            {{- include "n8n.encryptionKeyEnv" . | nindent 12 }}
 
             # Task Runners Configuration
             {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}

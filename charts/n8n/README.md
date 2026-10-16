@@ -6,7 +6,9 @@ The official Helm chart for [n8n](https://n8n.io), the workflow automation platf
 
 We release a new chart version every week. Each Wednesday, the day after n8n's weekly release, the chart moves to the latest `stable` n8n version.
 
-Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [changelog](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) to see which n8n version a release carries.
+Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [release notes](https://github.com/n8n-io/n8n-hosting/releases) to see which n8n version a release carries.
+
+Chart 1.x installs n8n 2.x. It is maintained on the [`release/n8n-2.x`](https://github.com/n8n-io/n8n-hosting/tree/release/n8n-2.x) branch, and its weekly releases stay on n8n 2.x. Chart 2.0 is being built on `main` and is published as release candidates, `2.0.0-rc.1`, `2.0.0-rc.2` and so on. Helm skips release candidates unless you pass `--devel` or name the exact version, so `helm install` and `helm upgrade` keep resolving to the latest 1.x release.
 
 ## Prerequisites
 
@@ -25,13 +27,13 @@ helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-v
 
 ### Verify the chart
 
-Each release is signed with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) keyless signing. The signature records that the chart was built by this repository's release workflow on `main`. No key is involved, so there is nothing for you to download first.
+Each release is signed with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) keyless signing. The signature records that the chart was built by this repository's release workflow, on `main` or on a `release/n8n-<major>.x` maintenance branch. No key is involved, so there is nothing for you to download first.
 
 To check a chart version before you install it, run the command below. Replace `<chart-version>` with the version you pass to `helm install --version`, for example `1.14.0`. This is the chart version, not the n8n version.
 
 ```bash
 cosign verify ghcr.io/n8n-io/n8n-helm-chart/n8n:<chart-version> \
-  --certificate-identity "https://github.com/n8n-io/n8n-hosting/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-identity-regexp '^https://github\.com/n8n-io/n8n-hosting/\.github/workflows/release\.yml@refs/heads/(main|release/n8n-[0-9]+\.x)$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
@@ -88,15 +90,56 @@ All three use the same n8n container image, differentiated by command/args.
 
 ## Secret Management
 
-1. **Core secrets** (`secretRefs.existingSecret`): `N8N_ENCRYPTION_KEY`, `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL` — always required
+1. **Core secrets** (`secretRefs.existingSecret`): `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL`, plus `N8N_ENCRYPTION_KEY` in env mode. For file mode, mount the encryption key file and set its path in `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`
 2. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
 3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
 For production, use an external secrets operator (e.g., [External Secrets Operator](https://external-secrets.io/)) rather than storing secrets in values files.
 
+### Encryption key file
+
+By default, the chart injects `N8N_ENCRYPTION_KEY` from the core Secret. To use n8n's file-based configuration instead, set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE` to the absolute path of a mounted key file. A non-empty file path makes the chart inject `N8N_ENCRYPTION_KEY_FILE` and omit `N8N_ENCRYPTION_KEY` from every main, worker, and webhook-processor n8n container.
+
+The existing global `extraVolumes` and `extraVolumeMounts` values apply to all of these containers:
+
+```yaml
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+  env:
+    N8N_ENCRYPTION_KEY_FILE: "/run/secrets/n8n/encryption-key"
+
+extraVolumes:
+  - name: encryption-key
+    secret:
+      secretName: n8n-encryption-key
+      items:
+        - key: N8N_ENCRYPTION_KEY
+          path: encryption-key
+
+extraVolumeMounts:
+  - name: encryption-key
+    mountPath: /run/secrets/n8n
+    readOnly: true
+```
+
+In file mode, `n8n-core-secrets` only needs the other core keys (`N8N_HOST`, `N8N_PORT`, and `N8N_PROTOCOL`). The file path is taken from Helm values even when `secretRefs.existingSecret` is set; Helm cannot inspect an externally managed Secret to select the mode automatically. Global extra volume mounts are not added to task-runner or user-supplied sidecars, which do not need the n8n encryption key; declare sidecar mounts explicitly if needed.
+
+When the path is set, it wins, and any `N8N_ENCRYPTION_KEY` in values is ignored. The containers receive the path directly, so the chart-managed Secret never stores it. In file mode that Secret also leaves out `N8N_ENCRYPTION_KEY`, because no container reads it.
+
+> **Warning:** the key file must hold the same key the install already uses. n8n encrypts every stored credential with this key. If the value changes when you switch between `N8N_ENCRYPTION_KEY` and `N8N_ENCRYPTION_KEY_FILE`, n8n can no longer read those credentials.
+
 ## Ingress and HTTPS
 
 Set `ingress.enabled=true` to create the main Ingress for the n8n UI, API, and test webhooks. Configure `ingress.className`, controller-specific `ingress.annotations`, and `ingress.tls` for HTTPS termination. For cert-manager, add the issuer annotation and set `ingress.tls[].secretName` to the certificate Secret cert-manager should create.
+
+The chart sets n8n's public URLs from the first ingress host, always with `https://`. This assumes TLS ends at the ingress or in front of it, for example at a cloud load balancer. If n8n is served over plain HTTP, or on another host, set both URLs yourself:
+
+```yaml
+webhook:
+  url: http://n8n.internal   # N8N_WEBHOOK_URL
+editor:
+  url: http://n8n.internal   # N8N_EDITOR_BASE_URL
+```
 
 When `webhookProcessor.enabled=true`, enable `ingress.webhookProcessor.enabled` to create a second Ingress for production webhook traffic. The webhook processor Ingress routes `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/`, and `/mcp/` to webhook processor pods. Test paths such as `/webhook-test/` and `/mcp-test/` stay on the main Ingress.
 
@@ -151,16 +194,20 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 |---|---|---|
 | `image.repository` | n8n image | `docker.n8n.io/n8nio/n8n` |
 | `image.tag` | n8n version | `""` (uses the chart's `appVersion`) |
+| `image.digest` | Pin the n8n image by digest (`sha256:...`); replaces `image.tag` when set | `""` |
+| `taskRunners.image.digest` | Pin the runner image by digest; replaces `taskRunners.image.tag` when set. With task runners enabled, set both digests or neither | `""` |
+| `imagePullSecrets` | Existing pull Secrets for private image registries, as a list of `- name: <secret>` entries | `[]` |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
 | `queueMode.workerConcurrency` | Jobs per worker | `10` |
-| `multiMain.enabled` | Multi-main HA (Enterprise) | `false` |
+| `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
 | `taskRunners.enabled` | Task runner sidecars | `false` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
+| `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
 | `strategy` | Deployment update strategy | `{}` (k8s default) |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
-| `hpa.main.enabled` | HPA for main pods | `false` |
+| `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
@@ -170,10 +217,15 @@ To use the namespace's default ServiceAccount, set `name: ""`. If you set `creat
 | `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `networkPolicy.enabled` | Network policies | `false` |
 | `extraObjects` | Additional Kubernetes objects rendered with the release | `[]` |
+| `extraVolumes` / `extraVolumeMounts` | Volumes and n8n-container mounts shared by main, worker, and webhook-processor pods | `[]` / `[]` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
+| `hostAliases` | Extra `/etc/hosts` entries for all n8n pods | `[]` |
+| `securityContext` | Pod securityContext for all n8n pods (`fsGroup`, `runAsUser`, `runAsGroup`) | enabled, `1000` |
+| `podSecurityContext.<role>` | Pod securityContext for `main`, `worker` or `webhookProcessor`; replaces `securityContext` for that role | `{}` |
+| `containerSecurityContext.<role>` | Container securityContext for `main`, `worker`, `webhookProcessor` or `taskRunner` | no privilege escalation, all capabilities dropped |
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
@@ -256,6 +308,51 @@ nodePlacement:
 > **Note:** When `multiMain.enabled=true`, the chart emits an automatic pod-anti-affinity rule to spread main replicas across nodes. Setting `nodePlacement.main.affinity` replaces that auto rule — include your own pod-anti-affinity term if you still want main replicas spread.
 
 See [`examples/node-placement.yaml`](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
+
+## Security Context
+
+Every n8n pod runs with `securityContext`: UID, GID and `fsGroup` 1000, `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. Set `securityContext.enabled: false` to drop these defaults.
+
+To set a different pod securityContext for one role, set `podSecurityContext.<role>`. The block replaces the defaults for that role and is rendered as written, so include every field you want.
+
+```yaml
+# OpenShift: let the restricted SCC assign the UID and GID. Set the same for
+# webhookProcessor when it is enabled.
+podSecurityContext:
+  main:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  worker:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+```
+
+The n8n containers and the task-runner sidecar set `allowPrivilegeEscalation: false` and drop all capabilities. Containers added with `extraContainers` or `extraInitContainers` get none of them. The defaults are in `values.yaml` under `containerSecurityContext.<role>`, so your values merge over them. Set only the fields that change, and set a field to `null` to remove it. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
+
+```yaml
+# Run the task runner as nobody (UID and GID 65532), as n8n's hardening guide recommends.
+containerSecurityContext:
+  taskRunner:
+    runAsUser: 65532
+    runAsGroup: 65532
+```
+
+To give several containers the same setting, use a YAML anchor:
+
+```yaml
+containerSecurityContext:
+  main: &n8n
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+    readOnlyRootFilesystem: true
+  worker: *n8n
+  webhookProcessor: *n8n
+```
+
+`readOnlyRootFilesystem` needs writable volumes at the paths n8n writes to, such as `/tmp` and `~/.n8n`. `extraVolumes` and `extraVolumeMounts` add them to the n8n containers. They do not reach the task-runner sidecar, so leave `readOnlyRootFilesystem` off `taskRunner`.
 
 ## Task Runners
 

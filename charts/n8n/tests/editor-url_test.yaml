@@ -1,0 +1,150 @@
+# N8N_EDITOR_BASE_URL comes from editor.url when it is set. Otherwise the
+# chart derives it from the first ingress host with https://, or falls back
+# to webhook.url when ingress is off.
+suite: 'editor: URL'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  database.type: postgresdb
+  database.useExternal: true
+  database.host: postgres.example.com
+  queueMode.enabled: true
+  webhookProcessor.enabled: true
+tests:
+  - it: derives https from the ingress host when editor.url is empty
+    template: templates/configmap.yaml
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: n8n.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+
+  - it: derives https from the ingress host when ingress TLS is set
+    template: templates/configmap.yaml
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: n8n.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+      ingress.tls:
+        - secretName: n8n-tls
+          hosts:
+            - n8n.example.com
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://n8n.example.com
+
+  - it: uses editor.url over the ingress host
+    template: templates/configmap.yaml
+    set:
+      editor.url: http://n8n.internal
+      ingress.enabled: true
+      ingress.hosts:
+        - host: n8n.internal
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: http://n8n.internal
+
+  - it: uses editor.url over webhook.url when ingress is off
+    template: templates/configmap.yaml
+    set:
+      editor.url: http://n8n.internal
+      webhook.url: http://hooks.internal
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: http://n8n.internal
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: http://hooks.internal
+
+  - it: sets both URLs to plain http with webhook.url and editor.url
+    template: templates/configmap.yaml
+    set:
+      editor.url: http://n8n.internal
+      webhook.url: http://n8n.internal
+      ingress.enabled: true
+      ingress.hosts:
+        - host: n8n.internal
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: http://n8n.internal
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: http://n8n.internal
+
+  - it: passes N8N_EDITOR_BASE_URL to every n8n container from editor.url
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      editor.url: http://n8n.internal
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_EDITOR_BASE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: RELEASE-NAME-n8n
+                key: N8N_EDITOR_BASE_URL
+
+  - it: passes N8N_EDITOR_BASE_URL from editor.url with webhooks disabled
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      editor.url: http://n8n.internal
+      webhook.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_EDITOR_BASE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: RELEASE-NAME-n8n
+                key: N8N_EDITOR_BASE_URL
+
+  - it: rejects an editor.url without a scheme
+    template: templates/configmap.yaml
+    set:
+      editor.url: n8n.internal
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/editor/url': 'n8n.internal' does not match pattern"
+
+  - it: rejects an editor.url with a scheme other than http or https
+    template: templates/configmap.yaml
+    set:
+      editor.url: ftp://n8n.internal
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/editor/url': 'ftp://n8n.internal' does not match pattern"
