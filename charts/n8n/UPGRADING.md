@@ -97,6 +97,33 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 
 ### Security contexts
 
+The chart-wide `securityContext` block is retired. `podSecurityContext` and `containerSecurityContext` each have a `shared` block that applies to every pod or container. Each role block merges over `shared` field by field, and the role wins. Set a field to `null` to remove it. See [decision 0005](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0005-per-role-security-context.md).
+
+Move your settings as follows:
+
+| 1.x | 2.0 |
+|---|---|
+| `securityContext.fsGroup` | `podSecurityContext.shared.fsGroup` |
+| `securityContext.runAsUser` | `podSecurityContext.shared.runAsUser` |
+| `securityContext.runAsGroup` | `podSecurityContext.shared.runAsGroup` |
+| `securityContext.enabled: false` | `podSecurityContext.shared: null` |
+
+`runAsNonRoot: true` and the `RuntimeDefault` seccomp profile are now in `podSecurityContext.shared` too, so you can change or remove them. The container defaults are in `containerSecurityContext.shared`. A `containerSecurityContext.<role>` override from 1.x keeps working, because it now merges over `shared`.
+
+A `podSecurityContext.<role>` block from 1.16 now merges over `shared` instead of replacing it. The render does not detect this. If the block left out a field to remove it, set that field to `null`.
+
+On OpenShift, the restricted SCC assigns the UID and GID. In 1.x you set `securityContext.enabled: false`, or a `podSecurityContext.<role>` block without the IDs. In 2.0, remove the pinned IDs once for every pod:
+
+```yaml
+podSecurityContext:
+  shared:
+    fsGroup: null
+    runAsUser: null
+    runAsGroup: null
+```
+
+The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile, so they still meet the `restricted` Pod Security Standard.
+
 ### Network policy
 
 ### Persistence

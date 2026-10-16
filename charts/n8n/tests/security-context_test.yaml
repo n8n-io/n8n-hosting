@@ -302,6 +302,22 @@ tests:
       - notExists:
           path: spec.template.spec.containers[?(@.name == "n8n-main")].securityContext
 
+  - it: fails on the retired securityContext key and names its replacement
+    template: templates/deployment-main.yaml
+    set:
+      securityContext.enabled: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'securityContext is no longer a chart value. Set the same fields under podSecurityContext.shared instead, and replace securityContext.enabled: false with podSecurityContext.shared: null. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: fails on the chart 1.16 defaults that helm upgrade --reuse-values renders with
+    template: templates/deployment-main.yaml
+    values:
+      - values/chart-1.16-security-context.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: 'securityContext is no longer a chart value. Set the same fields under podSecurityContext.shared instead, and replace securityContext.enabled: false with podSecurityContext.shared: null. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
   - it: rejects an unknown role key
     template: templates/deployment-main.yaml
     set:

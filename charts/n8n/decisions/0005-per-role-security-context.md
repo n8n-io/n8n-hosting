@@ -27,5 +27,5 @@ The chart writes the merge out in `n8n.mergeOver` instead of using Sprig's `merg
 - Helm drops a `null` on a key that has a default, so a role set to `null` keeps `shared`. To drop every default, set `shared` to `null`.
 - The schema is closed, so a Kubernetes field the chart does not list fails the render until the chart adds it. Windows fields are not listed, because n8n ships Linux images only.
 - `securityContext` is retired in 2.0. A values file that sets it fails the render and names `podSecurityContext.shared`. `securityContext.enabled: false` becomes `podSecurityContext.shared: null`.
-- A 1.16 `podSecurityContext.<role>` block replaced the defaults, and in 2.0 it merges over `shared`. A block that left out the pinned IDs, as on OpenShift, must set them to `null`. The render cannot detect this, so `UPGRADING.md` calls it out.
+- A 1.16 `podSecurityContext.<role>` block replaced the defaults, and in 2.0 it merges over `shared`. A block that left out the pinned IDs, as on OpenShift, must set them to `null`. The render cannot detect this, so [UPGRADING.md](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md#security-contexts) calls it out.
 - The role names follow the 1.x keys (`webhookProcessor`). A 2.0 rename of roles applies to these maps too.

@@ -282,6 +282,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
   replacement: "Remove it; nothing replaces it."
+- path: securityContext
+  replacement: "Set the same fields under podSecurityContext.shared instead, and replace securityContext.enabled: false with podSecurityContext.shared: null."
 {{- end -}}
 
 {{/*
