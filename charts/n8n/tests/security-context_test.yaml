@@ -1,6 +1,5 @@
-# A role's podSecurityContext block replaces the chart-wide securityContext
-# for that role. containerSecurityContext defaults live in values.yaml, so
-# Helm merges user values over them and a null removes a field.
+# Each role's securityContext is the shared block with the role block merged
+# over it, field by field. A null removes a field, and the role always wins.
 suite: 'securityContext: per-role overrides'
 templates:
   - templates/deployment-main.yaml
@@ -17,7 +16,7 @@ set:
   redis.host: redis.example.com
   webhookProcessor.enabled: true
 tests:
-  - it: renders the chart-wide pod securityContext by default
+  - it: renders the default pod securityContext for each role
     template: templates/deployment-main.yaml
     asserts:
       - equal:
@@ -30,42 +29,53 @@ tests:
             seccompProfile:
               type: RuntimeDefault
 
-  - it: replaces the main pod securityContext with the role block
+  - it: merges a main pod override over the defaults
     template: templates/deployment-main.yaml
     set:
-      podSecurityContext.main:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+      podSecurityContext.main.supplementalGroups: [3000]
     asserts:
       - equal:
           path: spec.template.spec.securityContext
           value:
+            fsGroup: 1000
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+            supplementalGroups: [3000]
+
+  - it: merges a worker pod override over the defaults
+    template: templates/deployment-worker.yaml
+    set:
+      podSecurityContext.worker.runAsUser: 2000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            fsGroup: 1000
+            runAsUser: 2000
+            runAsGroup: 1000
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
 
-  - it: replaces the worker pod securityContext with the role block
-    template: templates/deployment-worker.yaml
-    set:
-      podSecurityContext.worker.supplementalGroups: [3000]
-    asserts:
-      - equal:
-          path: spec.template.spec.securityContext
-          value:
-            supplementalGroups: [3000]
-
-  - it: replaces the webhook processor pod securityContext with the role block
+  - it: merges a webhook processor pod override over the defaults
     template: templates/deployment-webhook-processor.yaml
     set:
-      podSecurityContext.webhookProcessor.runAsUser: 2000
+      podSecurityContext.webhookProcessor.fsGroup: 2000
     asserts:
       - equal:
           path: spec.template.spec.securityContext
           value:
-            runAsUser: 2000
+            fsGroup: 2000
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
 
-  - it: applies a role's pod block to that role only
+  - it: applies a role's pod override to that role only
     template: templates/deployment-worker.yaml
     set:
       podSecurityContext.main.runAsUser: 2000
@@ -74,10 +84,70 @@ tests:
           path: spec.template.spec.securityContext.runAsUser
           value: 1000
 
-  - it: renders a role's pod block when the chart defaults are disabled
+  - it: removes the pinned IDs set to null and keeps the other pod defaults
+    template: templates/deployment-main.yaml
+    values:
+      - values/security-context-null.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+
+  - it: removes a nested field and the map it leaves empty
+    template: templates/deployment-worker.yaml
+    set:
+      podSecurityContext.worker.seccompProfile.type: null
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            fsGroup: 1000
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+
+  - it: overrides shared values with false and 0
+    template: templates/deployment-worker.yaml
+    set:
+      podSecurityContext.worker.runAsNonRoot: false
+      podSecurityContext.worker.runAsUser: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            fsGroup: 1000
+            runAsUser: 0
+            runAsGroup: 1000
+            runAsNonRoot: false
+            seccompProfile:
+              type: RuntimeDefault
+
+  - it: merges a shared pod override into every role
+    template: templates/deployment-webhook-processor.yaml
+    set:
+      podSecurityContext.shared.supplementalGroups: [3000]
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.supplementalGroups
+          value: [3000]
+
+  - it: lets the role win over a shared override
+    template: templates/deployment-worker.yaml
+    set:
+      podSecurityContext.shared.runAsUser: 2000
+      podSecurityContext.worker.runAsUser: 3000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 3000
+
+  - it: renders only the role block when shared is null
     template: templates/deployment-main.yaml
     set:
-      securityContext.enabled: false
+      podSecurityContext.shared: null
       podSecurityContext.main.runAsNonRoot: true
     asserts:
       - equal:
@@ -85,13 +155,22 @@ tests:
           value:
             runAsNonRoot: true
 
-  - it: renders no pod securityContext when the chart defaults are disabled and no role block is set
-    template: templates/deployment-webhook-processor.yaml
+  - it: renders no pod securityContext when shared is null and the role is empty
+    template: templates/deployment-worker.yaml
     set:
-      securityContext.enabled: false
+      podSecurityContext.shared: null
     asserts:
       - notExists:
           path: spec.template.spec.securityContext
+
+  - it: keeps the shared block for a role set to null
+    template: templates/deployment-worker.yaml
+    set:
+      podSecurityContext.worker: null
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
 
   - it: merges the main container override over the defaults
     template: templates/deployment-main.yaml
@@ -191,29 +270,53 @@ tests:
       - notExists:
           path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
 
-  - it: renders the hardened container default when containerSecurityContext is missing
+  - it: replaces an inherited list whole
     template: templates/deployment-worker.yaml
     set:
-      containerSecurityContext: null
+      containerSecurityContext.worker.capabilities.drop: [NET_RAW]
     asserts:
       - equal:
-          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext.capabilities
           value:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: [ALL]
+            drop: [NET_RAW]
 
-  - it: renders the hardened container default for a role missing from the values
+  - it: applies a shared container override to every container
     template: templates/deployment-worker.yaml
     set:
-      containerSecurityContext.worker: null
+      taskRunners.enabled: true
+      taskRunners.authToken.existingSecret: n8n-runner-token
+      containerSecurityContext.shared.readOnlyRootFilesystem: true
     asserts:
       - equal:
-          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext
-          value:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: [ALL]
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "task-runner")].securityContext.readOnlyRootFilesystem
+          value: true
+
+  - it: renders no container securityContext when shared is null and the role is empty
+    template: templates/deployment-main.yaml
+    set:
+      containerSecurityContext.shared: null
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[?(@.name == "n8n-main")].securityContext
+
+  - it: fails on the retired securityContext key and names its replacement
+    template: templates/deployment-main.yaml
+    set:
+      securityContext.enabled: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'securityContext is no longer a chart value. Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: fails on the chart 1.16 defaults that helm upgrade --reuse-values renders with
+    template: templates/deployment-main.yaml
+    values:
+      - values/chart-1.16-security-context.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: 'securityContext is no longer a chart value. Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
 
   - it: rejects an unknown role key
     template: templates/deployment-main.yaml
@@ -230,3 +333,73 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "at '/podSecurityContext/main'"
+
+  - it: rejects an unknown pod securityContext field
+    template: templates/deployment-main.yaml
+    set:
+      podSecurityContext.main.runAsUsr: 2000
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'runAsUsr' not allowed"
+
+  - it: rejects an unknown container securityContext field
+    template: templates/deployment-main.yaml
+    set:
+      containerSecurityContext.taskRunner.readOnlyRootFileSystem: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'readOnlyRootFileSystem' not allowed"
+
+  - it: rejects an unknown seccomp profile type
+    template: templates/deployment-main.yaml
+    set:
+      podSecurityContext.worker.seccompProfile.type: runtimeDefault
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/podSecurityContext/worker/seccompProfile/type'"
+
+  - it: accepts the documented pod and container fields
+    template: templates/deployment-main.yaml
+    set:
+      podSecurityContext.main:
+        fsGroupChangePolicy: OnRootMismatch
+        supplementalGroups: [3000]
+        sysctls:
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
+        seLinuxOptions:
+          level: s0:c123,c456
+        seccompProfile:
+          type: Localhost
+          localhostProfile: profiles/n8n.json
+      containerSecurityContext.main:
+        readOnlyRootFilesystem: true
+        privileged: false
+        procMount: Default
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            supplementalGroups: [3000]
+            sysctls:
+              - name: net.ipv4.ip_unprivileged_port_start
+                value: "0"
+            seLinuxOptions:
+              level: s0:c123,c456
+            seccompProfile:
+              type: Localhost
+              localhostProfile: profiles/n8n.json
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-main")].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            privileged: false
+            procMount: Default
