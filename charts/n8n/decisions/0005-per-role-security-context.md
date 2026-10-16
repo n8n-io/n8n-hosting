@@ -23,7 +23,7 @@ The chart writes the merge out in `n8n.mergeOver` instead of using Sprig's `merg
 
 - The defaults are visible in `values.yaml` and `helm show values`.
 - A setting for every pod or container is one line in `shared`. A setting for one role overrides `shared` for that role only.
-- On OpenShift, setting `fsGroup`, `runAsUser` and `runAsGroup` to `null` in `podSecurityContext.shared` keeps `runAsNonRoot` and seccomp, so the pods still meet the `restricted` Pod Security Standard.
+- On OpenShift, setting `fsGroup`, `runAsUser` and `runAsGroup` to `null` in `podSecurityContext.shared` keeps `runAsNonRoot` and seccomp. With the container defaults, the chart's pods still meet the `restricted` Pod Security Standard. Containers added with `extraContainers` or `extraInitContainers` need their own `securityContext`.
 - Helm drops a `null` on a key that has a default, so a role set to `null` keeps `shared`. To drop every default, set `shared` to `null`.
 - The schema is closed, so a Kubernetes field the chart does not list fails the render until the chart adds it. Windows fields are not listed, because n8n ships Linux images only.
 - `securityContext` is retired in 2.0. A values file that sets it fails the render and names `podSecurityContext.shared`. `securityContext.enabled: false` becomes `podSecurityContext.shared: null`.

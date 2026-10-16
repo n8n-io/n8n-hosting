@@ -283,7 +283,7 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
 - path: retiredKeysTest.nested.second
   replacement: "Remove it; nothing replaces it."
 - path: securityContext
-  replacement: "Set the same fields under podSecurityContext.shared instead, and replace securityContext.enabled: false with podSecurityContext.shared: null."
+  replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
 {{- end -}}
 
 {{/*

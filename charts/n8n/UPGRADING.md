@@ -106,6 +106,7 @@ Move your settings as follows:
 | `securityContext.fsGroup` | `podSecurityContext.shared.fsGroup` |
 | `securityContext.runAsUser` | `podSecurityContext.shared.runAsUser` |
 | `securityContext.runAsGroup` | `podSecurityContext.shared.runAsGroup` |
+| `securityContext.enabled: true` | Remove it. The defaults apply without it. |
 | `securityContext.enabled: false` | `podSecurityContext.shared: null` |
 
 `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile are now in `podSecurityContext.shared` too, so you can change or remove them. The container defaults are in `containerSecurityContext.shared`. A `containerSecurityContext.<role>` override from 1.x keeps working, because it now merges over `shared`.
@@ -122,7 +123,7 @@ podSecurityContext:
     runAsGroup: null
 ```
 
-The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile, so they still meet the `restricted` Pod Security Standard.
+The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The chart's containers keep `allowPrivilegeEscalation: false` and drop all capabilities. Together these meet the `restricted` Pod Security Standard. Containers you add with `extraContainers` or `extraInitContainers` do not get the container defaults, so set their `securityContext` yourself.
 
 ### Network policy
 

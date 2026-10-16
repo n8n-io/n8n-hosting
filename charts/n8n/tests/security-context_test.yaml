@@ -308,7 +308,7 @@ tests:
       securityContext.enabled: false
     asserts:
       - failedTemplate:
-          errorMessage: 'securityContext is no longer a chart value. Set the same fields under podSecurityContext.shared instead, and replace securityContext.enabled: false with podSecurityContext.shared: null. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+          errorMessage: 'securityContext is no longer a chart value. Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
 
   - it: fails on the chart 1.16 defaults that helm upgrade --reuse-values renders with
     template: templates/deployment-main.yaml
@@ -316,7 +316,7 @@ tests:
       - values/chart-1.16-security-context.yaml
     asserts:
       - failedTemplate:
-          errorMessage: 'securityContext is no longer a chart value. Set the same fields under podSecurityContext.shared instead, and replace securityContext.enabled: false with podSecurityContext.shared: null. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+          errorMessage: 'securityContext is no longer a chart value. Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
 
   - it: rejects an unknown role key
     template: templates/deployment-main.yaml
