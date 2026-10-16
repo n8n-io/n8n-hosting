@@ -232,6 +232,28 @@ ingress:
     annotations: {}
     tls: []
 
+# ----- Gateway API -----
+# An HTTPRoute that attaches n8n to a Gateway the cluster already runs. The
+# chart never creates the Gateway. The route sends every path to main, and the
+# webhook paths (/webhook/, /webhook-waiting/, /form/, /form-waiting/, /mcp/)
+# to the webhook processors when webhookProcessor.enabled=true. It renders
+# whenever it is enabled, so the Gateway API CRDs must be installed. Use it
+# instead of ingress, not with it.
+httpRoute:
+  enabled: false
+  # Annotations on the HTTPRoute, merged over commonAnnotations.
+  annotations: {}
+  # The Gateways the route attaches to. Required when enabled.
+  # Example:
+  # parentRefs:
+  #   - name: my-gateway
+  #     namespace: gateway-system
+  #     sectionName: https
+  parentRefs: []
+  # Hostnames the route matches. The first one sets the public address when
+  # editor.url is empty, with https://.
+  hostnames: []
+
 # ----- Persistence -----
 persistence:
   enabled: false
@@ -655,21 +677,21 @@ pdb:
 webhook:
   # Enable webhook functionality
   enabled: true
-  # Custom webhook URL base domain (if not set, will use ingress host)
-  # Format: https://your-domain.com, or http:// when n8n is served over plain
-  # HTTP (n8n adds /webhook path automatically)
-  # Rendered as N8N_WEBHOOK_URL, which sets the base URL for both test and
-  # production webhooks. The URL derived from the ingress host always uses
-  # https://. If n8n is served over plain HTTP, set this and editor.url.
+  # Public base URL for webhooks, for example https://hooks.example.com.
+  # n8n adds the /webhook path itself. Rendered as N8N_WEBHOOK_URL, the base
+  # URL for test and production webhooks. When empty, webhooks follow the
+  # editor URL. Set it only when webhooks arrive at an address the chart does
+  # not route, such as a separate load balancer or API gateway.
   url: ""
 
 # ----- Editor config -----
 editor:
   # Public base URL of the n8n editor, for example https://n8n.example.com.
   # Rendered as N8N_EDITOR_BASE_URL. n8n builds OAuth redirect URLs and links
-  # in emails from it. When empty, the chart uses https:// and the first
-  # ingress host, or webhook.url when ingress is off. Set it when n8n is
-  # served over plain HTTP or on a different host.
+  # in emails from it, and webhooks follow it unless webhook.url is set. When
+  # empty, the chart uses https:// and the first ingress host or HTTPRoute
+  # hostname. Set it when n8n is served over plain HTTP, has no ingress or
+  # route, or is reached at another host.
   url: ""
 
 # ----- Executions config -----

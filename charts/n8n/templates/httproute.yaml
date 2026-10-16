@@ -1,0 +1,41 @@
+{{- if .Values.httpRoute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "n8n.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+  {{- with merge (deepCopy (.Values.httpRoute.annotations | default dict)) (.Values.commonAnnotations | default dict) }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.httpRoute.parentRefs | nindent 4 }}
+  {{- with .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- /* The longest matching prefix wins, so these paths beat / whatever
+    the rule order. */}}
+    {{- if .Values.webhookProcessor.enabled }}
+    - matches:
+        {{- range include "n8n.webhookPaths" . | fromYamlArray }}
+        - path:
+            type: PathPrefix
+            value: {{ . }}
+        {{- end }}
+      backendRefs:
+        - name: {{ include "n8n.fullname" . }}-webhook-processor
+          port: {{ .Values.service.port }}
+    {{- end }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "n8n.fullname" . }}-main
+          port: {{ .Values.service.port }}
+{{- end }}

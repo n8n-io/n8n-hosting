@@ -314,6 +314,29 @@
       },
       "required": ["enabled", "hosts"]
     },
+    "httpRoute": {
+      "type": "object",
+      "description": "A Gateway API HTTPRoute to main, and to the webhook processors for the webhook paths. The chart never creates the Gateway.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "annotations": { "type": "object", "additionalProperties": true },
+        "parentRefs": {
+          "type": "array",
+          "description": "The Gateways the route attaches to. Required when enabled.",
+          "items": {
+            "type": "object",
+            "properties": { "name": { "type": "string", "minLength": 1 } },
+            "required": ["name"]
+          }
+        },
+        "hostnames": {
+          "type": "array",
+          "description": "Hostnames the route matches. The first one sets the public address when editor.url is empty.",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "additionalProperties": false
+    },
     "persistence": {
       "type": "object",
       "properties": {
@@ -684,7 +707,7 @@
         "url": {
           "type": "string",
           "pattern": "^(https?://.+)?$",
-          "description": "Public base URL of the editor, rendered as N8N_EDITOR_BASE_URL. Empty uses the first ingress host when configured, otherwise webhook.url when set."
+          "description": "Public base URL of the editor, rendered as N8N_EDITOR_BASE_URL. Webhooks follow it unless webhook.url is set. Empty uses https:// and the first ingress host or route hostname."
         }
       }
     },

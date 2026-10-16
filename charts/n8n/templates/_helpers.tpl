@@ -340,6 +340,19 @@ per mistake.
 {{- $errs = append $errs "ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true" -}}
 {{- end -}}
 
+{{/* --- HTTPRoute --- */}}
+{{- if .Values.httpRoute.enabled -}}
+{{- if .Values.ingress.enabled -}}
+{{- $errs = append $errs "httpRoute.enabled and ingress.enabled are both true. The chart routes n8n through one of them. Set one to false." -}}
+{{- end -}}
+{{- if .Values.ingress.webhookProcessor.enabled -}}
+{{- $errs = append $errs "httpRoute.enabled and ingress.webhookProcessor.enabled are both true. The route already sends webhook paths to the webhook processors. Set ingress.webhookProcessor.enabled to false." -}}
+{{- end -}}
+{{- if not .Values.httpRoute.parentRefs -}}
+{{- $errs = append $errs "httpRoute.parentRefs is empty, so the route attaches to no Gateway. Name the Gateway, for example [{name: my-gateway, namespace: gateway-system}]." -}}
+{{- end -}}
+{{- end -}}
+
 {{/* --- KEDA --- */}}
 {{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled (not .Values.keda.webhookProcessor.triggers) -}}
 {{- $errs = append $errs "keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to hold them at webhookProcessor.replicaCount." -}}
@@ -544,17 +557,48 @@ so workers handle code execution and main pods do not need runner sidecars.
 {{- end -}}
 
 {{/*
+The host the chart routes traffic for: the first ingress host, or the first
+HTTPRoute hostname. The validation refuses both on together. Empty when the
+chart routes nothing.
+*/}}
+{{- define "n8n.publicHost" -}}
+{{- if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
+{{ (index .Values.ingress.hosts 0).host }}
+{{- else if and .Values.httpRoute .Values.httpRoute.enabled .Values.httpRoute.hostnames -}}
+{{ first .Values.httpRoute.hostnames }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The paths the webhook Ingress and the HTTPRoute send to webhook processors.
+Both APIs match prefixes on whole segments, so /mcp/ leaves /mcp-test/ on main.
+*/}}
+{{- define "n8n.webhookPaths" -}}
+{{- list "/webhook/" "/webhook-waiting/" "/form/" "/form-waiting/" "/mcp/" | toYaml -}}
+{{- end -}}
+
+{{/*
 The public editor URL, rendered as N8N_EDITOR_BASE_URL and printed by NOTES.txt.
-editor.url wins. The ingress fallback uses https://, which assumes TLS ends at
-the ingress or in front of it. Empty when no public URL is configured.
+editor.url wins. The https:// fallback assumes TLS ends at or before the route.
 */}}
 {{- define "n8n.editorBaseUrl" -}}
 {{- if .Values.editor.url -}}
 {{ .Values.editor.url }}
-{{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
-https://{{ (index .Values.ingress.hosts 0).host }}
-{{- else if and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString)) -}}
+{{- else if include "n8n.publicHost" . -}}
+https://{{ include "n8n.publicHost" . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The public webhook URL, rendered as N8N_WEBHOOK_URL. webhook.url wins, for
+webhooks that arrive somewhere the chart does not route. Otherwise webhooks
+follow the editor URL, because the chart routes both through the same hosts.
+*/}}
+{{- define "n8n.webhookUrl" -}}
+{{- if .Values.webhook.url -}}
 {{ .Values.webhook.url }}
+{{- else -}}
+{{ include "n8n.editorBaseUrl" . }}
 {{- end -}}
 {{- end -}}
 
