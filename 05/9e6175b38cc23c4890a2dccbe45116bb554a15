@@ -1,0 +1,187 @@
+.github/workflows/backport.yml
+  s_354c957e03eb30::t_4b27f23de4fdd2 1-78
+.github/workflows/bump-n8n-version.yml
+  s_354c957e03eb30::t_a3c435f462ca88 1,3-11,15,17-19,28-35,37,53-59,63-65,72-74,79-80,87-102,120-122,132-144,147,237-240,257,275,286
+.github/workflows/ci.yml
+  s_354c957e03eb30::t_c4b0e679b672f6 5-7,26,35,37-63,79,128,138-151,156-237,239,243-246,254,256-258,269-311,313-315,318-319,325-337,360-361,365,373,382
+.github/workflows/preview-chart.yml
+  s_354c957e03eb30::t_a8f2dc7f9dac5b 4-5
+.github/workflows/release.yml
+  s_354c957e03eb30::t_90e39c7676b7d1 1-4,9,20-22,24,67,131-132,136,139
+.release-please-manifest.json
+  s_354c957e03eb30::t_1a174c4765b141 2
+AGENTS.md
+  s_354c957e03eb30::t_89ad71d914d83c 10-22,27,38-44,49
+CONTRIBUTING.md
+  s_354c957e03eb30::t_01bc4399be6877 200,208-209
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks-ha.yaml
+  s_354c957e03eb30::t_8a77b54d5641e6 13
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode-webhooks.yaml
+  s_354c957e03eb30::t_a4f1701b71bc0d 10
+aws-cloudformation/ecs-fargate/n8n-w-multimain-queuemode.yaml
+  s_354c957e03eb30::t_9aa827ed327c99 14
+charts/n8n/CHANGELOG.md
+  s_354c957e03eb30::t_0ce9d82108d623 7-43
+charts/n8n/Chart.yaml
+  s_354c957e03eb30::t_50ff7248644ecb 3,14,40,42
+charts/n8n/README.md
+  s_354c957e03eb30::t_ddc7a16a4a4d02 9-11,30,36,93,99-130,135-143,197-199,202,207,210,220,225-228,312-356
+charts/n8n/ci/fixtures/postgres.yaml
+  s_354c957e03eb30::t_dc0af4b33f2885 1-55
+charts/n8n/ci/fixtures/redis.yaml
+  s_354c957e03eb30::t_c3af451ea8ba62 1-38
+charts/n8n/ci/fixtures/s3/s3mock.yaml
+  s_354c957e03eb30::t_7de55031edc27c 1-50
+charts/n8n/ci/install/extra-objects.post.sh
+  s_354c957e03eb30::t_544813ace0be23 1-28
+charts/n8n/ci/install/extra-objects.pre.sh
+  s_354c957e03eb30::t_23932f88e326cc 1-21
+charts/n8n/ci/install/extra-objects.yaml
+  s_354c957e03eb30::t_533664b7358359 1-9
+charts/n8n/ci/install/https-ingress.post.sh
+  s_354c957e03eb30::t_56db75c76bb1f5 1-75
+charts/n8n/ci/install/https-ingress.pre.sh
+  s_354c957e03eb30::t_6df5d996b04fed 1-63
+charts/n8n/ci/install/https-ingress.yaml
+  s_354c957e03eb30::t_abd0019f0a1fa0 1-12
+charts/n8n/ci/install/keda-autoscaling.post.sh
+  s_354c957e03eb30::t_52d669f318883c 1-6
+charts/n8n/ci/install/keda-autoscaling.pre.sh
+  s_354c957e03eb30::t_5fd414a4840c0f 1-8
+charts/n8n/ci/install/keda-autoscaling.yaml
+  s_354c957e03eb30::t_ce7eb9301197e6 1-13
+charts/n8n/ci/install/mcp-server.yaml
+  s_354c957e03eb30::t_f2b902b27baa66 1-12
+charts/n8n/ci/install/minimal-with-docker.yaml
+  s_354c957e03eb30::t_7de27046d6a4fc 1-6
+charts/n8n/ci/install/minimal.yaml
+  s_354c957e03eb30::t_3990705eb0f03c 1-8
+charts/n8n/ci/install/multi-main-queue.post.sh
+  s_354c957e03eb30::t_d3e2a35a9b6cdf 1-26
+charts/n8n/ci/install/multi-main-queue.yaml
+  s_354c957e03eb30::t_17b317c1324a3f 1-70
+charts/n8n/ci/install/node-placement.post.sh
+  s_354c957e03eb30::t_fbfc26a64094ac 1-35
+charts/n8n/ci/install/node-placement.yaml
+  s_354c957e03eb30::t_f606b74598f041 1-14
+charts/n8n/ci/install/production-s3.post.sh
+  s_354c957e03eb30::t_db74e8c76b5a30 1-22
+charts/n8n/ci/install/production-s3.pre.sh
+  s_354c957e03eb30::t_bfb3c948c20257 1-6
+charts/n8n/ci/install/production-s3.yaml
+  s_354c957e03eb30::t_ca0566328d5726 1-73
+charts/n8n/ci/install/standalone.yaml
+  s_354c957e03eb30::t_b048d32bb4d6c2 1-4
+charts/n8n/ci/install/task-runners.yaml
+  s_354c957e03eb30::t_7d89ad6cea61da 1-11
+charts/n8n/ci/kind/node-placement.yaml
+  s_354c957e03eb30::t_ad409541d53772 1-24
+charts/n8n/decisions/0004-encryption-key-file-in-secretrefs-env.md
+  s_354c957e03eb30::t_f80974151a982f 1-23
+charts/n8n/decisions/0005-multi-main-requires-a-licence.md
+  s_354c957e03eb30::t_2a1d6db5924e28 1-21
+charts/n8n/decisions/0005-per-role-security-context.md
+  s_354c957e03eb30::t_b49157919ef87a 1-27
+charts/n8n/decisions/0006-install-test-cluster-and-fixtures.md
+  s_354c957e03eb30::t_e86a70ab5ca290 1-22
+charts/n8n/decisions/0006-public-urls-default-to-https.md
+  s_354c957e03eb30::t_1c12c5480d6b13 1-24
+charts/n8n/decisions/0007-install-test-add-ons.md
+  s_354c957e03eb30::t_362f8f33b9fcd0 1-23
+charts/n8n/decisions/0008-image-digest-replaces-tag.md
+  s_354c957e03eb30::t_b26f1230ba527a 1-27
+charts/n8n/decisions/0009-roles-start-through-the-image-entrypoint.md
+  s_354c957e03eb30::t_4ff52a17d73b1a 1-23
+charts/n8n/decisions/0010-maintenance-branch-ahead-of-the-n8n-major.md
+  s_354c957e03eb30::t_2b3bf059f8d066 1-29
+charts/n8n/decisions/0011-chart-reports-deployment-artifact.md
+  s_354c957e03eb30::t_4f2294080214a6 1
+charts/n8n/decisions/0015-other-artefacts-report-their-name-without-a-version.md
+  s_354c957e03eb30::t_599ec5f41279c9 1,8
+charts/n8n/examples/minimal-with-docker.yaml
+  s_354c957e03eb30::t_a8bde63db25ddb 52-53,57,60,64,67
+charts/n8n/templates/NOTES.txt
+  s_354c957e03eb30::t_22434bd17c65ec 1,6
+charts/n8n/templates/_configmap-env.tpl
+  s_354c957e03eb30::t_bf16e7d599d560 226,286,308
+charts/n8n/templates/_environment-helpers.tpl
+  s_354c957e03eb30::t_2bef6340951f43 120,122-127,133-140
+charts/n8n/templates/_helpers.tpl
+  s_354c957e03eb30::t_2c421c035df8cd 66-106,138-161,168,170,172-173,307-316,354-366,390-395,445-459
+charts/n8n/templates/configmap.yaml
+  s_354c957e03eb30::t_48bb72987bc3a4 15,118-121,124-125
+charts/n8n/templates/deployment-main.yaml
+  s_354c957e03eb30::t_c28d156b39ba6c 34-37,45,47,57-60,73,75,77-78
+charts/n8n/templates/deployment-webhook-processor.yaml
+  s_354c957e03eb30::t_3dd01ff1beb023 32-35,43,45,55-58,71,74,76-77,136
+charts/n8n/templates/deployment-worker.yaml
+  s_354c957e03eb30::t_03a81c939bc059 32-35,43,45,55-58,71,76,78-79,137
+charts/n8n/templates/pvc.yaml
+  s_354c957e03eb30::t_7cf4fa1f08f5de 9-10
+charts/n8n/templates/secrets.yaml
+  s_354c957e03eb30::t_9ccbd839711baa 15-20
+charts/n8n/templates/tests/test-connection.yaml
+  s_354c957e03eb30::t_0024a238189fcd 14-17
+charts/n8n/tests/__snapshot__/default-render_test.yaml.snap
+  s_354c957e03eb30::t_7217255ce301de 80,315
+charts/n8n/tests/editor-url_test.yaml
+  s_354c957e03eb30::t_86d561a1569faa 1-150
+charts/n8n/tests/encryption-key-file_test.yaml
+  s_354c957e03eb30::t_5327d966be2445 1-75
+charts/n8n/tests/host-aliases_test.yaml
+  s_354c957e03eb30::t_6849bbc2491039 1-95
+charts/n8n/tests/image-digest_test.yaml
+  s_354c957e03eb30::t_7d309b9daf525a 1-151
+charts/n8n/tests/image-entrypoint_test.yaml
+  s_354c957e03eb30::t_ca653fe8b54d39 1-54
+charts/n8n/tests/image-pull-secrets_test.yaml
+  s_354c957e03eb30::t_ee66df10059013 1-3,8-9,15-17,19,21-32,34,39-42,44-48,50-51,53-54,57-78
+charts/n8n/tests/notes-url_test.yaml
+  s_354c957e03eb30::t_6cf5d95b743c34 1-56
+charts/n8n/tests/pvc_test.yaml
+  s_354c957e03eb30::t_3091a1bac1aea5 1-44
+charts/n8n/tests/security-context_test.yaml
+  s_354c957e03eb30::t_f42395e37d32ca 1-232
+charts/n8n/tests/validate-encryption-key_test.yaml
+  s_354c957e03eb30::t_efcc3b3cec3c2a 23-39
+charts/n8n/tests/validate-multi-main_test.yaml
+  s_354c957e03eb30::t_77b1eca6d16ac8 14-15,19-48,58-108
+charts/n8n/tests/validate-persistence_test.yaml
+  s_354c957e03eb30::t_024d1320f5eb3d 1-25
+charts/n8n/tests/values/security-context-null.yaml
+  s_354c957e03eb30::t_c9d225773b9c97 1-8
+charts/n8n/tests/without-schema/validate_test.yaml
+  s_354c957e03eb30::t_8c9eebb0c8c7ac 34,44,75-82
+charts/n8n/values.schema.json
+  s_354c957e03eb30::t_5a3674ae771aa1 14-18,26-37,104-108,314-319,390-410,434-453,680-689,760-769,789-795
+charts/n8n/values.yaml
+  s_354c957e03eb30::t_4c92afe7afb56c 8-12,15-27,85,115-120,207,261-265,353-365,416-418,425-473,593,672-673,675-676,685-693,760-763
+docker-caddy/.env
+  s_354c957e03eb30::t_eea06dcbc07072 1
+docker-compose/subfolderWithSSL/.env
+  s_354c957e03eb30::t_be5540bb9c0d88 1
+docker-compose/withPostgres/.env
+  s_354c957e03eb30::t_7b6b106d6e06c9 1
+docker-compose/withPostgresAndWorker/.env
+  s_354c957e03eb30::t_518d83fe27456c 1
+kubernetes/n8n-deployment.yaml
+  s_354c957e03eb30::t_43b52cbdf74241 56
+release-please-config.json
+  s_354c957e03eb30::t_d9a69ab75ebfda 3,19-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "059e6175b38cc23c4890a2dccbe45116bb554a15",
+  "prompts": {},
+  "sessions": {
+    "s_354c957e03eb30": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "88346052-aee3-4a6f-b660-0ac63a1cce3d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
