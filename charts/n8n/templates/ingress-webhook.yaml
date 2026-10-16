@@ -21,41 +21,15 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
-          - path: /webhook/
+        {{- range include "n8n.webhookPaths" $ | fromYamlArray }}
+          - path: {{ . }}
             pathType: Prefix
             backend:
               service:
                 name: {{ include "n8n.fullname" $ }}-webhook-processor
                 port:
                   number: {{ $.Values.service.port }}
-          - path: /webhook-waiting/
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
-                port:
-                  number: {{ $.Values.service.port }}
-          - path: /form/
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
-                port:
-                  number: {{ $.Values.service.port }}
-          - path: /form-waiting/
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
-                port:
-                  number: {{ $.Values.service.port }}
-          - path: /mcp/
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
-                port:
-                  number: {{ $.Values.service.port }}
+        {{- end }}
   {{- end }}
   {{- with (.Values.ingress.webhookProcessor).tls }}
   tls:
