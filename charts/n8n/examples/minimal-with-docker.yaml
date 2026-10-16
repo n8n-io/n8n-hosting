@@ -70,9 +70,6 @@ resources:
 config:
   timezone: UTC
 
-webhook:
-  url: "http://localhost:8080"
-
 editor:
   url: "http://localhost:8080"
 

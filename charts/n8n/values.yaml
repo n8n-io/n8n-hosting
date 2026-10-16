@@ -664,21 +664,20 @@ pdb:
 webhook:
   # Enable webhook functionality
   enabled: true
-  # Custom webhook URL base domain (if not set, will use ingress host)
-  # Format: https://your-domain.com, or http:// when n8n is served over plain
-  # HTTP (n8n adds /webhook path automatically)
-  # Rendered as N8N_WEBHOOK_URL, which sets the base URL for both test and
-  # production webhooks. The URL derived from the ingress host always uses
-  # https://. If n8n is served over plain HTTP, set this and editor.url.
+  # Public base URL for webhooks, for example https://hooks.example.com.
+  # n8n adds the /webhook path itself. Rendered as N8N_WEBHOOK_URL, the base
+  # URL for test and production webhooks. When empty, webhooks follow the
+  # editor URL. Set it only when webhooks arrive at an address the chart does
+  # not route, such as a separate load balancer or API gateway.
   url: ""
 
 # ----- Editor config -----
 editor:
   # Public base URL of the n8n editor, for example https://n8n.example.com.
   # Rendered as N8N_EDITOR_BASE_URL. n8n builds OAuth redirect URLs and links
-  # in emails from it. When empty, the chart uses https:// and the first
-  # ingress host, or webhook.url when ingress is off. Set it when n8n is
-  # served over plain HTTP or on a different host.
+  # in emails from it, and webhooks follow it unless webhook.url is set. When
+  # empty, the chart uses https:// and the first ingress host. Set it when n8n
+  # is served over plain HTTP, has no ingress, or is reached at another host.
   url: ""
 
 # ----- Executions config -----

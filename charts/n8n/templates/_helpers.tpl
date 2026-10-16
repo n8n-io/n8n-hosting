@@ -630,17 +630,39 @@ so workers handle code execution and main pods do not need runner sidecars.
 {{- end -}}
 
 {{/*
+The host the chart routes traffic for: the first ingress host. Empty when the
+chart routes nothing.
+*/}}
+{{- define "n8n.publicHost" -}}
+{{- if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
+{{ (index .Values.ingress.hosts 0).host }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 The public editor URL, rendered as N8N_EDITOR_BASE_URL and printed by NOTES.txt.
-editor.url wins. The ingress fallback uses https://, which assumes TLS ends at
-the ingress or in front of it. Empty when no public URL is configured.
+editor.url wins. The fallback uses https:// and the host the chart routes,
+which assumes TLS ends there or in front of it. webhook.url never sets it,
+because it names where webhooks arrive. Empty when neither is configured.
 */}}
 {{- define "n8n.editorBaseUrl" -}}
 {{- if .Values.editor.url -}}
 {{ .Values.editor.url }}
-{{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
-https://{{ (index .Values.ingress.hosts 0).host }}
-{{- else if and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString)) -}}
+{{- else if include "n8n.publicHost" . -}}
+https://{{ include "n8n.publicHost" . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The public webhook URL, rendered as N8N_WEBHOOK_URL. webhook.url wins, for
+webhooks that arrive somewhere the chart does not route. Otherwise webhooks
+follow the editor URL, because the chart routes both through the same hosts.
+*/}}
+{{- define "n8n.webhookUrl" -}}
+{{- if .Values.webhook.url -}}
 {{ .Values.webhook.url }}
+{{- else -}}
+{{ include "n8n.editorBaseUrl" . }}
 {{- end -}}
 {{- end -}}
 
