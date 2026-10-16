@@ -11,7 +11,6 @@ multiMain:
 queueMode:
   enabled: true
   workerReplicaCount: 5
-  workerConcurrency: 15
 
 # Load balancer must route /webhook/*, /form/*, and /form-waiting/* to webhook processor service
 webhookProcessor:
@@ -132,18 +131,17 @@ resources:
 # Production configuration
 config:
   timezone: Europe/Berlin
-  extraEnv:
+
+env:
+  shared:
     # Security settings
-    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
-      value: "true"
-    
-    - name: N8N_LOG_LEVEL
-      value: "info"
-    - name: N8N_LOG_OUTPUT
-      value: "console"
+    N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+    N8N_LOG_LEVEL: info
+    N8N_LOG_OUTPUT: console
 
 executions:
   concurrency:
+    # In queue mode n8n uses this as each worker's concurrency.
     productionLimit: 50
   timeout: 3600  # 1 hour
   data:
@@ -158,9 +156,6 @@ executions:
     hardDeleteBuffer: 1      # 1 hour buffer before hard delete
     hardDeleteInterval: 15   # minutes between hard delete runs
     softDeleteInterval: 60   # minutes between soft delete runs
-
-webhook:
-  timeout: 300000  # 5 minutes
 
 # Core secrets reference
 secretRefs:

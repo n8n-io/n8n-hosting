@@ -1,0 +1,66 @@
+# n8n takes a worker's concurrency from N8N_CONCURRENCY_PRODUCTION_LIMIT when
+# it is set, and ignores --concurrency. Either setting works alone; both
+# together fail, because one would be ignored.
+suite: 'worker concurrency'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
+tests:
+  - it: passes no --concurrency flag by default
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - worker
+
+  - it: passes queueMode.workerConcurrency as the flag
+    template: templates/deployment-worker.yaml
+    set:
+      queueMode.workerConcurrency: 20
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --concurrency=20
+
+  - it: accepts executions.concurrency.productionLimit alone
+    template: templates/deployment-main.yaml
+    set:
+      executions.concurrency.productionLimit: 20
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: refuses both settings in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.workerConcurrency: 20
+      executions.concurrency.productionLimit: 100
+    asserts:
+      - failedTemplate:
+          errorMessage: "queueMode.workerConcurrency and executions.concurrency.productionLimit both set each worker's concurrency, and n8n uses productionLimit. Remove one of them."
+
+  - it: refuses the flag with the variable in a worker map
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.workerConcurrency: 20
+      env.worker.N8N_CONCURRENCY_PRODUCTION_LIMIT: 100
+    asserts:
+      - failedTemplate:
+          errorMessage: "queueMode.workerConcurrency and N8N_CONCURRENCY_PRODUCTION_LIMIT in env.worker both set each worker's concurrency, and n8n uses the variable. Remove one of them."
+
+  - it: accepts both in standalone mode, where there are no workers
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      database.type: sqlite
+      database.useExternal: false
+      persistence.enabled: true
+      queueMode.workerConcurrency: 20
+      executions.concurrency.productionLimit: 100
+    asserts:
+      - notFailedTemplate: {}

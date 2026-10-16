@@ -54,6 +54,40 @@ Deployment Configuration:
   - Task runners: off (code runs inside the n8n process)
 {{- end }}
 
+{{- $overrides := list }}
+{{- range $c, $_ := (include "n8n.envSection" (list (dict "x" .Values.chartEnvOverrides) "x") | fromJson) }}
+{{- range $k, $_ := (include "n8n.envSection" (list $.Values.chartEnvOverrides $c) | fromJson) }}
+{{- $overrides = append $overrides (printf "chartEnvOverrides.%s.%s" $c $k) }}
+{{- end }}
+{{- end }}
+{{- if $overrides }}
+
+These variables replace values the chart sets. Remove each override once its
+value can express what you need:
+{{- range $overrides }}
+  - {{ . }}
+{{- end }}
+{{- end }}
+
+{{- /* With no public URL, n8n builds its webhook and OAuth callback URLs from
+N8N_HOST, which defaults to localhost. */}}
+{{- if not (include "n8n.editorBaseUrl" .) }}
+{{- $urlEnv := false }}
+{{- range include "n8n.userEnv" (dict "root" . "component" "main") | fromJsonArray }}
+{{- if has .name (list "N8N_EDITOR_BASE_URL" "N8N_HOST") }}{{- $urlEnv = true }}{{- end }}
+{{- end }}
+{{- if not $urlEnv }}
+
+WARNING: No public URL is set, so n8n builds its webhook and OAuth callback
+URLs from localhost. If users reach n8n at another address, set editor.url
+and webhook.url.
+{{- if or (and .Values.envFrom .Values.envFrom.shared) (and .Values.envFrom .Values.envFrom.main) }}
+The chart cannot see inside envFrom sources. Ignore this warning if one of
+them sets N8N_EDITOR_BASE_URL or N8N_HOST.
+{{- end }}
+{{- end }}
+{{- end }}
+
 {{- if .Values.database.ssl.key }}
 
 WARNING: database.ssl.key is set, but the chart ignores it. To supply a client

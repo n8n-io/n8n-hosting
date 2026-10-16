@@ -1,0 +1,495 @@
+# The env maps and the ConfigMaps the chart computes. Each chart variable
+# reaches the components that read it, and a user map never silently
+# replaces one.
+suite: 'env: per-component maps'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
+  webhookProcessor.enabled: true
+tests:
+  - it: puts env.shared in the shared ConfigMap
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      env.shared.N8N_LOG_LEVEL: info
+    asserts:
+      - equal:
+          path: data.N8N_LOG_LEVEL
+          value: info
+
+  - it: puts env.worker in the worker ConfigMap only
+    template: templates/configmap.yaml
+    set:
+      env.shared.N8N_LOG_LEVEL: info
+      env.worker.N8N_LOG_LEVEL: debug
+    asserts:
+      - equal:
+          path: data.N8N_LOG_LEVEL
+          value: info
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n
+      - equal:
+          path: data.N8N_LOG_LEVEL
+          value: debug
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+      - notExists:
+          path: data.N8N_LOG_LEVEL
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+
+  # envFrom loads the component ConfigMap after the shared one, so the worker's
+  # value above wins; env-from_test pins that order.
+
+  - it: renders no worker ConfigMap when there are no worker pods
+    template: templates/configmap.yaml
+    set:
+      queueMode.workerReplicaCount: 0
+    asserts:
+      - containsDocument:
+          kind: ConfigMap
+          apiVersion: v1
+          name: RELEASE-NAME-n8n-worker
+        not: true
+        any: true
+
+  - it: renders numbers and booleans as plain strings
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      env.shared.N8N_PAYLOAD_SIZE_MAX: 1000000
+      env.shared.N8N_DIAGNOSTICS_ENABLED: false
+      env.shared.N8N_SOME_RATIO: 0.5
+    asserts:
+      - equal:
+          path: data.N8N_PAYLOAD_SIZE_MAX
+          value: "1000000"
+      - equal:
+          path: data.N8N_DIAGNOSTICS_ENABLED
+          value: "false"
+      - equal:
+          path: data.N8N_SOME_RATIO
+          value: "0.5"
+
+  - it: accepts lowercase proxy variables
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      env.shared.no_proxy: localhost,.svc
+    asserts:
+      - equal:
+          path: data.no_proxy
+          value: localhost,.svc
+
+  - it: sets the shared variables once, for every n8n process
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      webhook.url: https://n8n.example.com
+      license.enabled: true
+      license.activationKey: test-key
+    asserts:
+      - equal:
+          path: data.N8N_PORT
+          value: "5678"
+      - equal:
+          path: data.DB_POSTGRESDB_HOST
+          value: your-postgres-hostname
+      - equal:
+          path: data.EXECUTIONS_MODE
+          value: queue
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://n8n.example.com
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+      - notExists:
+          path: data.N8N_LICENSE_ACTIVATION_KEY
+      - notExists:
+          path: data.N8N_HOST
+      - notExists:
+          path: data.N8N_PROTOCOL
+      - notExists:
+          path: data.N8N_WEBHOOK_TIMEOUT
+
+  - it: sets N8N_PORT from service.port
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      service.port: 8080
+    asserts:
+      - equal:
+          path: data.N8N_PORT
+          value: "8080"
+
+  - it: sets execution settings on main and workers but not webhook processors
+    template: templates/configmap.yaml
+    set:
+      executions.timeout: 300
+    asserts:
+      - equal:
+          path: data.EXECUTIONS_TIMEOUT
+          value: "300"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.EXECUTIONS_TIMEOUT
+          value: "300"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+      - notExists:
+          path: data.EXECUTIONS_TIMEOUT
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+
+  - it: sets multi-main and production-webhook settings on main only
+    template: templates/configmap.yaml
+    set:
+      multiMain.enabled: true
+      multiMain.replicas: 2
+      license.enabled: true
+    asserts:
+      - equal:
+          path: data.N8N_MULTI_MAIN_SETUP_ENABLED
+          value: "true"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.N8N_DISABLE_PRODUCTION_MAIN_PROCESS
+          value: "true"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - notExists:
+          path: data.N8N_MULTI_MAIN_SETUP_ENABLED
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+
+  - it: sets the queue health check on workers only
+    template: templates/configmap.yaml
+    set:
+      redis.healthCheck.enabled: true
+    asserts:
+      - equal:
+          path: data.QUEUE_HEALTH_CHECK_ACTIVE
+          value: "true"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+      - notExists:
+          path: data.QUEUE_HEALTH_CHECK_ACTIVE
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - notExists:
+          path: data.QUEUE_HEALTH_CHECK_ACTIVE
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+
+  - it: sets the runner broker on workers in queue mode, not on main
+    template: templates/configmap.yaml
+    set:
+      taskRunners.enabled: true
+    asserts:
+      - equal:
+          path: data.N8N_RUNNERS_MODE
+          value: external
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+      - notExists:
+          path: data.N8N_RUNNERS_MODE
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.N8N_RUNNERS_TASK_BROKER_URI
+          value: http://localhost:5679
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-task-runner
+
+  - it: renders a ConfigMap only for the components that run
+    template: templates/configmap.yaml
+    set:
+      webhookProcessor.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 4
+      - containsDocument:
+          kind: ConfigMap
+          apiVersion: v1
+          name: RELEASE-NAME-n8n-worker
+          any: true
+      - containsDocument:
+          kind: ConfigMap
+          apiVersion: v1
+          name: RELEASE-NAME-n8n-task-runner
+          any: true
+
+  - it: reads only the encryption key from an existing Secret
+    template: templates/deployment-main.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: n8n-core-secrets
+                key: N8N_ENCRYPTION_KEY
+      - notContains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: n8n-core-secrets
+
+  - it: renders no Secret when an existing one holds the key
+    template: templates/secrets.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: writes only the encryption key to the chart-managed Secret
+    template: templates/secrets.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-key
+    asserts:
+      - equal:
+          path: stringData
+          value:
+            N8N_ENCRYPTION_KEY: test-key
+
+  - it: accepts a variable the chart does not set in this configuration
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.AWS_ACCESS_KEY_ID: from-another-tool
+      env.shared.N8N_DEFAULT_BINARY_DATA_MODE: database
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: refuses a shared variable the chart sets, naming the value
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.DB_POSTGRESDB_HOST: pg.example.com
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.DB_POSTGRESDB_HOST is set by the chart from database.host. Set database.host instead, or put it in chartEnvOverrides.shared to override the chart deliberately.'
+
+  - it: refuses a component variable the chart sets on that component
+    template: templates/deployment-main.yaml
+    set:
+      multiMain.enabled: true
+      multiMain.replicas: 2
+      license.enabled: true
+      env.main.N8N_MULTI_MAIN_SETUP_ENABLED: "false"
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.main.N8N_MULTI_MAIN_SETUP_ENABLED is set by the chart from multiMain.enabled. Set multiMain.enabled instead, or put it in chartEnvOverrides.main to override the chart deliberately.'
+
+  - it: refuses N8N_PORT, which the chart sets from service.port
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_PORT: 8080
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N_PORT is set by the chart from service.port. Set service.port instead, or put it in chartEnvOverrides.shared to override the chart deliberately.'
+
+  - it: refuses a variable the chart reads from a Secret
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.DB_POSTGRESDB_PASSWORD: hunter2
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.DB_POSTGRESDB_PASSWORD is read by the chart from database.passwordSecret. Set database.passwordSecret instead.'
+
+  - it: renders a reference in env and keeps it out of the ConfigMap
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_SMTP_PASS
+            valueFrom:
+              secretKeyRef:
+                name: smtp
+                key: password
+
+  - it: keeps references out of the ConfigMaps
+    template: templates/configmap.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+      env.worker.POD_NAME:
+        fieldRef:
+          fieldPath: metadata.name
+    asserts:
+      - notExists:
+          path: data.N8N_SMTP_PASS
+      - notExists:
+          path: data.POD_NAME
+
+  - it: lets a component reference win over a shared literal
+    template: templates/deployment-worker.yaml
+    set:
+      env.shared.N8N_SMTP_PASS: plain
+      env.worker.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_SMTP_PASS
+            valueFrom:
+              secretKeyRef:
+                name: smtp
+                key: password
+
+  - it: lets a component literal win over a shared reference
+    templates:
+      - templates/deployment-worker.yaml
+      - templates/deployment-main.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+      env.worker.N8N_SMTP_PASS: plain
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_SMTP_PASS
+          any: true
+        template: templates/deployment-worker.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_SMTP_PASS
+            valueFrom:
+              secretKeyRef:
+                name: smtp
+                key: password
+        template: templates/deployment-main.yaml
+
+  - it: puts the component literal in its ConfigMap when it hides a shared reference
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef:
+          name: smtp
+          key: password
+      env.worker.N8N_SMTP_PASS: plain
+    asserts:
+      - equal:
+          path: data.N8N_SMTP_PASS
+          value: plain
+
+  - it: refuses a reference to a variable the chart sets
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.DB_POSTGRESDB_HOST:
+        configMapKeyRef:
+          name: pg
+          key: host
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.DB_POSTGRESDB_HOST is set by the chart from database.host. Set database.host instead, or put it in chartEnvOverrides.shared to override the chart deliberately.'
+
+  - it: refuses a reference without its required fields
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.POD_NAME:
+        fieldRef: {}
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/env/shared/POD_NAME'"
+
+  - it: refuses a malformed envFrom entry
+    template: templates/deployment-main.yaml
+    set:
+      envFrom.shared:
+        - secretRef: {}
+    asserts:
+      - failedTemplate:
+          errorPattern: "missing property 'name'"
+
+  - it: refuses an object that is not a single reference
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        valueFrom:
+          secretKeyRef:
+            name: smtp
+            key: password
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/env/shared/N8N_SMTP_PASS'"
+
+  - it: refuses an unknown component key
+    template: templates/deployment-main.yaml
+    set:
+      env.webhook.N8N_LOG_LEVEL: info
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/env': additional properties 'webhook' not allowed"
+
+  - it: refuses an invalid variable name
+    template: templates/deployment-main.yaml
+    set:
+      env.shared:
+        N8N-LOG-LEVEL: info
+    asserts:
+      - failedTemplate:
+          errorPattern: "invalid propertyName 'N8N-LOG-LEVEL'"
+
+  - it: refuses a nested map as a value
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_LOG:
+        level: info
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/env/shared/N8N_LOG'"

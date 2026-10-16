@@ -18,10 +18,7 @@ persistence:
 
 # You must still provide an encryption key for credential storage.
 # Create a secret: kubectl create secret generic n8n-secrets \
-#   --from-literal=N8N_ENCRYPTION_KEY=$(openssl rand -hex 32) \
-#   --from-literal=N8N_HOST=localhost \
-#   --from-literal=N8N_PORT=5678 \
-#   --from-literal=N8N_PROTOCOL=http
+#   --from-literal=N8N_ENCRYPTION_KEY=$(openssl rand -hex 32)
 secretRefs:
   existingSecret: "n8n-secrets"
 

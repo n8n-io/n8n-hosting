@@ -16,58 +16,37 @@ set:
   s3.auth.autoDetect: true
   serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
 tests:
-  - it: sets the binary data mode and not the available modes on main
-    template: templates/deployment-main.yaml
+  - it: sets the binary data mode and not the available modes in the shared ConfigMap
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: N8N_DEFAULT_BINARY_DATA_MODE
-            value: s3
-      - notContains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: N8N_AVAILABLE_BINARY_DATA_MODES
-          any: true
+      - equal:
+          path: data.N8N_DEFAULT_BINARY_DATA_MODE
+          value: s3
+      - notExists:
+          path: data.N8N_AVAILABLE_BINARY_DATA_MODES
 
-  - it: sets the binary data mode and not the available modes on workers
-    template: templates/deployment-worker.yaml
+  - it: loads the shared ConfigMap on every n8n container
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: N8N_DEFAULT_BINARY_DATA_MODE
-            value: s3
-      - notContains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: N8N_AVAILABLE_BINARY_DATA_MODES
-          any: true
-
-  - it: sets the binary data mode and not the available modes on webhook processors
-    template: templates/deployment-webhook-processor.yaml
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: N8N_DEFAULT_BINARY_DATA_MODE
-            value: s3
-      - notContains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: N8N_AVAILABLE_BINARY_DATA_MODES
-          any: true
+            configMapRef:
+              name: RELEASE-NAME-n8n
 
   # The schema allows unknown keys under s3.storage, so values files written
   # for older chart versions keep rendering.
   - it: ignores s3.storage.availableModes
-    template: templates/deployment-main.yaml
+    template: templates/configmap.yaml
     set:
       s3.storage.availableModes: filesystem,s3
     asserts:
       - notFailedTemplate: {}
-      - notContains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: N8N_AVAILABLE_BINARY_DATA_MODES
-          any: true
+      - notExists:
+          path: data.N8N_AVAILABLE_BINARY_DATA_MODES

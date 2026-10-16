@@ -19,6 +19,9 @@ set:
 tests:
   - it: sets N8N_WEBHOOK_URL in the ConfigMap from webhook.url
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     set:
       webhook.url: https://hooks.example.com
     asserts:
@@ -30,6 +33,9 @@ tests:
 
   - it: sets N8N_WEBHOOK_URL in the ConfigMap from the ingress host
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     set:
       ingress.enabled: true
       ingress.hosts:
@@ -53,13 +59,10 @@ tests:
       webhook.url: https://hooks.example.com
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: N8N_WEBHOOK_URL
-            valueFrom:
-              configMapKeyRef:
-                name: RELEASE-NAME-n8n
-                key: N8N_WEBHOOK_URL
+            configMapRef:
+              name: RELEASE-NAME-n8n
       - notContains:
           path: spec.template.spec.containers[0].env
           content:
@@ -80,13 +83,10 @@ tests:
               pathType: Prefix
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: N8N_WEBHOOK_URL
-            valueFrom:
-              configMapKeyRef:
-                name: RELEASE-NAME-n8n
-                key: N8N_WEBHOOK_URL
+            configMapRef:
+              name: RELEASE-NAME-n8n
       - notContains:
           path: spec.template.spec.containers[0].env
           content:

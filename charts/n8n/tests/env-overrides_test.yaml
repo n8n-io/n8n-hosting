@@ -1,0 +1,129 @@
+# chartEnvOverrides replaces a variable the chart sets, and nothing else, so
+# it stays an escape hatch rather than a second place to set variables.
+suite: 'env: chartEnvOverrides'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/NOTES.txt
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  taskRunners.authToken.existingSecret: n8n-runner-token
+  webhookProcessor.enabled: true
+tests:
+  - it: replaces a shared variable in the shared ConfigMap
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      webhook.url: https://n8n.example.com
+      chartEnvOverrides.shared.N8N_WEBHOOK_URL: http://n8n.example.com/
+    asserts:
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: http://n8n.example.com/
+
+  - it: writes a shared override of a component variable into that component's ConfigMap
+    template: templates/configmap.yaml
+    set:
+      executions.timeout: 300
+      chartEnvOverrides.shared.EXECUTIONS_TIMEOUT: 600
+    asserts:
+      - equal:
+          path: data.EXECUTIONS_TIMEOUT
+          value: "600"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.EXECUTIONS_TIMEOUT
+          value: "600"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+      - notExists:
+          path: data.EXECUTIONS_TIMEOUT
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+
+  - it: keeps a shared override of a component variable out of the shared ConfigMap
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      executions.timeout: 300
+      chartEnvOverrides.shared.EXECUTIONS_TIMEOUT: 600
+    asserts:
+      - notExists:
+          path: data.EXECUTIONS_TIMEOUT
+
+  - it: replaces a shared variable for one component only
+    template: templates/configmap.yaml
+    set:
+      chartEnvOverrides.worker.TZ: Europe/Berlin
+    asserts:
+      - equal:
+          path: data.TZ
+          value: Europe/Berlin
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+      - equal:
+          path: data.TZ
+          value: UTC
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n
+
+  - it: refuses an override of a variable the chart does not set
+    template: templates/deployment-main.yaml
+    set:
+      chartEnvOverrides.shared.N8N_LOG_LEVEL: debug
+    asserts:
+      - failedTemplate:
+          errorMessage: 'chartEnvOverrides.shared.N8N_LOG_LEVEL overrides nothing: the chart does not set N8N_LOG_LEVEL. Put it in env.shared instead.'
+
+  - it: refuses a component override of a variable the chart sets elsewhere
+    template: templates/deployment-main.yaml
+    set:
+      redis.healthCheck.enabled: true
+      chartEnvOverrides.webhookProcessor.QUEUE_HEALTH_CHECK_PORT: 5690
+    asserts:
+      - failedTemplate:
+          errorMessage: 'chartEnvOverrides.webhookProcessor.QUEUE_HEALTH_CHECK_PORT overrides nothing: the chart does not set QUEUE_HEALTH_CHECK_PORT here. Put it in env.webhookProcessor instead.'
+
+  - it: refuses an override of a variable read from a Secret
+    template: templates/deployment-main.yaml
+    set:
+      chartEnvOverrides.main.DB_POSTGRESDB_PASSWORD: hunter2
+    asserts:
+      - failedTemplate:
+          errorMessage: 'chartEnvOverrides.main.DB_POSTGRESDB_PASSWORD cannot be overridden, because the chart reads it from a Secret. Set database.passwordSecret instead.'
+
+  - it: refuses an override for a component the release does not run
+    template: templates/deployment-main.yaml
+    set:
+      webhookProcessor.enabled: false
+      chartEnvOverrides.webhookProcessor.TZ: Europe/Berlin
+    asserts:
+      - failedTemplate:
+          errorMessage: 'chartEnvOverrides.webhookProcessor.TZ overrides nothing: this release renders no webhookProcessor pods.'
+
+  - it: lists the overrides in effect in NOTES
+    template: templates/NOTES.txt
+    set:
+      chartEnvOverrides.shared.TZ: Europe/Berlin
+    asserts:
+      - matchRegex:
+          path: raw
+          pattern: '(?s)replace values the chart sets.*- chartEnvOverrides\.shared\.TZ'
+
+  - it: says nothing about overrides when there are none
+    template: templates/NOTES.txt
+    asserts:
+      - notMatchRegex:
+          path: raw
+          pattern: chartEnvOverrides

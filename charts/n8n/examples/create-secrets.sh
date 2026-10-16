@@ -8,15 +8,6 @@ echo "n8n Secrets Creation Script"
 echo "================================"
 echo
 
-prompt_with_default() {
-    local prompt="$1"
-    local default="$2"
-    local var_name="$3"
-
-    read -p "$prompt [$default]: " input
-    printf -v "$var_name" '%s' "${input:-$default}"
-}
-
 prompt_secret() {
     local prompt="$1"
     local var_name="$2"
@@ -27,7 +18,7 @@ prompt_secret() {
 }
 
 echo "This script will create the following secrets:"
-echo "  • n8n-core-secrets (encryption key, host, protocol)"
+echo "  • n8n-core-secrets (encryption key)"
 echo "  • n8n-db-secret (database password)"
 echo "  • s3-credentials (AWS S3 secret key, optional)"
 echo "  • n8n-runner-token (task runner auth token)"
@@ -51,9 +42,6 @@ echo "Please provide the following information:"
 echo
 
 echo "=== Core n8n Configuration ==="
-prompt_with_default "n8n host (domain/IP where n8n will be accessible)" "localhost" "N8N_HOST"
-prompt_with_default "n8n port" "5678" "N8N_PORT"
-prompt_with_default "n8n protocol (http/https)" "http" "N8N_PROTOCOL"
 
 N8N_ENCRYPTION_KEY=$(openssl rand -base64 32)
 echo "Generated new encryption key: ${N8N_ENCRYPTION_KEY:0:16}..."
@@ -83,9 +71,6 @@ echo
 
 
 echo "  Review your configuration:"
-echo "  Host: $N8N_HOST"
-echo "  Port: $N8N_PORT"  
-echo "  Protocol: $N8N_PROTOCOL"
 echo "  Encryption key: Generated"
 echo "  Database password: [HIDDEN]"
 if [ "$CREATE_S3_SECRET" = true ]; then
@@ -108,9 +93,6 @@ echo "   Creating secrets..."
 echo "Creating n8n-core-secrets..."
 kubectl create secret generic n8n-core-secrets \
     --from-literal=N8N_ENCRYPTION_KEY="$N8N_ENCRYPTION_KEY" \
-    --from-literal=N8N_HOST="$N8N_HOST" \
-    --from-literal=N8N_PORT="$N8N_PORT" \
-    --from-literal=N8N_PROTOCOL="$N8N_PROTOCOL" \
     --dry-run=client -o yaml | kubectl apply -f -
 
 # Create database secret

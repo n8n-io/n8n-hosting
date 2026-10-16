@@ -29,9 +29,7 @@ tests:
     template: templates/deployment-main.yaml
     set:
       taskRunners.enabled: true
-      taskRunners.extraEnv:
-        - name: N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT
-          value: "5690"
+      env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT: "5690"
     asserts:
       - notFailedTemplate: {}
 
@@ -39,31 +37,25 @@ tests:
     template: templates/deployment-main.yaml
     set:
       taskRunners.enabled: true
-      taskRunners.extraEnv:
-        - name: N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT
-          value: health
+      env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT: health
     asserts:
       - failedTemplate:
-          errorMessage: 'N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT in taskRunners.extraEnv must be a port number from 1 to 65535, got "health". The sidecar''s liveness probe uses it.'
+          errorMessage: 'env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT must be a port number from 1 to 65535, got "health". The sidecar''s liveness probe uses it.'
 
   - it: rejects a launcher health check port out of range
     template: templates/deployment-main.yaml
     set:
       taskRunners.enabled: true
-      taskRunners.extraEnv:
-        - name: N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT
-          value: "70000"
+      env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT: "70000"
     asserts:
       - failedTemplate:
-          errorMessage: 'N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT in taskRunners.extraEnv must be a port number from 1 to 65535, got "70000". The sidecar''s liveness probe uses it.'
+          errorMessage: 'env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT must be a port number from 1 to 65535, got "70000". The sidecar''s liveness probe uses it.'
 
   - it: skips the port check when the liveness probe is disabled
     template: templates/deployment-main.yaml
     set:
       taskRunners.enabled: true
       taskRunners.probes.liveness.enabled: false
-      taskRunners.extraEnv:
-        - name: N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT
-          value: health
+      env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT: health
     asserts:
       - notFailedTemplate: {}

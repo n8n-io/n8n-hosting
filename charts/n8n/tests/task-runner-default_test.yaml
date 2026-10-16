@@ -43,8 +43,11 @@ tests:
           path: spec.template.spec.containers[1].resources.requests.memory
           value: 128Mi
 
-  - it: sets external mode in the ConfigMap
+  - it: sets external mode in the worker ConfigMap
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
     asserts:
       - equal:
           path: data.N8N_RUNNERS_MODE
@@ -71,6 +74,9 @@ tests:
 
   - it: leaves the runner mode unset with taskRunners.enabled false
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
     set:
       taskRunners.enabled: false
     asserts:

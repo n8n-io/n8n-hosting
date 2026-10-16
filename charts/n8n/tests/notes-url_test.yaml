@@ -47,7 +47,7 @@ tests:
       - notMatchRegexRaw:
           pattern: 'port-forward'
 
-  - it: prints port-forward steps when no public URL is set
+  - it: prints port-forward steps and a localhost warning when no public URL is set
     set:
       ingress.enabled: false
     asserts:
@@ -55,3 +55,45 @@ tests:
           pattern: 'kubectl port-forward service/RELEASE-NAME-n8n-main'
       - notMatchRegexRaw:
           pattern: 'available at:'
+      - matchRegexRaw:
+          pattern: 'WARNING: No public URL is set'
+
+  - it: leaves out the localhost warning when a public URL is set
+    asserts:
+      - notMatchRegexRaw:
+          pattern: 'No public URL is set'
+
+  - it: leaves out the localhost warning when env.shared sets N8N_HOST
+    set:
+      ingress.enabled: false
+      env.shared.N8N_HOST: n8n.example.com
+    asserts:
+      - notMatchRegexRaw:
+          pattern: 'No public URL is set'
+
+  - it: leaves out the localhost warning when env.main sets N8N_EDITOR_BASE_URL
+    set:
+      ingress.enabled: false
+      env.main.N8N_EDITOR_BASE_URL: https://n8n.example.com
+    asserts:
+      - notMatchRegexRaw:
+          pattern: 'No public URL is set'
+
+  - it: says the warning may not apply when envFrom loads extra sources
+    set:
+      ingress.enabled: false
+      envFrom.main:
+        - secretRef:
+            name: n8n-urls
+    asserts:
+      - matchRegexRaw:
+          pattern: 'No public URL is set'
+      - matchRegexRaw:
+          pattern: 'cannot see inside envFrom sources'
+
+  - it: leaves out the envFrom note when no envFrom sources are loaded
+    set:
+      ingress.enabled: false
+    asserts:
+      - notMatchRegexRaw:
+          pattern: 'envFrom'

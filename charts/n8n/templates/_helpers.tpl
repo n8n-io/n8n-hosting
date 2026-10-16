@@ -171,8 +171,7 @@ pods (queue mode) so both sidecars stay the same.
   securityContext:
     {{- . | nindent 4 }}
   {{- end }}
-  env:
-    {{- include "n8n.taskRunnerSidecarEnv" . | nindent 4 }}
+  {{- include "n8n.containerEnv" (dict "root" . "component" "taskRunner") | trim | nindent 2 }}
   resources:
     {{- toYaml .Values.taskRunners.resources | nindent 4 }}
   {{- $probes := .Values.taskRunners.probes | default dict }}
@@ -199,16 +198,16 @@ pods (queue mode) so both sidecars stay the same.
 {{/*
 Port of the launcher's health endpoint in the task-runner sidecar. The launcher
 reads N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT, so the probe follows it when
-taskRunners.extraEnv sets it, and use the launcher's default otherwise. Empty
-when it comes from valueFrom, which the chart cannot read, so the probe is
-left out rather than pointed at the wrong port.
+env.taskRunner sets it, and uses the launcher's default otherwise. Empty when
+it is a reference, which the chart cannot read, so the probe is left out rather
+than pointed at the wrong port.
 */}}
 {{- define "n8n.taskRunnerHealthCheckPort" -}}
 {{- $port := "5680" -}}
-{{- range .Values.taskRunners.extraEnv -}}
-{{- if eq (.name | default "") "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT" -}}
-{{- $port = .value | default "" | toString -}}
-{{- end -}}
+{{- $runnerEnv := include "n8n.envSection" (list (.Values.env | default dict) "taskRunner") | fromJson -}}
+{{- if hasKey $runnerEnv "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT" -}}
+{{- $val := get $runnerEnv "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT" -}}
+{{- $port = ternary "" (include "n8n.envValue" $val) (kindIs "map" $val) -}}
 {{- end -}}
 {{- $port -}}
 {{- end -}}
@@ -312,6 +311,17 @@ per mistake.
 {{- end -}}
 {{- end -}}
 
+{{/* --- Worker probes --- */}}
+{{/* Same condition as deployment-worker.yaml: no worker pods, nothing to probe. */}}
+{{- if and .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) -}}
+{{- range $name := list "liveness" "readiness" -}}
+{{- $probe := index $.Values.probes.worker $name -}}
+{{- if and $probe.enabled (eq $probe.type "httpGet") (not $.Values.redis.healthCheck.enabled) -}}
+{{- $errs = append $errs (printf "probes.worker.%s.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or remove probes.worker.%s.type to let the chart choose." $name $name) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{/* --- Standalone mode constraints --- */}}
 {{- if not .Values.queueMode.enabled -}}
 {{- if and (not .Values.persistence.enabled) (not .Values.database.useExternal) -}}
@@ -389,7 +399,7 @@ render without a cluster, and the runner and broker then disagree. */ -}}
 {{- if and .Values.taskRunners.enabled ((.Values.taskRunners.probes | default dict).liveness | default dict).enabled -}}
 {{- $healthPort := include "n8n.taskRunnerHealthCheckPort" . -}}
 {{- if and $healthPort (or (not (regexMatch "^[0-9]+$" $healthPort)) (lt (atoi $healthPort) 1) (gt (atoi $healthPort) 65535)) -}}
-{{- $errs = append $errs (printf "N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT in taskRunners.extraEnv must be a port number from 1 to 65535, got %q. The sidecar's liveness probe uses it." $healthPort) -}}
+{{- $errs = append $errs (printf "env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT must be a port number from 1 to 65535, got %q. The sidecar's liveness probe uses it." $healthPort) -}}
 {{- end -}}
 {{- end -}}
 {{- /* A digest on one image only lets a chart upgrade move the other, so the
@@ -426,6 +436,11 @@ runner and n8n drift onto different versions. */ -}}
 {{- if and .Values.license.enabled .Values.license.activationKey .Values.license.existingSecret.name -}}
 {{- $errs = append $errs "license.activationKey and license.existingSecret.name are mutually exclusive. Use one or the other." -}}
 {{- end -}}
+{{- /* An inline key goes in the chart's Secret, which would collide with an
+existing Secret of the same name. */ -}}
+{{- if and .Values.license.enabled .Values.license.activationKey (eq .Values.secretRefs.existingSecret (include "n8n.fullname" .)) -}}
+{{- $errs = append $errs (printf "license.activationKey is stored in the chart's Secret %q, but secretRefs.existingSecret uses that name. Put the key in a Secret of your own and set license.existingSecret instead." (include "n8n.fullname" .)) -}}
+{{- end -}}
 
 {{/* --- Encryption key --- */}}
 {{- $encryptionKeyFile := .Values.secretRefs.env.N8N_ENCRYPTION_KEY_FILE | default "" -}}
@@ -434,6 +449,56 @@ runner and n8n drift onto different versions. */ -}}
 {{- end -}}
 {{- if and (not $encryptionKeyFile) (not .Values.secretRefs.existingSecret) (eq .Values.secretRefs.env.N8N_ENCRYPTION_KEY "change-me-to-a-long-random-key") -}}
 {{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, provide secretRefs.existingSecret with your own Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY_FILE" -}}
+{{- end -}}
+
+{{/* --- Settings the chart no longer reads --- */}}
+{{- range $k := list "N8N_HOST" "N8N_PROTOCOL" -}}
+{{- if hasKey $.Values.secretRefs.env $k -}}
+{{- $errs = append $errs (printf "secretRefs.env.%s is no longer read. n8n builds its public URLs from editor.url and webhook.url. Remove it from secretRefs.env, and set it in env.shared if you still need it." $k) -}}
+{{- end -}}
+{{- end -}}
+{{- if hasKey .Values.secretRefs.env "N8N_PORT" -}}
+{{- $errs = append $errs "secretRefs.env.N8N_PORT is no longer read. The chart sets N8N_PORT from service.port. Remove it from secretRefs.env." -}}
+{{- end -}}
+{{- $lists := list
+  (dict "path" "config.extraEnv" "value" .Values.config.extraEnv "to" "env.shared")
+  (dict "path" "config.extraEnvFrom" "value" .Values.config.extraEnvFrom "to" "envFrom.shared")
+  (dict "path" "queueMode.workerExtraEnv" "value" .Values.queueMode.workerExtraEnv "to" "env.worker")
+  (dict "path" "webhookProcessor.extraEnv" "value" .Values.webhookProcessor.extraEnv "to" "env.webhookProcessor")
+  (dict "path" "webhook.extraEnv" "value" .Values.webhook.extraEnv "to" "env.main and env.webhookProcessor")
+  (dict "path" "redis.extraEnv" "value" .Values.redis.extraEnv "to" "env.shared")
+  (dict "path" "executions.extraEnv" "value" .Values.executions.extraEnv "to" "env.main and env.worker")
+  (dict "path" "s3.storage.extraEnv" "value" .Values.s3.storage.extraEnv "to" "env.shared")
+  (dict "path" "taskRunners.extraEnv" "value" .Values.taskRunners.extraEnv "to" "env.taskRunner") -}}
+{{- range $lists -}}
+{{- if .value -}}
+{{- if eq .path "config.extraEnvFrom" -}}
+{{- $errs = append $errs (printf "%s is no longer read. Move its entries to %s." .path .to) -}}
+{{- else -}}
+{{- $errs = append $errs (printf "%s is no longer read. Set these variables in %s as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret." .path .to) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- if hasKey .Values.webhook "timeout" -}}
+{{- $errs = append $errs "webhook.timeout has no effect: n8n has no setting for a webhook timeout. Remove it from your values." -}}
+{{- end -}}
+
+{{/* --- Environment --- */}}
+{{- range include "n8n.validateEnv" . | fromJsonArray -}}
+{{- $errs = append $errs . -}}
+{{- end -}}
+{{- /* n8n takes a worker's concurrency from N8N_CONCURRENCY_PRODUCTION_LIMIT
+when it is set, and ignores the --concurrency flag. */ -}}
+{{- if and .Values.queueMode.enabled .Values.queueMode.workerConcurrency -}}
+{{- $limit := .Values.executions.concurrency.productionLimit -}}
+{{- if and $limit (ne ($limit | int) -1) -}}
+{{- $errs = append $errs "queueMode.workerConcurrency and executions.concurrency.productionLimit both set each worker's concurrency, and n8n uses productionLimit. Remove one of them." -}}
+{{- end -}}
+{{- range include "n8n.userEnv" (dict "root" . "component" "worker") | fromJsonArray -}}
+{{- if and (eq .name "N8N_CONCURRENCY_PRODUCTION_LIMIT") (not (hasPrefix "chartEnvOverrides." .source)) -}}
+{{- $errs = append $errs (printf "queueMode.workerConcurrency and N8N_CONCURRENCY_PRODUCTION_LIMIT in %s both set each worker's concurrency, and n8n uses the variable. Remove one of them." .source) -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/* --- Service account --- */}}
@@ -566,4 +631,43 @@ Main pod replica count: multiMain.replicas under multi-main, otherwise replicaCo
 */}}
 {{- define "n8n.mainReplicas" -}}
 {{- ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled -}}
+{{- end -}}
+
+{{/*
+Probe type for a worker liveness or readiness probe. An explicit type wins.
+Otherwise a command means exec, and the health endpoint means httpGet, so
+partial overrides keep rendering the probe they asked for.
+
+Call with (dict "probe" .Values.probes.worker.liveness "root" .)
+*/}}
+{{- define "n8n.workerProbeType" -}}
+{{- if .probe.type -}}
+{{- .probe.type -}}
+{{- else if .probe.command -}}
+exec
+{{- else if .root.Values.redis.healthCheck.enabled -}}
+httpGet
+{{- else -}}
+exec
+{{- end -}}
+{{- end -}}
+
+{{/*
+Handler for a worker liveness or readiness probe. With the health endpoint
+off and no command, it falls back to a process check. pgrep matches its own
+shell, so that check passes whenever the container can run a shell; the
+health endpoint is the real check.
+
+Call with (dict "probe" .Values.probes.worker.liveness "root" .)
+*/}}
+{{- define "n8n.workerProbeHandler" -}}
+{{- if eq (include "n8n.workerProbeType" .) "httpGet" -}}
+httpGet:
+  path: {{ .probe.path }}
+  port: {{ .root.Values.redis.healthCheck.port }}
+{{- else -}}
+exec:
+  command:
+    {{- toYaml (.probe.command | default (list "/bin/sh" "-c" "pgrep -f 'n8n worker' > /dev/null")) | nindent 4 }}
+{{- end -}}
 {{- end -}}
