@@ -776,6 +776,7 @@
       "type": "object",
       "properties": {
         "timezone": { "type": "string" },
+        "deploymentArtifact": { "type": "string" },
         "extraEnv": { "type": "array" },
         "extraEnvFrom": { "type": "array" }
       }

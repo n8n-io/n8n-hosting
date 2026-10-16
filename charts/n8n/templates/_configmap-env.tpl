@@ -9,6 +9,11 @@ the user's TLS Secret
     configMapKeyRef:
       name: {{ include "n8n.fullname" . }}
       key: TZ
+- name: N8N_DEPLOYMENT_ARTIFACT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ include "n8n.fullname" . }}
+      key: N8N_DEPLOYMENT_ARTIFACT
 - name: DB_TYPE
   valueFrom:
     configMapKeyRef:
