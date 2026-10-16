@@ -204,7 +204,7 @@ S3 binary data storage needs an n8n Business or Enterprise licence. Without one,
 
 In `database` mode, n8n rejects files over 512 MiB. `N8N_BINARY_DATA_DATABASE_MAX_FILE_SIZE` in `env.shared` raises the limit, up to 1024 MiB.
 
-In queue mode, the render fails if `N8N_DEFAULT_BINARY_DATA_MODE` is `filesystem` in an `env` map or in `chartEnvOverrides`. The pods do not share a disk, so one pod cannot read binary data another wrote.
+In queue mode, the render fails if `N8N_DEFAULT_BINARY_DATA_MODE` is `filesystem` in an `env` map or in `chartEnvOverrides`. The pods do not share a disk, so one pod cannot read binary data that another pod writes.
 
 To keep the bucket for execution data and store binary data elsewhere, set the mode in `chartEnvOverrides`:
 

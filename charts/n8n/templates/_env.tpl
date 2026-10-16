@@ -158,7 +158,7 @@ rather than queueMode.enabled. */ -}}
 {{- $_ := set $e "N8N_EDITOR_BASE_URL" (dict "value" . "from" "editor.url") -}}
 {{- end -}}
 {{- if $v.s3.enabled -}}
-{{- $_ := set $e "N8N_DEFAULT_BINARY_DATA_MODE" (dict "value" ($v.s3.storage.mode | default "s3") "from" "s3.storage.mode") -}}
+{{- $_ := set $e "N8N_DEFAULT_BINARY_DATA_MODE" (dict "value" ($v.s3.storage.mode | default "s3") "from" "s3.enabled") -}}
 {{- $_ := set $e "N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME" (dict "value" $v.s3.bucket.name "from" "s3.bucket.name") -}}
 {{- $_ := set $e "N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION" (dict "value" $v.s3.bucket.region "from" "s3.bucket.region") -}}
 {{- with $v.s3.bucket.host -}}

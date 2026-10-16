@@ -444,23 +444,24 @@ runner and n8n drift onto different versions. */ -}}
 {{- end -}}
 {{- with .Values.s3.storage.mode -}}
 {{- if ne . "s3" -}}
-{{- $errs = append $errs (printf "s3.storage.mode is %q but s3.enabled=true, so binary data is written to each pod's local disk and not to S3. Set s3.storage.mode to \"s3\", or remove it to follow s3.enabled. S3 binary data storage requires an n8n Business or Enterprise licence." .) -}}
+{{- $where := ternary ", so n8n writes binary data to each pod's local disk and not to S3" "" (eq . "filesystem") -}}
+{{- $errs = append $errs (printf "s3.storage.mode is %q but s3.enabled=true%s. Set s3.storage.mode to \"s3\", or remove it to follow s3.enabled. S3 binary data storage requires an n8n Business or Enterprise licence." . $where) -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
 
-{{/* --- Binary data mode ---
-n8n cannot tell that queue-mode pods have separate disks; the chart can.
-A reference holds no value the chart can read. */}}
+{{/* --- Binary data mode --- */}}
+{{- /* n8n cannot tell that queue-mode pods have separate disks; the chart can. */ -}}
 {{- if .Values.queueMode.enabled -}}
 {{- $sections := concat (list "shared") (include "n8n.envComponents" . | fromJsonArray) -}}
 {{- $fix := ternary "Remove it so the chart's S3 mode applies, or set it to \"database\"." "Remove it, and n8n uses \"database\" in queue mode, or store binary data in S3 with s3.enabled=true." .Values.s3.enabled -}}
 {{- range $block := list "env" "chartEnvOverrides" -}}
 {{- range $section := $sections -}}
-{{- $m := include "n8n.envSection" (list (index $.Values $block | default dict) $section) | fromJson -}}
-{{- $val := get $m "N8N_DEFAULT_BINARY_DATA_MODE" -}}
+{{- $vars := include "n8n.envSection" (list (index $.Values $block | default dict) $section) | fromJson -}}
+{{- $val := get $vars "N8N_DEFAULT_BINARY_DATA_MODE" -}}
+{{- /* A reference holds no value the chart can read. */ -}}
 {{- if and (not (kindIs "map" $val)) (eq (toString $val | lower) "filesystem") -}}
-{{- $errs = append $errs (printf "%s.%s.N8N_DEFAULT_BINARY_DATA_MODE is filesystem, but queueMode.enabled=true. Pods do not share a filesystem, so binary data one pod writes cannot be read by another. %s" $block $section $fix) -}}
+{{- $errs = append $errs (printf "%s.%s.N8N_DEFAULT_BINARY_DATA_MODE is filesystem, but queueMode.enabled=true. The pods do not share a disk, so one pod cannot read binary data that another pod writes. %s" $block $section $fix) -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
