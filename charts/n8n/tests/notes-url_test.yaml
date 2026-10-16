@@ -77,3 +77,22 @@ tests:
     asserts:
       - notMatchRegexRaw:
           pattern: 'No public URL is set'
+
+  - it: says the warning may not apply when envFrom loads extra sources
+    set:
+      ingress.enabled: false
+      envFrom.main:
+        - secretRef:
+            name: n8n-urls
+    asserts:
+      - matchRegexRaw:
+          pattern: 'No public URL is set'
+      - matchRegexRaw:
+          pattern: 'cannot see inside envFrom sources'
+
+  - it: leaves out the envFrom note when no envFrom sources are loaded
+    set:
+      ingress.enabled: false
+    asserts:
+      - notMatchRegexRaw:
+          pattern: 'envFrom'
