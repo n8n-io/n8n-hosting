@@ -624,10 +624,8 @@ chart routes nothing.
 {{- end -}}
 
 {{/*
-The paths n8n serves from webhook processors, as a YAML list. Both the webhook
-Ingress and the HTTPRoute send them there. Both APIs match a prefix on whole
-path segments, so /form/ does not catch /form-waiting/ and /mcp/ does not
-catch /mcp-test/, which stays on main.
+The paths the webhook Ingress and the HTTPRoute send to webhook processors.
+Both APIs match prefixes on whole segments, so /mcp/ leaves /mcp-test/ on main.
 */}}
 {{- define "n8n.webhookPaths" -}}
 {{- list "/webhook/" "/webhook-waiting/" "/form/" "/form-waiting/" "/mcp/" | toYaml -}}
@@ -635,9 +633,7 @@ catch /mcp-test/, which stays on main.
 
 {{/*
 The public editor URL, rendered as N8N_EDITOR_BASE_URL and printed by NOTES.txt.
-editor.url wins. The fallback uses https:// and the host the chart routes,
-which assumes TLS ends there or in front of it. webhook.url never sets it,
-because it names where webhooks arrive. Empty when neither is configured.
+editor.url wins. The https:// fallback assumes TLS ends at or before the route.
 */}}
 {{- define "n8n.editorBaseUrl" -}}
 {{- if .Values.editor.url -}}
