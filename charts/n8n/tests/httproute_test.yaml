@@ -1,0 +1,209 @@
+# The HTTPRoute sends traffic from a Gateway the cluster runs to the main
+# Service, and the webhook paths to the webhook processors when they run. Its
+# hostnames are a second source of the public address, after the ingress.
+suite: 'httpRoute'
+templates:
+  - templates/httproute.yaml
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  httpRoute.enabled: true
+  httpRoute.parentRefs:
+    - name: n8n-gateway
+      namespace: gateway-system
+  httpRoute.hostnames:
+    - n8n.example.com
+tests:
+  - it: renders nothing by default
+    template: templates/httproute.yaml
+    set:
+      httpRoute.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: attaches to the named Gateway and sends every path to main
+    template: templates/httproute.yaml
+    asserts:
+      - isKind:
+          of: HTTPRoute
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-n8n
+      - equal:
+          path: spec.parentRefs
+          value:
+            - name: n8n-gateway
+              namespace: gateway-system
+      - equal:
+          path: spec.hostnames
+          value:
+            - n8n.example.com
+      - equal:
+          path: spec.rules
+          value:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+              backendRefs:
+                - name: RELEASE-NAME-n8n-main
+                  port: 5678
+
+  - it: leaves hostnames out when none are set
+    template: templates/httproute.yaml
+    set:
+      httpRoute.hostnames: []
+    asserts:
+      - notExists:
+          path: spec.hostnames
+
+  - it: sends the webhook paths to the webhook processors
+    template: templates/httproute.yaml
+    set:
+      queueMode.enabled: true
+      database.type: postgresdb
+      database.useExternal: true
+      database.host: postgres.example.com
+      webhookProcessor.enabled: true
+    asserts:
+      - equal:
+          path: spec.rules[0]
+          value:
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /webhook/
+              - path:
+                  type: PathPrefix
+                  value: /webhook-waiting/
+              - path:
+                  type: PathPrefix
+                  value: /form/
+              - path:
+                  type: PathPrefix
+                  value: /form-waiting/
+              - path:
+                  type: PathPrefix
+                  value: /mcp/
+            backendRefs:
+              - name: RELEASE-NAME-n8n-webhook-processor
+                port: 5678
+      - equal:
+          path: spec.rules[1].backendRefs[0].name
+          value: RELEASE-NAME-n8n-main
+
+  - it: merges its annotations over commonAnnotations
+    template: templates/httproute.yaml
+    set:
+      commonAnnotations:
+        team: automation
+        owner: platform
+      httpRoute.annotations:
+        owner: n8n
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            team: automation
+            owner: n8n
+
+  - it: sets both URLs from the first route hostname
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      httpRoute.hostnames:
+        - n8n.example.com
+        - n8n.example.org
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://n8n.example.com
+
+  - it: keeps the editor on the route hostname when webhook.url points elsewhere
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      webhook.url: https://hooks.example.com
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://hooks.example.com
+
+  - it: uses editor.url over the route hostname
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      editor.url: http://n8n.example.com
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: http://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: http://n8n.example.com
+
+  - it: sets no URL from a route that is turned off
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      httpRoute.enabled: false
+    asserts:
+      - notExists:
+          path: data.N8N_EDITOR_BASE_URL
+      - notExists:
+          path: data.N8N_WEBHOOK_URL
+
+  - it: accepts a route with a parentRef and the ingress off
+    template: templates/deployment-main.yaml
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: refuses the route and the ingress together
+    template: templates/deployment-main.yaml
+    set:
+      ingress.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'httpRoute.enabled and ingress.enabled are both true. The chart routes n8n through one of them. Set one to false.'
+
+  - it: refuses the route and the webhook ingress together
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: true
+      database.type: postgresdb
+      database.useExternal: true
+      database.host: postgres.example.com
+      redis.enabled: true
+      redis.host: redis.example.com
+      webhookProcessor.enabled: true
+      ingress.webhookProcessor.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'httpRoute.enabled and ingress.webhookProcessor.enabled are both true. The route already sends webhook paths to the webhook processors. Set ingress.webhookProcessor.enabled to false.'
+
+  - it: refuses a route with no parentRefs
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.parentRefs: []
+    asserts:
+      - failedTemplate:
+          errorMessage: 'httpRoute.parentRefs is empty, so the route attaches to no Gateway. Name the Gateway, for example [{name: my-gateway, namespace: gateway-system}].'

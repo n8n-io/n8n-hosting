@@ -86,6 +86,7 @@ All three use the same n8n container image, differentiated by command/args.
 | [production-s3.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/production-s3.yaml) | Production with S3, HPA, multi-main |
 | [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
 | [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) | HTTPS Ingress with TLS and webhook processor routing |
+| [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-httproute.yaml) | Gateway API HTTPRoute with webhook processor routing |
 | [extra-objects.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/extra-objects.yaml) | Extra objects beside the chart: a Traefik IngressRoute, a PrometheusRule and a string entry |
 
 ## Secret Management
@@ -155,6 +156,28 @@ MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so 
 Use `ingress.sticky.enabled=true` for nginx cookie affinity, or `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. Multi-main deployments require sticky sessions at the load-balancing layer.
 
 See [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) for a complete HTTPS example.
+
+## Gateway API
+
+Set `httpRoute.enabled=true` to expose n8n through a Gateway API implementation, such as Envoy Gateway, Istio or Cilium. The chart renders an `HTTPRoute` and attaches it to the Gateways in `httpRoute.parentRefs`. It never creates a Gateway. TLS is configured on the Gateway's listener.
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: shared-gateway
+      namespace: gateway-system
+  hostnames:
+    - n8n.example.com
+```
+
+The route sends every path to the main pods. When `webhookProcessor.enabled=true`, it sends `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/` to the webhook processor pods, the same split as the webhook processor Ingress.
+
+The first hostname sets n8n's public address, with `https://`, in the same way as the first ingress host. Set `editor.url` if the Gateway serves n8n over plain HTTP.
+
+The route renders whenever it is enabled, so the Gateway API CRDs must be installed before you install the chart. Use the route or the Ingress, not both. The render fails if `httpRoute.enabled` is set with `ingress.enabled` or `ingress.webhookProcessor.enabled`, or without `parentRefs`.
+
+See [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-httproute.yaml) for a complete example.
 
 ## Ports and Health Checks
 

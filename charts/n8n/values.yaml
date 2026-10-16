@@ -242,6 +242,28 @@ ingress:
     annotations: {}
     tls: []
 
+# ----- Gateway API -----
+# An HTTPRoute that attaches n8n to a Gateway the cluster already runs. The
+# chart never creates the Gateway. The route sends every path to main, and the
+# webhook paths (/webhook/, /webhook-waiting/, /form/, /form-waiting/, /mcp/)
+# to the webhook processors when webhookProcessor.enabled=true. It renders
+# whenever it is enabled, so the Gateway API CRDs must be installed. Use it
+# instead of ingress, not with it.
+httpRoute:
+  enabled: false
+  # Annotations on the HTTPRoute, merged over commonAnnotations.
+  annotations: {}
+  # The Gateways the route attaches to. Required when enabled.
+  # Example:
+  # parentRefs:
+  #   - name: my-gateway
+  #     namespace: gateway-system
+  #     sectionName: https
+  parentRefs: []
+  # Hostnames the route matches. The first one sets the public address when
+  # editor.url is empty, with https://.
+  hostnames: []
+
 # ----- Persistence -----
 persistence:
   enabled: false

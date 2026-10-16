@@ -394,6 +394,19 @@ per mistake.
 {{- $errs = append $errs "ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true" -}}
 {{- end -}}
 
+{{/* --- HTTPRoute --- */}}
+{{- if .Values.httpRoute.enabled -}}
+{{- if .Values.ingress.enabled -}}
+{{- $errs = append $errs "httpRoute.enabled and ingress.enabled are both true. The chart routes n8n through one of them. Set one to false." -}}
+{{- end -}}
+{{- if .Values.ingress.webhookProcessor.enabled -}}
+{{- $errs = append $errs "httpRoute.enabled and ingress.webhookProcessor.enabled are both true. The route already sends webhook paths to the webhook processors. Set ingress.webhookProcessor.enabled to false." -}}
+{{- end -}}
+{{- if not .Values.httpRoute.parentRefs -}}
+{{- $errs = append $errs "httpRoute.parentRefs is empty, so the route attaches to no Gateway. Name the Gateway, for example [{name: my-gateway, namespace: gateway-system}]." -}}
+{{- end -}}
+{{- end -}}
+
 {{/* --- KEDA --- */}}
 {{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled (not .Values.keda.webhookProcessor.triggers) -}}
 {{- $errs = append $errs "keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to hold them at webhookProcessor.replicaCount." -}}
@@ -630,13 +643,26 @@ so workers handle code execution and main pods do not need runner sidecars.
 {{- end -}}
 
 {{/*
-The host the chart routes traffic for: the first ingress host. Empty when the
+The host the chart routes traffic for: the first ingress host, or the first
+HTTPRoute hostname. The validation refuses both on together. Empty when the
 chart routes nothing.
 */}}
 {{- define "n8n.publicHost" -}}
 {{- if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
 {{ (index .Values.ingress.hosts 0).host }}
+{{- else if and .Values.httpRoute .Values.httpRoute.enabled .Values.httpRoute.hostnames -}}
+{{ first .Values.httpRoute.hostnames }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+The paths n8n serves from webhook processors, as a YAML list. Both the webhook
+Ingress and the HTTPRoute send them there. Both APIs match a prefix on whole
+path segments, so /form/ does not catch /form-waiting/ and /mcp/ does not
+catch /mcp-test/, which stays on main.
+*/}}
+{{- define "n8n.webhookPaths" -}}
+{{- list "/webhook/" "/webhook-waiting/" "/form/" "/form-waiting/" "/mcp/" | toYaml -}}
 {{- end -}}
 
 {{/*
