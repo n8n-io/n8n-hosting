@@ -11,27 +11,26 @@ set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
   - it: enables the queue health endpoint on the worker by default
-    template: templates/deployment-worker.yaml
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: QUEUE_HEALTH_CHECK_ACTIVE
-            value: "true"
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: QUEUE_HEALTH_CHECK_PORT
-            value: "5678"
+      - equal:
+          path: data.QUEUE_HEALTH_CHECK_ACTIVE
+          value: "true"
+      - equal:
+          path: data.QUEUE_HEALTH_CHECK_PORT
+          value: "5678"
 
   - it: leaves the health endpoint off the main pod, which never reads it
-    template: templates/deployment-main.yaml
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-main
     asserts:
-      - notContains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: QUEUE_HEALTH_CHECK_ACTIVE
-            value: "true"
+      - notExists:
+          path: data.QUEUE_HEALTH_CHECK_ACTIVE
 
   - it: probes the health endpoint over HTTP by default
     template: templates/deployment-worker.yaml
@@ -175,17 +174,23 @@ tests:
     asserts:
       - notExists:
           path: spec.template.spec.containers[0].startupProbe
-      - notContains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: QUEUE_HEALTH_CHECK_ACTIVE
-            value: "true"
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
           value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
       - equal:
           path: spec.template.spec.containers[0].readinessProbe.exec.command
           value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
+
+  - it: leaves the health env out of the worker ConfigMap when the endpoint is off
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
+    set:
+      redis.healthCheck.enabled: false
+    asserts:
+      - notExists:
+          path: data.QUEUE_HEALTH_CHECK_ACTIVE
 
   - it: keeps rendering a values file copied from an older chart
     template: templates/deployment-worker.yaml

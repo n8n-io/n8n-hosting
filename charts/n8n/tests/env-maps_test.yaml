@@ -189,7 +189,7 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-n8n-worker
 
-  - it: sets the queue health check on main and workers
+  - it: sets the queue health check on workers only
     template: templates/configmap.yaml
     set:
       redis.healthCheck.enabled: true
@@ -200,9 +200,8 @@ tests:
         documentSelector:
           path: metadata.name
           value: RELEASE-NAME-n8n-worker
-      - equal:
+      - notExists:
           path: data.QUEUE_HEALTH_CHECK_ACTIVE
-          value: "true"
         documentSelector:
           path: metadata.name
           value: RELEASE-NAME-n8n-main

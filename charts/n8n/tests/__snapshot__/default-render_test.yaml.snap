@@ -96,6 +96,8 @@ matches the snapshot:
       EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
       EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
       EXECUTIONS_TIMEOUT_MAX: "3600"
+      QUEUE_HEALTH_CHECK_ACTIVE: "true"
+      QUEUE_HEALTH_CHECK_PORT: "5678"
     kind: ConfigMap
     metadata:
       labels:
@@ -244,7 +246,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: 6df2fd12249d2fa9c69983735eef5ba83517464ab99db370e81f16d7f9bc6ded
+            checksum/config: f672491395a3c51b17d652c5b267e8c1d6b3a4ffe119ccfc640feb48bf97fe43
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: worker
@@ -283,23 +285,19 @@ matches the snapshot:
                       - -c
                       - sleep 10
               livenessProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - pgrep -f 'n8n worker' > /dev/null
                 failureThreshold: 3
+                httpGet:
+                  path: /healthz
+                  port: 5678
                 initialDelaySeconds: 60
                 periodSeconds: 30
                 timeoutSeconds: 5
               name: n8n-worker
               readinessProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - pgrep -f 'n8n worker' > /dev/null
                 failureThreshold: 6
+                httpGet:
+                  path: /healthz/readiness
+                  port: 5678
                 initialDelaySeconds: 30
                 periodSeconds: 10
                 timeoutSeconds: 3
@@ -315,6 +313,12 @@ matches the snapshot:
                 capabilities:
                   drop:
                     - ALL
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: 5678
+                periodSeconds: 10
               volumeMounts: null
           securityContext:
             fsGroup: 1000

@@ -198,7 +198,7 @@ rather than queueMode.enabled. */ -}}
 {{- $_ := set $e "N8N_RUNNERS_BROKER_LISTEN_ADDRESS" (dict "value" $v.taskRunners.broker.listenAddress "from" "taskRunners.broker.listenAddress") -}}
 {{- $_ := set $e "N8N_NATIVE_PYTHON_RUNNER" (dict "value" $v.taskRunners.nativePythonRunner "from" "taskRunners.nativePythonRunner") -}}
 {{- end -}}
-{{- if and (has .component (list "main" "worker")) $v.queueMode.enabled $v.redis.healthCheck.enabled -}}
+{{- if and (eq .component "worker") $v.redis.healthCheck.enabled -}}
 {{- $_ := set $e "QUEUE_HEALTH_CHECK_ACTIVE" (dict "value" "true" "from" "redis.healthCheck.enabled") -}}
 {{- $_ := set $e "QUEUE_HEALTH_CHECK_PORT" (dict "value" $v.redis.healthCheck.port "from" "redis.healthCheck.port") -}}
 {{- end -}}
