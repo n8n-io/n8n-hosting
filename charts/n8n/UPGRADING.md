@@ -31,7 +31,9 @@ The chart's Secret holds only secrets. Host, port and protocol are no longer rea
 | `secretRefs.env.N8N_HOST` or `secretRefs.env.N8N_PROTOCOL` | Remove them. n8n builds its public URLs from `editor.url` and `webhook.url`. If you still need either variable, set it in `env.shared`. |
 | `secretRefs.env.N8N_PORT` | Remove it. The chart sets `N8N_PORT` from `service.port` on every n8n process, workers included. |
 
-If you use `secretRefs.existingSecret`, the Secret needs only the `N8N_ENCRYPTION_KEY` key. The chart reads that one key by name, so a Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` keeps working. You can delete those keys.
+If you use `secretRefs.existingSecret`, the Secret needs only the `N8N_ENCRYPTION_KEY` key, or no key at all if you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. The chart reads that one key by name and ignores the rest of the Secret. A Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` still renders, but n8n no longer receives those values.
+
+In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` and `webhook.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`. After that, you can delete the three keys from the Secret.
 
 If you set `license.activationKey` inline, the chart now stores it in the chart's Secret and the containers read it from there. You do not need to change anything. If `secretRefs.existingSecret` names the chart's own Secret (the release's full name), the render fails. Put the licence key in a Secret of your own and set `license.existingSecret` instead.
 
@@ -75,14 +77,14 @@ env:
         key: password
 ```
 
-An empty list is ignored, so a values file copied from 1.x still renders.
+An empty list is ignored, so you only need to move the lists that hold entries.
 
 `env.shared` reaches every n8n process: main, workers and webhook processors. It does not reach the task runner sidecar. Use `env.taskRunner` for the sidecar.
 
 Check these behaviour changes:
 
 - **A variable the chart sets cannot go in an `env` map.** The render fails and names the values key that sets it. Set that key instead. To replace the chart's value on purpose, use `chartEnvOverrides.<component>`. The chart lists the overrides in effect after install.
-- **`envFrom` refs now win over the chart's values.** In 1.x the chart's variables took precedence over `config.extraEnvFrom`. In 2.0, `envFrom.shared` and `envFrom.<component>` load after the chart's ConfigMaps, so a key in them replaces the chart's value. Check that the ConfigMaps and Secrets you load hold only the keys you mean to set.
+- **`envFrom` refs now win over the chart's ConfigMap values.** In 1.x the chart's variables took precedence over `config.extraEnvFrom`. In 2.0, `envFrom.shared` and `envFrom.<component>` load after the chart's ConfigMaps, so a key in them replaces the chart's value. Variables the chart reads from a Secret, such as the encryption key and database password, are in the container's `env` list and still win. Check that the ConfigMaps and Secrets you load hold only the keys you mean to set.
 - **`webhook.timeout` is removed.** n8n never read the variable it set, so it had no effect. Remove it from your values.
 
 Every pod restarts once on upgrade, because its environment moves into the new ConfigMaps. After that, a change to one component's map restarts only that component's pods.
@@ -103,6 +105,6 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 
 `queueMode.workerConcurrency` is now empty by default, so workers start without a `--concurrency` flag and use n8n's default of 10.
 
-In queue mode, the render fails if you set `queueMode.workerConcurrency` together with `executions.concurrency.productionLimit`, or together with `N8N_CONCURRENCY_PRODUCTION_LIMIT` in an `env` map. n8n uses the production limit as each worker's concurrency and ignores the flag. To keep the concurrency your workers run at today, keep `productionLimit` and remove `workerConcurrency`.
+In queue mode, the render fails if you set `queueMode.workerConcurrency` together with `executions.concurrency.productionLimit`, or together with `N8N_CONCURRENCY_PRODUCTION_LIMIT` in `env.shared` or `env.worker`. n8n uses the production limit as each worker's concurrency and ignores the flag. To keep the concurrency your workers run at today, keep `productionLimit` and remove `workerConcurrency`.
 
 ### n8n 3.0
