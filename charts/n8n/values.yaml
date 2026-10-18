@@ -617,7 +617,8 @@ keda:
     triggers:
       - type: redis
         metadata:
-          # Redis address (auto-derived from redis.host:redis.port if empty)
+          # Redis address (auto-derived from redis.host:redis.port if empty, with
+          # databaseIndex taken from redis.database)
           address: ""
           # Bull queue waiting list key: "<prefix>:jobs:wait" (prefix defaults to
           # "bull"). If you set redis.prefix, update this to match, e.g. "myprefix:jobs:wait".

@@ -25,6 +25,10 @@ spec:
         {{- $address := .metadata.address }}
         {{- if and (eq .type "redis") (eq (default "" $address) "") }}
         address: "{{ $.Values.redis.host }}:{{ $.Values.redis.port }}"
+        {{- /* The derived address is n8n's Redis, so read the queue from n8n's database too. */}}
+        {{- if and (not (hasKey .metadata "databaseIndex")) $.Values.redis.database (ne ($.Values.redis.database | int) 0) }}
+        databaseIndex: {{ $.Values.redis.database | quote }}
+        {{- end }}
         {{- else }}
         address: {{ $address | quote }}
         {{- end }}
