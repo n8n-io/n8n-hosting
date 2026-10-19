@@ -13,11 +13,11 @@ n8n reads `N8N_DEPLOYMENT_ARTIFACT` and sends it with the telemetry it already s
 
 The chart sets `N8N_DEPLOYMENT_ARTIFACT` to `helm-chart/<chart version>` on every component. The value comes from `config.deploymentArtifact`. When that value is empty, the chart uses its own name and version. A wrapping chart sets `config.deploymentArtifact` to its own name and version.
 
-The value has its own key rather than an entry in `config.extraEnv`. This follows "one place to set anything, and a defined winner". The chart sets the variable itself, so `config.deploymentArtifact` is the one place to change it. If someone also sets it in `config.extraEnv`, the pod spec carries two entries with the same name. Kubernetes uses the last one, so the `extraEnv` entry wins. Other chart-managed variables behave the same way. Server-side apply and strategic merge patches do not handle duplicate names reliably, so `config.deploymentArtifact` is the supported way.
+The value has its own key rather than an entry in `env.shared`. This follows "one place to set anything, and a defined winner". The chart sets the variable itself, so `config.deploymentArtifact` is the one place to change it. Setting it in `env.shared` as well stops the render, as it does for every variable the chart sets.
 
 ## Consequences
 
 - Upgrading to the release that adds this restarts every n8n pod once, because the ConfigMap checksum changes.
 - The value carries the chart version, so it changes with every chart release. Most chart releases already restart pods because they change `appVersion`.
 - The value names the artifact and its version. It carries nothing about the install itself.
-- To stop sending telemetry, set `N8N_DIAGNOSTICS_ENABLED` to `false` in `config.extraEnv`. That stops this value along with the rest.
+- To stop sending telemetry, set `N8N_DIAGNOSTICS_ENABLED` to `false` in `env.shared`. That stops this value along with the rest.

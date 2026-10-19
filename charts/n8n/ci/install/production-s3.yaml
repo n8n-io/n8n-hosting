@@ -1,8 +1,8 @@
 # Overlay for installing examples/production-s3.yaml on kind. It replaces the
 # placeholders with the fixtures in ../fixtures/, reads the licence from the
 # n8n-license Secret CI creates, and scales the example down to fit a hosted
-# runner. The fixture Postgres has no TLS, so database.ssl is off. extraEnv
-# keeps the example's other settings.
+# runner. The fixture Postgres has no TLS, so database.ssl is off. env.shared
+# merges with the example's map.
 multiMain:
   replicas: 2
 queueMode:
@@ -42,9 +42,6 @@ s3:
       key: secret-access-key
   storage:
     forcePathStyle: true
-    extraEnv:
-      - name: N8N_EXTERNAL_STORAGE_S3_PROTOCOL
-        value: http
 resources:
   main:
     requests:
@@ -58,16 +55,10 @@ resources:
     requests:
       memory: 256Mi
       cpu: 100m
-config:
-  extraEnv:
-    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
-      value: "true"
-    - name: N8N_LOG_LEVEL
-      value: "info"
-    - name: N8N_LOG_OUTPUT
-      value: "console"
-    - name: N8N_LICENSE_TENANT_ID
-      valueFrom:
-        secretKeyRef:
-          name: n8n-license
-          key: tenant-id
+env:
+  shared:
+    N8N_EXTERNAL_STORAGE_S3_PROTOCOL: http
+    N8N_LICENSE_TENANT_ID:
+      secretKeyRef:
+        name: n8n-license
+        key: tenant-id

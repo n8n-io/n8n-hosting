@@ -2,7 +2,7 @@
 # the placeholders with the fixtures in ../fixtures/ and the Secrets CI
 # creates, reads the licence from the n8n-license Secret, and scales the
 # example down to fit a hosted runner. The fixture Postgres has no TLS, so
-# database.ssl is off. extraEnv keeps the example's other settings. The
+# database.ssl is off. env.shared merges with the example's map. The
 # chart's NetworkPolicy allows egress only to the database, Redis and port
 # 443, so the S3 mock on 9090 is unreachable here. S3 stays off, and
 # production-s3 covers it.
@@ -53,18 +53,9 @@ resources:
     requests:
       memory: 256Mi
       cpu: 100m
-config:
-  extraEnv:
-    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
-      value: "true"
-    - name: N8N_LOG_LEVEL
-      value: "info"
-    - name: N8N_LOG_OUTPUT
-      value: "json"
-    - name: N8N_ENTERPRISE_LICENSE_ENABLED
-      value: "true"
-    - name: N8N_LICENSE_TENANT_ID
-      valueFrom:
-        secretKeyRef:
-          name: n8n-license
-          key: tenant-id
+env:
+  shared:
+    N8N_LICENSE_TENANT_ID:
+      secretKeyRef:
+        name: n8n-license
+        key: tenant-id
