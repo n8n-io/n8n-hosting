@@ -22,6 +22,14 @@ If your values file sets a key the chart no longer reads, the render fails. The 
 
 ### Database
 
+`database.type` is now the only database setting. See [decision 0018](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0018-database-type-replaces-useexternal.md).
+
+| If your values set | Do this |
+|---|---|
+| `database.useExternal: true` | Remove it. Keep `database.type: postgresdb`, which is the default. |
+| `database.useExternal: false` | Remove it. Keep `database.type: sqlite`. |
+| `redis.useExternal` | Remove it. `redis.enabled` turns Redis on. |
+
 ### Secrets and host settings
 
 The chart's Secret holds only secrets. Host, port and protocol are no longer read from it. See [decision 0012](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0012-env-as-per-component-maps.md).
