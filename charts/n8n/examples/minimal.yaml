@@ -25,7 +25,7 @@ queueMode:
   workerReplicaCount: 1
   workerConcurrency: 5
 
-# Database configuration (MUST be external)
+# PostgreSQL connection (required for queue mode)
 database:
   type: postgresdb
   host: "your-postgres-host.com"
@@ -37,7 +37,7 @@ database:
     name: "n8n-db-secret"
     key: "password"
 
-# Redis configuration (MUST be external)
+# Redis connection (required for queue mode)
 redis:
   enabled: true
   host: "your-redis-host.com"
