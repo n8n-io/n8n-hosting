@@ -1022,7 +1022,8 @@
     "config": {
       "type": "object",
       "properties": {
-        "timezone": { "type": "string" }
+        "timezone": { "type": "string" },
+        "deploymentArtifact": { "type": "string" }
       }
     },
     "secretRefs": {
