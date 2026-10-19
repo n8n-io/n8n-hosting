@@ -39,7 +39,7 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    {{- if .Values.database.useExternal }}
+    {{- if eq .Values.database.type "postgresdb" }}
     # Allow PostgreSQL
     - to: []
       ports:

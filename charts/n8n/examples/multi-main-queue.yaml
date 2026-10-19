@@ -36,7 +36,6 @@ hpa:
 # External database (production PostgreSQL)
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host.com"
   port: 5432
   database: n8n_enterprise
@@ -58,7 +57,6 @@ database:
 # External Redis (production Redis)
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host.com"
   port: 6379
 

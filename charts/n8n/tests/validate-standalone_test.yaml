@@ -10,22 +10,20 @@ tests:
     template: templates/deployment-main.yaml
     set:
       queueMode.enabled: false
-      database.useExternal: false
       database.type: sqlite
       persistence.enabled: true
     asserts:
       - notFailedTemplate: {}
 
-  - it: requires persistence without an external database
+  - it: requires persistence for sqlite
     template: templates/deployment-main.yaml
     set:
       queueMode.enabled: false
-      database.useExternal: false
       database.type: sqlite
       persistence.enabled: false
     asserts:
       - failedTemplate:
-          errorMessage: 'persistence.enabled must be true when queueMode.enabled=false and database.useExternal=false. Standalone mode requires persistent storage when no external database.'
+          errorMessage: 'persistence.enabled must be true when database.type=sqlite. SQLite keeps its data on the PersistentVolumeClaim.'
 
   - it: rejects multi-main outside queue mode
     template: templates/deployment-main.yaml
@@ -46,3 +44,14 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'webhookProcessor.enabled=true requires queueMode.enabled=true'
+
+  - it: rejects multi-main with sqlite
+    template: templates/deployment-main.yaml
+    set:
+      database.type: sqlite
+      multiMain.enabled: true
+      multiMain.replicas: 2
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/multiMain/enabled': value must be false"

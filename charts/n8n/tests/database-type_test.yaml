@@ -1,0 +1,91 @@
+# database.type decides whether n8n gets the PostgreSQL connection settings,
+# the password reference and the egress rule to the database.
+suite: 'database: type'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/networkpolicy.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  networkPolicy.enabled: true
+tests:
+  - it: sets the PostgreSQL connection settings for postgresdb
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    asserts:
+      - equal:
+          path: data.DB_TYPE
+          value: postgresdb
+      - equal:
+          path: data.DB_POSTGRESDB_HOST
+          value: your-postgres-hostname
+      - equal:
+          path: data.DB_POSTGRESDB_DATABASE
+          value: n8n
+
+  - it: reads the PostgreSQL password from its Secret for postgresdb
+    template: templates/deployment-main.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_POSTGRESDB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: n8n-db-password
+                key: password
+
+  - it: allows egress to PostgreSQL for postgresdb
+    template: templates/networkpolicy.yaml
+    asserts:
+      - contains:
+          path: spec.egress
+          content:
+            to: []
+            ports:
+              - protocol: TCP
+                port: 5432
+
+  - it: sets no PostgreSQL settings for sqlite
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set: &sqlite
+      database.type: sqlite
+      queueMode.enabled: false
+      redis.enabled: false
+      persistence.enabled: true
+    asserts:
+      - equal:
+          path: data.DB_TYPE
+          value: sqlite
+      - notExists:
+          path: data.DB_POSTGRESDB_HOST
+      - notExists:
+          path: data.DB_POSTGRESDB_DATABASE
+
+  - it: reads no PostgreSQL password for sqlite
+    template: templates/deployment-main.yaml
+    set: *sqlite
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_POSTGRESDB_PASSWORD
+          any: true
+
+  - it: allows no egress to PostgreSQL for sqlite
+    template: templates/networkpolicy.yaml
+    set: *sqlite
+    asserts:
+      - notContains:
+          path: spec.egress
+          content:
+            to: []
+            ports:
+              - protocol: TCP
+                port: 5432

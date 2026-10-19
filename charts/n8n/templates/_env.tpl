@@ -79,7 +79,7 @@ taskRunner. Call with (dict "root" $ "component" <name>).
 {{- $_ := set $e "N8N_ENCRYPTION_KEY_FILE" (dict "value" . "from" "secretRefs.env.N8N_ENCRYPTION_KEY_FILE") -}}
 {{- end -}}
 {{- $_ := set $e "DB_TYPE" (dict "value" $v.database.type "from" "database.type") -}}
-{{- if $v.database.useExternal -}}
+{{- if eq $v.database.type "postgresdb" -}}
 {{- $_ := set $e "DB_POSTGRESDB_DATABASE" (dict "value" $v.database.database "from" "database.database") -}}
 {{- $_ := set $e "DB_POSTGRESDB_HOST" (dict "value" $v.database.host "from" "database.host") -}}
 {{- $_ := set $e "DB_POSTGRESDB_PORT" (dict "value" $v.database.port "from" "database.port") -}}
@@ -260,7 +260,7 @@ named key is read. component is main, worker, webhookProcessor or taskRunner.
 {{- if not $v.secretRefs.env.N8N_ENCRYPTION_KEY_FILE -}}
 {{- $_ := set $e "N8N_ENCRYPTION_KEY" (dict "valueFrom" (dict "secretKeyRef" (dict "name" ($v.secretRefs.existingSecret | default (include "n8n.fullname" .root)) "key" "N8N_ENCRYPTION_KEY")) "from" "secretRefs") -}}
 {{- end -}}
-{{- if $v.database.useExternal -}}
+{{- if eq $v.database.type "postgresdb" -}}
 {{- $_ := set $e "DB_POSTGRESDB_PASSWORD" (dict "valueFrom" (dict "secretKeyRef" (dict "name" $v.database.passwordSecret.name "key" $v.database.passwordSecret.key)) "from" "database.passwordSecret") -}}
 {{- if $v.database.ssl.enabled -}}
 {{- with $v.database.ssl.existingSecret -}}

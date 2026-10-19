@@ -28,7 +28,6 @@ queueMode:
 # Database configuration (MUST be external)
 database:
   type: postgresdb
-  useExternal: true  # Chart only supports external databases
   host: "your-postgres-host.com"
   port: 5432
   database: n8n
@@ -41,7 +40,6 @@ database:
 # Redis configuration (MUST be external)
 redis:
   enabled: true
-  useExternal: true  # Chart only supports external Redis
   host: "your-redis-host.com"
   port: 6379
 

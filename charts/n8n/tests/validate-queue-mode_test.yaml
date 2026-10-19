@@ -11,10 +11,10 @@ tests:
     asserts:
       - notFailedTemplate: {}
 
-  - it: rejects queue mode without an external database
+  - it: rejects sqlite in queue mode
     template: templates/deployment-main.yaml
     set:
-      database.useExternal: false
+      database.type: sqlite
     asserts:
       # The schema catches this first; without-schema/ covers the fail.
       - failedTemplate:
