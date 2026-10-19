@@ -73,11 +73,13 @@ value can express what you need:
 N8N_HOST, which defaults to localhost. */}}
 {{- if not (include "n8n.editorBaseUrl" .) }}
 {{- $urlEnv := false }}
+{{- $webhookEnv := and .Values.webhook.enabled (include "n8n.webhookUrl" .) }}
 {{- range include "n8n.userEnv" (dict "root" . "component" "main") | fromJsonArray }}
 {{- if has .name (list "N8N_EDITOR_BASE_URL" "N8N_HOST") }}{{- $urlEnv = true }}{{- end }}
+{{- if eq .name "N8N_WEBHOOK_URL" }}{{- $webhookEnv = true }}{{- end }}
 {{- end }}
 {{- if not $urlEnv }}
-{{- if include "n8n.webhookUrl" . }}
+{{- if $webhookEnv }}
 
 WARNING: No editor URL is set, so n8n builds its editor and OAuth callback
 URLs from localhost. If users reach n8n at another address, set editor.url.
