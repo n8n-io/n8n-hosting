@@ -26,7 +26,7 @@ The files under `.github/workflows/` are identical on every branch and pick thei
 
 The individual calls made under those principles live one per file in `charts/n8n/decisions/`, numbered and named for the call (`0001-chart-versioning.md`). Take the next free number when work on the change starts, and record it on the ticket, so that two open PRs never claim the same number. Write one when a change settles a question a reviewer could reasonably reopen later, and keep it to context, decision, consequences, the date and a link to the PR. They are public and they version with the chart, so a reviewer asking why the chart version doesn't follow n8n's gets a file to read rather than a Linear thread to reconstruct. `charts/n8n/decisions/README.md` has the shape.
 
-A decision that changes what a customer sees also gets a line in `charts/n8n/UPGRADING.md` (the file does not exist yet; DEP-57 creates it), linking back to the decision. Customers need the what and the how, and the reasoning stays here for anyone who goes looking for it.
+A decision that changes what a customer sees also gets a line in `charts/n8n/UPGRADING.md`, under the heading for its topic, linking back to the decision. Customers need the what and the how, and the reasoning stays here for anyone who goes looking for it.
 
 ## Changing the chart
 
@@ -40,6 +40,7 @@ Most work here is a chart change. Take it in this order:
    - Not breaking: pods rolling on upgrade, which is how `helm upgrade` works here. A bug fix that makes the chart do what its values already say. A new `fail` that rejects a combination of values that never worked, because those installs were already broken and the message names the fix.
    - Take care when changing a default. A new default that meaningfully changes a deployment's performance or behaviour, in a way a user would not reasonably expect from a minor or patch release, belongs on a major.
    - Give a new value a default that leaves today's render unchanged.
+   - When you remove or rename a values key, add it to `n8n.retiredKeys` in `_helpers.tpl` with its replacement, in the same change. Keep it declared in `values.schema.json`, described as retired.
    - Call out a roll or a new `fail` in the PR description so it reaches the changelog.
    - A breaking change carries its own upgrade path in the same PR: a guard entry that fails the render on each retired key and names its replacement, the lines in `charts/n8n/UPGRADING.md` that tell users what to change, and the examples migrated to the new values.
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.
@@ -57,7 +58,7 @@ helm unittest --strict charts/n8n
 helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
 ```
 
-`ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false` matches the CI lint job if `ct` is installed. The kind install test runs in CI only, on labelled PRs and the automated bump and release PRs. The kind upgrade test, from the last release of the previous major to the PR, runs in CI only, on PRs to `main` labelled `test-upgrade`.
+`ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false` matches the CI lint job if `ct` is installed. The kind install test runs in CI only, on labelled PRs and the automated bump and release PRs. On PRs to `main`, the `test-install-v3-rc` label runs it on the newest n8n 3 release candidate. The kind upgrade test, from the last release of the previous major to the PR, runs in CI only, on PRs to `main` labelled `test-upgrade`.
 
 The unit tests need the `helm-unittest` plugin at the version CI pins in the `unittest` job. Where `values.schema.json` rejects an input before the templates render, assert the schema error in the main suite and the `fail` message in `tests/without-schema/`. `tests/default-render_test.yaml` snapshots the default output. When a change alters that output on purpose, run `helm unittest -u charts/n8n` and commit the updated snapshot with the change.
 

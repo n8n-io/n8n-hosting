@@ -20,6 +20,10 @@ matches the snapshot:
         - Database: PostgreSQL (your-postgres-hostname)
         - Cache: Redis (your-redis-hostname)
 
+      WARNING: No public URL is set, so n8n builds its webhook and OAuth callback
+      URLs from localhost. If users reach n8n at another address, set editor.url
+      and webhook.url.
+
       Documentation: https://docs.n8n.io/
       Issues: https://github.com/n8n-io/n8n-hosting/issues
   2: |
@@ -32,8 +36,9 @@ matches the snapshot:
       DB_POSTGRESDB_USER: n8n
       DB_TYPE: postgresdb
       EXECUTIONS_MODE: queue
+      N8N_DEPLOYMENT_ARTIFACT: helm-chart/0.0.0
       N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "30"
-      N8N_WEBHOOK_TIMEOUT: "120000"
+      N8N_PORT: "5678"
       OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
       QUEUE_BULL_REDIS_HOST: your-redis-hostname
       QUEUE_BULL_REDIS_PORT: "6379"
@@ -54,6 +59,58 @@ matches the snapshot:
       name: RELEASE-NAME-n8n
       namespace: NAMESPACE
   3: |
+    apiVersion: v1
+    data:
+      EXECUTIONS_DATA_HARD_DELETE_BUFFER: "1"
+      EXECUTIONS_DATA_MAX_AGE: "336"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL: "15"
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: "10000"
+      EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL: "60"
+      EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS: "true"
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
+      EXECUTIONS_TIMEOUT_MAX: "3600"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-main
+      namespace: NAMESPACE
+  4: |
+    apiVersion: v1
+    data:
+      EXECUTIONS_DATA_HARD_DELETE_BUFFER: "1"
+      EXECUTIONS_DATA_MAX_AGE: "336"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL: "15"
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: "10000"
+      EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL: "60"
+      EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS: "true"
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
+      EXECUTIONS_TIMEOUT_MAX: "3600"
+      QUEUE_HEALTH_CHECK_ACTIVE: "true"
+      QUEUE_HEALTH_CHECK_PORT: "5678"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-worker
+      namespace: NAMESPACE
+  5: |
     apiVersion: apps/v1
     kind: Deployment
     metadata:
@@ -77,7 +134,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: b853d556b426cb3c46641413064e1b669ac1e2c815ac9e399629770cb5c75932
+            checksum/config: b8c265fa897c6fce98f96116fb9b670dda209e5a386db62f08b02884f606732b
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: main
@@ -89,143 +146,21 @@ matches the snapshot:
         spec:
           containers:
             - env:
-                - name: TZ
-                  valueFrom:
-                    configMapKeyRef:
-                      key: TZ
-                      name: RELEASE-NAME-n8n
-                - name: DB_TYPE
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_TYPE
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_DATABASE
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_DATABASE
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_HOST
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_HOST
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_PORT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_PORT
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_USER
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_USER
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_SCHEMA
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_SCHEMA
-                      name: RELEASE-NAME-n8n
-                - name: EXECUTIONS_MODE
-                  valueFrom:
-                    configMapKeyRef:
-                      key: EXECUTIONS_MODE
-                      name: RELEASE-NAME-n8n
-                - name: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
-                  valueFrom:
-                    configMapKeyRef:
-                      key: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_BULL_REDIS_HOST
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_BULL_REDIS_HOST
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_BULL_REDIS_PORT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_BULL_REDIS_PORT
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_WORKER_LOCK_DURATION
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_WORKER_LOCK_DURATION
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_WORKER_LOCK_RENEW_TIME
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_WORKER_LOCK_RENEW_TIME
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_WORKER_STALLED_INTERVAL
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_WORKER_STALLED_INTERVAL
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_WORKER_MAX_STALLED_COUNT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_WORKER_MAX_STALLED_COUNT
-                      name: RELEASE-NAME-n8n
-                - name: N8N_GRACEFUL_SHUTDOWN_TIMEOUT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: N8N_GRACEFUL_SHUTDOWN_TIMEOUT
-                      name: RELEASE-NAME-n8n
-                - name: N8N_WEBHOOK_TIMEOUT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: N8N_WEBHOOK_TIMEOUT
-                      name: RELEASE-NAME-n8n
                 - name: DB_POSTGRESDB_PASSWORD
                   valueFrom:
                     secretKeyRef:
                       key: password
                       name: n8n-db-password
-                - name: EXECUTIONS_TIMEOUT_MAX
-                  value: "3600"
-                - name: EXECUTIONS_DATA_SAVE_ON_ERROR
-                  value: all
-                - name: EXECUTIONS_DATA_SAVE_ON_SUCCESS
-                  value: all
-                - name: EXECUTIONS_DATA_SAVE_ON_PROGRESS
-                  value: "false"
-                - name: EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS
-                  value: "true"
-                - name: EXECUTIONS_DATA_PRUNE
-                  value: "true"
-                - name: EXECUTIONS_DATA_MAX_AGE
-                  value: "336"
-                - name: EXECUTIONS_DATA_PRUNE_MAX_COUNT
-                  value: "10000"
-                - name: EXECUTIONS_DATA_HARD_DELETE_BUFFER
-                  value: "1"
-                - name: EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL
-                  value: "15"
-                - name: EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL
-                  value: "60"
                 - name: N8N_ENCRYPTION_KEY
                   valueFrom:
                     secretKeyRef:
                       key: N8N_ENCRYPTION_KEY
                       name: n8n-core-secrets
-                - name: N8N_HOST
-                  valueFrom:
-                    secretKeyRef:
-                      key: N8N_HOST
-                      name: n8n-core-secrets
-                - name: N8N_PORT
-                  valueFrom:
-                    secretKeyRef:
-                      key: N8N_PORT
-                      name: n8n-core-secrets
-                - name: N8N_PROTOCOL
-                  valueFrom:
-                    secretKeyRef:
-                      key: N8N_PROTOCOL
-                      name: n8n-core-secrets
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-n8n
+                - configMapRef:
+                    name: RELEASE-NAME-n8n-main
               image: docker.n8n.io/n8nio/n8n:0.0.0
               imagePullPolicy: IfNotPresent
               lifecycle:
@@ -288,7 +223,7 @@ matches the snapshot:
           volumes:
             - emptyDir: {}
               name: data
-  4: |
+  6: |
     apiVersion: apps/v1
     kind: Deployment
     metadata:
@@ -312,7 +247,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: b853d556b426cb3c46641413064e1b669ac1e2c815ac9e399629770cb5c75932
+            checksum/config: 4acea2c0da1cb599ba4e4d8b0166d08909ecc2d95ff1f36787aa5ae4c780229e
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: worker
@@ -325,125 +260,22 @@ matches the snapshot:
           containers:
             - args:
                 - worker
-                - --concurrency=10
               env:
-                - name: TZ
-                  valueFrom:
-                    configMapKeyRef:
-                      key: TZ
-                      name: RELEASE-NAME-n8n
-                - name: DB_TYPE
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_TYPE
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_DATABASE
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_DATABASE
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_HOST
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_HOST
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_PORT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_PORT
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_USER
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_USER
-                      name: RELEASE-NAME-n8n
-                - name: DB_POSTGRESDB_SCHEMA
-                  valueFrom:
-                    configMapKeyRef:
-                      key: DB_POSTGRESDB_SCHEMA
-                      name: RELEASE-NAME-n8n
-                - name: EXECUTIONS_MODE
-                  valueFrom:
-                    configMapKeyRef:
-                      key: EXECUTIONS_MODE
-                      name: RELEASE-NAME-n8n
-                - name: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
-                  valueFrom:
-                    configMapKeyRef:
-                      key: OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_BULL_REDIS_HOST
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_BULL_REDIS_HOST
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_BULL_REDIS_PORT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_BULL_REDIS_PORT
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_WORKER_LOCK_DURATION
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_WORKER_LOCK_DURATION
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_WORKER_LOCK_RENEW_TIME
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_WORKER_LOCK_RENEW_TIME
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_WORKER_STALLED_INTERVAL
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_WORKER_STALLED_INTERVAL
-                      name: RELEASE-NAME-n8n
-                - name: QUEUE_WORKER_MAX_STALLED_COUNT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: QUEUE_WORKER_MAX_STALLED_COUNT
-                      name: RELEASE-NAME-n8n
-                - name: N8N_GRACEFUL_SHUTDOWN_TIMEOUT
-                  valueFrom:
-                    configMapKeyRef:
-                      key: N8N_GRACEFUL_SHUTDOWN_TIMEOUT
-                      name: RELEASE-NAME-n8n
                 - name: DB_POSTGRESDB_PASSWORD
                   valueFrom:
                     secretKeyRef:
                       key: password
                       name: n8n-db-password
-                - name: EXECUTIONS_TIMEOUT_MAX
-                  value: "3600"
-                - name: EXECUTIONS_DATA_SAVE_ON_ERROR
-                  value: all
-                - name: EXECUTIONS_DATA_SAVE_ON_SUCCESS
-                  value: all
-                - name: EXECUTIONS_DATA_SAVE_ON_PROGRESS
-                  value: "false"
-                - name: EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS
-                  value: "true"
-                - name: EXECUTIONS_DATA_PRUNE
-                  value: "true"
-                - name: EXECUTIONS_DATA_MAX_AGE
-                  value: "336"
-                - name: EXECUTIONS_DATA_PRUNE_MAX_COUNT
-                  value: "10000"
-                - name: EXECUTIONS_DATA_HARD_DELETE_BUFFER
-                  value: "1"
-                - name: EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL
-                  value: "15"
-                - name: EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL
-                  value: "60"
                 - name: N8N_ENCRYPTION_KEY
                   valueFrom:
                     secretKeyRef:
                       key: N8N_ENCRYPTION_KEY
                       name: n8n-core-secrets
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-n8n
+                - configMapRef:
+                    name: RELEASE-NAME-n8n-worker
               image: docker.n8n.io/n8nio/n8n:0.0.0
               imagePullPolicy: IfNotPresent
               lifecycle:
@@ -454,23 +286,19 @@ matches the snapshot:
                       - -c
                       - sleep 10
               livenessProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - pgrep -f 'n8n worker' > /dev/null
                 failureThreshold: 3
+                httpGet:
+                  path: /healthz
+                  port: 5678
                 initialDelaySeconds: 60
                 periodSeconds: 30
                 timeoutSeconds: 5
               name: n8n-worker
               readinessProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - pgrep -f 'n8n worker' > /dev/null
                 failureThreshold: 6
+                httpGet:
+                  path: /healthz/readiness
+                  port: 5678
                 initialDelaySeconds: 30
                 periodSeconds: 10
                 timeoutSeconds: 3
@@ -486,6 +314,12 @@ matches the snapshot:
                 capabilities:
                   drop:
                     - ALL
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: 5678
+                periodSeconds: 10
               volumeMounts: null
           securityContext:
             fsGroup: 1000
@@ -497,7 +331,7 @@ matches the snapshot:
           serviceAccountName: n8n
           terminationGracePeriodSeconds: 60
           volumes: null
-  5: |
+  7: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     metadata:
@@ -523,7 +357,7 @@ matches the snapshot:
           - secrets
         verbs:
           - get
-  6: |
+  8: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     metadata:
@@ -543,7 +377,7 @@ matches the snapshot:
       - kind: ServiceAccount
         name: n8n
         namespace: NAMESPACE
-  7: |
+  9: |
     apiVersion: v1
     data:
       N8N_RUNNERS_AUTH_TOKEN: c25hcHNob3QtdGVzdC10b2tlbg==
@@ -558,7 +392,7 @@ matches the snapshot:
       name: RELEASE-NAME-n8n-task-runners
       namespace: NAMESPACE
     type: Opaque
-  8: |
+  10: |
     apiVersion: v1
     kind: Service
     metadata:
@@ -580,7 +414,7 @@ matches the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: n8n
       type: ClusterIP
-  9: |
+  11: |
     apiVersion: v1
     kind: ServiceAccount
     metadata:
@@ -592,7 +426,7 @@ matches the snapshot:
         helm.sh/chart: n8n-0.0.0
       name: n8n
       namespace: NAMESPACE
-  10: |
+  12: |
     apiVersion: v1
     kind: Pod
     metadata:

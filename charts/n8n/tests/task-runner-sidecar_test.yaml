@@ -54,26 +54,22 @@ tests:
           path: spec.template.spec.containers[1].livenessProbe.failureThreshold
           value: 3
 
-  - it: follows the launcher health check port set in extraEnv
+  - it: follows the launcher health check port set in env.taskRunner
     template: templates/deployment-worker.yaml
     set:
-      taskRunners.extraEnv:
-        - name: N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT
-          value: "5690"
+      env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT: "5690"
     asserts:
       - equal:
           path: spec.template.spec.containers[1].livenessProbe.httpGet.port
           value: 5690
 
-  - it: omits the probe when the health check port comes from valueFrom
+  - it: omits the probe when the health check port is a reference
     template: templates/deployment-worker.yaml
     set:
-      taskRunners.extraEnv:
-        - name: N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: runner-ports
-              key: health
+      env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT:
+        configMapKeyRef:
+          name: runner-ports
+          key: health
     asserts:
       - notExists:
           path: spec.template.spec.containers[1].livenessProbe
@@ -95,19 +91,17 @@ tests:
       - notExists:
           path: spec.template.spec.containers[1].livenessProbe
 
-  - it: passes a NODE_OPTIONS from extraEnv through once
-    template: templates/deployment-worker.yaml
+  - it: passes a NODE_OPTIONS from env.taskRunner through once
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-task-runner
     set:
-      taskRunners.extraEnv:
-        - name: NODE_OPTIONS
-          value: --max-old-space-size=700
+      env.taskRunner.NODE_OPTIONS: --max-old-space-size=700
     asserts:
-      - contains:
-          path: spec.template.spec.containers[1].env
-          content:
-            name: NODE_OPTIONS
-            value: --max-old-space-size=700
-          count: 1
+      - equal:
+          path: data.NODE_OPTIONS
+          value: --max-old-space-size=700
 
   - it: renders without a memory limit
     template: templates/deployment-worker.yaml
