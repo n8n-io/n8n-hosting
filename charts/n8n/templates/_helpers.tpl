@@ -445,7 +445,7 @@ runner and n8n drift onto different versions. */ -}}
 {{- with .Values.s3.storage.mode -}}
 {{- if ne . "s3" -}}
 {{- $where := ternary ", so n8n writes binary data to each pod's local disk and not to S3" "" (eq . "filesystem") -}}
-{{- $errs = append $errs (printf "s3.storage.mode is %q but s3.enabled=true%s. Set s3.storage.mode to \"s3\", or remove it to follow s3.enabled. S3 binary data storage requires an n8n Business or Enterprise licence." . $where) -}}
+{{- $errs = append $errs (printf "s3.storage.mode is %q but s3.enabled=true%s. Set s3.storage.mode to \"s3\", or remove it to follow s3.enabled. S3 binary data storage requires an n8n Business or Enterprise licence. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE instead." . $where) -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
