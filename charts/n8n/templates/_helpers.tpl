@@ -374,6 +374,11 @@ per mistake.
 {{- $errs = append $errs "httpRoute.parentRefs is empty, so the route attaches to no Gateway. Name the Gateway, for example [{name: my-gateway, namespace: gateway-system}]." -}}
 {{- end -}}
 {{- end -}}
+{{- with include "n8n.publicHost" . -}}
+{{- if and (hasPrefix "*" .) (not $.Values.editor.url) -}}
+{{- $errs = append $errs (printf "The first routed host, %s, is a wildcard, so the chart cannot build the public address from it. Set editor.url." .) -}}
+{{- end -}}
+{{- end -}}
 
 {{/* --- KEDA --- */}}
 {{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled (not .Values.keda.webhookProcessor.triggers) -}}

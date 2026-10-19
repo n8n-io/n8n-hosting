@@ -16,7 +16,7 @@ set:
   httpRoute.hostnames:
     - n8n.example.com
 tests:
-  - it: renders nothing by default
+  - it: renders nothing when disabled
     template: templates/httproute.yaml
     set:
       httpRoute.enabled: false
@@ -207,3 +207,35 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'httpRoute.parentRefs is empty, so the route attaches to no Gateway. Name the Gateway, for example [{name: my-gateway, namespace: gateway-system}].'
+
+  - it: refuses a wildcard route hostname as the public address
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.hostnames:
+        - '*.example.com'
+    asserts:
+      - failedTemplate:
+          errorMessage: 'The first routed host, *.example.com, is a wildcard, so the chart cannot build the public address from it. Set editor.url.'
+
+  - it: refuses a wildcard ingress host as the public address
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.enabled: false
+      ingress.enabled: true
+      ingress.hosts:
+        - host: '*.example.com'
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - failedTemplate:
+          errorMessage: 'The first routed host, *.example.com, is a wildcard, so the chart cannot build the public address from it. Set editor.url.'
+
+  - it: accepts a wildcard route hostname with editor.url
+    template: templates/deployment-main.yaml
+    set:
+      editor.url: https://n8n.example.com
+      httpRoute.hostnames:
+        - '*.example.com'
+    asserts:
+      - notFailedTemplate: {}

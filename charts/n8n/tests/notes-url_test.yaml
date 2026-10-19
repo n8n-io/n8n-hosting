@@ -41,10 +41,12 @@ tests:
       ingress.enabled: false
       webhook.url: https://hooks.example.com
     asserts:
+      - notMatchRegexRaw:
+          pattern: 'available at:\n  https://hooks\.example\.com'
       - matchRegexRaw:
           pattern: 'kubectl port-forward service/RELEASE-NAME-n8n-main'
       - matchRegexRaw:
-          pattern: 'WARNING: No editor URL is set'
+          pattern: 'WARNING: No editor URL is set, so n8n builds its editor and OAuth callback'
 
   - it: prints port-forward steps and a localhost warning when no public URL is set
     set:
@@ -55,7 +57,7 @@ tests:
       - notMatchRegexRaw:
           pattern: 'available at:'
       - matchRegexRaw:
-          pattern: 'WARNING: No editor URL is set'
+          pattern: 'WARNING: No editor URL is set, so n8n builds its editor, webhook and OAuth'
 
   - it: leaves out the localhost warning when a public URL is set
     asserts:

@@ -77,9 +77,16 @@ N8N_HOST, which defaults to localhost. */}}
 {{- if has .name (list "N8N_EDITOR_BASE_URL" "N8N_HOST") }}{{- $urlEnv = true }}{{- end }}
 {{- end }}
 {{- if not $urlEnv }}
+{{- if include "n8n.webhookUrl" . }}
 
 WARNING: No editor URL is set, so n8n builds its editor and OAuth callback
 URLs from localhost. If users reach n8n at another address, set editor.url.
+{{- else }}
+
+WARNING: No editor URL is set, so n8n builds its editor, webhook and OAuth
+callback URLs from localhost. If users reach n8n at another address, set
+editor.url.
+{{- end }}
 {{- if or (and .Values.envFrom .Values.envFrom.shared) (and .Values.envFrom .Values.envFrom.main) }}
 The chart cannot see inside envFrom sources. Ignore this warning if one of
 them sets N8N_EDITOR_BASE_URL or N8N_HOST.
