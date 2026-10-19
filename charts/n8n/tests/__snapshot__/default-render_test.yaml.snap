@@ -21,8 +21,9 @@ matches the snapshot:
         - Cache: Redis (your-redis-hostname)
         - Task runners: sidecar on worker pods, token from Secret n8n-core-secrets, key N8N_RUNNERS_AUTH_TOKEN
 
-      WARNING: No editor URL is set, so n8n builds its editor and OAuth callback
-      URLs from localhost. If users reach n8n at another address, set editor.url.
+      WARNING: No editor URL is set, so n8n builds its editor, webhook and OAuth
+      callback URLs from localhost. If users reach n8n at another address, set
+      editor.url.
 
       Documentation: https://docs.n8n.io/
       Issues: https://github.com/n8n-io/n8n-hosting/issues

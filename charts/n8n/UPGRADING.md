@@ -150,7 +150,8 @@ Webhooks now follow the editor URL unless `webhook.url` is set, and `webhook.url
 | `editor.url` on a different host from the ingress, without `webhook.url` | Webhook URLs move to the `editor.url` host. | Nothing, unless webhooks must stay on the ingress host. Then set `webhook.url` to it. |
 | `editor.url` with no ingress, without `webhook.url` | n8n gets a webhook URL. In 1.x it showed `http://localhost:5678`. | Nothing. |
 | `webhook.url` with no ingress, without `editor.url` | The chart no longer sets an editor URL, so n8n builds it from `localhost`. | Set `editor.url`. Remove `webhook.url` if it holds the same address. |
-| `webhook.url` set to the same address as `editor.url` or the ingress host | Nothing. | Remove `webhook.url`. It now repeats the default. |
+| `webhook.url` set to the same address as `editor.url`, or to the ingress host with no `editor.url` | Nothing. | Remove `webhook.url`. It now repeats the default. |
+| `editor.url`, and `N8N_WEBHOOK_URL` in `env`, without `webhook.url` | The render fails, because the chart now sets `N8N_WEBHOOK_URL` from `editor.url`. | Move the address to `webhook.url`. |
 
 ### Security contexts
 

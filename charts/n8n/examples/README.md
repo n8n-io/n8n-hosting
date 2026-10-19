@@ -17,8 +17,10 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (Ingress)
 - **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress with TLS, sticky sessions, and webhook processor routing
-- **[gateway-httproute.yaml](./gateway-httproute.yaml)** - Gateway API HTTPRoute with webhook processor routing
 - **[mcp-server.yaml](./mcp-server.yaml)** - Scale the MCP Server Trigger (`/mcp`) across multiple webhook processors (requires n8n ≥ 2.8.0)
+
+### Community Examples (Gateway API)
+- **[gateway-httproute.yaml](./gateway-httproute.yaml)** - Gateway API HTTPRoute with webhook processor routing
 
 ### Community Examples (Node Placement)
 - **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
@@ -211,7 +213,7 @@ When `disableProductionWebhooksOnMainProcess: true`, configure your load balance
 - `/form-test/*` → main service (test form triggers)
 - `/*` → main service (UI, API, everything else)
 
-The chart can create this split routing with `ingress.webhookProcessor.enabled=true`; see [https-ingress.yaml](./https-ingress.yaml). With a Gateway API implementation, `httpRoute.enabled=true` creates the same split; see [gateway-httproute.yaml](./gateway-httproute.yaml).
+The chart can create this split routing with `ingress.webhookProcessor.enabled=true`; see [https-ingress.yaml](./https-ingress.yaml). With a Gateway API implementation, `httpRoute.enabled=true` creates the same split when `webhookProcessor.enabled=true`; see [gateway-httproute.yaml](./gateway-httproute.yaml).
 
 ### Testing
 ```bash

@@ -149,11 +149,11 @@ rather than queueMode.enabled. */ -}}
 {{- end -}}
 {{- if $v.webhook.enabled -}}
 {{- with include "n8n.webhookUrl" .root -}}
-{{- $_ := set $e "N8N_WEBHOOK_URL" (dict "value" . "from" "webhook.url (or the editor URL)") -}}
+{{- $_ := set $e "N8N_WEBHOOK_URL" (dict "value" . "from" "webhook.url") -}}
 {{- end -}}
 {{- end -}}
 {{- with include "n8n.editorBaseUrl" .root -}}
-{{- $_ := set $e "N8N_EDITOR_BASE_URL" (dict "value" . "from" "editor.url (or the first ingress host or route hostname)") -}}
+{{- $_ := set $e "N8N_EDITOR_BASE_URL" (dict "value" . "from" "editor.url") -}}
 {{- end -}}
 {{- if $v.s3.enabled -}}
 {{- /* s3.enabled cannot choose another mode, so only an override can. */ -}}

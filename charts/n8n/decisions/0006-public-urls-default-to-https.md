@@ -23,7 +23,7 @@ The chart never derives a scheme from TLS settings, and it does not set `N8N_HOS
 
 ## Consequences
 
-- Plain-HTTP installs and installs without an ingress set `editor.url` alone. Webhooks follow it.
+- Plain-HTTP installs and installs without an ingress or `HTTPRoute` set `editor.url` alone. Webhooks follow it.
 - `webhook.url` never sets the editor URL. An install that sets only `webhook.url` and routes nothing gets no editor URL, and `NOTES.txt` warns about it.
 - `NOTES.txt` prints the editor URL the chart sets, so the install output and n8n agree.
 - The schema rejects an `editor.url` without `http://` or `https://`.

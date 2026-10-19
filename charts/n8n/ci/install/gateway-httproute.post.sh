@@ -7,6 +7,16 @@ kubectl wait httproute/n8n --for=jsonpath='{.status.parents[0].conditions[?(@.ty
 kubectl wait httproute/n8n --for=jsonpath='{.status.parents[0].conditions[?(@.type=="ResolvedRefs")].status}'=True --timeout=120s
 
 proxy_labels=gateway.envoyproxy.io/owning-gateway-name=shared-gateway,gateway.envoyproxy.io/owning-gateway-namespace=gateway-system
+# Envoy Gateway creates the proxy Deployment after it accepts the Gateway, and
+# kubectl wait fails on a selector that matches nothing yet.
+for attempt in $(seq 1 60); do
+  [[ -n "$(kubectl get deploy -n envoy-gateway-system -l "$proxy_labels" -o name)" ]] && break
+  if [[ "$attempt" == 60 ]]; then
+    echo "::error::Envoy Gateway did not create the proxy Deployment."
+    exit 1
+  fi
+  sleep 2
+done
 kubectl wait -n envoy-gateway-system deploy -l "$proxy_labels" --for=condition=Available --timeout=120s
 proxy_service=$(kubectl get service -n envoy-gateway-system -l "$proxy_labels" -o name)
 
@@ -37,7 +47,8 @@ backend_ips() {
 # Envoy Gateway logs each request as JSON with the pod it sent it to as
 # upstream_host, so the check matches that against the Service's pods. A
 # request is retried while the route settles, and the log line can lag the
-# response. Logs are read into a variable so grep -q cannot SIGPIPE kubectl.
+# response. Each grep reads from a variable, so grep -q cannot SIGPIPE a
+# pipeline under pipefail.
 routed_to() {
   local path=$1 service=$2 expected_status=$3
   local status logs ip
@@ -45,8 +56,9 @@ routed_to() {
     status=$(request -o /dev/null -w '%{http_code}' "http://n8n.example.com:8080${path}" || true)
     if [[ "$status" == "$expected_status" ]]; then
       logs=$(kubectl logs -n envoy-gateway-system -l "$proxy_labels" -c envoy --tail=-1)
+      logs=$(grep -F "\"${path}\"" <<< "$logs" || true)
       for ip in $(backend_ips "$service"); do
-        if grep -F "\"${path}\"" <<< "$logs" | grep -qF "\"upstream_host\":\"${ip}:"; then
+        if grep -qF "\"upstream_host\":\"${ip}:" <<< "$logs"; then
           return 0
         fi
       done
@@ -70,6 +82,10 @@ fi
 # A waiting path takes an execution ID, so the check names one that does not exist.
 if ! routed_to /form-waiting/999999 n8n-webhook-processor 404; then
   echo "::error::/form-waiting/ was not answered by n8n-webhook-processor."
+  exit 1
+fi
+if ! routed_to /mcp/ci-routing-check n8n-webhook-processor 404; then
+  echo "::error::/mcp/ was not answered by n8n-webhook-processor."
   exit 1
 fi
 # Test paths share a prefix with /mcp/ but not a whole segment, so they stay

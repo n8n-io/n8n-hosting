@@ -145,7 +145,7 @@ editor:
 
 Set `webhook.url` only when webhooks arrive at an address the chart does not route, such as a separate load balancer or API gateway. The editor keeps its own URL.
 
-The chart does not set `N8N_HOST` or `N8N_PROTOCOL`. n8n reads them only to build a fallback URL when neither URL is set.
+The chart does not set `N8N_HOST` or `N8N_PROTOCOL`. n8n reads them only to build a fallback for a URL that is not set.
 
 When `webhookProcessor.enabled=true`, enable `ingress.webhookProcessor.enabled` to create a second Ingress for production webhook traffic. The webhook processor Ingress routes `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/`, and `/mcp/` to webhook processor pods. Test paths such as `/webhook-test/` and `/mcp-test/` stay on the main Ingress.
 
