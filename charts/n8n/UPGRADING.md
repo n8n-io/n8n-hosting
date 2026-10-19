@@ -131,6 +131,8 @@ n8n keeps reading the binary data it stored on disk before the upgrade, as long 
 
 ### Ingress and cloud integration
 
+The chart routes the editor and webhooks through the same hosts, so they now share one public address. In 1.x, plain-HTTP installs got `https://` webhook URLs, and installs with `editor.url` but no ingress got `http://localhost:5678`.
+
 Webhooks now follow the editor URL unless `webhook.url` is set, and `webhook.url` no longer sets the editor URL. See [decision 0006](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0006-public-urls-default-to-https.md).
 
 | If your values set | What changes | Do this |
