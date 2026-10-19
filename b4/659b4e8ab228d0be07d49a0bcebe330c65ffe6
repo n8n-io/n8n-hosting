@@ -1,0 +1,111 @@
+AGENTS.md
+  s_e5c44218010996::t_d3339a2b3639c0 29,43
+charts/n8n/README.md
+  s_e5c44218010996::t_4e679303666939 93-96,126,161,164,192-237,248-251,430,493-494
+charts/n8n/UPGRADING.md
+  s_e5c44218010996::t_a5b5b96dbe1d03 1-110
+charts/n8n/ci/install/multi-main-queue.yaml
+  s_e5c44218010996::t_e5a9eca64d5daa 5,56-61
+charts/n8n/ci/install/production-s3.yaml
+  s_e5c44218010996::t_7e048fad143c61 4-5,58-64
+charts/n8n/decisions/0011-chart-reports-deployment-artifact.md
+  s_e5c44218010996::t_ae0c3d3f57c07a 16,23
+charts/n8n/decisions/0012-env-as-per-component-maps.md
+  s_e5c44218010996::t_ea39c294f5d4b0 1-38
+charts/n8n/decisions/0013-worker-probes-use-the-queue-health-endpoint.md
+  s_e5c44218010996::t_6e714d0ae4af4f 1-27
+charts/n8n/decisions/0020-retired-values-keys-fail-the-render.md
+  s_e5c44218010996::t_bc83da9722c21d 1-24
+charts/n8n/examples/create-secrets.sh
+  s_e5c44218010996::t_fd6d50746b1ccf 21
+charts/n8n/examples/minimal-with-docker.yaml
+  s_e5c44218010996::t_14e654d18d6bee 73-81,83
+charts/n8n/examples/multi-main-queue.yaml
+  s_e5c44218010996::t_6f2c3db4100257 125-127,129-130,132-134,136,141
+charts/n8n/examples/production-s3.yaml
+  s_e5c44218010996::t_0da568a2f89a3d 134-136,138-140,144
+charts/n8n/examples/standalone.yaml
+  s_e5c44218010996::t_98348fb2ef264e 21
+charts/n8n/templates/NOTES.txt
+  s_e5c44218010996::t_665605d15a5cce 52-85
+charts/n8n/templates/_env.tpl
+  s_e5c44218010996::t_bdd0a79b3a9a42 1-601
+charts/n8n/templates/_helpers.tpl
+  s_e5c44218010996::t_26977daf8bb8d1 174,201-203,207-210,254-270,280-297,314-324,396,433-437,448-497,629-667
+charts/n8n/templates/configmap.yaml
+  s_e5c44218010996::t_77a0ef4511d91f 1-10
+charts/n8n/templates/deployment-main.yaml
+  s_e5c44218010996::t_165dd292be04e2 28,88
+charts/n8n/templates/deployment-webhook-processor.yaml
+  s_e5c44218010996::t_dd86a1be17bc9c 26,87
+charts/n8n/templates/deployment-worker.yaml
+  s_e5c44218010996::t_8eb915b3b93b80 26,75-77,91,93-102,105-106,108-113,116-117,119-124
+charts/n8n/templates/secrets.yaml
+  s_e5c44218010996::t_39ed3c557c9d13 1-5,19-24
+charts/n8n/tests/__snapshot__/default-render_test.yaml.snap
+  s_e5c44218010996::t_c3de6864d5d5f1 23-26,41,62-113,137,159-163,226,250,274-278,290-292,299-301,317-322,334,360,380,395,417,429
+charts/n8n/tests/database-ssl-secret_test.yaml
+  s_e5c44218010996::t_9235f544f4d248 97-99
+charts/n8n/tests/database-ssl_test.yaml
+  s_e5c44218010996::t_d7a1d4f0ff7056 20-22,41,43-44,53-55
+charts/n8n/tests/deployment-artifact_test.yaml
+  s_e5c44218010996::t_72af3bc490b2d7 22-24,30,37,39-40,44-46
+charts/n8n/tests/editor-url_test.yaml
+  s_e5c44218010996::t_cbf671dd80d870 21-23,38-40,62-64,80-82,96-98,125,127-128,140,142-143
+charts/n8n/tests/encryption-key-file_test.yaml
+  s_e5c44218010996::t_7aff8ecbeaea41 12-16,18-20,22-26,29,31-32,39,42-43
+charts/n8n/tests/env-from_test.yaml
+  s_e5c44218010996::t_ed44a505c3eaee 1-142
+charts/n8n/tests/env-maps_test.yaml
+  s_e5c44218010996::t_8b59d70bedb912 1-489
+charts/n8n/tests/env-overrides_test.yaml
+  s_e5c44218010996::t_bbe120563b8b71 1-128
+charts/n8n/tests/notes-url_test.yaml
+  s_e5c44218010996::t_3bed590010ab50 49,57-98
+charts/n8n/tests/s3-env_test.yaml
+  s_e5c44218010996::t_36988fe5f2ec08 18-22,24-28,30-34,37,39-40,45,50-51
+charts/n8n/tests/task-runner-sidecar_test.yaml
+  s_e5c44218010996::t_61857a57a1f330 57,60,66,69-72,94-98,100,102-104
+charts/n8n/tests/validate-license_test.yaml
+  s_e5c44218010996::t_bf83c355fd54ab 4-5,28-67
+charts/n8n/tests/validate-multi-main_test.yaml
+  s_e5c44218010996::t_0d6a0f5eeb4881 21-23
+charts/n8n/tests/validate-retired-settings_test.yaml
+  s_e5c44218010996::t_b66bbdfafabdc7 1-95
+charts/n8n/tests/validate-task-runners_test.yaml
+  s_e5c44218010996::t_2c992ad7c9134c 31,39,42,48,51,58
+charts/n8n/tests/values/env-main-not-a-map.yaml
+  s_e5c44218010996::t_ee94773b32c066 1-2
+charts/n8n/tests/values/env-not-a-map.yaml
+  s_e5c44218010996::t_ed257a09b07f0e 1
+charts/n8n/tests/webhook-url_test.yaml
+  s_e5c44218010996::t_01b2f93a9f5b23 21-23,35-37,61,63-64,85,87-88
+charts/n8n/tests/without-schema/retired-keys_test.yaml
+  s_e5c44218010996::t_b1f76ef49c62a0 1-64
+charts/n8n/tests/without-schema/validate_test.yaml
+  s_e5c44218010996::t_72d149080d4ea3 83-145
+charts/n8n/tests/worker-concurrency_test.yaml
+  s_e5c44218010996::t_315899ae6f1614 1-65
+charts/n8n/tests/worker-probes_test.yaml
+  s_e5c44218010996::t_f1cde6a0cbb7ae 1-276
+charts/n8n/values.schema.json
+  s_e5c44218010996::t_1c78b7ff5ab918 5-38,236-239,248,496-504,511,530,532,677,765-1020,1025,1156
+charts/n8n/values.yaml
+  s_e5c44218010996::t_868db54daf6c1b 57-61,160-161,511-515,517-525,528-530,537-539,696-756,769-771,845,847-848
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4659b4e8ab228d0be07d49a0bcebe330c65ffe6",
+  "prompts": {},
+  "sessions": {
+    "s_e5c44218010996": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "34fbb8e4-c311-44cb-b192-e0037bfb818d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Thanasis Gkliatis <thanasis.gkliatis@n8n.io>"
+    }
+  }
+}
