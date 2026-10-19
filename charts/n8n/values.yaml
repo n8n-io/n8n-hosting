@@ -758,6 +758,9 @@ envFrom:
 # ----- App config -----
 config:
   timezone: UTC
+  # Sets N8N_DEPLOYMENT_ARTIFACT, which n8n's telemetry reports as the artifact that installed it.
+  # Empty means helm-chart/<chart version>. A chart that wraps this one, such as a marketplace listing, sets its own name and version.
+  deploymentArtifact: ""
 
 # ----- License (for n8n Enterprise) -----
 license:

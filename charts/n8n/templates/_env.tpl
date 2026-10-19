@@ -72,6 +72,8 @@ taskRunner. Call with (dict "root" $ "component" <name>).
 {{- $e := dict -}}
 {{- if eq .component "shared" -}}
 {{- $_ := set $e "TZ" (dict "value" $v.config.timezone "from" "config.timezone") -}}
+{{- /* Tells n8n's telemetry which artefact installed it. */ -}}
+{{- $_ := set $e "N8N_DEPLOYMENT_ARTIFACT" (dict "value" ($v.config.deploymentArtifact | default (printf "helm-chart/%s" .root.Chart.Version)) "from" "config.deploymentArtifact") -}}
 {{- $_ := set $e "N8N_PORT" (dict "value" $v.service.port "from" "service.port") -}}
 {{- with $v.secretRefs.env.N8N_ENCRYPTION_KEY_FILE -}}
 {{- $_ := set $e "N8N_ENCRYPTION_KEY_FILE" (dict "value" . "from" "secretRefs.env.N8N_ENCRYPTION_KEY_FILE") -}}

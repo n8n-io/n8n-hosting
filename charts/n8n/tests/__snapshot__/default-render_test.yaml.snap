@@ -36,6 +36,7 @@ matches the snapshot:
       DB_POSTGRESDB_USER: n8n
       DB_TYPE: postgresdb
       EXECUTIONS_MODE: queue
+      N8N_DEPLOYMENT_ARTIFACT: helm-chart/0.0.0
       N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "30"
       N8N_PORT: "5678"
       OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
@@ -133,7 +134,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: a10282cd961e8ac04bdaad24e8c736b216d2c6c52aa3517e41319529f374f9e5
+            checksum/config: b8c265fa897c6fce98f96116fb9b670dda209e5a386db62f08b02884f606732b
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: main
@@ -246,7 +247,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: f672491395a3c51b17d652c5b267e8c1d6b3a4ffe119ccfc640feb48bf97fe43
+            checksum/config: 4acea2c0da1cb599ba4e4d8b0166d08909ecc2d95ff1f36787aa5ae4c780229e
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: worker
