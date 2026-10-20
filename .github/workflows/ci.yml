@@ -459,9 +459,10 @@ jobs:
         run: bash charts/n8n/ci/upgrade/resources.sh snapshot n8n "$RUNNER_TEMP/before.json"
 
       # A values file written for the previous major has to fail on each
-      # retired key it sets, naming it. Nothing to check until the values set
-      # one. --dry-run keeps a missed key from changing the release.
-      - name: Upgrade with the unmigrated values, which must fail
+      # retired key it sets, naming it. Any other reason the upgrade fails is
+      # a warning, so a setting retired outside n8n.retiredKeys shows on the
+      # run. --dry-run keeps the release unchanged.
+      - name: Upgrade with the unmigrated values
         run: |
           set -euo pipefail
           files=("${PREVIOUS}/examples/${EXAMPLE}.yaml" "${PREVIOUS}/ci/install/${EXAMPLE}.yaml")
@@ -469,15 +470,15 @@ jobs:
           # an empty list and skip the check.
           keys=$(bash charts/n8n/ci/upgrade/retired-keys.sh charts/n8n "${files[@]}")
           mapfile -t retired < <(printf '%s' "$keys" | sed '/^$/d')
-          if [[ ${#retired[@]} -eq 0 ]]; then
-            echo "The unmigrated ${EXAMPLE}.yaml sets no retired key."
-            exit 0
-          fi
-          echo "The unmigrated ${EXAMPLE}.yaml sets: ${retired[*]}"
+          echo "The unmigrated ${EXAMPLE}.yaml sets these retired keys: ${retired[*]:-none}"
 
           if output=$(helm upgrade n8n charts/n8n -f "${files[0]}" -f "${files[1]}" --dry-run 2>&1); then
-            echo "::error::helm upgrade accepted the unmigrated ${EXAMPLE}.yaml, which sets ${retired[*]}."
-            exit 1
+            if [[ ${#retired[@]} -gt 0 ]]; then
+              echo "::error::helm upgrade accepted the unmigrated ${EXAMPLE}.yaml, which sets ${retired[*]}."
+              exit 1
+            fi
+            echo "helm upgrade accepts the unmigrated ${EXAMPLE}.yaml."
+            exit 0
           fi
           echo "$output"
 
@@ -488,6 +489,19 @@ jobs:
               failed=1
             fi
           done
+
+          # n8n.validate reports one problem as the error itself and several
+          # as a list.
+          if grep -q 'problems in your values:$' <<< "$output"; then
+            problems=$(sed -n 's/^- //p' <<< "$output")
+          else
+            problems=$(sed -n 's/^Error: \(UPGRADE FAILED: \)\{0,1\}\(execution error at ([^)]*): \)\{0,1\}//p' <<< "$output")
+          fi
+          while IFS= read -r problem; do
+            if [[ -n "$problem" && "$problem" != *" is no longer a chart value. "* ]]; then
+              echo "::warning::The unmigrated ${EXAMPLE}.yaml fails outside n8n.retiredKeys: ${problem}"
+            fi
+          done <<< "$problems"
           exit "$failed"
 
       - name: Upgrade to this chart with ${{ matrix.example }}.yaml
