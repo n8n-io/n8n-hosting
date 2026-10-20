@@ -16,17 +16,10 @@ persistence:
   enabled: true
   size: 5Gi
 
-# You must still provide an encryption key for credential storage.
-# Create a secret: kubectl create secret generic n8n-secrets \
-#   --from-literal=N8N_ENCRYPTION_KEY=$(openssl rand -hex 32)
+# You must still provide an encryption key for credential storage, and a
+# token for the task-runner sidecar. Create a secret:
+#   kubectl create secret generic n8n-secrets \
+#     --from-literal=N8N_ENCRYPTION_KEY=$(openssl rand -hex 32) \
+#     --from-literal=N8N_RUNNERS_AUTH_TOKEN=$(openssl rand -base64 32)
 secretRefs:
   existingSecret: "n8n-secrets"
-
-# Task runner sidecars are on by default and need an auth token. generate lets
-# the chart create one, which suits a quick start with helm install. If you
-# created n8n-runner-token, for example with create-secrets.sh, set
-# existingSecret: n8n-runner-token and existingSecretKey: auth-token instead.
-# Under Argo CD or helm template, use existingSecret.
-taskRunners:
-  authToken:
-    generate: true

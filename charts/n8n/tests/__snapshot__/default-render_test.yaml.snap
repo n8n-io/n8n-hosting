@@ -19,7 +19,7 @@ matches the snapshot:
         - Main pods: 1
         - Database: PostgreSQL (your-postgres-hostname)
         - Cache: Redis (your-redis-hostname)
-        - Task runners: sidecar on worker pods, token from Secret n8n-runner-token
+        - Task runners: sidecar on worker pods, token from Secret n8n-core-secrets, key N8N_RUNNERS_AUTH_TOKEN
 
       WARNING: No public URL is set, so n8n builds its webhook and OAuth callback
       URLs from localhost. If users reach n8n at another address, set editor.url
@@ -296,7 +296,7 @@ matches the snapshot:
                   valueFrom:
                     secretKeyRef:
                       key: N8N_RUNNERS_AUTH_TOKEN
-                      name: n8n-runner-token
+                      name: n8n-core-secrets
               envFrom:
                 - configMapRef:
                     name: RELEASE-NAME-n8n
@@ -352,7 +352,7 @@ matches the snapshot:
                   valueFrom:
                     secretKeyRef:
                       key: N8N_RUNNERS_AUTH_TOKEN
-                      name: n8n-runner-token
+                      name: n8n-core-secrets
               envFrom:
                 - configMapRef:
                     name: RELEASE-NAME-n8n-task-runner

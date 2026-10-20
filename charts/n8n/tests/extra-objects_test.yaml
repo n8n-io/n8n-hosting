@@ -11,7 +11,6 @@ release:
   namespace: automation
 set:
   secretRefs.existingSecret: n8n-core-secrets
-  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   - it: renders nothing by default
     template: templates/extra-objects.yaml

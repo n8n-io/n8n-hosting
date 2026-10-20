@@ -154,6 +154,7 @@ executions:
     pruneSoftDeleteInterval: "0 3 * * *"  # Daily at 3 AM
 
 # Core secrets
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-enterprise-secrets"
 
@@ -190,11 +191,3 @@ monitoring:
     scrapeTimeout: 10s
   prometheusRule:
     enabled: true
-
-# Task runner sidecars are on by default and need an auth token. Create the
-# Secret first:
-#   kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32)
-taskRunners:
-  authToken:
-    existingSecret: "n8n-runner-token"
-    existingSecretKey: "auth-token"

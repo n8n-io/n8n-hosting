@@ -249,7 +249,7 @@ named key is read. component is main, worker, webhookProcessor or taskRunner.
 {{- define "n8n.secretEnv" -}}
 {{- $v := .root.Values -}}
 {{- $e := dict -}}
-{{- $tokenRef := dict "name" (printf "%s-task-runners" (include "n8n.fullname" .root)) "key" "N8N_RUNNERS_AUTH_TOKEN" -}}
+{{- $tokenRef := dict "name" ($v.secretRefs.existingSecret | default (include "n8n.fullname" .root)) "key" "N8N_RUNNERS_AUTH_TOKEN" -}}
 {{- with $v.taskRunners.authToken.existingSecret -}}
 {{- $tokenRef = dict "name" . "key" ($v.taskRunners.authToken.existingSecretKey | default "N8N_RUNNERS_AUTH_TOKEN") -}}
 {{- end -}}

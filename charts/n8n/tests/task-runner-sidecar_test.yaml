@@ -4,11 +4,9 @@ templates:
   - templates/deployment-worker.yaml
   - templates/configmap.yaml
   - templates/secrets.yaml
-  - templates/secret-task-runners.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
   taskRunners.enabled: true
-  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   - it: probes the launcher health endpoint on the worker sidecar
     template: templates/deployment-worker.yaml

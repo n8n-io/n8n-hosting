@@ -5,7 +5,6 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
-  taskRunners.authToken.existingSecret: n8n-runner-token
   persistence.enabled: true
 tests:
   - it: rejects persistence.annotations with existingClaim

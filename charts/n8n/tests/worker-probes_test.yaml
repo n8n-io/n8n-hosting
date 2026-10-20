@@ -9,7 +9,6 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
-  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   - it: enables the queue health endpoint on the worker by default
     template: templates/configmap.yaml

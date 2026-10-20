@@ -8,7 +8,6 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
-  taskRunners.authToken.existingSecret: n8n-runner-token
 tests:
   - it: refuses secretRefs.env.N8N_HOST
     template: templates/deployment-main.yaml

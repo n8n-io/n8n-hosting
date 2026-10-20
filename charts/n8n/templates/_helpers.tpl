@@ -266,6 +266,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
   replacement: "Remove it; nothing replaces it."
+- path: taskRunners.authToken.value
+  replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead."
 {{- end -}}
 
 {{/*
@@ -390,11 +392,17 @@ per mistake.
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
 {{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
 {{- end -}}
-{{- /* Generating the token is opt-in: a generated value changes on every
-render without a cluster, and the runner and broker then disagree. */ -}}
-{{- $token := .Values.taskRunners.authToken -}}
-{{- if and .Values.taskRunners.enabled (not $token.existingSecret) (not $token.value) (not $token.generate) -}}
-{{- $errs = append $errs "taskRunners.enabled=true requires an auth token. Create a Secret with: kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32). Then set taskRunners.authToken.existingSecret: n8n-runner-token and taskRunners.authToken.existingSecretKey: auth-token. Or set taskRunners.authToken.value to a token. Or set taskRunners.authToken.generate: true, which keeps the token stable only when Helm can reach the cluster." -}}
+{{- /* The token lives in the core Secret by default. The chart cannot see into
+an existing Secret, so it checks only the token it renders itself. */ -}}
+{{- $tokenSecret := .Values.taskRunners.authToken.existingSecret -}}
+{{- $inlineToken := .Values.secretRefs.env.N8N_RUNNERS_AUTH_TOKEN | default "" -}}
+{{- if and .Values.taskRunners.enabled (not $tokenSecret) (not .Values.secretRefs.existingSecret) (not $inlineToken) -}}
+{{- $errs = append $errs "taskRunners.enabled=true requires an auth token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN to a token, which you can generate with: openssl rand -base64 32. Or set taskRunners.authToken.existingSecret to a Secret that holds it." -}}
+{{- end -}}
+{{- if and $inlineToken .Values.secretRefs.existingSecret -}}
+{{- $errs = append $errs (printf "secretRefs.env.N8N_RUNNERS_AUTH_TOKEN has no effect with secretRefs.existingSecret. Add the token to %s under the key N8N_RUNNERS_AUTH_TOKEN, and remove secretRefs.env.N8N_RUNNERS_AUTH_TOKEN." .Values.secretRefs.existingSecret) -}}
+{{- else if and $inlineToken $tokenSecret -}}
+{{- $errs = append $errs "secretRefs.env.N8N_RUNNERS_AUTH_TOKEN and taskRunners.authToken.existingSecret are mutually exclusive. Use one or the other." -}}
 {{- end -}}
 {{- if and .Values.taskRunners.enabled ((.Values.taskRunners.probes | default dict).liveness | default dict).enabled -}}
 {{- $healthPort := include "n8n.taskRunnerHealthCheckPort" . -}}
