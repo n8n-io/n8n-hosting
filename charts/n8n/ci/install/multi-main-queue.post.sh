@@ -2,7 +2,7 @@
 # Checks both mains are up in multi-main mode and the licence is active. The
 # mains share one database, so only the first to start activates the licence.
 # A main that finds the licence already stored, as every main does after an
-# upgrade, logs the stored cert's state instead.
+# upgrade, logs the stored cert's state instead, which has to be valid.
 set -euo pipefail
 
 ready=$(kubectl get deploy n8n-main -o jsonpath='{.status.readyReplicas}')
@@ -20,7 +20,7 @@ for _ in $(seq 1 15); do
       echo "Both mains are ready, and ${pod} activated the licence."
       exit 0
     fi
-    if grep -q '\[license SDK\] cert state:' <<< "$logs"; then
+    if grep -q '\[license SDK\] cert state: .* isValid=true ' <<< "$logs"; then
       echo "Both mains are ready, and ${pod} loaded the stored licence."
       exit 0
     fi
