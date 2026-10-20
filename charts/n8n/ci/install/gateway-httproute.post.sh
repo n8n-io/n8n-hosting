@@ -2,6 +2,7 @@
 # Checks that the Gateway accepts the chart's HTTPRoute, and that Envoy routes
 # each path to the right n8n component.
 set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
 source "$(dirname "$0")/gateway-checks.sh"
 
 kubectl wait httproute/n8n --for=jsonpath='{.status.parents[0].conditions[?(@.type=="Accepted")].status}'=True --timeout=120s

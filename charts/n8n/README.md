@@ -141,8 +141,8 @@ n8n has two public URLs: the editor URL (`N8N_EDITOR_BASE_URL`), for the UI and 
 
 | URL | Set from, in order |
 |---|---|
-| Editor | `editor.url`, then `https://` and the first ingress host |
-| Webhook | `webhook.url`, then `https://` and the first `ingress.webhook` host, then the editor URL |
+| Editor | `editor.url`, then `https://` and the first ingress host or `httpRoute` hostname |
+| Webhook | `webhook.url`, then `https://` and the first `ingress.webhook` host or `httpRoute.webhook` hostname, then the editor URL |
 
 The `https://` default assumes TLS ends at the ingress or in front of it, for example at a cloud load balancer. If n8n is served over plain HTTP, has no ingress, or is reached at another host, set `editor.url`, and `webhook.url` when webhooks have a host of their own. Set `webhook.url` too when webhooks arrive at an address the chart does not route, such as a separate load balancer or API gateway.
 

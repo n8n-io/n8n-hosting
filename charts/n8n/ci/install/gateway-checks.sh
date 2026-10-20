@@ -50,7 +50,8 @@ backend_ips() {
 }
 
 # Succeeds when a request for $3 on host $2, through Gateway $1's proxy on
-# local port $4, answers $6 and was served by Service $5. Envoy Gateway logs
+# local port $4, answers $6 and was served by Service $5. With $5 empty, it
+# succeeds when Envoy found no route and answered itself. Envoy Gateway logs
 # each request as JSON with the pod it sent it to as upstream_host, so the
 # check matches that against the Service's pods. A request is retried while
 # the route settles, and the log line can lag the response. Each grep reads
@@ -62,9 +63,14 @@ routed_to() {
   for _ in $(seq 1 15); do
     status=$(curl -sS --resolve "${host}:${port}:127.0.0.1" -o /dev/null -w '%{http_code}' "http://${host}:${port}${path}" || true)
     if [[ "$status" == "$expected_status" ]]; then
-      [[ -z "$service" ]] && return 0
       logs=$(kubectl logs -n envoy-gateway-system -l "$labels" -c envoy --tail=-1)
       logs=$(grep -F "\"${path}\"" <<< "$logs" || true)
+      if [[ -z "$service" ]]; then
+        # NR is Envoy's response flag for a request that matched no route.
+        grep -qF '"response_flags":"NR"' <<< "$logs" && return 0
+        sleep 1
+        continue
+      fi
       for ip in $(backend_ips "$service"); do
         if grep -qF "\"upstream_host\":\"${ip}:" <<< "$logs"; then
           return 0
