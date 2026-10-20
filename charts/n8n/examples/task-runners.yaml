@@ -31,7 +31,6 @@ taskRunners:
 
   # Broker runs inside the n8n container
   broker:
-    listenAddress: "0.0.0.0"
     port: 5679
 
   # Launcher settings

@@ -99,7 +99,6 @@ matches the snapshot:
       EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
       EXECUTIONS_TIMEOUT_MAX: "3600"
       N8N_NATIVE_PYTHON_RUNNER: "true"
-      N8N_RUNNERS_BROKER_LISTEN_ADDRESS: 0.0.0.0
       N8N_RUNNERS_MODE: external
       QUEUE_HEALTH_CHECK_ACTIVE: "true"
       QUEUE_HEALTH_CHECK_PORT: "5678"
@@ -119,7 +118,7 @@ matches the snapshot:
     data:
       N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT: "15"
       N8N_RUNNERS_LAUNCHER_LOG_LEVEL: info
-      N8N_RUNNERS_TASK_BROKER_URI: http://localhost:5679
+      N8N_RUNNERS_TASK_BROKER_URI: http://127.0.0.1:5679
     kind: ConfigMap
     metadata:
       labels:
@@ -268,7 +267,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: 245499fbab4ef04b30840114fbbc2275aa758022bff95e911f796d31e9f3e4f4
+            checksum/config: faa4097a965e8f1e7939269b40ed2ec38fde3b06cc094aac000cbf0e6570c43a
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: worker

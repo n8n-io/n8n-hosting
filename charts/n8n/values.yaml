@@ -122,10 +122,9 @@ taskRunners:
     existingSecret: ""
     existingSecretKey: ""
 
-  # Task broker configuration (runs within n8n main/worker containers)
+  # Task broker configuration (runs within n8n main/worker containers).
+  # The broker listens on localhost, which the sidecar shares with n8n.
   broker:
-    # Listen address for the task broker (0.0.0.0 allows external connections from sidecar)
-    listenAddress: "0.0.0.0"
     # Port for task broker to listen on
     port: 5679
 
