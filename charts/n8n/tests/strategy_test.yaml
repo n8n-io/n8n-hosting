@@ -28,8 +28,10 @@ tests:
       persistence.accessModes: ["ReadWriteOncePod"]
     asserts:
       - equal:
-          path: spec.strategy.type
-          value: Recreate
+          path: spec.strategy
+          value:
+            type: Recreate
+            rollingUpdate: null
 
   - it: leaves the Kubernetes default when any access mode is shared
     template: templates/deployment-main.yaml
@@ -88,3 +90,14 @@ tests:
           value:
             type: Recreate
             rollingUpdate: null
+
+  - it: rejects rollingUpdate settings alongside Recreate
+    template: templates/deployment-main.yaml
+    set:
+      strategy:
+        type: Recreate
+        rollingUpdate:
+          maxSurge: 1
+    asserts:
+      - failedTemplate:
+          errorPattern: "/strategy/rollingUpdate"

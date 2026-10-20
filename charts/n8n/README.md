@@ -290,8 +290,8 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `persistence.enabled` | PVC for main pods | `false` |
 | `s3.enabled` | Store binary data in an S3 bucket. Requires an n8n Business or Enterprise licence and `license.enabled` | `false` |
 | `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
-| `strategy` | Update strategy for the main Deployment. Empty uses `Recreate` when every `persistence.accessModes` entry is `ReadWriteOnce` or `ReadWriteOncePod`, and the Kubernetes default otherwise | `{}` |
-| `enableServiceLinks` | Inject `<SERVICE>_HOST` and `<SERVICE>_PORT` variables for every Service in the namespace into n8n pods | `false` |
+| `strategy` | Update strategy for the main Deployment. Empty uses `Recreate` when `persistence.enabled` is true and every `persistence.accessModes` entry is `ReadWriteOnce` or `ReadWriteOncePod`, and the Kubernetes default otherwise | `{}` |
+| `enableServiceLinks` | Inject `<SERVICE>_SERVICE_HOST`, `<SERVICE>_PORT` and related variables for every Service in the namespace into n8n pods | `false` |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
 | `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
