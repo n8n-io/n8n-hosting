@@ -175,6 +175,16 @@ In queue mode, the render fails if you set `queueMode.workerConcurrency` togethe
 
 `taskRunners.resources.requests.memory` is now `128Mi`, down from `256Mi`. The limit stays `512Mi`.
 
+`enableServiceLinks` is new and `false`, so Kubernetes no longer adds a `<SERVICE>_HOST` and `<SERVICE>_PORT` variable to n8n's pods for each Service in the namespace. A Service named `n8n` no longer sets `N8N_PORT` to a `tcp://` address that stops n8n starting. If a container you add reads one of these variables, set `enableServiceLinks: true`. See [decision 0024](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0024-pods-get-only-what-n8n-uses.md).
+
+With `persistence.enabled: true` and only `ReadWriteOnce` or `ReadWriteOncePod` access modes, the main Deployment now uses the `Recreate` strategy. The old main pod stops before the new one starts, so each upgrade has a short outage, and the rollout no longer waits on a volume the old pod still holds. To keep rolling updates, set `strategy.type: RollingUpdate`. A `strategy` you set is used as it is. With `persistence.existingClaim`, set `persistence.accessModes` to match your claim.
+
+If you installed the 1.x release with Helm 4, the first upgrade can fail with `spec.strategy.rollingUpdate: Forbidden: may not be specified when strategy type is 'Recreate'`. Helm 4 applies changes on the server by default, and that leaves the `rollingUpdate` settings Kubernetes added to the 1.x Deployment. Run that upgrade once with `--server-side=false`. Later upgrades do not need it. Releases installed with Helm 3 upgrade without it.
+
+`rbac.create` is now `false`, so the chart no longer creates a Role that reads ConfigMaps and Secrets, or its RoleBinding. n8n does not use them. Helm removes both on upgrade. If something else in your pods uses that Role, set `rbac.create: true`.
+
+`serviceAccount.automountServiceAccountToken` is now `false`, so n8n's pods no longer get a Kubernetes API token at `/var/run/secrets/kubernetes.io/serviceaccount`. n8n does not call the Kubernetes API. If a container you add calls it, set `serviceAccount.automountServiceAccountToken: true`.
+
 ### n8n 3.0
 
 On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist, n8n refuses to start and names them. Move the contents of `binaryData` into `storage`, remove `binaryData`, and start n8n again.
