@@ -120,4 +120,4 @@ tests:
       redis.useExternal: true
     asserts:
       - failedTemplate:
-          errorMessage: 'redis.useExternal is no longer a chart value. Remove it; redis.enabled turns Redis on. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+          errorMessage: 'redis.useExternal is no longer a chart value. Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'

@@ -1087,7 +1087,7 @@
       "type": "object",
       "properties": {
         "useExternal": {
-          "description": "Retired. redis.enabled turns Redis on. The render fails while this key is set."
+          "description": "Retired. Nothing replaces it. The render fails while this key is set."
         },
         "host": { "type": "string" },
         "port": { "type": "integer" },

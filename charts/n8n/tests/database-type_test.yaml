@@ -38,8 +38,10 @@ tests:
                 name: n8n-db-password
                 key: password
 
-  - it: allows egress to PostgreSQL for postgresdb
+  - it: allows egress to the PostgreSQL port for postgresdb
     template: templates/networkpolicy.yaml
+    set:
+      database.port: 6543
     asserts:
       - contains:
           path: spec.egress
@@ -47,7 +49,7 @@ tests:
             to: []
             ports:
               - protocol: TCP
-                port: 5432
+                port: 6543
 
   - it: sets no PostgreSQL settings for sqlite
     template: templates/configmap.yaml

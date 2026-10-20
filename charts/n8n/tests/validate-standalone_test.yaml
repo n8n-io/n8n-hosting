@@ -48,7 +48,9 @@ tests:
   - it: rejects multi-main with sqlite
     template: templates/deployment-main.yaml
     set:
+      queueMode.enabled: false
       database.type: sqlite
+      persistence.enabled: true
       multiMain.enabled: true
       multiMain.replicas: 2
     asserts:

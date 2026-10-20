@@ -265,7 +265,7 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
 - path: database.useExternal
   replacement: "Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim."
 - path: redis.useExternal
-  replacement: "Remove it; redis.enabled turns Redis on."
+  replacement: "Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host."
 - path: retiredKeysTest.first
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
