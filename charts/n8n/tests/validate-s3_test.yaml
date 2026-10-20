@@ -5,6 +5,7 @@ templates:
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
+  license.enabled: true
   s3.enabled: true
   s3.bucket.name: n8n-data
   s3.bucket.region: eu-west-1
@@ -59,3 +60,62 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: 'serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)'
+
+  - it: requires license.enabled
+    template: templates/deployment-main.yaml
+    set:
+      license.enabled: false
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+    asserts:
+      - failedTemplate:
+          errorMessage: 's3.enabled=true requires license.enabled=true. n8n stores binary data in S3 only with a Business or Enterprise licence, and exits at boot without one. Set license.activationKey or license.existingSecret.name, or set license.enabled=true alone if the licence reaches n8n another way.'
+
+  # A licence activated in n8n reaches it without a key in values.
+  - it: accepts license.enabled without a key
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: names the replacement for the retired s3.storage.mode
+    template: templates/deployment-main.yaml
+    set:
+      s3.storage.mode: filesystem
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+    asserts:
+      - failedTemplate:
+          errorMessage: 's3.storage.mode is no longer a chart value. Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: points a binary data mode in env at chartEnvOverrides with S3 on
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+      env.shared.N8N_DEFAULT_BINARY_DATA_MODE: database
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N_DEFAULT_BINARY_DATA_MODE is set by the chart from s3.enabled. Put it in chartEnvOverrides.shared to override the chart deliberately.'
+
+  # Keeps the bucket for execution data while binary data goes elsewhere.
+  - it: accepts a database mode in chartEnvOverrides with S3 on
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+      chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE: database
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects a filesystem mode in chartEnvOverrides with S3 on in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      s3.auth.autoDetect: true
+      serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
+      chartEnvOverrides.worker.N8N_DEFAULT_BINARY_DATA_MODE: filesystem
+    asserts:
+      - failedTemplate:
+          errorMessage: 'chartEnvOverrides.worker.N8N_DEFAULT_BINARY_DATA_MODE is filesystem, but queueMode.enabled=true. The pods do not share a disk, so one pod cannot read binary data that another pod writes. Remove it so the chart''s S3 mode applies, or set it to "database".'

@@ -82,9 +82,6 @@ s3:
     # secretAccessKeySecret:
     #   name: "s3-credentials"
     #   key: "secret-access-key"
-  
-  storage:
-    mode: "s3"
 
 # Service Account with AWS IAM Role
 serviceAccount:

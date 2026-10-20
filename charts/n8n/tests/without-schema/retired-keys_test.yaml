@@ -34,6 +34,7 @@ tests:
     template: templates/deployment-main.yaml
     set:
       retiredKeysTest.first: true
+      license.enabled: true
       s3.enabled: true
       s3.bucket.region: eu-west-1
       s3.auth.accessKeyId: key

@@ -189,6 +189,40 @@ serviceAccount:
 
 To use the namespace's default ServiceAccount, set `name: ""`. If you set `create: false` without also changing `name` from the chart default `"n8n"`, rendering will fail with a clear error — this prevents pods from being wired to a ServiceAccount that was never created.
 
+## Binary data
+
+n8n stores binary data, such as files passed between nodes, in one of several places. The chart sets the mode only when `s3.enabled` is true. Otherwise n8n picks it for the topology.
+
+| Configuration | Mode | Where the data lives |
+|---|---|---|
+| `s3.enabled: true` | `s3` | The S3 bucket |
+| Queue mode | `database` | The n8n database |
+| Standalone with `persistence.enabled: true` | `filesystem` | `/home/node/.n8n/storage` on the PVC |
+| Standalone without persistence | `filesystem` | An emptyDir, lost when the pod restarts |
+
+An install that already has `/home/node/.n8n/binaryData` keeps using it on n8n 2.x. n8n 3.0 renames it to `storage` on first start.
+
+S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot and logs that the licence is missing, so the chart requires `license.enabled: true` alongside `s3.enabled: true`.
+
+In `database` mode, n8n rejects files over 512 MiB. `N8N_BINARY_DATA_DATABASE_MAX_FILE_SIZE` in `env.shared` raises the limit, up to 1024 MiB.
+
+In queue mode, the render fails if `N8N_DEFAULT_BINARY_DATA_MODE` is `filesystem` in an `env` map or in `chartEnvOverrides`. The pods do not share a disk, so one pod cannot read binary data that another pod writes.
+
+To keep the bucket for execution data and store binary data elsewhere, set the mode in `chartEnvOverrides`:
+
+```yaml
+s3:
+  enabled: true
+chartEnvOverrides:
+  shared:
+    N8N_DEFAULT_BINARY_DATA_MODE: database
+env:
+  shared:
+    N8N_EXECUTION_DATA_STORAGE_MODE: s3
+```
+
+If you turn S3 off later, n8n can no longer read the binary data it stored in the bucket.
+
 ## Environment variables
 
 Set n8n environment variables per component, as flat maps:
@@ -254,6 +288,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `taskRunners.enabled` | Task runner sidecars. Requires an auth token: `N8N_RUNNERS_AUTH_TOKEN` in the core Secret (`secretRefs.existingSecret` or `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`), or a Secret of its own in `taskRunners.authToken.existingSecret` | `true` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
+| `s3.enabled` | Store binary data in an S3 bucket. Requires an n8n Business or Enterprise licence and `license.enabled` | `false` |
 | `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
 | `strategy` | Deployment update strategy | `{}` (k8s default) |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |

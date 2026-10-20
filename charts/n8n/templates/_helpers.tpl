@@ -284,6 +284,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Remove it; nothing replaces it."
 - path: securityContext
   replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
+- path: s3.storage.mode
+  replacement: "Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
 - path: taskRunners.authToken.value
   replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
 {{- end -}}
@@ -455,6 +457,26 @@ runner and n8n drift onto different versions. */ -}}
 {{- end -}}
 {{- if and .Values.s3.auth.autoDetect (not .Values.serviceAccount.awsRoleArn) -}}
 {{- $errs = append $errs "serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)" -}}
+{{- end -}}
+{{- if not .Values.license.enabled -}}
+{{- $errs = append $errs "s3.enabled=true requires license.enabled=true. n8n stores binary data in S3 only with a Business or Enterprise licence, and exits at boot without one. Set license.activationKey or license.existingSecret.name, or set license.enabled=true alone if the licence reaches n8n another way." -}}
+{{- end -}}
+{{- end -}}
+
+{{/* --- Binary data mode --- */}}
+{{- /* n8n cannot tell that queue-mode pods have separate disks; the chart can. */ -}}
+{{- if .Values.queueMode.enabled -}}
+{{- $sections := concat (list "shared") (include "n8n.envComponents" . | fromJsonArray) -}}
+{{- $fix := ternary "Remove it so the chart's S3 mode applies, or set it to \"database\"." "Remove it, and n8n uses \"database\" in queue mode, or store binary data in S3 with s3.enabled=true." .Values.s3.enabled -}}
+{{- range $block := list "env" "chartEnvOverrides" -}}
+{{- range $section := $sections -}}
+{{- $vars := include "n8n.envSection" (list (index $.Values $block | default dict) $section) | fromJson -}}
+{{- $val := get $vars "N8N_DEFAULT_BINARY_DATA_MODE" -}}
+{{- /* A reference holds no value the chart can read. */ -}}
+{{- if and (not (kindIs "map" $val)) (eq (toString $val | lower) "filesystem") -}}
+{{- $errs = append $errs (printf "%s.%s.N8N_DEFAULT_BINARY_DATA_MODE is filesystem, but queueMode.enabled=true. The pods do not share a disk, so one pod cannot read binary data that another pod writes. %s" $block $section $fix) -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
