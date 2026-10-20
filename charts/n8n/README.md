@@ -397,25 +397,16 @@ Each sidecar requests 100m CPU and 128Mi of memory, with limits of 500m and 512M
 
 **Requires n8n 2.13.0 or later.** Earlier versions also run a broker on main pods, and 1.108.0 to 2.12.x need a runner there for the MCP Server Trigger, so pinning `image.tag` below 2.13.0 leaves those executions without a runner. The chart does not enforce this version floor when `image.tag` is overridden.
 
-**Supply the auth token:**
-```yaml
-taskRunners:
-  authToken:
-    existingSecret: "n8n-runner-token"
-    existingSecretKey: "auth-token"
-```
+**Auth token:** the runner and the broker authenticate with a shared token. The chart reads it from the core Secret, the one that holds the encryption key, under the key `N8N_RUNNERS_AUTH_TOKEN`:
 
-Create the auth token secret:
-```bash
-kubectl create secret generic n8n-runner-token \
-  --from-literal=auth-token=$(openssl rand -base64 32)
-```
+- With `secretRefs.existingSecret`, add the key to that Secret:
+  ```bash
+  kubectl patch secret n8n-core-secrets --type merge \
+    -p "{\"stringData\":{\"N8N_RUNNERS_AUTH_TOKEN\":\"$(openssl rand -base64 32)\"}}"
+  ```
+- Without it, set `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` next to the encryption key, and the chart renders it into its Secret.
 
-The token is required. There are three ways to supply it:
-
-- `existingSecret` and `existingSecretKey` read it from a Secret you manage. Use this for production and for GitOps.
-- `value` sets it in your values, and the chart creates the Secret.
-- `generate: true` makes the chart generate it and keep it in the cluster. Use this for a quick start with plain `helm install`. The chart reads the token back with `lookup`, which returns nothing under `helm template` and Argo CD. There the token changes on every render, so use `existingSecret` instead.
+To keep the token in a Secret of its own, set `taskRunners.authToken.existingSecret`, and `existingSecretKey` if the key is not `N8N_RUNNERS_AUTH_TOKEN`. The chart never generates the token, so `helm template` and Argo CD render the same output as `helm install`.
 
 **Health probe:** the sidecar has a liveness probe on the launcher's health endpoint, `/healthz` on port `5680`. The launcher answers this endpoint itself, so a runner busy with a long task does not fail the probe. Kubernetes restarts the sidecar only when the launcher stops responding. The launcher already restarts a runner that stops responding. Tune or disable the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `env.taskRunner`, the probe uses that port. Set it as a literal, because the chart cannot read a reference and leaves the probe out in that case.
 

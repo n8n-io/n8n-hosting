@@ -18,5 +18,5 @@ This sits under "Versioned with n8n, not by n8n": chart 2.0 ships n8n 3.0, so it
 ## Consequences
 
 - Each worker pod, or the main pod in standalone, has a second container and requests 100m CPU and 128Mi more.
-- A default install needs a task-runner token source, as [0019](0019-task-runner-token-generation-is-opt-in.md) describes. Every example supplies one.
+- A default install needs a task-runner token source, as [0019](0019-task-runner-token-in-the-core-secret.md) describes. Every example supplies one.
 - `taskRunners.enabled: false` keeps internal mode until n8n removes it.

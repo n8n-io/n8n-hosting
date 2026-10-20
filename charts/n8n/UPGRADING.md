@@ -93,33 +93,23 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 
 Task runners are on by default. In queue mode, each worker pod gains a `task-runner` container that requests 100m CPU and 128Mi of memory. In standalone mode, the main pod gains it instead. Plan node capacity for the extra requests, or adjust them under `taskRunners.resources`. To keep code running inside the n8n process, set `taskRunners.enabled: false`. See [decision 0014](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0014-task-runners-on-by-default.md).
 
-With task runners enabled, an auth token source is required. The chart generates a token only when you ask it to, and the render fails without a source. See [decision 0019](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0019-task-runner-token-generation-is-opt-in.md).
+With task runners enabled, the runner and the broker need a shared auth token. The chart reads it from the core Secret under the key `N8N_RUNNERS_AUTH_TOKEN`, and never generates it. See [decision 0019](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0019-task-runner-token-in-the-core-secret.md).
 
-If you already set `taskRunners.authToken.existingSecret` or `taskRunners.authToken.value`, there is nothing to do.
+- If you set `secretRefs.existingSecret`, add the token to that Secret. For example:
 
-Otherwise, create a Secret with a new token:
+  ```bash
+  kubectl patch secret n8n-core-secrets --type merge \
+    -p "{\"stringData\":{\"N8N_RUNNERS_AUTH_TOKEN\":\"$(openssl rand -base64 32)\"}}"
+  ```
 
-```bash
-kubectl create secret generic n8n-runner-token \
-  --from-literal=auth-token=$(openssl rand -base64 32)
-```
+  The chart cannot see into that Secret. If the key is missing, the pods do not start, and their events name the key.
+- If the chart manages the core Secret, set `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` next to `secretRefs.env.N8N_ENCRYPTION_KEY`. The render fails until you do.
+- If you set `taskRunners.authToken.existingSecret`, there is nothing to do.
+- If you set `taskRunners.authToken.value`, move the token to `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`. The render fails on the old key and names the new one.
 
-Then point the chart at it:
+A new token works straight away. The runner and the broker share a pod, and every pod restarts on upgrade, so you do not need to keep the token the 1.x chart generated.
 
-```yaml
-taskRunners:
-  authToken:
-    existingSecret: n8n-runner-token
-    existingSecretKey: auth-token
-```
-
-Or set `taskRunners.authToken.value` to a token, and the chart creates the Secret.
-
-To keep the token the chart generated before, set `taskRunners.authToken.generate: true`. This only stays stable when Helm can reach the cluster. Under Argo CD or `helm template`, use `existingSecret`.
-
-Do not name the Secret the chart created, which ends in `-task-runners`, in `existingSecret`. Helm deletes that Secret on upgrade, because the chart does not render it when `existingSecret` is set.
-
-With task runners disabled, the chart does not render the task-runner Secret, and Helm removes it on upgrade.
+The chart does not render a separate task-runner Secret, so Helm removes the one ending in `-task-runners` on upgrade. Do not name that Secret in `taskRunners.authToken.existingSecret`.
 
 ### Binary data and S3
 
