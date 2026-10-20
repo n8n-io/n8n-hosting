@@ -251,7 +251,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `envFrom.<component>` | ConfigMaps and Secrets loaded whole | `[]` |
 | `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
-| `taskRunners.enabled` | Task runner sidecars. Requires `N8N_RUNNERS_AUTH_TOKEN` in the core Secret, from `secretRefs.existingSecret` or `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` | `true` |
+| `taskRunners.enabled` | Task runner sidecars. Requires an auth token: `N8N_RUNNERS_AUTH_TOKEN` in the core Secret (`secretRefs.existingSecret` or `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`), or a Secret of its own in `taskRunners.authToken.existingSecret` | `true` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
 | `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
