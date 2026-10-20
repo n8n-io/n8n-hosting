@@ -114,7 +114,7 @@ A new token works straight away. The runner and the broker share a pod, and ever
 
 The chart does not render a separate task-runner Secret, so Helm removes the one ending in `-task-runners` on upgrade. Do not name that Secret in `taskRunners.authToken.existingSecret`.
 
-The task broker now listens on localhost only, which is n8n's default. The runner sidecar reaches it there, so the default setup needs no change. Remove `taskRunners.broker.listenAddress` from your values; the render fails while it is set. If you run a runner outside the pod, set `N8N_RUNNERS_BROKER_LISTEN_ADDRESS` in `env.worker`, or in `env.main` in standalone mode. See [decision 0024](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0024-task-runner-broker-listens-on-localhost.md).
+The task broker now listens on localhost only, which is n8n's default. The runner sidecar reaches it there, so the default setup needs no change. Remove `taskRunners.broker.listenAddress` from your values. The render fails while it is set. If you run a runner outside the pod, set `N8N_RUNNERS_BROKER_LISTEN_ADDRESS` in `env.worker`, or in `env.main` in standalone mode. See [decision 0024](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0024-task-runner-broker-listens-on-localhost.md).
 
 ### Binary data and S3
 

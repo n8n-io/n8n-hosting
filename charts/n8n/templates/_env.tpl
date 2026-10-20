@@ -177,7 +177,7 @@ rather than queueMode.enabled. */ -}}
 {{- end -}}
 
 {{- else if eq .component "taskRunner" -}}
-{{- $_ := set $e "N8N_RUNNERS_TASK_BROKER_URI" (dict "value" (printf "http://localhost:%v" $v.taskRunners.broker.port) "from" "taskRunners.broker.port") -}}
+{{- $_ := set $e "N8N_RUNNERS_TASK_BROKER_URI" (dict "value" (printf "http://127.0.0.1:%v" $v.taskRunners.broker.port) "from" "taskRunners.broker.port") -}}
 {{- $_ := set $e "N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT" (dict "value" $v.taskRunners.launcher.autoShutdownTimeout "from" "taskRunners.launcher.autoShutdownTimeout") -}}
 {{- $_ := set $e "N8N_RUNNERS_LAUNCHER_LOG_LEVEL" (dict "value" $v.taskRunners.launcher.logLevel "from" "taskRunners.launcher.logLevel") -}}
 

@@ -17,6 +17,6 @@ This sits under "One place to set anything, and a defined winner": the chart set
 
 ## Consequences
 
-- The broker listens on localhost only. The sidecar connects as before.
+- The broker listens on `127.0.0.1` only. The sidecar connects to `http://127.0.0.1:<port>`, the address the broker binds, rather than `localhost`, which can resolve to `::1` first.
 - An install that sets `taskRunners.broker.listenAddress` fails to render, and the message names `env.worker` and `env.main`.
 - `taskRunners.broker.port` stays, because the chart uses it to build the sidecar's broker URI.

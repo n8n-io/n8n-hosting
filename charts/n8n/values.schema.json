@@ -241,7 +241,7 @@
           "type": "object",
           "properties": {
             "listenAddress": {
-              "description": "Retired. Remove it; the broker listens on localhost. For a runner outside the pod, set N8N_RUNNERS_BROKER_LISTEN_ADDRESS in env.worker or env.main."
+              "description": "Retired. Remove it; the broker listens on localhost. For a runner outside the pod, set N8N_RUNNERS_BROKER_LISTEN_ADDRESS in env.worker, or in env.main in standalone mode."
             },
             "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
           },
