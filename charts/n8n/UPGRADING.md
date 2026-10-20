@@ -160,10 +160,8 @@ The webhook Ingress:
 
 | If your values set | What changes | Do this |
 |---|---|---|
-| `ingress.webhookProcessor` | The render fails and names `ingress.webhook`. | Move `className`, `annotations` and `tls` to `ingress.webhook`, and remove `enabled`. |
-| `ingress.webhookProcessor.enabled: true` | The Ingress is now named `<release>-webhook`, so Helm replaces it on upgrade. | Nothing. |
-| `webhookProcessor.enabled` and `ingress.enabled`, without `ingress.webhookProcessor.enabled` | The chart now renders the webhook Ingress, which sends the production webhook paths to the webhook processors. In 1.x they reached main. | Nothing. |
-| `ingress.webhookProcessor.className` empty | The webhook Ingress now uses `ingress.className`. | Set `ingress.webhook.className` to keep another class. |
+| Any `ingress.webhookProcessor` key | The render fails and names `ingress.webhook`. | Move `className`, `annotations` and `tls` to `ingress.webhook`, and remove `enabled`. An empty `ingress.webhook.className` now uses `ingress.className`, so set it to keep another class. The Ingress keeps its name. |
+| `webhookProcessor.enabled` and `ingress.enabled`, with `ingress.webhookProcessor.enabled` false or unset | The chart now renders the webhook Ingress, which sends the production webhook paths to the webhook processors. In 1.x they reached main. | Nothing. |
 
 ### Security contexts
 

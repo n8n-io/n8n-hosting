@@ -2,6 +2,7 @@
 # Checks that each Gateway accepts its route, that the editor host sends every
 # path to main, and that the webhook host carries only the webhook paths.
 set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
 source "$(dirname "$0")/gateway-checks.sh"
 
 for route in n8n n8n-webhook; do

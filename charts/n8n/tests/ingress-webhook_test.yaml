@@ -45,7 +45,7 @@ tests:
     asserts:
       - equal:
           path: metadata.name
-          value: RELEASE-NAME-n8n-webhook
+          value: RELEASE-NAME-n8n-webhook-processor
       - equal:
           path: spec.ingressClassName
           value: nginx-internal

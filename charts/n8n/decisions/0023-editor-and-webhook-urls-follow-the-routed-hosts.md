@@ -30,7 +30,7 @@ The chart never derives a scheme from TLS settings, and it does not set `N8N_HOS
 
 - Plain-HTTP installs and installs without an ingress or `HTTPRoute` set `editor.url`, and `webhook.url` only when webhooks have a host of their own.
 - `webhook.url` never sets the editor URL. An install that sets only `webhook.url` and routes nothing gets no editor URL, and `NOTES.txt` warns about it.
-- `ingress.webhookProcessor` is retired for `ingress.webhook`, which no longer has an `enabled` switch. The webhook Ingress renders whenever webhook processors run or webhook hosts are set.
+- `ingress.webhookProcessor` is retired for `ingress.webhook`, which no longer has an `enabled` switch. The webhook Ingress renders when `ingress.enabled` is true and webhook processors run or webhook hosts are set.
 - A wildcard first host fails the render unless the matching URL value is set, because `https://*.example.com` is not an address n8n can use.
 - `NOTES.txt` prints the editor URL the chart sets, so the install output and n8n agree.
 - Deriving the scheme later would change URLs for upstream-TLS installs, so it needs a major version.
