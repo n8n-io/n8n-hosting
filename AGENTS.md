@@ -18,7 +18,7 @@ Branch from `main` and open the PR against it. The exception is a fix for code t
 
 A change that also applies to 1.x reaches it as a backport. Add the label `backport release/n8n-2.x` to the PR on `main`, before or after it merges. `.github/workflows/backport.yml` cherry-picks the merged commit and opens a PR against the maintenance branch with the same title. It refuses a breaking change. If the cherry-pick conflicts, it says so on the original PR, and the backport is then a PR against the maintenance branch written by hand.
 
-The files under `.github/workflows/` are identical on every branch and pick their behaviour from the branch they run on. Change them on `main`, then open the same change against each maintenance branch as a PR of its own. The backport label cannot do this, because the App it pushes with has no permission to change workflow files. The release-please files are the exception: each branch keeps its own `release-please-config.json` and `.release-please-manifest.json`.
+Each branch runs its own copy of `.github/workflows/`. The exception is `bump-n8n-version.yml`, which runs from `main` and opens a bump PR for every line. Change workflows on `main`. Bring a change to a maintenance branch only when it changes what CI or a release does on that branch, as a PR of its own. The backport label cannot do this, because the App it pushes with has no permission to change workflow files. A job that acts only on `main`, such as `upgrade-test`, stays on `main`. Each branch also keeps its own `release-please-config.json` and `.release-please-manifest.json`.
 
 ## Design and decisions
 
@@ -58,7 +58,7 @@ helm unittest --strict charts/n8n
 helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
 ```
 
-`ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false` matches the CI lint job if `ct` is installed. The kind install test runs in CI only, on labelled PRs and the automated bump and release PRs.
+`ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false` matches the CI lint job if `ct` is installed. The kind install test runs in CI only, on labelled PRs and the automated bump and release PRs. On PRs to `main`, the `test-install-v3-rc` label runs it on the newest n8n 3 release candidate. The kind upgrade test, from the last release of the previous major to the PR, runs in CI only, on PRs to `main` labelled `test-upgrade`.
 
 The unit tests need the `helm-unittest` plugin at the version CI pins in the `unittest` job. Where `values.schema.json` rejects an input before the templates render, assert the schema error in the main suite and the `fail` message in `tests/without-schema/`. `tests/default-render_test.yaml` snapshots the default output. When a change alters that output on purpose, run `helm unittest -u charts/n8n` and commit the updated snapshot with the change.
 

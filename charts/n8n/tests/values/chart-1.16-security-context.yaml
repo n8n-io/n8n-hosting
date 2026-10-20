@@ -1,0 +1,36 @@
+# The security context blocks from the chart 1.16 values.yaml. helm upgrade
+# --reuse-values renders with the previous chart's values.yaml, so an upgrade
+# from 1.16 renders with these. 1.16 has no shared blocks, so the nulls
+# remove the ones this chart's values.yaml adds.
+securityContext:
+  enabled: true
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsGroup: 1000
+podSecurityContext:
+  shared: null
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+containerSecurityContext:
+  shared: null
+  main:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  worker:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  webhookProcessor:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  taskRunner:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL

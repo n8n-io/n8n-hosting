@@ -396,33 +396,33 @@ nodePlacement: {}
 #         effect: NoSchedule
 
 # ----- Security -----
-# Pod securityContext for every n8n pod. When enabled, the chart also sets
-# runAsNonRoot: true and seccompProfile.type: RuntimeDefault.
-# Set enabled: false to drop these defaults.
-securityContext:
-  enabled: true
-  fsGroup: 1000
-  runAsUser: 1000
-  runAsGroup: 1000
-
-# Pod securityContext per role. A role block replaces the securityContext
-# defaults above for that role and is rendered as written, so include every
-# field you want, runAsNonRoot and seccompProfile among them.
+# Pod securityContext. shared applies to every n8n pod, and each role block
+# merges over it field by field, so set only the fields you want to change.
+# The role wins over shared. Set a field to null to remove it. Set shared to
+# null to drop every default.
 # Example for OpenShift, where the restricted SCC assigns the UID and GID:
 #   podSecurityContext:
-#     main:
-#       runAsNonRoot: true
-#       seccompProfile:
-#         type: RuntimeDefault
+#     shared:
+#       fsGroup: null
+#       runAsUser: null
+#       runAsGroup: null
 podSecurityContext:
+  shared:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
   main: {}
   worker: {}
   webhookProcessor: {}
 
-# Container securityContext per container. Your values merge over these
-# defaults, so set only the fields you want to change. Set a field to null
-# to remove it. taskRunner applies to the task-runner sidecar on main and on
-# worker pods.
+# Container securityContext. shared applies to every n8n container and the
+# task-runner sidecar, and each role block merges over it in the same way.
+# taskRunner applies to the task-runner sidecar on main and on worker pods.
+# Containers added with extraContainers or extraInitContainers get none of
+# this.
 # readOnlyRootFilesystem is not set by default. n8n writes to ~/.n8n/, /tmp/
 # and other paths at runtime, so enabling it needs writable volumes mounted
 # at those paths.
@@ -433,26 +433,15 @@ podSecurityContext:
 #       runAsUser: 65532
 #       runAsGroup: 65532
 containerSecurityContext:
-  main:
+  shared:
     allowPrivilegeEscalation: false
     capabilities:
       drop:
         - ALL
-  worker:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-  webhookProcessor:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-  taskRunner:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
 
 # ----- RBAC ServiceAccount & Network Policy -----
 rbac:
