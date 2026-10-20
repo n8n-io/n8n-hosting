@@ -1,4 +1,4 @@
-# 0017. The NetworkPolicy allows all egress by default, and set rules replace the chart's
+# 0017. The NetworkPolicy allows all egress by default, and set rules replace the chart's rules
 
 Date: 2026-10-20
 PR: https://github.com/n8n-io/n8n-hosting/pull/263

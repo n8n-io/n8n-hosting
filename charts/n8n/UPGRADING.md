@@ -133,7 +133,7 @@ If you leave `networkPolicy.egress` empty, the policy now allows all egress. In 
 
 If you leave `networkPolicy.ingress` empty, nothing changes. The policy allows the release's own pods and any source on `service.port`.
 
-If your values set either list, check it before you upgrade. Those rules now take effect, and they are the only rules for that direction. An egress list must allow DNS, the database, Redis, your S3 endpoint and every system your workflows call. An ingress list must allow your ingress controller. It must also allow any in-cluster client that calls n8n, such as the `helm test` pod.
+If your values set a non-empty list, check it before you upgrade. Those rules now take effect, and they are the only rules for that direction. An egress list must allow DNS, the database and every system your workflows call. In queue mode it must also allow Redis, and with S3 enabled it must allow your S3 endpoint. An ingress list must allow your ingress controller. It must also allow any in-cluster client that calls n8n, such as the `helm test` pod.
 
 ### Persistence
 
