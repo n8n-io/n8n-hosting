@@ -257,6 +257,29 @@ Call with (dict "root" $ "object" <entry>).
 {{- end -}}
 
 {{/*
+The main Deployment's update strategy. An explicit strategy wins. A volume
+only one node can mount gets Recreate, because a rolling update cannot attach
+it to the new pod. The null clears the rollingUpdate the API server defaulted
+on an existing Deployment, which it rejects alongside Recreate.
+*/}}
+{{- define "n8n.strategy" -}}
+{{- if .Values.strategy -}}
+{{- toYaml .Values.strategy -}}
+{{- else if .Values.persistence.enabled -}}
+{{- $shared := false -}}
+{{- range .Values.persistence.accessModes -}}
+{{- if not (has . (list "ReadWriteOnce" "ReadWriteOncePod")) -}}
+{{- $shared = true -}}
+{{- end -}}
+{{- end -}}
+{{- if and .Values.persistence.accessModes (not $shared) -}}
+type: Recreate
+rollingUpdate: null
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create the name of the service account to use
 */}}
 {{- define "n8n.serviceAccountName" -}}

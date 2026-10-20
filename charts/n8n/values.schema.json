@@ -497,7 +497,10 @@
         "create": { "type": "boolean" },
         "name": { "type": "string" },
         "annotations": { "type": "object", "additionalProperties": true },
-        "automountServiceAccountToken": { "type": "boolean" }
+        "automountServiceAccountToken": {
+          "type": "boolean",
+          "description": "Mount the ServiceAccount token into n8n pods. n8n does not call the Kubernetes API."
+        }
       }
     },
     "extraInitContainers": {
@@ -536,7 +539,24 @@
     },
     "rbac": {
       "type": "object",
-      "properties": { "create": { "type": "boolean" } }
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "description": "Create a Role that reads ConfigMaps and Secrets in the namespace, bound to the ServiceAccount. n8n does not use it."
+        }
+      }
+    },
+    "strategy": {
+      "type": "object",
+      "description": "Update strategy for the main Deployment. Empty uses Recreate for ReadWriteOnce persistence, and the Kubernetes default otherwise.",
+      "properties": {
+        "type": { "type": "string", "enum": ["Recreate", "RollingUpdate"] },
+        "rollingUpdate": { "type": ["object", "null"] }
+      }
+    },
+    "enableServiceLinks": {
+      "type": "boolean",
+      "description": "Inject Docker-style <SERVICE>_HOST and <SERVICE>_PORT variables for every Service in the namespace into n8n pods. A Service named n8n sets N8N_PORT and stops n8n starting."
     },
     "probes": {
       "type": "object",

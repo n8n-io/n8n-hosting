@@ -165,6 +165,7 @@ matches the snapshot:
             app.kubernetes.io/version: 0.0.0
             helm.sh/chart: n8n-0.0.0
         spec:
+          automountServiceAccountToken: false
           containers:
             - env:
                 - name: DB_POSTGRESDB_PASSWORD
@@ -232,6 +233,7 @@ matches the snapshot:
               volumeMounts:
                 - mountPath: /home/node/.n8n
                   name: data
+          enableServiceLinks: false
           securityContext:
             fsGroup: 1000
             runAsGroup: 1000
@@ -278,6 +280,7 @@ matches the snapshot:
             app.kubernetes.io/version: 0.0.0
             helm.sh/chart: n8n-0.0.0
         spec:
+          automountServiceAccountToken: false
           containers:
             - args:
                 - worker
@@ -379,6 +382,7 @@ matches the snapshot:
                 capabilities:
                   drop:
                     - ALL
+          enableServiceLinks: false
           securityContext:
             fsGroup: 1000
             runAsGroup: 1000
@@ -390,52 +394,6 @@ matches the snapshot:
           terminationGracePeriodSeconds: 60
           volumes: null
   8: |
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: Role
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: n8n
-        app.kubernetes.io/version: 0.0.0
-        helm.sh/chart: n8n-0.0.0
-      name: RELEASE-NAME-n8n
-      namespace: NAMESPACE
-    rules:
-      - apiGroups:
-          - ""
-        resources:
-          - configmaps
-        verbs:
-          - get
-          - list
-      - apiGroups:
-          - ""
-        resources:
-          - secrets
-        verbs:
-          - get
-  9: |
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: RoleBinding
-    metadata:
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: n8n
-        app.kubernetes.io/version: 0.0.0
-        helm.sh/chart: n8n-0.0.0
-      name: RELEASE-NAME-n8n
-      namespace: NAMESPACE
-    roleRef:
-      apiGroup: rbac.authorization.k8s.io
-      kind: Role
-      name: RELEASE-NAME-n8n
-    subjects:
-      - kind: ServiceAccount
-        name: n8n
-        namespace: NAMESPACE
-  10: |
     apiVersion: v1
     kind: Service
     metadata:
@@ -457,7 +415,7 @@ matches the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: n8n
       type: ClusterIP
-  11: |
+  9: |
     apiVersion: v1
     kind: ServiceAccount
     metadata:
@@ -469,7 +427,7 @@ matches the snapshot:
         helm.sh/chart: n8n-0.0.0
       name: n8n
       namespace: NAMESPACE
-  12: |
+  10: |
     apiVersion: v1
     kind: Pod
     metadata:
