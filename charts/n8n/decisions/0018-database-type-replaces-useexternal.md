@@ -1,7 +1,7 @@
 # 0018. database.type is the only database setting
 
 Date: 2026-10-19
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/264
 
 ## Context
 
