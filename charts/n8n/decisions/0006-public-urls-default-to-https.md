@@ -1,30 +1,25 @@
-# 0006. n8n has one public address, which defaults to https
+# 0006. Public URLs default to https and are overridden by value
 
-Date: 2026-10-16
-PR: https://github.com/n8n-io/n8n-hosting/pull/258
+Date: 2026-10-09
+PR: https://github.com/n8n-io/n8n-hosting/pull/243
+Superseded by: [0023](0023-editor-and-webhook-urls-follow-the-routed-hosts.md)
 
 ## Context
 
-n8n needs two public URLs: `N8N_EDITOR_BASE_URL` for the editor, OAuth redirects and links in emails, and `N8N_WEBHOOK_URL` for webhooks and forms. When neither is set, n8n builds a fallback from `N8N_HOST` and `N8N_PROTOCOL`, which default to `localhost` and `http`.
+n8n needs two public URLs: `N8N_WEBHOOK_URL` for webhooks and `N8N_EDITOR_BASE_URL` for the editor, OAuth redirects and links in emails. With ingress enabled, the chart builds both from the first ingress host with `https://`. An install served over plain HTTP gets URLs that don't work. `webhook.url` could already replace the webhook URL, but nothing in values could replace the editor URL.
 
-The chart routes the editor and webhooks through the same hosts. The webhook processor Ingress reuses `ingress.hosts` and splits traffic by path, and the `HTTPRoute` does the same with `httpRoute.hostnames`. So the two URLs only differ when webhooks arrive somewhere the chart does not route, such as a separate load balancer or API gateway.
-
-The chart cannot tell plain HTTP from TLS that ends before the ingress, at a cloud load balancer, a managed certificate or a CDN. Those installs leave `ingress.tls` empty and are served on `https://`.
+One option was to choose the scheme from `ingress.tls`. The chart cannot tell plain HTTP from TLS that ends before the ingress, at a cloud load balancer, a managed certificate or a CDN. Those installs leave `ingress.tls` empty and are correct on `https://` today. Deriving the scheme would move them to `http://` and break their webhook and OAuth URLs.
 
 ## Decision
 
-n8n has one public address, and the chart sets both URLs from it.
+The chart keeps `https://` and the first ingress host as the default for both URLs. Each URL has one value that replaces it outright: `webhook.url` and `editor.url`. The chart does not inspect TLS settings to choose a scheme.
 
-- The editor URL is `editor.url`, or else `https://` and the first host the chart routes: the first ingress host, or the first `HTTPRoute` hostname.
-- The webhook URL is `webhook.url`, or else the editor URL.
-- With no URL set and nothing routed, the chart sets neither variable.
-
-The chart never derives a scheme from TLS settings, and it does not set `N8N_HOST` or `N8N_PROTOCOL`. This sits under "One place to set anything, and a defined winner": the address has one home, `editor.url`, and `webhook.url` exists only for webhooks the chart does not route.
+This sits under "One place to set anything, and a defined winner". For `N8N_EDITOR_BASE_URL` the order is `editor.url`, then the ingress host, then `webhook.url` when ingress is off.
 
 ## Consequences
 
-- Plain-HTTP installs and installs without an ingress or `HTTPRoute` set `editor.url` alone. Webhooks follow it.
-- `webhook.url` never sets the editor URL. An install that sets only `webhook.url` and routes nothing gets no editor URL, and `NOTES.txt` warns about it.
+- Installs that do not set `editor.url` render as before.
+- Plain-HTTP installs set `webhook.url` and `editor.url`. The README shows both.
 - `NOTES.txt` prints the editor URL the chart sets, so the install output and n8n agree.
 - The schema rejects an `editor.url` without `http://` or `https://`.
 - Deriving the scheme later would change URLs for upstream-TLS installs, so it needs a major version.

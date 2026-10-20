@@ -1,0 +1,61 @@
+# Example: Gateway API with the editor on an internal Gateway and webhooks on
+# a public one, each on a host of its own.
+#
+# Prerequisites:
+# - A Gateway API implementation, such as Envoy Gateway, Istio or Cilium,
+#   with its CRDs installed.
+# - Two Gateways in the gateway-system namespace: shared-gateway, reachable
+#   from the internal network, and public-gateway, reachable from the
+#   internet. Each needs a listener that accepts routes from the release
+#   namespace. The chart attaches to them and never creates them. TLS is
+#   configured on the Gateways' listeners.
+# - External PostgreSQL and Redis services for queue mode.
+
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+database:
+  useExternal: true
+  host: "postgres.example.internal"
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+redis:
+  enabled: true
+  useExternal: true
+  host: "redis.example.internal"
+  passwordSecret:
+    name: "n8n-redis-secret"
+    key: "password"
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 2
+  workerConcurrency: 10
+
+webhookProcessor:
+  enabled: true
+  replicaCount: 2
+  disableProductionWebhooksOnMainProcess: true
+
+# The editor route sends every path on n8n.internal.example.com to main, and
+# sets the editor URL, https://n8n.internal.example.com.
+#
+# The webhook route carries only the webhook paths on hooks.example.com: the
+# production webhook, form and MCP paths go to the webhook processors, and the
+# test paths go to main. It sets the webhook URL, https://hooks.example.com,
+# which n8n shows for every webhook, form and MCP trigger.
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: shared-gateway
+      namespace: gateway-system
+  hostnames:
+    - n8n.internal.example.com
+  webhook:
+    parentRefs:
+      - name: public-gateway
+        namespace: gateway-system
+    hostnames:
+      - hooks.example.com

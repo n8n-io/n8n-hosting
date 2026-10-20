@@ -33,9 +33,9 @@ webhookProcessor:
   replicaCount: 2
   disableProductionWebhooksOnMainProcess: true
 
-# Dedicated webhook ingress routes production webhook, form, and MCP (/mcp)
-# paths to webhook-processor pods. Test paths (/webhook-test/, /mcp-test/)
-# continue to route to the main ingress through the catch-all "/" path above.
+# With webhook processors, a second Ingress on the same host routes the
+# production webhook, form and MCP (/mcp) paths to them. Test paths
+# (/webhook-test/, /mcp-test/) stay on main through the catch-all "/" path.
 ingress:
   enabled: true
   className: nginx
@@ -52,9 +52,7 @@ ingress:
     - secretName: n8n-tls
       hosts:
         - n8n.example.com
-  webhookProcessor:
-    enabled: true
-    className: nginx
+  webhook:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-prod
     tls:

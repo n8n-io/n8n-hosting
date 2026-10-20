@@ -4,6 +4,12 @@ n8n has been successfully deployed!
 
 Your n8n instance is available at:
   {{ . }}
+{{- $webhookUrl := include "n8n.webhookUrl" $ }}
+{{- if and $.Values.webhook.enabled (ne $webhookUrl .) }}
+
+Webhooks, forms and MCP triggers are served at:
+  {{ $webhookUrl }}
+{{- end }}
 
 {{- else }}
 

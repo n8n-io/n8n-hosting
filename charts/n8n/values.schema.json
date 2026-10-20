@@ -381,14 +381,19 @@
             "cookieMaxAge": { "type": "string" }
           }
         },
-        "webhookProcessor": {
+        "webhook": {
           "type": "object",
+          "description": "A second Ingress for webhook traffic. With hosts, webhooks get hosts of their own; without, it shares ingress.hosts and renders only with webhook processors.",
           "properties": {
-            "enabled": { "type": "boolean" },
+            "hosts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
             "className": { "type": "string" },
             "annotations": { "type": "object", "additionalProperties": true },
             "tls": { "type": "array" }
-          }
+          },
+          "additionalProperties": false
+        },
+        "webhookProcessor": {
+          "description": "Retired. Set ingress.webhook instead."
         }
       },
       "required": ["enabled", "hosts"]
@@ -414,8 +419,34 @@
         },
         "hostnames": {
           "type": "array",
-          "description": "Hostnames the route matches. The first one sets the public address when editor.url is empty.",
+          "description": "Hostnames the route matches. The first one sets the editor URL when editor.url is empty.",
           "items": { "type": "string", "minLength": 1 }
+        },
+        "webhook": {
+          "type": "object",
+          "description": "A second HTTPRoute for webhook hosts of their own, carrying the webhook paths only.",
+          "properties": {
+            "hostnames": {
+              "type": "array",
+              "description": "Webhook hostnames. The first one sets the webhook URL when webhook.url is empty.",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "parentRefs": {
+              "type": "array",
+              "description": "The Gateways the webhook route attaches to. Empty uses httpRoute.parentRefs.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "namespace": { "type": "string", "minLength": 1 },
+                  "sectionName": { "type": "string", "minLength": 1 }
+                },
+                "required": ["name"]
+              }
+            },
+            "annotations": { "type": "object", "additionalProperties": true }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

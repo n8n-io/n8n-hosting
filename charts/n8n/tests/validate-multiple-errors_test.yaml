@@ -12,7 +12,7 @@ tests:
   - it: reports every problem in one render
     template: templates/deployment-main.yaml
     set:
-      ingress.webhookProcessor.enabled: true
+      ingress.webhook.hosts: [hooks.example.com]
       s3.enabled: true
       serviceAccount.create: false
       podLabels:
@@ -20,7 +20,7 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: |-
-            - ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true
+            - ingress.webhook.hosts is set, but ingress.enabled is false, so the chart renders no Ingress for it. Set ingress.enabled to true, or remove ingress.webhook.hosts.
             - s3.bucket.name is required when s3.enabled=true
             - s3.bucket.region is required when s3.enabled=true
             - s3.auth.accessKeyId is required when s3.enabled=true and s3.auth.autoDetect=false

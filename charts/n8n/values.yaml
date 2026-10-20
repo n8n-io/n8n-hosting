@@ -235,9 +235,23 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-  # Separate Ingress for webhook processor pods (requires webhookProcessor.enabled=true)
-  webhookProcessor:
-    enabled: false
+  # A second Ingress for webhook traffic. With no hosts, webhooks share
+  # ingress.hosts, and the Ingress renders only when webhookProcessor.enabled
+  # is true, to send the production webhook paths to the webhook processors.
+  # With hosts, webhooks get hosts of their own that carry the webhook paths
+  # only, and the first one sets the webhook URL when webhook.url is empty.
+  # Example:
+  # webhook:
+  #   className: nginx-external
+  #   hosts:
+  #     - hooks.example.com
+  #   tls:
+  #     - secretName: hooks-tls
+  #       hosts:
+  #         - hooks.example.com
+  webhook:
+    hosts: []
+    # IngressClass for the webhook Ingress. Empty uses ingress.className.
     className: ""
     annotations: {}
     tls: []
@@ -260,9 +274,26 @@ httpRoute:
   #     namespace: gateway-system
   #     sectionName: https
   parentRefs: []
-  # Hostnames the route matches. The first one sets the public address when
+  # Hostnames the route matches. The first one sets the editor URL when
   # editor.url is empty, with https://.
   hostnames: []
+  # A second HTTPRoute for webhook hosts of their own. It carries the webhook
+  # paths only, and the first hostname sets the webhook URL when webhook.url
+  # is empty. Without hostnames, webhooks share httpRoute.hostnames.
+  # Example:
+  # webhook:
+  #   parentRefs:
+  #     - name: public-gateway
+  #       namespace: gateway-system
+  #   hostnames:
+  #     - hooks.example.com
+  webhook:
+    hostnames: []
+    # The Gateways the webhook route attaches to. Empty uses
+    # httpRoute.parentRefs.
+    parentRefs: []
+    # Annotations on the webhook route, merged over commonAnnotations.
+    annotations: {}
 
 # ----- Persistence -----
 persistence:
@@ -688,9 +719,10 @@ webhook:
   enabled: true
   # Public base URL for webhooks, for example https://hooks.example.com.
   # n8n adds the /webhook path itself. Rendered as N8N_WEBHOOK_URL, the base
-  # URL for test and production webhooks. When empty, webhooks follow the
-  # editor URL. Set it only when webhooks arrive at an address the chart does
-  # not route, such as a separate load balancer or API gateway.
+  # URL for test and production webhooks, forms and MCP. When empty, the chart
+  # uses https:// and the first ingress.webhook host or httpRoute.webhook
+  # hostname, or else the editor URL. Set it for plain HTTP, or when webhooks
+  # arrive at an address the chart does not route.
   url: ""
 
 # ----- Editor config -----
