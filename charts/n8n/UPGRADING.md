@@ -16,6 +16,8 @@ helm template n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version
 
 The render fails on every values key that 2.0 retired, and names the replacement for each one. Work through the list until the render passes. Then read the sections below for any other changes that apply to your install, and run `helm upgrade` with the same values file.
 
+Pass your values file with `-f`. Do not use `--reuse-values`. It keeps the defaults of the chart version you installed as well as your own values, so the 2.0 render fails on 1.x defaults that 2.0 no longer reads. If you no longer have your values file, `helm get values <release> -o yaml` prints the values you set. `--reset-then-reuse-values`, in Helm 3.14 or later, reuses your values with the new chart's defaults, and also works.
+
 ### Values validation
 
 If your values file sets a key the chart no longer reads, the render fails. The message names each such key and what replaces it, all in one render. The chart stops rather than ignoring the key, so a setting cannot quietly stop working. See [decision 0020](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0020-retired-values-keys-fail-the-render.md).
@@ -93,6 +95,19 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 
 ### Binary data and S3
 
+With `s3.enabled: true`, n8n now stores binary data in the S3 bucket. In 1.x the chart set the mode to `filesystem`, so n8n wrote binary data to each pod's local disk and the bucket held no binary data. See [decision 0022](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0022-binary-data-mode.md).
+
+S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot, so the chart now requires `license.enabled: true` alongside `s3.enabled: true`. If your install has no such licence, set `s3.enabled: false` before you upgrade.
+
+| If your values set | Do this |
+|---|---|
+| `s3.storage.mode` | Remove the line. `s3.enabled` sets the mode. The render fails until you do. |
+| `s3.enabled: true` without `license.enabled: true` | Set `license.enabled: true` with your licence key, or alone if the licence reaches n8n another way. The render fails until you do. |
+| `N8N_DEFAULT_BINARY_DATA_MODE: filesystem` in queue mode | Remove it, and n8n uses `database`. Or set `s3.enabled: true`. The render fails until you do. |
+| `N8N_DEFAULT_BINARY_DATA_MODE` with `s3.enabled: true`, to keep binary data out of the bucket | Move it to `chartEnvOverrides.shared`. |
+
+n8n keeps reading the binary data it stored on disk before the upgrade, as long as the volume that holds it is still mounted. With `persistence.enabled: true`, files from earlier executions on main stay readable. Files on a worker, or on main without persistence, were already lost each time the pod restarted.
+
 ### Ingress and cloud integration
 
 ### Security contexts
@@ -136,3 +151,5 @@ The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The
 In queue mode, the render fails if you set `queueMode.workerConcurrency` together with `executions.concurrency.productionLimit`, or together with `N8N_CONCURRENCY_PRODUCTION_LIMIT` in `env.shared` or `env.worker`. n8n uses the production limit as each worker's concurrency and ignores the flag. To keep the concurrency your workers run at today, keep `productionLimit` and remove `workerConcurrency`.
 
 ### n8n 3.0
+
+On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist, n8n refuses to start and names them. Move the contents of `binaryData` into `storage`, remove `binaryData`, and start n8n again.

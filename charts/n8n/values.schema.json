@@ -1218,14 +1218,11 @@
         "storage": {
           "type": "object",
           "properties": {
-            "mode": { 
-              "type": "string",
-              "enum": ["filesystem", "s3"],
-              "description": "Binary data storage mode"
+            "mode": {
+              "description": "Retired. Remove it; s3.enabled sets the binary data mode."
             },
             "forcePathStyle": { "type": "boolean" }
-          },
-          "required": ["mode"]
+          }
         }
       },
       "required": ["enabled"]
@@ -1418,8 +1415,7 @@
         "properties": {
           "s3": {
             "properties": {
-              "bucket": { "required": ["name", "region"] },
-              "storage": { "required": ["mode"] }
+              "bucket": { "required": ["name", "region"] }
             },
             "anyOf": [
               {
