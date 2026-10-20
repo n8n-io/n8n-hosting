@@ -1,5 +1,5 @@
-# NOTES.txt prints the editor URL the chart sets as N8N_EDITOR_BASE_URL, so
-# the install output and n8n agree on where the instance lives.
+# NOTES.txt prints the editor URL the chart sets as N8N_EDITOR_BASE_URL, and
+# the webhook URL when it differs, so the install output and n8n agree.
 suite: 'notes: URL'
 templates:
   - templates/NOTES.txt
@@ -28,6 +28,18 @@ tests:
           pattern: 'available at:\n  https://n8n\.example\.com\n'
       - notMatchRegexRaw:
           pattern: 'http://n8n\.example\.com'
+
+  - it: prints the webhook URL when webhooks have a host of their own
+    set:
+      ingress.webhook.hosts: [hooks.example.com]
+    asserts:
+      - matchRegexRaw:
+          pattern: 'served at:\n  https://hooks\.example\.com\n'
+
+  - it: leaves out the webhook URL when it matches the editor URL
+    asserts:
+      - notMatchRegexRaw:
+          pattern: 'served at:'
 
   - it: prints editor.url when it is set
     set:

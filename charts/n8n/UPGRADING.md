@@ -131,9 +131,9 @@ n8n keeps reading the binary data it stored on disk before the upgrade, as long 
 
 ### Ingress and cloud integration
 
-The chart routes the editor and webhooks through the same hosts, so they now share one public address. In 1.x, plain-HTTP installs got `https://` webhook URLs, and installs with `editor.url` but no ingress got `http://localhost:5678`.
+The chart now sets the webhook URL from the hosts it routes webhooks on. Webhooks share the editor's address unless you give them hosts of their own, under `ingress.webhook.hosts` or `httpRoute.webhook.hostnames`. In 1.x, plain-HTTP installs got `https://` webhook URLs, installs with `editor.url` but no ingress got `http://localhost:5678`, and the chart could not route webhooks on a separate host. See [decision 0023](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0023-editor-and-webhook-urls-follow-the-routed-hosts.md).
 
-Webhooks now follow the editor URL unless `webhook.url` is set, and `webhook.url` no longer sets the editor URL. See [decision 0006](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0006-public-urls-default-to-https.md).
+Public URLs:
 
 | If your values set | What changes | Do this |
 |---|---|---|
@@ -142,7 +142,17 @@ Webhooks now follow the editor URL unless `webhook.url` is set, and `webhook.url
 | `editor.url` with no ingress, without `webhook.url` | n8n gets a webhook URL. In 1.x it showed `http://localhost:5678`. | Nothing. |
 | `webhook.url` with no ingress, without `editor.url` | The chart no longer sets an editor URL, so n8n builds it from `localhost`. | Set `editor.url`. Remove `webhook.url` if it holds the same address. |
 | `webhook.url` set to the same address as `editor.url`, or to the ingress host with no `editor.url` | Nothing. | Remove `webhook.url`. It now repeats the default. |
+| `webhook.url` on a separate host, with your own Ingress or route for it | Nothing. | Optionally, move the host to `ingress.webhook.hosts` or `httpRoute.webhook.hostnames`, remove your own Ingress or route, and remove `webhook.url`. |
 | `editor.url`, and `N8N_WEBHOOK_URL` in `env`, without `webhook.url` | The render fails, because the chart now sets `N8N_WEBHOOK_URL` from `editor.url`. | Move the address to `webhook.url`. |
+
+The webhook Ingress:
+
+| If your values set | What changes | Do this |
+|---|---|---|
+| `ingress.webhookProcessor` | The render fails and names `ingress.webhook`. | Move `className`, `annotations` and `tls` to `ingress.webhook`, and remove `enabled`. |
+| `ingress.webhookProcessor.enabled: true` | The Ingress is now named `<release>-webhook`, so Helm replaces it on upgrade. | Nothing. |
+| `webhookProcessor.enabled` and `ingress.enabled`, without `ingress.webhookProcessor.enabled` | The chart now renders the webhook Ingress, which sends the production webhook paths to the webhook processors. In 1.x they reached main. | Nothing. |
+| `ingress.webhookProcessor.className` empty | The webhook Ingress now uses `ingress.className`. | Set `ingress.webhook.className` to keep another class. |
 
 ### Security contexts
 

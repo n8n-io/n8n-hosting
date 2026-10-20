@@ -21,6 +21,7 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (Gateway API)
 - **[gateway-httproute.yaml](./gateway-httproute.yaml)** - Gateway API HTTPRoute with webhook processor routing
+- **[gateway-webhook-host.yaml](./gateway-webhook-host.yaml)** - Editor on an internal Gateway, webhooks on a public host
 
 ### Community Examples (Node Placement)
 - **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
@@ -213,7 +214,7 @@ When `disableProductionWebhooksOnMainProcess: true`, configure your load balance
 - `/form-test/*` → main service (test form triggers)
 - `/*` → main service (UI, API, everything else)
 
-The chart can create this split routing with `ingress.webhookProcessor.enabled=true`; see [https-ingress.yaml](./https-ingress.yaml). With a Gateway API implementation, `httpRoute.enabled=true` creates the same split when `webhookProcessor.enabled=true`; see [gateway-httproute.yaml](./gateway-httproute.yaml).
+With `ingress.enabled=true`, the chart creates this split routing; see [https-ingress.yaml](./https-ingress.yaml). With a Gateway API implementation, `httpRoute.enabled=true` creates the same split when `webhookProcessor.enabled=true`; see [gateway-httproute.yaml](./gateway-httproute.yaml).
 
 ### Testing
 ```bash
