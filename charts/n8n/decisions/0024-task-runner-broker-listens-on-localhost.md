@@ -1,7 +1,7 @@
 # 0024. The task-runner broker listens on n8n's default address
 
 Date: 2026-10-20
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/265
 
 ## Context
 
