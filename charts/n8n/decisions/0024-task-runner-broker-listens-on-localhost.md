@@ -13,7 +13,7 @@ The sidecar shares the pod's network namespace, so it reaches the broker on loca
 
 The chart does not set `N8N_RUNNERS_BROKER_LISTEN_ADDRESS`, so the broker listens where n8n puts it. `taskRunners.broker.listenAddress` retires. An install that runs a runner outside the pod sets the variable in `env.worker`, or in `env.main` in standalone mode.
 
-This sits under "One place to set anything, and a defined winner": the chart sets a variable only where its own topology needs it, and the env maps are the one home for the rest.
+The chart sets an n8n variable only where the pods it renders need one, and these pods do not need this one. An install that does need it sets it in the env maps, its one home under "One place to set anything, and a defined winner".
 
 ## Consequences
 
