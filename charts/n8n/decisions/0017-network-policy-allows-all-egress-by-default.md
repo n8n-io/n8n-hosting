@@ -5,7 +5,7 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/000
 
 ## Context
 
-In chart 1.x, `templates/networkpolicy.yaml` rendered a fixed policy and ignored `networkPolicy.ingress` and `networkPolicy.egress`. A values file that restricted ingress to one namespace still allowed port 5678 from anywhere. The fixed egress allowed DNS, the database port, the Redis port and 443. That blocked an S3-compatible store on another port, such as MinIO on 9000, and n8n does not start when it cannot reach its bucket. It also blocked workflows that call SMTP, LDAP, plain HTTP or an internal service on any other port.
+In chart 1.x, `templates/networkpolicy.yaml` rendered a fixed policy and ignored `networkPolicy.ingress` and `networkPolicy.egress`. A values file that restricted ingress to one namespace still allowed port 5678 from anywhere. The fixed egress allowed DNS, the database port, the Redis port and 443. That blocked an S3-compatible store on another port, such as MinIO on 9000, and n8n does not start when it cannot reach its bucket. It also blocked workflows that call SMTP, LDAP, plain HTTP or an internal service on any other port. Values that look set but do nothing go against DESIGN.md's "Fail loudly, never silently".
 
 ## Decision
 
@@ -15,8 +15,6 @@ When a list is empty, the chart renders its own rules for that direction:
 
 - Ingress allows the release's own pods and any source on `service.port`. The chart cannot know which namespace or labels an ingress controller uses, so a narrower default would assume a vendor. This follows DESIGN.md's "Portable primitives with portable defaults".
 - Egress allows all traffic. n8n's job is calling the systems its workflows name, on whatever port they listen on, and the chart cannot know them in advance. An allow-list of ports breaks real workflows, and the user only finds out when one fails.
-
-Before this change the values silently did nothing, which DESIGN.md's "Fail loudly, never silently" rules out.
 
 ## Consequences
 

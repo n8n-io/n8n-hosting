@@ -139,6 +139,8 @@ If your values set either list, check it before you upgrade. Those rules now tak
 
 ### Changed defaults
 
+With `networkPolicy.enabled` and no `networkPolicy.egress` set, the NetworkPolicy now allows all egress. See [Network policy](#network-policy).
+
 `queueMode.workerConcurrency` is now empty by default, so workers start without a `--concurrency` flag and use n8n's default of 10.
 
 In queue mode, the render fails if you set `queueMode.workerConcurrency` together with `executions.concurrency.productionLimit`, or together with `N8N_CONCURRENCY_PRODUCTION_LIMIT` in `env.shared` or `env.worker`. n8n uses the production limit as each worker's concurrency and ignores the flag. To keep the concurrency your workers run at today, keep `productionLimit` and remove `workerConcurrency`.

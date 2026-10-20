@@ -127,4 +127,14 @@ tests:
       networkPolicy.ingress: allow-all
     asserts:
       - failedTemplate:
-          errorPattern: "networkPolicy.ingress"
+          errorPattern: "at '/networkPolicy/ingress'"
+
+  - it: rejects a misspelt key
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.egres:
+        - to:
+            - podSelector: {}
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'egres' not allowed"
