@@ -1,7 +1,7 @@
 # 0025. Pods get only what n8n uses, and main recreates on single-node storage
 
 Date: 2026-10-20
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/266
 
 ## Context
 
