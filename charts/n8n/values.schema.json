@@ -34,6 +34,80 @@
       },
       "required": ["name"],
       "additionalProperties": false
+    },
+    "podSecurityContext": {
+      "type": ["object", "null"],
+      "description": "A Kubernetes PodSecurityContext. Every field accepts null, which removes the default.",
+      "properties": {
+        "appArmorProfile": { "$ref": "#/definitions/profile" },
+        "fsGroup": { "type": ["integer", "null"], "minimum": 0 },
+        "fsGroupChangePolicy": { "type": ["string", "null"], "enum": ["Always", "OnRootMismatch", null] },
+        "runAsGroup": { "type": ["integer", "null"], "minimum": 0 },
+        "runAsNonRoot": { "type": ["boolean", "null"] },
+        "runAsUser": { "type": ["integer", "null"], "minimum": 0 },
+        "seLinuxChangePolicy": { "type": ["string", "null"], "enum": ["MountOption", "Recursive", null] },
+        "seLinuxOptions": { "$ref": "#/definitions/seLinuxOptions" },
+        "seccompProfile": { "$ref": "#/definitions/profile" },
+        "supplementalGroups": { "type": ["array", "null"], "items": { "type": "integer", "minimum": 0 } },
+        "supplementalGroupsPolicy": { "type": ["string", "null"], "enum": ["Merge", "Strict", null] },
+        "sysctls": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": "string" }
+            },
+            "required": ["name", "value"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "containerSecurityContext": {
+      "type": ["object", "null"],
+      "description": "A Kubernetes SecurityContext for a container. Every field accepts null, which removes the default.",
+      "properties": {
+        "allowPrivilegeEscalation": { "type": ["boolean", "null"] },
+        "appArmorProfile": { "$ref": "#/definitions/profile" },
+        "capabilities": {
+          "type": ["object", "null"],
+          "properties": {
+            "add": { "type": ["array", "null"], "items": { "type": "string" } },
+            "drop": { "type": ["array", "null"], "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "privileged": { "type": ["boolean", "null"] },
+        "procMount": { "type": ["string", "null"], "enum": ["Default", "Unmasked", null] },
+        "readOnlyRootFilesystem": { "type": ["boolean", "null"] },
+        "runAsGroup": { "type": ["integer", "null"], "minimum": 0 },
+        "runAsNonRoot": { "type": ["boolean", "null"] },
+        "runAsUser": { "type": ["integer", "null"], "minimum": 0 },
+        "seLinuxOptions": { "$ref": "#/definitions/seLinuxOptions" },
+        "seccompProfile": { "$ref": "#/definitions/profile" }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": ["object", "null"],
+      "description": "A seccompProfile or appArmorProfile.",
+      "properties": {
+        "type": { "type": ["string", "null"], "enum": ["RuntimeDefault", "Localhost", "Unconfined", null] },
+        "localhostProfile": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "seLinuxOptions": {
+      "type": ["object", "null"],
+      "properties": {
+        "level": { "type": ["string", "null"] },
+        "role": { "type": ["string", "null"] },
+        "type": { "type": ["string", "null"] },
+        "user": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
     }
   },
   "properties": {
@@ -389,32 +463,28 @@
       "default": {}
     },
     "securityContext": {
-      "type": "object",
-      "properties": {
-        "enabled": { "type": "boolean" },
-        "fsGroup": { "type": "integer", "minimum": 0 },
-        "runAsUser": { "type": "integer", "minimum": 0 },
-        "runAsGroup": { "type": "integer", "minimum": 0 }
-      }
+      "description": "Retired. Set podSecurityContext.shared instead."
     },
     "podSecurityContext": {
       "type": "object",
-      "description": "Pod securityContext per role. A role block replaces securityContext for that role and is rendered as written.",
+      "description": "Pod securityContext. Each role block merges over shared field by field and wins over it. A null removes a field.",
       "properties": {
-        "main": { "type": "object" },
-        "worker": { "type": "object" },
-        "webhookProcessor": { "type": "object" }
+        "shared": { "$ref": "#/definitions/podSecurityContext" },
+        "main": { "$ref": "#/definitions/podSecurityContext" },
+        "worker": { "$ref": "#/definitions/podSecurityContext" },
+        "webhookProcessor": { "$ref": "#/definitions/podSecurityContext" }
       },
       "additionalProperties": false
     },
     "containerSecurityContext": {
       "type": "object",
-      "description": "Container securityContext per container. User values merge over the defaults in values.yaml, and a null removes a field. taskRunner applies to the task-runner sidecar on main and worker pods.",
+      "description": "Container securityContext. Each role block merges over shared field by field and wins over it. A null removes a field. taskRunner applies to the task-runner sidecar on main and worker pods.",
       "properties": {
-        "main": { "type": "object" },
-        "worker": { "type": "object" },
-        "webhookProcessor": { "type": "object" },
-        "taskRunner": { "type": "object" }
+        "shared": { "$ref": "#/definitions/containerSecurityContext" },
+        "main": { "$ref": "#/definitions/containerSecurityContext" },
+        "worker": { "$ref": "#/definitions/containerSecurityContext" },
+        "webhookProcessor": { "$ref": "#/definitions/containerSecurityContext" },
+        "taskRunner": { "$ref": "#/definitions/containerSecurityContext" }
       },
       "additionalProperties": false
     },
@@ -1157,14 +1227,11 @@
         "storage": {
           "type": "object",
           "properties": {
-            "mode": { 
-              "type": "string",
-              "enum": ["filesystem", "s3"],
-              "description": "Binary data storage mode"
+            "mode": {
+              "description": "Retired. Remove it; s3.enabled sets the binary data mode."
             },
             "forcePathStyle": { "type": "boolean" }
-          },
-          "required": ["mode"]
+          }
         }
       },
       "required": ["enabled"]
@@ -1321,8 +1388,7 @@
         "properties": {
           "s3": {
             "properties": {
-              "bucket": { "required": ["name", "region"] },
-              "storage": { "required": ["mode"] }
+              "bucket": { "required": ["name", "region"] }
             },
             "anyOf": [
               {

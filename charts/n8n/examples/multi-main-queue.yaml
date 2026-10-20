@@ -68,8 +68,6 @@ s3:
     region: "us-east-1"
   auth:
     autoDetect: true  # Using IRSA
-  storage:
-    mode: "s3"
 
 # Service account with enterprise IAM role
 serviceAccount:
@@ -154,11 +152,6 @@ executions:
 # Core secrets
 secretRefs:
   existingSecret: "n8n-enterprise-secrets"
-
-# Enterprise security settings
-securityContext:
-  runAsUser: 1000
-  fsGroup: 1000
 
 # Pod disruption budget for high availability
 podDisruptionBudget:

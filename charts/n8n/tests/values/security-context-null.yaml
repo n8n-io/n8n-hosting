@@ -1,5 +1,11 @@
-# A null removes a default that values.yaml sets: one field on main, and
-# every field on worker.
+# A null removes a field the shared block sets. Pods: the pinned IDs on
+# main, as on OpenShift. Containers: one field on main, and every field on
+# worker.
+podSecurityContext:
+  main:
+    fsGroup: null
+    runAsUser: null
+    runAsGroup: null
 containerSecurityContext:
   main:
     allowPrivilegeEscalation: null

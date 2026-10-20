@@ -80,9 +80,6 @@ s3:
     # secretAccessKeySecret:
     #   name: "s3-credentials"
     #   key: "secret-access-key"
-  
-  storage:
-    mode: "s3"
 
 # Service Account with AWS IAM Role
 serviceAccount:
@@ -173,11 +170,6 @@ probes:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
-
-# Security context
-securityContext:
-  runAsUser: 1000
-  fsGroup: 1000
 
 # Pod disruption budget for high availability
 podDisruptionBudget:

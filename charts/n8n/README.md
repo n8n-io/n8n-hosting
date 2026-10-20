@@ -189,6 +189,40 @@ serviceAccount:
 
 To use the namespace's default ServiceAccount, set `name: ""`. If you set `create: false` without also changing `name` from the chart default `"n8n"`, rendering will fail with a clear error — this prevents pods from being wired to a ServiceAccount that was never created.
 
+## Binary data
+
+n8n stores binary data, such as files passed between nodes, in one of several places. The chart sets the mode only when `s3.enabled` is true. Otherwise n8n picks it for the topology.
+
+| Configuration | Mode | Where the data lives |
+|---|---|---|
+| `s3.enabled: true` | `s3` | The S3 bucket |
+| Queue mode | `database` | The n8n database |
+| Standalone with `persistence.enabled: true` | `filesystem` | `/home/node/.n8n/storage` on the PVC |
+| Standalone without persistence | `filesystem` | An emptyDir, lost when the pod restarts |
+
+An install that already has `/home/node/.n8n/binaryData` keeps using it on n8n 2.x. n8n 3.0 renames it to `storage` on first start.
+
+S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot and logs that the licence is missing, so the chart requires `license.enabled: true` alongside `s3.enabled: true`.
+
+In `database` mode, n8n rejects files over 512 MiB. `N8N_BINARY_DATA_DATABASE_MAX_FILE_SIZE` in `env.shared` raises the limit, up to 1024 MiB.
+
+In queue mode, the render fails if `N8N_DEFAULT_BINARY_DATA_MODE` is `filesystem` in an `env` map or in `chartEnvOverrides`. The pods do not share a disk, so one pod cannot read binary data that another pod writes.
+
+To keep the bucket for execution data and store binary data elsewhere, set the mode in `chartEnvOverrides`:
+
+```yaml
+s3:
+  enabled: true
+chartEnvOverrides:
+  shared:
+    N8N_DEFAULT_BINARY_DATA_MODE: database
+env:
+  shared:
+    N8N_EXECUTION_DATA_STORAGE_MODE: s3
+```
+
+If you turn S3 off later, n8n can no longer read the binary data it stored in the bucket.
+
 ## Environment variables
 
 Set n8n environment variables per component, as flat maps:
@@ -254,6 +288,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `taskRunners.enabled` | Task runner sidecars | `false` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
+| `s3.enabled` | Store binary data in an S3 bucket. Requires an n8n Business or Enterprise licence and `license.enabled` | `false` |
 | `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
 | `strategy` | Deployment update strategy | `{}` (k8s default) |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
@@ -273,9 +308,10 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
 | `hostAliases` | Extra `/etc/hosts` entries for all n8n pods | `[]` |
-| `securityContext` | Pod securityContext for all n8n pods (`fsGroup`, `runAsUser`, `runAsGroup`) | enabled, `1000` |
-| `podSecurityContext.<role>` | Pod securityContext for `main`, `worker` or `webhookProcessor`; replaces `securityContext` for that role | `{}` |
-| `containerSecurityContext.<role>` | Container securityContext for `main`, `worker`, `webhookProcessor` or `taskRunner` | no privilege escalation, all capabilities dropped |
+| `podSecurityContext.shared` | Pod securityContext for every n8n pod | UID, GID and `fsGroup` 1000, non-root, `RuntimeDefault` seccomp |
+| `podSecurityContext.<role>` | Merged over `shared` for `main`, `worker` or `webhookProcessor` | `{}` |
+| `containerSecurityContext.shared` | Container securityContext for every n8n container and the task-runner sidecar | no privilege escalation, all capabilities dropped |
+| `containerSecurityContext.<role>` | Merged over `shared` for `main`, `worker`, `webhookProcessor` or `taskRunner` | `{}` |
 | `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
 
 See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
@@ -361,25 +397,20 @@ See [`examples/node-placement.yaml`](https://github.com/n8n-io/n8n-hosting/blob/
 
 ## Security Context
 
-Every n8n pod runs with `securityContext`: UID, GID and `fsGroup` 1000, `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. Set `securityContext.enabled: false` to drop these defaults.
+`podSecurityContext.shared` and `containerSecurityContext.shared` apply to every n8n pod and container. Each role block merges over `shared` field by field, and the role wins. Set only the fields that change. Set a field to `null` to remove it, in `shared` or for one role. A list such as `capabilities.drop` replaces the inherited list whole.
 
-To set a different pod securityContext for one role, set `podSecurityContext.<role>`. The block replaces the defaults for that role and is rendered as written, so include every field you want.
+Every n8n pod runs with UID, GID and `fsGroup` 1000, `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. Set `podSecurityContext.shared: null` to drop these defaults.
 
 ```yaml
-# OpenShift: let the restricted SCC assign the UID and GID. Set the same for
-# webhookProcessor when it is enabled.
+# OpenShift: let the restricted SCC assign the UID and GID.
 podSecurityContext:
-  main:
-    runAsNonRoot: true
-    seccompProfile:
-      type: RuntimeDefault
-  worker:
-    runAsNonRoot: true
-    seccompProfile:
-      type: RuntimeDefault
+  shared:
+    fsGroup: null
+    runAsUser: null
+    runAsGroup: null
 ```
 
-The n8n containers and the task-runner sidecar set `allowPrivilegeEscalation: false` and drop all capabilities. Containers added with `extraContainers` or `extraInitContainers` get none of them. The defaults are in `values.yaml` under `containerSecurityContext.<role>`, so your values merge over them. Set only the fields that change, and set a field to `null` to remove it. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
+The n8n containers and the task-runner sidecar set `allowPrivilegeEscalation: false` and drop all capabilities. Containers added with `extraContainers` or `extraInitContainers` get none of them. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
 
 ```yaml
 # Run the task runner as nobody (UID and GID 65532), as n8n's hardening guide recommends.
@@ -389,20 +420,7 @@ containerSecurityContext:
     runAsGroup: 65532
 ```
 
-To give several containers the same setting, use a YAML anchor:
-
-```yaml
-containerSecurityContext:
-  main: &n8n
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop: [ALL]
-    readOnlyRootFilesystem: true
-  worker: *n8n
-  webhookProcessor: *n8n
-```
-
-`readOnlyRootFilesystem` needs writable volumes at the paths n8n writes to, such as `/tmp` and `~/.n8n`. `extraVolumes` and `extraVolumeMounts` add them to the n8n containers. They do not reach the task-runner sidecar, so leave `readOnlyRootFilesystem` off `taskRunner`.
+`readOnlyRootFilesystem` needs writable volumes at the paths n8n writes to, such as `/tmp` and `~/.n8n`. `extraVolumes` and `extraVolumeMounts` add them to the n8n containers. They do not reach the task-runner sidecar, so if you set `readOnlyRootFilesystem` in `shared`, set it to `null` for `taskRunner`.
 
 ## Task Runners
 
