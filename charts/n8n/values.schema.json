@@ -535,6 +535,22 @@
       "type": "object",
       "properties": { "create": { "type": "boolean" } }
     },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "ingress": {
+          "type": "array",
+          "description": "NetworkPolicy ingress rules. When set, they replace the chart's ingress rules. Empty allows the release's own pods and any source on service.port.",
+          "items": { "type": "object" }
+        },
+        "egress": {
+          "type": "array",
+          "description": "NetworkPolicy egress rules. When set, they replace the chart's egress rules. Empty allows all egress.",
+          "items": { "type": "object" }
+        }
+      }
+    },
     "probes": {
       "type": "object",
       "properties": {

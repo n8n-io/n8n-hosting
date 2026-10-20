@@ -1,0 +1,130 @@
+# networkPolicy.ingress and networkPolicy.egress each replace the chart's
+# rules for their direction when set. Left empty, ingress allows the
+# release's own pods and any source on the service port, and egress allows
+# everything.
+suite: 'NetworkPolicy'
+templates:
+  - templates/networkpolicy.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: allows the release's pods and any source on the service port by default
+    set:
+      networkPolicy.enabled: true
+    asserts:
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - podSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: n8n
+                      app.kubernetes.io/instance: RELEASE-NAME
+              ports:
+                - protocol: TCP
+                  port: 5678
+            - from: []
+              ports:
+                - protocol: TCP
+                  port: 5678
+
+  - it: allows all egress by default
+    set:
+      networkPolicy.enabled: true
+    asserts:
+      - equal:
+          path: spec.egress
+          value:
+            - {}
+
+  - it: allows egress to an S3 endpoint on a non-443 port by default
+    set:
+      networkPolicy.enabled: true
+      s3.enabled: true
+      s3.bucket.name: n8n
+      s3.bucket.region: us-east-1
+      s3.bucket.host: minio:9000
+      s3.storage.mode: s3
+    asserts:
+      - equal:
+          path: spec.egress
+          value:
+            - {}
+
+  - it: renders the ingress rules as given
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: ingress-system
+          ports:
+            - protocol: TCP
+              port: 5678
+    asserts:
+      - equal:
+          path: spec.ingress
+          value:
+            - from:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: ingress-system
+              ports:
+                - protocol: TCP
+                  port: 5678
+      - equal:
+          path: spec.egress
+          value:
+            - {}
+
+  - it: renders the egress rules as given
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.egress:
+        - to:
+            - ipBlock:
+                cidr: 10.0.0.0/8
+          ports:
+            - protocol: TCP
+              port: 5432
+    asserts:
+      - equal:
+          path: spec.egress
+          value:
+            - to:
+                - ipBlock:
+                    cidr: 10.0.0.0/8
+              ports:
+                - protocol: TCP
+                  port: 5432
+      - lengthEqual:
+          path: spec.ingress
+          count: 2
+
+  - it: keeps both policy types when the user sets rules
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress:
+        - from:
+            - podSelector: {}
+      networkPolicy.egress:
+        - to:
+            - podSelector: {}
+    asserts:
+      - equal:
+          path: spec.policyTypes
+          value: [Ingress, Egress]
+
+  - it: rejects ingress rules that are not a list
+    set:
+      networkPolicy.enabled: true
+      networkPolicy.ingress: allow-all
+    asserts:
+      - failedTemplate:
+          errorPattern: "networkPolicy.ingress"

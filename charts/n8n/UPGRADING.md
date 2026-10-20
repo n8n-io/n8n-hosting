@@ -127,6 +127,14 @@ The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The
 
 ### Network policy
 
+The NetworkPolicy now renders `networkPolicy.ingress` and `networkPolicy.egress`. In 1.x the chart ignored both. A list you set replaces the chart's rules for that direction and does not merge with them. See [decision 0017](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0017-network-policy-allows-all-egress-by-default.md).
+
+If you leave `networkPolicy.egress` empty, the policy now allows all egress. In 1.x it allowed only DNS, the database port, the Redis port and 443.
+
+If you leave `networkPolicy.ingress` empty, nothing changes. The policy allows the release's own pods and any source on `service.port`.
+
+If your values set either list, check it before you upgrade. Those rules now take effect, and they are the only rules for that direction. An egress list must allow DNS, the database, Redis, your S3 endpoint and every system your workflows call. An ingress list must allow your ingress controller. It must also allow any in-cluster client that calls n8n, such as the `helm test` pod.
+
 ### Persistence
 
 ### Changed defaults
