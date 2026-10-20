@@ -25,4 +25,6 @@ The call, in the present tense. Name the principle it sits under.
 What this means for the chart, for customers upgrading, and what it closes off.
 ```
 
+A record is not rewritten once it has merged. When a later change reverses or replaces a call, write a new record with a `Supersedes:` line under its PR line, and add a `Superseded by:` line to the old one.
+
 A decision that changes customer-visible behaviour also gets a line in `../UPGRADING.md` linking back here.

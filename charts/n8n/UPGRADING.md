@@ -97,7 +97,7 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 
 ### Security contexts
 
-The chart-wide `securityContext` block is retired. `podSecurityContext` and `containerSecurityContext` each have a `shared` block that applies to every pod or container. Each role block merges over `shared` field by field, and the role wins. Set a field to `null` to remove it. See [decision 0005](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0005-per-role-security-context.md).
+The chart-wide `securityContext` block is retired. `podSecurityContext` and `containerSecurityContext` each have a `shared` block that applies to every pod or container. Each role block merges over `shared` field by field, and the role wins. Set a field to `null` to remove it. See [decision 0021](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0021-security-contexts-merge-over-shared.md).
 
 Move your settings as follows:
 
