@@ -8,6 +8,7 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
   webhookProcessor.enabled: true
+  license.enabled: true
   s3.enabled: true
   s3.bucket.name: n8n-data
   s3.bucket.region: eu-west-1
@@ -37,18 +38,6 @@ tests:
           content:
             configMapRef:
               name: RELEASE-NAME-n8n
-
-  - it: keeps an explicit s3 mode
-    template: templates/configmap.yaml
-    documentSelector:
-      path: metadata.name
-      value: RELEASE-NAME-n8n
-    set:
-      s3.storage.mode: s3
-    asserts:
-      - equal:
-          path: data.N8N_DEFAULT_BINARY_DATA_MODE
-          value: s3
 
   # Keeps the bucket for execution data while binary data goes elsewhere.
   - it: lets chartEnvOverrides replace the S3 mode

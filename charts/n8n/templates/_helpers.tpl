@@ -284,6 +284,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Remove it; nothing replaces it."
 - path: securityContext
   replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
+- path: s3.storage.mode
+  replacement: "Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
 {{- end -}}
 
 {{/*
@@ -442,11 +444,8 @@ runner and n8n drift onto different versions. */ -}}
 {{- if and .Values.s3.auth.autoDetect (not .Values.serviceAccount.awsRoleArn) -}}
 {{- $errs = append $errs "serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)" -}}
 {{- end -}}
-{{- with .Values.s3.storage.mode -}}
-{{- if ne . "s3" -}}
-{{- $where := ternary ", so n8n writes binary data to each pod's local disk and not to S3" "" (eq . "filesystem") -}}
-{{- $errs = append $errs (printf "s3.storage.mode is %q but s3.enabled=true%s. Set s3.storage.mode to \"s3\", or remove it to follow s3.enabled. S3 binary data storage requires an n8n Business or Enterprise licence. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE instead." . $where) -}}
-{{- end -}}
+{{- if not .Values.license.enabled -}}
+{{- $errs = append $errs "s3.enabled=true requires license.enabled=true. n8n stores binary data in S3 only with a Business or Enterprise licence, and exits at boot without one. Set license.activationKey or license.existingSecret.name, or set license.enabled=true alone if the licence reaches n8n another way." -}}
 {{- end -}}
 {{- end -}}
 

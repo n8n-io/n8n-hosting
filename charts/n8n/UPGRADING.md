@@ -95,13 +95,14 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 
 ### Binary data and S3
 
-With `s3.enabled: true`, n8n now stores binary data in the S3 bucket. In 1.x the chart set the mode to `filesystem`, so n8n wrote binary data to each pod's local disk and the bucket held no binary data. See [decision 0011](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0011-binary-data-mode.md).
+With `s3.enabled: true`, n8n now stores binary data in the S3 bucket. In 1.x the chart set the mode to `filesystem`, so n8n wrote binary data to each pod's local disk and the bucket held no binary data. See [decision 0022](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0022-binary-data-mode.md).
 
-S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot. If your install has no such licence, set `s3.enabled: false` before you upgrade.
+S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot, so the chart now requires `license.enabled: true` alongside `s3.enabled: true`. If your install has no such licence, set `s3.enabled: false` before you upgrade.
 
 | If your values set | Do this |
 |---|---|
-| `s3.storage.mode: filesystem` with `s3.enabled: true` | Remove the line, or set it to `s3`. The render fails until you do. |
+| `s3.storage.mode` | Remove the line. `s3.enabled` sets the mode. The render fails until you do. |
+| `s3.enabled: true` without `license.enabled: true` | Set `license.enabled: true` with your licence key, or alone if the licence reaches n8n another way. The render fails until you do. |
 | `N8N_DEFAULT_BINARY_DATA_MODE: filesystem` in queue mode | Remove it, and n8n uses `database`. Or set `s3.enabled: true`. The render fails until you do. |
 | `N8N_DEFAULT_BINARY_DATA_MODE` with `s3.enabled: true`, to keep binary data out of the bucket | Move it to `chartEnvOverrides.shared`. |
 

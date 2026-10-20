@@ -838,6 +838,9 @@ redis:
 
 # ----- S3 External Storage (required for queue mode with binary data) -----
 s3:
+  # With S3 enabled, n8n stores binary data in the bucket. This needs an n8n
+  # Business or Enterprise licence and license.enabled=true. To store binary
+  # data elsewhere, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE.
   enabled: false
   # S3 bucket configuration
   bucket:
@@ -853,14 +856,5 @@ s3:
       key: ""                                  # <-- Key inside the secret
   # Storage configuration
   storage:
-    # Binary data storage mode. Leave empty to store binary data in S3 whenever
-    # s3.enabled=true. With S3 enabled, a non-empty value other than "s3" fails
-    # the render. S3 binary data storage requires an n8n Business or Enterprise
-    # licence, and n8n exits at boot without one. To keep the bucket for
-    # execution data and store binary data elsewhere, set
-    # chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE. With S3 off, this
-    # value is unused: the chart sets no mode and n8n picks one for the
-    # topology, "database" in queue mode and "filesystem" otherwise.
-    mode: ""
     # S3 specific settings
     forcePathStyle: false                      # <-- Force path-style URLs (for S3-compatible providers)

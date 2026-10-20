@@ -158,7 +158,8 @@ rather than queueMode.enabled. */ -}}
 {{- $_ := set $e "N8N_EDITOR_BASE_URL" (dict "value" . "from" "editor.url") -}}
 {{- end -}}
 {{- if $v.s3.enabled -}}
-{{- $_ := set $e "N8N_DEFAULT_BINARY_DATA_MODE" (dict "value" ($v.s3.storage.mode | default "s3") "from" "s3.enabled") -}}
+{{- /* s3.enabled cannot choose another mode, so only an override can. */ -}}
+{{- $_ := set $e "N8N_DEFAULT_BINARY_DATA_MODE" (dict "value" "s3" "from" "s3.enabled" "overrideOnly" true) -}}
 {{- $_ := set $e "N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME" (dict "value" $v.s3.bucket.name "from" "s3.bucket.name") -}}
 {{- $_ := set $e "N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION" (dict "value" $v.s3.bucket.region "from" "s3.bucket.region") -}}
 {{- with $v.s3.bucket.host -}}
@@ -554,7 +555,11 @@ n8n.validate to report.
 {{- else if hasKey $chart $k -}}
 {{- $_ := set $reported $id true -}}
 {{- $from := (get $chart $k).from -}}
+{{- if (get $chart $k).overrideOnly -}}
+{{- $errs = append $errs (printf "%s is set by the chart from %s. Put it in chartEnvOverrides.%s to override the chart deliberately." $id $from $m) -}}
+{{- else -}}
 {{- $errs = append $errs (printf "%s is set by the chart from %s. Set %s instead, or put it in chartEnvOverrides.%s to override the chart deliberately." $id $from $from $m) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
