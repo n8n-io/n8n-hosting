@@ -69,3 +69,22 @@ tests:
             rollingUpdate:
               maxSurge: 0
               maxUnavailable: 1
+
+  - it: clears rollingUpdate when an explicit strategy is Recreate
+    template: templates/deployment-main.yaml
+    set:
+      persistence.enabled: false
+      queueMode.enabled: true
+      database.type: postgresdb
+      database.useExternal: true
+      database.host: postgres.example.com
+      redis.enabled: true
+      redis.host: redis.example.com
+      strategy:
+        type: Recreate
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: Recreate
+            rollingUpdate: null

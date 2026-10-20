@@ -556,7 +556,7 @@
     },
     "enableServiceLinks": {
       "type": "boolean",
-      "description": "Inject Docker-style <SERVICE>_HOST and <SERVICE>_PORT variables for every Service in the namespace into n8n pods. A Service named n8n sets N8N_PORT and stops n8n starting."
+      "description": "Inject <SERVICE>_HOST and <SERVICE>_PORT variables for every Service in the namespace into n8n pods. A Service named n8n sets N8N_PORT and stops n8n starting."
     },
     "probes": {
       "type": "object",

@@ -265,14 +265,17 @@ on an existing Deployment, which it rejects alongside Recreate.
 {{- define "n8n.strategy" -}}
 {{- if .Values.strategy -}}
 {{- toYaml .Values.strategy -}}
+{{- if and (eq (toString .Values.strategy.type) "Recreate") (not (hasKey .Values.strategy "rollingUpdate")) }}
+rollingUpdate: null
+{{- end -}}
 {{- else if .Values.persistence.enabled -}}
-{{- $shared := false -}}
+{{- $multiNode := false -}}
 {{- range .Values.persistence.accessModes -}}
 {{- if not (has . (list "ReadWriteOnce" "ReadWriteOncePod")) -}}
-{{- $shared = true -}}
+{{- $multiNode = true -}}
 {{- end -}}
 {{- end -}}
-{{- if and .Values.persistence.accessModes (not $shared) -}}
+{{- if and .Values.persistence.accessModes (not $multiNode) -}}
 type: Recreate
 rollingUpdate: null
 {{- end -}}

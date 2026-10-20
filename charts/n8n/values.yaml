@@ -172,12 +172,9 @@ taskRunners:
       failureThreshold: 6
 
 # ----- Deployment Strategy -----
-# Update strategy for the main Deployment. Left empty, the chart uses Recreate
-# when persistence is enabled and every persistence.accessModes entry is
-# ReadWriteOnce or ReadWriteOncePod, because a rolling update cannot attach
-# that volume to the new pod. Otherwise Kubernetes rolls the pods. With
-# persistence.existingClaim, set accessModes to match your claim, or set the
-# strategy here.
+# Update strategy for the main Deployment. Left empty, it is Recreate when
+# every persistence.accessModes entry is ReadWriteOnce or ReadWriteOncePod,
+# because a rolling update cannot attach that volume to the new pod.
 strategy: {}
 
 # ----- Service links -----

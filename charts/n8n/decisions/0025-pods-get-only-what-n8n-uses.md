@@ -1,11 +1,11 @@
-# 0024. Pods get only what n8n uses, and main recreates on single-node storage
+# 0025. Pods get only what n8n uses, and main recreates on single-node storage
 
 Date: 2026-10-20
 PR: https://github.com/n8n-io/n8n-hosting/pull/000
 
 ## Context
 
-Chart 1.x left four Kubernetes defaults in place that n8n does not need, and one of them stops n8n starting:
+Chart 1.x shipped three defaults that n8n does not need, and the first of them can stop n8n starting:
 
 - Kubernetes adds `<SERVICE>_HOST` and `<SERVICE>_PORT` variables for every Service in the namespace to every pod. n8n reads `N8N_PORT`, so a Service named `n8n` sets it to `tcp://10.0.0.1:5678`, and n8n fails to parse it.
 - The chart created a Role that reads ConfigMaps and Secrets, and Kubernetes mounted the ServiceAccount token into each pod. n8n never calls the Kubernetes API, and it runs code its users write, so the token gives that code access it has no use for.
@@ -17,7 +17,7 @@ The chart sets `enableServiceLinks: false` on every n8n pod, and `rbac.create` a
 
 When `strategy` is empty, `persistence.enabled` is true and every entry in `persistence.accessModes` is `ReadWriteOnce` or `ReadWriteOncePod`, the main Deployment uses `Recreate`. A `strategy` the user sets always wins. The chart reads the access modes from values rather than from the cluster, so it still renders without one. With `existingClaim`, the user describes their claim in `persistence.accessModes`. Other storage, and installs without persistence, keep the Kubernetes default.
 
-The chart renders `rollingUpdate: null` with `Recreate`. Kubernetes filled in `rollingUpdate` on every 1.x Deployment and rejects it alongside `Recreate`, and the null removes it when Helm applies the change on the client.
+The chart renders `rollingUpdate: null` with `Recreate`, its own or a user's that sets no `rollingUpdate`. Kubernetes filled in `rollingUpdate` on every 1.x Deployment and rejects it alongside `Recreate`, and the null removes it when Helm applies the change on the client.
 
 ## Consequences
 
