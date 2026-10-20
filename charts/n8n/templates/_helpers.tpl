@@ -64,44 +64,60 @@ always set by the chart.
 {{- end -}}
 
 {{/*
-Pod securityContext for a role (main, worker, webhookProcessor). A role's
-podSecurityContext block replaces the chart-wide securityContext for that
-role, so the block is rendered exactly as written.
+Merge the map "over" onto the map "base", field by field, and return JSON.
+Nested maps merge, any other value replaces the base, and a null removes the
+field. A nested map left empty is dropped. The merge is written out rather
+than using mergeOverwrite, because some Sprig versions skip false and 0 when
+overwriting, and a role must be able to set either.
 */}}
-{{- define "n8n.podSecurityContext" -}}
-{{- $root := .root -}}
-{{- $override := index ($root.Values.podSecurityContext | default dict) .role -}}
-{{- if $override -}}
-{{- toYaml $override -}}
-{{- else if $root.Values.securityContext.enabled -}}
-fsGroup: {{ $root.Values.securityContext.fsGroup }}
-runAsUser: {{ $root.Values.securityContext.runAsUser }}
-runAsGroup: {{ $root.Values.securityContext.runAsGroup }}
-runAsNonRoot: true
-seccompProfile:
-  type: RuntimeDefault
+{{- define "n8n.mergeOver" -}}
+{{- $base := index . 0 | default dict -}}
+{{- $out := deepCopy $base -}}
+{{- range $k, $v := index . 1 | default dict -}}
+{{- if kindIs "invalid" $v -}}
+{{- $_ := unset $out $k -}}
+{{- else if kindIs "map" $v -}}
+{{- $sub := index $out $k -}}
+{{- $merged := include "n8n.mergeOver" (list (ternary $sub dict (kindIs "map" $sub)) $v) | fromJson -}}
+{{- if $merged -}}
+{{- $_ := set $out $k $merged -}}
+{{- else -}}
+{{- $_ := unset $out $k -}}
+{{- end -}}
+{{- else -}}
+{{- $_ := set $out $k $v -}}
+{{- end -}}
+{{- end -}}
+{{- toJson $out -}}
+{{- end -}}
+
+{{/*
+securityContext for a role from a podSecurityContext or
+containerSecurityContext map: the shared block with the role block merged
+over it. The shared block is merged onto an empty map first, so a null in it
+is dropped too.
+*/}}
+{{- define "n8n.securityContextFor" -}}
+{{- $contexts := .contexts | default dict -}}
+{{- $shared := include "n8n.mergeOver" (list dict (index $contexts "shared")) | fromJson -}}
+{{- with include "n8n.mergeOver" (list $shared (index $contexts .role)) | fromJson -}}
+{{- toYaml . -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
+Pod securityContext for a role (main, worker, webhookProcessor).
+*/}}
+{{- define "n8n.podSecurityContext" -}}
+{{- include "n8n.securityContextFor" (dict "contexts" .root.Values.podSecurityContext "role" .role) -}}
+{{- end -}}
+
+{{/*
 Container securityContext for a role (main, worker, webhookProcessor,
-taskRunner). The defaults live in values.yaml, so Helm merges user values over
-them and a null removes a field. helm upgrade --reuse-values renders with the
-previous chart's values.yaml, which may have no entry for the role, so the
-hardened default is rendered when the role is missing.
+taskRunner). taskRunner is the task-runner sidecar on main and worker pods.
 */}}
 {{- define "n8n.containerSecurityContext" -}}
-{{- $roles := .root.Values.containerSecurityContext | default dict -}}
-{{- if hasKey $roles .role -}}
-{{- with index $roles .role -}}
-{{- toYaml . -}}
-{{- end -}}
-{{- else -}}
-allowPrivilegeEscalation: false
-capabilities:
-  drop:
-    - ALL
-{{- end -}}
+{{- include "n8n.securityContextFor" (dict "contexts" .root.Values.containerSecurityContext "role" .role) -}}
 {{- end -}}
 
 {{/*
@@ -266,6 +282,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
   replacement: "Remove it; nothing replaces it."
+- path: securityContext
+  replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
 {{- end -}}
 
 {{/*

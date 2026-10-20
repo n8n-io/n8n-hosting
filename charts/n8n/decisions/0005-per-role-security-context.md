@@ -2,6 +2,7 @@
 
 Date: 2026-10-09
 PR: https://github.com/n8n-io/n8n-hosting/pull/236
+Superseded by: [0021](0021-security-contexts-merge-over-shared.md)
 
 ## Context
 
