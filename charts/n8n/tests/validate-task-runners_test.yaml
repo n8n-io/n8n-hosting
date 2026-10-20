@@ -58,3 +58,11 @@ tests:
       env.taskRunner.N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT: health
     asserts:
       - notFailedTemplate: {}
+
+  - it: names the replacement for taskRunners.broker.listenAddress
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.broker.listenAddress: 0.0.0.0
+    asserts:
+      - failedTemplate:
+          errorMessage: 'taskRunners.broker.listenAddress is no longer a chart value. Remove it. The broker listens on localhost, where the task-runner sidecar reaches it. For a runner outside the pod, set N8N_RUNNERS_BROKER_LISTEN_ADDRESS in env.worker, or in env.main in standalone mode. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'

@@ -240,10 +240,12 @@
         "broker": {
           "type": "object",
           "properties": {
-            "listenAddress": { "type": "string", "minLength": 1 },
+            "listenAddress": {
+              "description": "Retired. Remove it; the broker listens on localhost. For a runner outside the pod, set N8N_RUNNERS_BROKER_LISTEN_ADDRESS in env.worker or env.main."
+            },
             "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
           },
-          "required": ["listenAddress", "port"]
+          "required": ["port"]
         },
         "launcher": {
           "type": "object",

@@ -235,6 +235,24 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-n8n-task-runner
 
+  - it: leaves the broker listen address to n8n
+    template: templates/configmap.yaml
+    asserts:
+      - notExists:
+          path: data.N8N_RUNNERS_BROKER_LISTEN_ADDRESS
+
+  - it: renders a broker listen address set in a worker env map
+    template: templates/configmap.yaml
+    set:
+      env.worker.N8N_RUNNERS_BROKER_LISTEN_ADDRESS: 0.0.0.0
+    asserts:
+      - equal:
+          path: data.N8N_RUNNERS_BROKER_LISTEN_ADDRESS
+          value: 0.0.0.0
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+
   - it: renders a ConfigMap only for the components that run
     template: templates/configmap.yaml
     set:

@@ -288,6 +288,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
 - path: taskRunners.authToken.value
   replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
+- path: taskRunners.broker.listenAddress
+  replacement: "Remove it. The broker listens on localhost, where the task-runner sidecar reaches it. For a runner outside the pod, set N8N_RUNNERS_BROKER_LISTEN_ADDRESS in env.worker, or in env.main in standalone mode."
 {{- end -}}
 
 {{/*
