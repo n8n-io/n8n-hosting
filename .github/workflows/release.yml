@@ -1,7 +1,8 @@
 # Each branch releases its own line from its own release-please config and
 # manifest: main the current chart major, and each release/n8n-<major>.x branch
-# the chart line for that n8n major. The file itself is the same on every
-# branch, so a change here is made on main and backported.
+# the chart line for that n8n major. Every branch releases through its own
+# copy of this file, so a change here is made on main and then opened against
+# each maintenance branch as a PR of its own.
 name: Release
 
 on:
