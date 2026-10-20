@@ -72,5 +72,6 @@ redis:
   port: 6379
 
 # Core secrets
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"

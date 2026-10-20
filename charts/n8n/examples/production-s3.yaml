@@ -155,6 +155,7 @@ executions:
     softDeleteInterval: 60   # minutes between soft delete runs
 
 # Core secrets reference
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 

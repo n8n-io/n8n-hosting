@@ -286,6 +286,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
 - path: s3.storage.mode
   replacement: "Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
+- path: taskRunners.authToken.value
+  replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
 {{- end -}}
 
 {{/*
@@ -409,6 +411,18 @@ per mistake.
 {{/* --- Task runners --- */}}
 {{- if and .Values.taskRunners.enabled (ne .Values.taskRunners.mode "external") -}}
 {{- $errs = append $errs "taskRunners.mode must be 'external'. This chart only supports external task runner sidecars." -}}
+{{- end -}}
+{{- /* The token lives in the core Secret by default. The chart cannot see into
+an existing Secret, so it checks only the token it renders itself. */ -}}
+{{- $tokenSecret := .Values.taskRunners.authToken.existingSecret -}}
+{{- $inlineToken := .Values.secretRefs.env.N8N_RUNNERS_AUTH_TOKEN | default "" -}}
+{{- if and .Values.taskRunners.enabled (not $tokenSecret) (not .Values.secretRefs.existingSecret) (not $inlineToken) -}}
+{{- $errs = append $errs "taskRunners.enabled=true requires an auth token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN to a token, which you can generate with: openssl rand -base64 32. Or set taskRunners.authToken.existingSecret to a Secret that holds it." -}}
+{{- end -}}
+{{- if and $inlineToken .Values.secretRefs.existingSecret -}}
+{{- $errs = append $errs (printf "secretRefs.env.N8N_RUNNERS_AUTH_TOKEN has no effect with secretRefs.existingSecret. Add the token to %s under the key N8N_RUNNERS_AUTH_TOKEN, and remove secretRefs.env.N8N_RUNNERS_AUTH_TOKEN." .Values.secretRefs.existingSecret) -}}
+{{- else if and $inlineToken $tokenSecret -}}
+{{- $errs = append $errs "secretRefs.env.N8N_RUNNERS_AUTH_TOKEN and taskRunners.authToken.existingSecret are mutually exclusive. Use one or the other." -}}
 {{- end -}}
 {{- if and .Values.taskRunners.enabled ((.Values.taskRunners.probes | default dict).liveness | default dict).enabled -}}
 {{- $healthPort := include "n8n.taskRunnerHealthCheckPort" . -}}

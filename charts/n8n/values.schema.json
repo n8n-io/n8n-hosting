@@ -231,7 +231,10 @@
           "properties": {
             "existingSecret": { "type": "string" },
             "existingSecretKey": { "type": "string" },
-            "value": { "type": "string" }
+            "value": {
+              "type": "string",
+              "description": "Retired. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, or add N8N_RUNNERS_AUTH_TOKEN to the Secret in secretRefs.existingSecret."
+            }
           }
         },
         "broker": {
@@ -1106,6 +1109,10 @@
               "type": "string",
               "pattern": "^(/.*)?$",
               "description": "Absolute path of a mounted encryption key file. When set, n8n containers read the key from this file instead of N8N_ENCRYPTION_KEY"
+            },
+            "N8N_RUNNERS_AUTH_TOKEN": {
+              "type": "string",
+              "description": "Task-runner auth token for the chart-managed Secret. With secretRefs.existingSecret, put the token in that Secret instead"
             }
           },
           "additionalProperties": { "type": "string" }

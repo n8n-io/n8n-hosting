@@ -285,7 +285,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `envFrom.<component>` | ConfigMaps and Secrets loaded whole | `[]` |
 | `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
-| `taskRunners.enabled` | Task runner sidecars | `false` |
+| `taskRunners.enabled` | Task runner sidecars. Requires an auth token: `N8N_RUNNERS_AUTH_TOKEN` in the core Secret (`secretRefs.existingSecret` or `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`), or a Secret of its own in `taskRunners.authToken.existingSecret` | `true` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
 | `s3.enabled` | Store binary data in an S3 bucket. Requires an n8n Business or Enterprise licence and `license.enabled` | `false` |
@@ -424,26 +424,27 @@ containerSecurityContext:
 
 ## Task Runners
 
-Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, worker pods get a runner sidecar in queue mode (manual executions are offloaded to workers). In standalone mode (`queueMode.enabled=false`), the main pod gets a runner sidecar instead.
+Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. They are on by default. Worker pods get a runner sidecar in queue mode (manual executions are offloaded to workers). In standalone mode (`queueMode.enabled=false`), the main pod gets a runner sidecar instead.
+
+Each sidecar requests 100m CPU and 128Mi of memory, with limits of 500m and 512Mi. Change them under `taskRunners.resources`. To run code inside the n8n process instead, set `taskRunners.enabled: false`. n8n deprecates this internal mode from 3.0.
 
 **How it works:** The n8n process that executes workflows runs a task broker on port 5679, and its runner sidecar connects to that broker over localhost to receive and execute code tasks. In queue mode the executing process is the worker, so only worker pods run a broker and get a sidecar. n8n does not start a broker on main pods when manual executions are offloaded to workers, which the chart always enables in queue mode.
 
 **Requires n8n 2.13.0 or later.** Earlier versions also run a broker on main pods, and 1.108.0 to 2.12.x need a runner there for the MCP Server Trigger, so pinning `image.tag` below 2.13.0 leaves those executions without a runner. The chart does not enforce this version floor when `image.tag` is overridden.
 
-**Enable task runners:**
-```yaml
-taskRunners:
-  enabled: true
-  authToken:
-    existingSecret: "n8n-runner-token"
-    existingSecretKey: "auth-token"
-```
+**Auth token:** the runner and the broker authenticate with a shared token. The chart reads it from the core Secret, the one that holds the encryption key, under the key `N8N_RUNNERS_AUTH_TOKEN`:
 
-Create the auth token secret:
-```bash
-kubectl create secret generic n8n-runner-token \
-  --from-literal=auth-token=$(openssl rand -base64 32)
-```
+- With `secretRefs.existingSecret`, add the key to that Secret:
+  ```bash
+  kubectl patch secret n8n-core-secrets --type merge --patch-file /dev/stdin <<EOF
+  {"stringData":{"N8N_RUNNERS_AUTH_TOKEN":"$(openssl rand -base64 32)"}}
+  EOF
+  ```
+- Without it, set `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` next to the encryption key, and the chart renders it into its Secret.
+
+Each pod reads the token when its containers start. If you change the token in an existing Secret while n8n is running, restart the n8n Deployments with `kubectl rollout restart`. Otherwise a sidecar that restarts on its own reads a token its n8n container does not hold.
+
+To keep the token in a Secret of its own, set `taskRunners.authToken.existingSecret`, and `existingSecretKey` if the key is not `N8N_RUNNERS_AUTH_TOKEN`. The chart never generates the token, so `helm template` and Argo CD render the same output as `helm install`.
 
 **Health probe:** the sidecar has a liveness probe on the launcher's health endpoint, `/healthz` on port `5680`. The launcher answers this endpoint itself, so a runner busy with a long task does not fail the probe. Kubernetes restarts the sidecar only when the launcher stops responding. The launcher already restarts a runner that stops responding. Tune or disable the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `env.taskRunner`, the probe uses that port. Set it as a literal, because the chart cannot read a reference and leaves the probe out in that case.
 

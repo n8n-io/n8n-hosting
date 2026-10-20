@@ -152,6 +152,7 @@ executions:
     pruneSoftDeleteInterval: "0 3 * * *"  # Daily at 3 AM
 
 # Core secrets
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-enterprise-secrets"
 

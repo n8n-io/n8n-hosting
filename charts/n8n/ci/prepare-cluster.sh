@@ -11,7 +11,9 @@ kubectl create secret generic n8n-core-secrets \
   --from-literal=N8N_ENCRYPTION_KEY=test-encryption-key-must-be-long-enough \
   --from-literal=N8N_HOST=localhost \
   --from-literal=N8N_PORT=5678 \
-  --from-literal=N8N_PROTOCOL=http
+  --from-literal=N8N_PROTOCOL=http \
+  --from-literal=N8N_RUNNERS_AUTH_TOKEN="$(openssl rand -base64 32)"
+# The 1.x task-runners example reads its token from here, for the upgrade test.
 kubectl create secret generic n8n-runner-token \
   --from-literal=auth-token="$(openssl rand -base64 32)"
 # The fixture Redis has no password, and Redis accepts one anyway.

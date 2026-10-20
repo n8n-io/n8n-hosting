@@ -33,7 +33,7 @@ The chart's Secret holds only secrets. Host, port and protocol are no longer rea
 | `secretRefs.env.N8N_HOST` or `secretRefs.env.N8N_PROTOCOL` | Remove them. n8n builds its public URLs from `editor.url` and `webhook.url`. If you still need either variable, set it in `env.shared`. |
 | `secretRefs.env.N8N_PORT` | Remove it. The chart sets `N8N_PORT` from `service.port` on every n8n process, workers included. |
 
-If you use `secretRefs.existingSecret`, the Secret needs only the `N8N_ENCRYPTION_KEY` key, or no key at all if you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. The chart reads that one key by name and ignores the rest of the Secret. A Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` still renders, but n8n no longer receives those values.
+If you use `secretRefs.existingSecret`, the Secret needs the `N8N_ENCRYPTION_KEY` key, unless you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. With task runners enabled, it also needs `N8N_RUNNERS_AUTH_TOKEN`; see [Task runners](#task-runners). The chart reads those keys by name and ignores the rest of the Secret. A Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` still renders, but n8n no longer receives those values.
 
 In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` and `webhook.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`. After that, you can delete the three keys from the Secret.
 
@@ -93,6 +93,27 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 
 ### Task runners
 
+Task runners are on by default. In queue mode, each worker pod gains a `task-runner` container that requests 100m CPU and 128Mi of memory. In standalone mode, the main pod gains it instead. Plan node capacity for the extra requests, or adjust them under `taskRunners.resources`. To keep code running inside the n8n process, set `taskRunners.enabled: false`. See [decision 0014](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0014-task-runners-on-by-default.md).
+
+With task runners enabled, the runner and the broker need a shared auth token. The chart reads it from the core Secret under the key `N8N_RUNNERS_AUTH_TOKEN`, and never generates it. See [decision 0019](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0019-task-runner-token-in-the-core-secret.md).
+
+- If you set `secretRefs.existingSecret`, add the token to that Secret. For example:
+
+  ```bash
+  kubectl patch secret n8n-core-secrets --type merge --patch-file /dev/stdin <<EOF
+  {"stringData":{"N8N_RUNNERS_AUTH_TOKEN":"$(openssl rand -base64 32)"}}
+  EOF
+  ```
+
+  The chart cannot see into that Secret. If the key is missing, the pods do not start, and their events name the key.
+- If the chart manages the core Secret, set `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` next to `secretRefs.env.N8N_ENCRYPTION_KEY`. The render fails until you do.
+- If you set `taskRunners.authToken.existingSecret`, there is nothing to do.
+- If you set `taskRunners.authToken.value`, remove it. Then supply the token as the two bullets above describe: in the Secret named in `secretRefs.existingSecret`, or in `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`. The render fails on the old key and names both places.
+
+A new token works straight away. The runner and the broker share a pod, and every pod restarts on upgrade, so you do not need to keep the token the 1.x chart generated.
+
+The chart does not render a separate task-runner Secret, so Helm removes the one ending in `-task-runners` on upgrade. Do not name that Secret in `taskRunners.authToken.existingSecret`.
+
 ### Binary data and S3
 
 With `s3.enabled: true`, n8n now stores binary data in the S3 bucket. In 1.x the chart set the mode to `filesystem`, so n8n wrote binary data to each pod's local disk and the bucket held no binary data. See [decision 0022](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0022-binary-data-mode.md).
@@ -149,6 +170,10 @@ The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The
 `queueMode.workerConcurrency` is now empty by default, so workers start without a `--concurrency` flag and use n8n's default of 10.
 
 In queue mode, the render fails if you set `queueMode.workerConcurrency` together with `executions.concurrency.productionLimit`, or together with `N8N_CONCURRENCY_PRODUCTION_LIMIT` in `env.shared` or `env.worker`. n8n uses the production limit as each worker's concurrency and ignores the flag. To keep the concurrency your workers run at today, keep `productionLimit` and remove `workerConcurrency`.
+
+`taskRunners.enabled` is now `true`. See [Task runners](#task-runners).
+
+`taskRunners.resources.requests.memory` is now `128Mi`, down from `256Mi`. The limit stays `512Mi`.
 
 ### n8n 3.0
 
