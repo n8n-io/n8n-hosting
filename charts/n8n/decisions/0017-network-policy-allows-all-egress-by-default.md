@@ -1,7 +1,7 @@
 # 0017. The NetworkPolicy allows all egress by default, and set rules replace the chart's
 
 Date: 2026-10-20
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/263
 
 ## Context
 
