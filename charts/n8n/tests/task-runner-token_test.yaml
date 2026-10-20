@@ -140,4 +140,4 @@ tests:
       taskRunners.authToken.value: test-token
     asserts:
       - failedTemplate:
-          errorMessage: 'taskRunners.authToken.value is no longer a chart value. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+          errorMessage: 'taskRunners.authToken.value is no longer a chart value. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'

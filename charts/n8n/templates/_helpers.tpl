@@ -285,7 +285,7 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
 - path: securityContext
   replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
 - path: taskRunners.authToken.value
-  replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead."
+  replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
 {{- end -}}
 
 {{/*

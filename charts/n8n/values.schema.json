@@ -233,7 +233,7 @@
             "existingSecretKey": { "type": "string" },
             "value": {
               "type": "string",
-              "description": "Retired. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead."
+              "description": "Retired. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, or add N8N_RUNNERS_AUTH_TOKEN to the Secret in secretRefs.existingSecret."
             }
           }
         },

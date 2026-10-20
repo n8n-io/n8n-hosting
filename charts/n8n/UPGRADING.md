@@ -31,7 +31,7 @@ The chart's Secret holds only secrets. Host, port and protocol are no longer rea
 | `secretRefs.env.N8N_HOST` or `secretRefs.env.N8N_PROTOCOL` | Remove them. n8n builds its public URLs from `editor.url` and `webhook.url`. If you still need either variable, set it in `env.shared`. |
 | `secretRefs.env.N8N_PORT` | Remove it. The chart sets `N8N_PORT` from `service.port` on every n8n process, workers included. |
 
-If you use `secretRefs.existingSecret`, the Secret needs only the `N8N_ENCRYPTION_KEY` key, or no key at all if you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. The chart reads that one key by name and ignores the rest of the Secret. A Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` still renders, but n8n no longer receives those values.
+If you use `secretRefs.existingSecret`, the Secret needs the `N8N_ENCRYPTION_KEY` key, unless you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. With task runners enabled, it also needs `N8N_RUNNERS_AUTH_TOKEN`; see [Task runners](#task-runners). The chart reads those keys by name and ignores the rest of the Secret. A Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` still renders, but n8n no longer receives those values.
 
 In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` and `webhook.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`. After that, you can delete the three keys from the Secret.
 
@@ -98,14 +98,15 @@ With task runners enabled, the runner and the broker need a shared auth token. T
 - If you set `secretRefs.existingSecret`, add the token to that Secret. For example:
 
   ```bash
-  kubectl patch secret n8n-core-secrets --type merge \
-    -p "{\"stringData\":{\"N8N_RUNNERS_AUTH_TOKEN\":\"$(openssl rand -base64 32)\"}}"
+  kubectl patch secret n8n-core-secrets --type merge --patch-file /dev/stdin <<EOF
+  {"stringData":{"N8N_RUNNERS_AUTH_TOKEN":"$(openssl rand -base64 32)"}}
+  EOF
   ```
 
   The chart cannot see into that Secret. If the key is missing, the pods do not start, and their events name the key.
 - If the chart manages the core Secret, set `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` next to `secretRefs.env.N8N_ENCRYPTION_KEY`. The render fails until you do.
 - If you set `taskRunners.authToken.existingSecret`, there is nothing to do.
-- If you set `taskRunners.authToken.value`, move the token to `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`. The render fails on the old key and names the new one.
+- If you set `taskRunners.authToken.value`, remove it. Then supply the token as the two bullets above describe: in the Secret named in `secretRefs.existingSecret`, or in `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`. The render fails on the old key and names both places.
 
 A new token works straight away. The runner and the broker share a pod, and every pod restarts on upgrade, so you do not need to keep the token the 1.x chart generated.
 

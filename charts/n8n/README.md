@@ -251,7 +251,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `envFrom.<component>` | ConfigMaps and Secrets loaded whole | `[]` |
 | `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
-| `taskRunners.enabled` | Task runner sidecars. Requires an auth token source under `taskRunners.authToken` | `true` |
+| `taskRunners.enabled` | Task runner sidecars. Requires `N8N_RUNNERS_AUTH_TOKEN` in the core Secret, from `secretRefs.existingSecret` or `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` | `true` |
 | `ingress.enabled` | Create Ingress resource | `false` |
 | `persistence.enabled` | PVC for main pods | `false` |
 | `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
@@ -401,10 +401,13 @@ Each sidecar requests 100m CPU and 128Mi of memory, with limits of 500m and 512M
 
 - With `secretRefs.existingSecret`, add the key to that Secret:
   ```bash
-  kubectl patch secret n8n-core-secrets --type merge \
-    -p "{\"stringData\":{\"N8N_RUNNERS_AUTH_TOKEN\":\"$(openssl rand -base64 32)\"}}"
+  kubectl patch secret n8n-core-secrets --type merge --patch-file /dev/stdin <<EOF
+  {"stringData":{"N8N_RUNNERS_AUTH_TOKEN":"$(openssl rand -base64 32)"}}
+  EOF
   ```
 - Without it, set `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` next to the encryption key, and the chart renders it into its Secret.
+
+Each pod reads the token when its containers start. If you change the token in an existing Secret while n8n is running, restart the n8n Deployments with `kubectl rollout restart`. Otherwise a sidecar that restarts on its own reads a token its n8n container does not hold.
 
 To keep the token in a Secret of its own, set `taskRunners.authToken.existingSecret`, and `existingSecretKey` if the key is not `N8N_RUNNERS_AUTH_TOKEN`. The chart never generates the token, so `helm template` and Argo CD render the same output as `helm install`.
 
