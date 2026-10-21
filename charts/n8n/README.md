@@ -388,8 +388,13 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `persistence.enabled` | PVC for main pods | `false` |
 | `s3.enabled` | Store binary data in an S3 bucket. Requires an n8n Business or Enterprise licence and `license.enabled` | `false` |
 | `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
+<<<<<<< HEAD
 | `strategy` | Update strategy for the main Deployment. Empty uses `Recreate` when `persistence.enabled` is true and every `persistence.accessModes` entry is `ReadWriteOnce` or `ReadWriteOncePod`, and the Kubernetes default otherwise | `{}` |
 | `enableServiceLinks` | Inject `<SERVICE>_SERVICE_HOST`, `<SERVICE>_PORT` and related variables for every Service in the namespace into n8n pods | `false` |
+=======
+| `persistence.existingClaim` | A PVC you manage, used instead of the chart's. Not allowed with `persistence.size`, `persistence.accessModes` or `persistence.storageClassName` | unset |
+| `strategy` | Deployment update strategy | `{}` (k8s default) |
+>>>>>>> 6236c53 (feat(chart)!: reject values keys the schema does not declare)
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
 | `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
@@ -418,6 +423,8 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 
 See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
 
+The schema rejects any key that `values.yaml` does not declare, so a misspelt key fails the install instead of being ignored. Free-form blocks such as annotations, labels, `resources`, `affinity` and the `extra*` lists accept any key.
+
 ## Extra objects
 
 Use `extraObjects` to deploy additional Kubernetes resources with the n8n release, such as a Traefik `IngressRoute`, a `SecretProviderClass` or a `PrometheusRule`. The chart does not need to know the kind.
@@ -433,6 +440,8 @@ extraObjects:
     data:
       mainService: '{{ include "n8n.fullname" . }}-main'
 ```
+
+To template from values of your own, put them under `global`, which the schema leaves open, and read them as `{{ .Values.global.myValue }}`. The same goes for YAML anchors. Other top-level keys fail the schema.
 
 Escape any literal `{{` as `{{ "{{" }}`. This matters for objects that carry their own templates, such as Prometheus alert annotations. Without the escape, the render fails with `undefined variable`:
 
