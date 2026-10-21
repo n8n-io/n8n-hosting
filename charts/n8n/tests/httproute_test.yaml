@@ -1,0 +1,334 @@
+# The HTTPRoute sends traffic from a Gateway the cluster runs to the main
+# Service, and the webhook paths to the webhook processors when they run. Its
+# hostnames set the editor URL, as the ingress hosts do. httpRoute.webhook
+# adds a second route for webhook hosts of their own.
+suite: 'httpRoute'
+templates:
+  - templates/httproute.yaml
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  httpRoute.enabled: true
+  httpRoute.parentRefs:
+    - name: n8n-gateway
+      namespace: gateway-system
+  httpRoute.hostnames:
+    - n8n.example.com
+tests:
+  - it: renders nothing when disabled
+    template: templates/httproute.yaml
+    set:
+      httpRoute.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: attaches to the named Gateway and sends every path to main
+    template: templates/httproute.yaml
+    asserts:
+      - isKind:
+          of: HTTPRoute
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-n8n
+      - equal:
+          path: spec.parentRefs
+          value:
+            - name: n8n-gateway
+              namespace: gateway-system
+      - equal:
+          path: spec.hostnames
+          value:
+            - n8n.example.com
+      - equal:
+          path: spec.rules
+          value:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+              backendRefs:
+                - name: RELEASE-NAME-n8n-main
+                  port: 5678
+
+  - it: leaves hostnames out when none are set
+    template: templates/httproute.yaml
+    set:
+      httpRoute.hostnames: []
+    asserts:
+      - notExists:
+          path: spec.hostnames
+
+  - it: sends the webhook paths to the webhook processors
+    template: templates/httproute.yaml
+    set:
+      queueMode.enabled: true
+      database.type: postgresdb
+      database.useExternal: true
+      database.host: postgres.example.com
+      webhookProcessor.enabled: true
+    asserts:
+      - equal:
+          path: spec.rules[0]
+          value:
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /webhook/
+              - path:
+                  type: PathPrefix
+                  value: /webhook-waiting/
+              - path:
+                  type: PathPrefix
+                  value: /form/
+              - path:
+                  type: PathPrefix
+                  value: /form-waiting/
+              - path:
+                  type: PathPrefix
+                  value: /mcp/
+            backendRefs:
+              - name: RELEASE-NAME-n8n-webhook-processor
+                port: 5678
+      - equal:
+          path: spec.rules[1].backendRefs[0].name
+          value: RELEASE-NAME-n8n-main
+
+  - it: renders no webhook route without webhook hostnames
+    template: templates/httproute.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: gives webhook hostnames a route of their own and keeps the editor route on main
+    template: templates/httproute.yaml
+    set:
+      queueMode.enabled: true
+      database.type: postgresdb
+      database.useExternal: true
+      database.host: postgres.example.com
+      webhookProcessor.enabled: true
+      httpRoute.webhook:
+        hostnames: [hooks.example.com]
+        parentRefs:
+          - name: public-gateway
+            namespace: gateway-system
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: spec.rules
+          value:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+              backendRefs:
+                - name: RELEASE-NAME-n8n-main
+                  port: 5678
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook
+        documentIndex: 1
+      - equal:
+          path: spec.parentRefs
+          value:
+            - name: public-gateway
+              namespace: gateway-system
+        documentIndex: 1
+      - equal:
+          path: spec.hostnames
+          value: [hooks.example.com]
+        documentIndex: 1
+      - equal:
+          path: spec.rules
+          value:
+            - matches:
+                - path: {type: PathPrefix, value: /webhook/}
+                - path: {type: PathPrefix, value: /webhook-waiting/}
+                - path: {type: PathPrefix, value: /form/}
+                - path: {type: PathPrefix, value: /form-waiting/}
+                - path: {type: PathPrefix, value: /mcp/}
+              backendRefs:
+                - name: RELEASE-NAME-n8n-webhook-processor
+                  port: 5678
+            - matches:
+                - path: {type: PathPrefix, value: /webhook-test/}
+                - path: {type: PathPrefix, value: /form-test/}
+                - path: {type: PathPrefix, value: /mcp-test/}
+              backendRefs:
+                - name: RELEASE-NAME-n8n-main
+                  port: 5678
+        documentIndex: 1
+
+  - it: attaches the webhook route to httpRoute.parentRefs by default, and to main without webhook processors
+    template: templates/httproute.yaml
+    documentIndex: 1
+    set:
+      httpRoute.webhook.hostnames: [hooks.example.com]
+    asserts:
+      - equal:
+          path: spec.parentRefs
+          value:
+            - name: n8n-gateway
+              namespace: gateway-system
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-n8n-main
+
+  - it: sets the webhook URL from the first webhook hostname
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      httpRoute.webhook.hostnames: [hooks.example.com]
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://hooks.example.com
+
+  - it: refuses webhook hostnames with the route off
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.enabled: false
+      httpRoute.webhook.hostnames: [hooks.example.com]
+    asserts:
+      - failedTemplate:
+          errorMessage: 'httpRoute.webhook.hostnames is set, but httpRoute.enabled is false, so the chart renders no HTTPRoute for it. Set httpRoute.enabled to true, or remove httpRoute.webhook.hostnames.'
+
+  - it: merges its annotations over commonAnnotations
+    template: templates/httproute.yaml
+    set:
+      commonAnnotations:
+        team: automation
+        owner: platform
+      httpRoute.annotations:
+        owner: n8n
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            team: automation
+            owner: n8n
+
+  - it: sets both URLs from the first route hostname
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      httpRoute.hostnames:
+        - n8n.example.com
+        - n8n.example.org
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://n8n.example.com
+
+  - it: keeps the editor on the route hostname when webhook.url points elsewhere
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      webhook.url: https://hooks.example.com
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://hooks.example.com
+
+  - it: uses editor.url over the route hostname
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      editor.url: http://n8n.example.com
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: http://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: http://n8n.example.com
+
+  - it: sets no URL from a route that is turned off
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      httpRoute.enabled: false
+    asserts:
+      - notExists:
+          path: data.N8N_EDITOR_BASE_URL
+      - notExists:
+          path: data.N8N_WEBHOOK_URL
+
+  - it: accepts a route with a parentRef and the ingress off
+    template: templates/deployment-main.yaml
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: refuses the route and the ingress together
+    template: templates/deployment-main.yaml
+    set:
+      ingress.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'httpRoute.enabled and ingress.enabled are both true. The chart routes n8n through one of them. Set one to false.'
+
+  - it: refuses a route with no parentRefs
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.parentRefs: []
+    asserts:
+      - failedTemplate:
+          errorMessage: 'httpRoute.parentRefs is empty, so the route attaches to no Gateway. Name the Gateway, for example [{name: my-gateway, namespace: gateway-system}].'
+
+  - it: refuses a wildcard route hostname as the editor address
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.hostnames:
+        - '*.example.com'
+    asserts:
+      - failedTemplate:
+          errorMessage: 'The first editor host, *.example.com, is a wildcard, so the chart cannot build the editor address from it. Set editor.url.'
+
+  - it: refuses a wildcard ingress host as the editor address
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.enabled: false
+      ingress.enabled: true
+      ingress.hosts:
+        - host: '*.example.com'
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - failedTemplate:
+          errorMessage: 'The first editor host, *.example.com, is a wildcard, so the chart cannot build the editor address from it. Set editor.url.'
+
+  - it: accepts a wildcard route hostname with editor.url
+    template: templates/deployment-main.yaml
+    set:
+      editor.url: https://n8n.example.com
+      httpRoute.hostnames:
+        - '*.example.com'
+    asserts:
+      - notFailedTemplate: {}

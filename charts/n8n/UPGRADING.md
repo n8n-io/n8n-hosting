@@ -35,7 +35,7 @@ The chart's Secret holds only secrets. Host, port and protocol are no longer rea
 
 If you use `secretRefs.existingSecret`, the Secret needs the `N8N_ENCRYPTION_KEY` key, unless you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. With task runners enabled, it also needs `N8N_RUNNERS_AUTH_TOKEN`; see [Task runners](#task-runners). The chart reads those keys by name and ignores the rest of the Secret. A Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` still renders, but n8n no longer receives those values.
 
-In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` and `webhook.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`. After that, you can delete the three keys from the Secret.
+In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`. After that, you can delete the three keys from the Secret.
 
 If you set `license.activationKey` inline, the chart now stores it in the chart's Secret and the containers read it from there. You do not need to change anything. If `secretRefs.existingSecret` names the chart's own Secret (the release's full name), the render fails. Put the licence key in a Secret of your own and set `license.existingSecret` instead.
 
@@ -130,6 +130,27 @@ S3 binary data storage needs an n8n Business or Enterprise licence. Without one,
 n8n keeps reading the binary data it stored on disk before the upgrade, as long as the volume that holds it is still mounted. With `persistence.enabled: true`, files from earlier executions on main stay readable. Files on a worker, or on main without persistence, were already lost each time the pod restarted.
 
 ### Ingress and cloud integration
+
+The chart now sets the webhook URL from the hosts it routes webhooks on. Webhooks share the editor's address unless you give them hosts of their own, under `ingress.webhook.hosts` or `httpRoute.webhook.hostnames`. In 1.x, plain-HTTP installs got `https://` webhook URLs, installs with `editor.url` but no ingress got `http://localhost:5678`, and the chart could not route webhooks on a separate host. See [decision 0023](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0023-editor-and-webhook-urls-follow-the-routed-hosts.md).
+
+Public URLs:
+
+| If your values set | What changes | Do this |
+|---|---|---|
+| `editor.url` with `http://` and an ingress, without `webhook.url` | Webhook URLs move from `https://` to `http://`, matching the editor. | Nothing, unless webhooks must stay on `https://`. Then set `webhook.url`. |
+| `editor.url` on a different host from the ingress, without `webhook.url` | Webhook URLs move to the `editor.url` host. | Nothing, unless webhooks must stay on the ingress host. Then set `webhook.url` to it. |
+| `editor.url` with no ingress, without `webhook.url` | n8n gets a webhook URL. In 1.x it showed `http://localhost:5678`. | Nothing. |
+| `webhook.url` with no ingress, without `editor.url` | The chart no longer sets an editor URL, so n8n builds it from `localhost`. | Set `editor.url`. Remove `webhook.url` if it holds the same address. |
+| `webhook.url` set to the same address as `editor.url`, or to the ingress host with no `editor.url` | Nothing. | Remove `webhook.url`. It now repeats the default. |
+| `webhook.url` on a separate host, with your own Ingress or route for it | Nothing. | Optionally, move the host to `ingress.webhook.hosts` or `httpRoute.webhook.hostnames`, remove your own Ingress or route, and remove `webhook.url`. |
+| `editor.url`, and `N8N_WEBHOOK_URL` in `env`, without `webhook.url` | The render fails, because the chart now sets `N8N_WEBHOOK_URL` from `editor.url`. | Move the address to `webhook.url`. |
+
+The webhook Ingress:
+
+| If your values set | What changes | Do this |
+|---|---|---|
+| Any `ingress.webhookProcessor` key | The render fails and names `ingress.webhook`. | Move `className`, `annotations` and `tls` to `ingress.webhook`, and remove `enabled`. An empty `ingress.webhook.className` now uses `ingress.className`, so set it to keep another class. The Ingress keeps its name. |
+| `webhookProcessor.enabled` and `ingress.enabled`, with `ingress.webhookProcessor.enabled` false or unset | The chart now renders the webhook Ingress, which sends the production webhook paths to the webhook processors. In 1.x they reached main. | Nothing. |
 
 ### Security contexts
 

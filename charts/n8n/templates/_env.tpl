@@ -148,10 +148,8 @@ rather than queueMode.enabled. */ -}}
 {{- $_ := set $e "N8N_GRACEFUL_SHUTDOWN_TIMEOUT" (dict "value" $v.redis.worker.timeout "from" "redis.worker.timeout") -}}
 {{- end -}}
 {{- if $v.webhook.enabled -}}
-{{- if $v.webhook.url -}}
-{{- $_ := set $e "N8N_WEBHOOK_URL" (dict "value" $v.webhook.url "from" "webhook.url") -}}
-{{- else if and $v.ingress $v.ingress.enabled (gt (len $v.ingress.hosts) 0) -}}
-{{- $_ := set $e "N8N_WEBHOOK_URL" (dict "value" (printf "https://%s" (index $v.ingress.hosts 0).host) "from" "webhook.url (or the first ingress host)") -}}
+{{- with include "n8n.webhookUrl" .root -}}
+{{- $_ := set $e "N8N_WEBHOOK_URL" (dict "value" . "from" "webhook.url") -}}
 {{- end -}}
 {{- end -}}
 {{- with include "n8n.editorBaseUrl" .root -}}

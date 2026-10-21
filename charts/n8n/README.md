@@ -86,6 +86,8 @@ All three use the same n8n container image, differentiated by command/args.
 | [production-s3.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/production-s3.yaml) | Production with S3, HPA, multi-main |
 | [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
 | [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) | HTTPS Ingress with TLS and webhook processor routing |
+| [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-httproute.yaml) | Gateway API HTTPRoute with webhook processor routing |
+| [gateway-webhook-host.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-webhook-host.yaml) | Gateway API with the editor on an internal Gateway and webhooks on a public host |
 | [extra-objects.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/extra-objects.yaml) | Extra objects beside the chart: a Traefik IngressRoute, a PrometheusRule and a string entry |
 
 ## Secret Management
@@ -133,16 +135,58 @@ When the path is set, it wins, and any `N8N_ENCRYPTION_KEY` in values is ignored
 
 Set `ingress.enabled=true` to create the main Ingress for the n8n UI, API, and test webhooks. Configure `ingress.className`, controller-specific `ingress.annotations`, and `ingress.tls` for HTTPS termination. For cert-manager, add the issuer annotation and set `ingress.tls[].secretName` to the certificate Secret cert-manager should create.
 
-The chart sets n8n's public URLs from the first ingress host, always with `https://`. This assumes TLS ends at the ingress or in front of it, for example at a cloud load balancer. If n8n is served over plain HTTP, or on another host, set both URLs yourself:
+### Public URLs
+
+n8n has two public URLs: the editor URL (`N8N_EDITOR_BASE_URL`), for the UI and OAuth callbacks, and the webhook URL (`N8N_WEBHOOK_URL`), for webhooks, forms and MCP. The chart sets them from the hosts it routes:
+
+| URL | Set from, in order |
+|---|---|
+| Editor | `editor.url`, then `https://` and the first ingress host or `httpRoute` hostname |
+| Webhook | `webhook.url`, then `https://` and the first `ingress.webhook` host or `httpRoute.webhook` hostname, then the editor URL |
+
+The `https://` default assumes TLS ends at the ingress or in front of it, for example at a cloud load balancer. If n8n is served over plain HTTP, has no ingress, or is reached at another host, set `editor.url`, and `webhook.url` when webhooks have a host of their own. Set `webhook.url` too when webhooks arrive at an address the chart does not route, such as a separate load balancer or API gateway.
+
+The chart does not set `N8N_HOST` or `N8N_PROTOCOL`. n8n reads them only to build a fallback for a URL that is not set.
+
+### One host for the editor and webhooks
 
 ```yaml
-webhook:
-  url: http://n8n.internal   # N8N_WEBHOOK_URL
-editor:
-  url: http://n8n.internal   # N8N_EDITOR_BASE_URL
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
 ```
 
-When `webhookProcessor.enabled=true`, enable `ingress.webhookProcessor.enabled` to create a second Ingress for production webhook traffic. The webhook processor Ingress routes `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/`, and `/mcp/` to webhook processor pods. Test paths such as `/webhook-test/` and `/mcp-test/` stay on the main Ingress.
+Both URLs are `https://n8n.example.com`. When `webhookProcessor.enabled=true`, the chart adds a second Ingress on the same hosts that routes `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/` to the webhook processor pods. Test paths such as `/webhook-test/` and `/mcp-test/` stay on main. Set its `className`, `annotations` and `tls` under `ingress.webhook`.
+
+### A separate host for webhooks
+
+Use this to keep the editor on an internal host and take webhooks on a public one:
+
+```yaml
+ingress:
+  enabled: true
+  className: nginx-internal
+  hosts:
+    - host: n8n.internal.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  webhook:
+    className: nginx-external   # empty uses ingress.className
+    hosts:
+      - hooks.example.com
+    tls:
+      - secretName: hooks-tls
+        hosts:
+          - hooks.example.com
+```
+
+The editor URL is `https://n8n.internal.example.com` and the webhook URL is `https://hooks.example.com`. The editor host sends every path to main. The webhook host carries only `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/`, which go to the webhook processors when they run and to main otherwise, and `/webhook-test/`, `/form-test/` and `/mcp-test/`, which go to main. n8n builds test URLs from the webhook URL as well, so they work on the webhook host.
 
 ### MCP Server Trigger with multiple webhook processors
 
@@ -151,6 +195,46 @@ MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so 
 Use `ingress.sticky.enabled=true` for nginx cookie affinity, or `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. Multi-main deployments require sticky sessions at the load-balancing layer.
 
 See [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) for a complete HTTPS example.
+
+## Gateway API
+
+Set `httpRoute.enabled=true` to expose n8n through a Gateway API implementation, such as Envoy Gateway, Istio or Cilium. The chart renders an `HTTPRoute` and attaches it to the Gateways in `httpRoute.parentRefs`. It never creates a Gateway. TLS is configured on the Gateway's listener.
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: shared-gateway
+      namespace: gateway-system
+  hostnames:
+    - n8n.example.com
+```
+
+The route sends every path to the main pods. When `webhookProcessor.enabled=true`, it sends `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/` to the webhook processor pods, the same split as the webhook Ingress.
+
+The first hostname sets the editor URL, and the webhook URL follows it, in the same way as the first ingress host. Set `editor.url` if the Gateway serves n8n over plain HTTP.
+
+For a separate webhook host, set `httpRoute.webhook`. The chart renders a second route for it, with the same paths as the webhook Ingress on a separate host, and the editor route sends every path to main. The webhook route can attach to a different Gateway, for example a public one:
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: internal-gateway
+      namespace: gateway-system
+  hostnames:
+    - n8n.internal.example.com
+  webhook:
+    parentRefs:          # empty uses httpRoute.parentRefs
+      - name: public-gateway
+        namespace: gateway-system
+    hostnames:
+      - hooks.example.com
+```
+
+The route renders whenever it is enabled, so the Gateway API CRDs must be installed before you install the chart. Use the route or the Ingress, not both. The render fails if `httpRoute.enabled` is set with `ingress.enabled`, or without `parentRefs`.
+
+See [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-httproute.yaml) and [gateway-webhook-host.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-webhook-host.yaml) for complete examples.
 
 ## Ports and Health Checks
 
@@ -287,6 +371,9 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
 | `taskRunners.enabled` | Task runner sidecars. Requires an auth token: `N8N_RUNNERS_AUTH_TOKEN` in the core Secret (`secretRefs.existingSecret` or `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`), or a Secret of its own in `taskRunners.authToken.existingSecret` | `true` |
 | `ingress.enabled` | Create Ingress resource | `false` |
+| `ingress.webhook.hosts` | Hosts of their own for webhooks; the first sets the webhook URL | `[]` |
+| `httpRoute.enabled` | Create a Gateway API HTTPRoute | `false` |
+| `httpRoute.webhook.hostnames` | Hostnames of their own for webhooks, on a second route; the first sets the webhook URL | `[]` |
 | `persistence.enabled` | PVC for main pods | `false` |
 | `s3.enabled` | Store binary data in an S3 bucket. Requires an n8n Business or Enterprise licence and `license.enabled` | `false` |
 | `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |

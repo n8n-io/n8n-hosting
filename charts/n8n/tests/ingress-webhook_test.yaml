@@ -1,0 +1,281 @@
+# The webhook Ingress. Without ingress.webhook.hosts it shares the editor
+# hosts and sends the production webhook paths to the webhook processors.
+# With them, webhooks get hosts of their own that carry the webhook paths only.
+suite: 'ingress: webhook'
+templates:
+  - templates/ingress-webhook.yaml
+  - templates/ingress.yaml
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  queueMode.enabled: true
+  database.type: postgresdb
+  database.useExternal: true
+  database.host: postgres.example.com
+  redis.host: redis.example.com
+  ingress.enabled: true
+  ingress.className: nginx-internal
+  ingress.hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+tests:
+  - it: renders nothing without webhook processors or webhook hosts
+    template: templates/ingress-webhook.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing when the ingress is off
+    template: templates/ingress-webhook.yaml
+    set:
+      ingress.enabled: false
+      webhookProcessor.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: sends the production webhook paths on the editor hosts to the webhook processors
+    template: templates/ingress-webhook.yaml
+    set:
+      webhookProcessor.enabled: true
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+      - equal:
+          path: spec.ingressClassName
+          value: nginx-internal
+      - equal:
+          path: spec.rules[0].host
+          value: n8n.example.com
+      - equal:
+          path: spec.rules[0].http.paths
+          value:
+            - path: /webhook/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /webhook-waiting/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /form/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /form-waiting/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /mcp/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+
+  - it: gives webhook hosts the webhook paths only, with test paths on main
+    template: templates/ingress-webhook.yaml
+    set:
+      webhookProcessor.enabled: true
+      ingress.webhook:
+        className: nginx-external
+        hosts: [hooks.example.com]
+        tls:
+          - secretName: hooks-tls
+            hosts: [hooks.example.com]
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx-external
+      - lengthEqual:
+          path: spec.rules
+          count: 1
+      - equal:
+          path: spec.rules[0].host
+          value: hooks.example.com
+      - equal:
+          path: spec.rules[0].http.paths
+          value:
+            - path: /webhook/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /webhook-waiting/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /form/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /form-waiting/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /mcp/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-webhook-processor
+                  port:
+                    number: 5678
+            - path: /webhook-test/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-main
+                  port:
+                    number: 5678
+            - path: /form-test/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-main
+                  port:
+                    number: 5678
+            - path: /mcp-test/
+              pathType: Prefix
+              backend:
+                service:
+                  name: RELEASE-NAME-n8n-main
+                  port:
+                    number: 5678
+      - equal:
+          path: spec.tls[0].secretName
+          value: hooks-tls
+
+  - it: sends webhook host traffic to main without webhook processors
+    template: templates/ingress-webhook.yaml
+    set:
+      ingress.webhook.hosts: [hooks.example.com]
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: RELEASE-NAME-n8n-main
+
+  - it: keeps the editor Ingress on main only with webhook hosts
+    template: templates/ingress.yaml
+    set:
+      webhookProcessor.enabled: true
+      ingress.webhook.hosts: [hooks.example.com]
+    asserts:
+      - equal:
+          path: spec.rules
+          value:
+            - host: n8n.example.com
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: RELEASE-NAME-n8n-main
+                        port:
+                          number: 5678
+
+  - it: merges its annotations over commonAnnotations
+    template: templates/ingress-webhook.yaml
+    set:
+      webhookProcessor.enabled: true
+      commonAnnotations:
+        team: automation
+        owner: platform
+      ingress.webhook.annotations:
+        owner: n8n
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            team: automation
+            owner: n8n
+
+  - it: sets the webhook URL from the first webhook host
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      ingress.webhook.hosts: [hooks.example.com, hooks.example.org]
+    asserts:
+      - equal:
+          path: data.N8N_EDITOR_BASE_URL
+          value: https://n8n.example.com
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: https://hooks.example.com
+
+  - it: uses webhook.url over the webhook host
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    set:
+      webhook.url: http://hooks.example.com
+      ingress.webhook.hosts: [hooks.example.com]
+    asserts:
+      - equal:
+          path: data.N8N_WEBHOOK_URL
+          value: http://hooks.example.com
+
+  - it: refuses webhook hosts with the ingress off
+    template: templates/deployment-main.yaml
+    set:
+      ingress.enabled: false
+      ingress.webhook.hosts: [hooks.example.com]
+    asserts:
+      - failedTemplate:
+          errorMessage: 'ingress.webhook.hosts is set, but ingress.enabled is false, so the chart renders no Ingress for it. Set ingress.enabled to true, or remove ingress.webhook.hosts.'
+
+  - it: refuses a wildcard webhook host as the webhook address
+    template: templates/deployment-main.yaml
+    set:
+      ingress.webhook.hosts: ['*.example.com']
+    asserts:
+      - failedTemplate:
+          errorMessage: 'The first webhook host, *.example.com, is a wildcard, so the chart cannot build the webhook address from it. Set webhook.url.'
+
+  - it: accepts a wildcard webhook host with webhook.url
+    template: templates/deployment-main.yaml
+    set:
+      webhook.url: https://hooks.example.com
+      ingress.webhook.hosts: ['*.example.com']
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: names ingress.webhook when ingress.webhookProcessor is set
+    template: templates/deployment-main.yaml
+    set:
+      ingress.webhookProcessor.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'ingress.webhookProcessor is no longer a chart value. Move className, annotations and tls to ingress.webhook, and remove enabled. The webhook Ingress renders whenever webhookProcessor.enabled is true. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
