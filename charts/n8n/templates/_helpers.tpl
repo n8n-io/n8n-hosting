@@ -689,7 +689,7 @@ Main pod replica count: multiMain.replicas under multi-main, otherwise replicaCo
 Handler for a worker liveness or readiness probe. A command runs as an exec
 probe; without one, the worker is probed on its health endpoint.
 n8n.validate fails the render when the endpoint is off and there is no
-command, so there is no fallback check here.
+command.
 
 Call with (dict "probe" .Values.probes.worker.liveness "root" .)
 */}}
