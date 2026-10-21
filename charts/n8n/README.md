@@ -423,7 +423,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 
 See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
 
-The schema rejects any key that `values.yaml` does not declare, so a misspelt key fails the install instead of being ignored. Free-form blocks such as annotations, labels, `affinity` and each component's `resources` accept any key, and the `extra*` lists accept any entry.
+The schema rejects any key it does not declare, so a misspelt key fails the install instead of being ignored. Free-form blocks such as annotations, labels, `affinity` and each component's `resources` accept any key, and the `extra*` lists accept any entry.
 
 ## Extra objects
 
