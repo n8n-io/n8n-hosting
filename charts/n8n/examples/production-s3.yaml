@@ -187,7 +187,7 @@ securityContext:
   fsGroup: 1000
 
 # Pod disruption budget for high availability
-podDisruptionBudget:
+pdb:
   enabled: true
   minAvailable: 1
 
