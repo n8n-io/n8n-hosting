@@ -1,7 +1,7 @@
 # 0016. The values schema rejects unknown keys
 
 Date: 2026-10-21
-PR: https://github.com/n8n-io/n8n-hosting/pull/TBD
+PR: https://github.com/n8n-io/n8n-hosting/pull/270
 
 ## Context
 
