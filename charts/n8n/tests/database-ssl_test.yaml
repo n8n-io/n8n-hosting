@@ -70,3 +70,12 @@ tests:
           content:
             name: DB_POSTGRESDB_SSL_ENABLED
           any: true
+
+  - it: names the replacement for the retired database.ssl.key
+    template: templates/deployment-main.yaml
+    set:
+      database.ssl.enabled: true
+      database.ssl.key: "-----BEGIN PRIVATE KEY-----"
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.ssl.key is no longer a chart value. Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'

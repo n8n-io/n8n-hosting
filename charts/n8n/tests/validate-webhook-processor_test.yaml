@@ -29,10 +29,10 @@ tests:
       webhookProcessor.enabled: true
       keda.webhookProcessor.enabled: true
       keda.webhookProcessor.triggers:
-        - type: cpu
-          metricType: Utilization
+        - type: redis
           metadata:
-            value: "70"
+            listName: "bull:jobs:wait"
+            listLength: "5"
     asserts:
       - notFailedTemplate: {}
 

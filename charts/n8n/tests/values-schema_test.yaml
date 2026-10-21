@@ -1,0 +1,59 @@
+# The schema rejects any key it does not declare, outside the free-form
+# passthroughs, so a typo fails the render instead of rendering the default
+# (decisions/0016).
+suite: 'values schema: unknown keys'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: rejects an unknown root key and names it
+    template: templates/deployment-main.yaml
+    set:
+      databse.host: postgres.example.com
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'databse' not allowed"
+
+  - it: rejects an unknown key inside a block and names it
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.workerReplicas: 3
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/queueMode': additional properties 'workerReplicas' not allowed"
+
+  - it: accepts any keys under global, which a parent chart sets
+    template: templates/deployment-main.yaml
+    set:
+      global.imageRegistry: registry.example.com
+      global.cattle.clusterId: c-abc12
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: accepts enabled=true from a parent chart's dependency condition
+    template: templates/deployment-main.yaml
+    set:
+      enabled: true
+    asserts:
+      - notFailedTemplate: {}
+
+  # Setting enabled: false directly would not turn anything off.
+  - it: rejects enabled=false
+    template: templates/deployment-main.yaml
+    set:
+      enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/enabled'"
+
+  - it: accepts unknown keys inside a passthrough
+    template: templates/deployment-main.yaml
+    set:
+      resources.main.limits.ephemeral-storage: 2Gi
+      podLabels.team: automation
+      strategy.rollingUpdate.maxSurge: 25%
+    asserts:
+      - notFailedTemplate: {}

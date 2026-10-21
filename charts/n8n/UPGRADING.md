@@ -20,9 +20,19 @@ Pass your values file with `-f`. Do not use `--reuse-values`. It keeps the defau
 
 ### Values validation
 
+The schema rejects any values key it does not know, so a typo or a key from another chart fails the install or upgrade instead of being ignored. Helm checks the schema before it renders, and names each key and where it sits:
+
+```
+- at '/queueMode': additional properties 'workerReplicas' not allowed
+```
+
+Remove each key the error names, or correct its spelling against [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml). Free-form blocks still accept any key: annotations, labels, `nodeSelector`, `tolerations`, `affinity`, `resources`, `strategy`, `dnsConfig` and the `extra*` lists. If you keep your own top-level keys, for YAML anchors or for values your `extraObjects` read through `tpl`, move them under `global`. To skip the schema check for one release, Helm 3.16 and later take `--skip-schema-validation`. The chart's own checks still run. See [decision 0016](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0016-values-schema-rejects-unknown-keys.md).
+
 If your values file sets a key the chart no longer reads, the render fails. The message names each such key and what replaces it, all in one render. The chart stops rather than ignoring the key, so a setting cannot quietly stop working. See [decision 0020](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0020-retired-values-keys-fail-the-render.md).
 
 ### Database
+
+The chart never read `database.ssl.key`, and setting it now fails the render. Put the client key in a Secret, and set `database.ssl.existingSecret.name` and `database.ssl.existingSecret.keyKey`. See [decision 0002](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0002-postgres-tls-material-from-an-existing-secret.md).
 
 ### Secrets and host settings
 
@@ -164,6 +174,8 @@ The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The
 ### Network policy
 
 ### Persistence
+
+With `persistence.existingClaim`, remove `persistence.size`, `persistence.storageClassName` and `persistence.accessModes` from your values. The chart does not create a PVC when you supply one, so those keys did nothing, and the render now fails on them.
 
 ### Changed defaults
 
