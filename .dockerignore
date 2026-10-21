@@ -1,0 +1,6 @@
+node_modules
+.git
+.env
+.env.*
+.DS_Store
+.vscode
