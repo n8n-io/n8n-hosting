@@ -67,14 +67,14 @@ s3:
     name: "n8n-enterprise-storage"
     region: "us-east-1"
   auth:
-    autoDetect: true  # Using IRSA
+    autoDetect: true  # AWS SDK credential chain, here IRSA on EKS
 
 # Service account with enterprise IAM role
 serviceAccount:
   create: true
   name: n8n-enterprise
-  awsRoleArn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
   annotations:
+    # IRSA on EKS. Remove it if you use Pod Identity or access keys.
     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
 
 # n8n Enterprise License Configuration

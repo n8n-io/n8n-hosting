@@ -1,0 +1,54 @@
+# The main Ingress names no controller. Controller settings, such as
+# ingress-nginx cookie affinity, arrive through ingress.annotations.
+suite: 'ingress: main'
+templates:
+  - templates/ingress.yaml
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  ingress.enabled: true
+  ingress.className: nginx
+tests:
+  - it: renders no annotations by default, even with the nginx class
+    template: templates/ingress.yaml
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: passes ingress.annotations through
+    template: templates/ingress.yaml
+    set:
+      ingress.annotations:
+        nginx.ingress.kubernetes.io/affinity: cookie
+        nginx.ingress.kubernetes.io/session-cookie-name: n8n_affinity
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            nginx.ingress.kubernetes.io/affinity: cookie
+            nginx.ingress.kubernetes.io/session-cookie-name: n8n_affinity
+
+  - it: merges commonAnnotations under ingress.annotations
+    template: templates/ingress.yaml
+    set:
+      commonAnnotations:
+        team: platform
+        owner: common
+      ingress.annotations:
+        owner: ingress
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            team: platform
+            owner: ingress
+
+  - it: names the replacement for ingress.sticky
+    template: templates/deployment-main.yaml
+    set:
+      ingress.sticky.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'ingress.sticky is no longer a chart value. Set your ingress controller''s session affinity annotations in ingress.annotations. examples/https-ingress.yaml shows them for ingress-nginx. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
