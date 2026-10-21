@@ -51,7 +51,7 @@ services:
       - N8N_PROTOCOL=https
       - NODE_ENV=production
       - N8N_PATH
-      - WEBHOOK_URL=https://${DOMAIN_NAME}${N8N_PATH}
+      - N8N_WEBHOOK_URL=https://${DOMAIN_NAME}${N8N_PATH}
       - N8N_RUNNERS_MODE=external
       - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}
       - N8N_RUNNERS_BROKER_LISTEN_ADDRESS=0.0.0.0
