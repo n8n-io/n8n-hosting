@@ -301,6 +301,8 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
 | `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `networkPolicy.enabled` | Network policies | `false` |
+| `networkPolicy.ingress` | Ingress rules that replace the chart's. Empty allows the release's own pods and any source on `service.port` | `[]` |
+| `networkPolicy.egress` | Egress rules that replace the chart's. Empty allows all egress | `[]` |
 | `extraObjects` | Additional Kubernetes objects rendered with the release | `[]` |
 | `extraVolumes` / `extraVolumeMounts` | Volumes and n8n-container mounts shared by main, worker, and webhook-processor pods | `[]` / `[]` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
