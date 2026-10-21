@@ -29,7 +29,7 @@ The root declares `global` as an open object and `enabled` as accepting only `tr
 
 Retired keys stay declared and accept any value, so the guard's message naming the replacement is what a user sees for them.
 
-Closing a block does not add new constraints on the values inside it. A value accepts an integer or a string wherever Kubernetes does, and `enum` is used only where `values.yaml` already lists the options.
+Closing a block does not add new constraints on the values inside it. A value accepts an integer or a string wherever Kubernetes does, and `enum` is used only for a fixed set of options that Kubernetes or the chart defines.
 
 ## Consequences
 
