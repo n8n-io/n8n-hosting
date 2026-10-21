@@ -278,16 +278,16 @@ contains a dot cannot be listed. Each key also gets a note in UPGRADING.md.
 The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_test.yaml.
 */}}
 {{- define "n8n.retiredKeys" -}}
+- path: database.ssl.key
+  replacement: "Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey."
 - path: retiredKeysTest.first
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
   replacement: "Remove it; nothing replaces it."
-- path: securityContext
-  replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
 - path: s3.storage.mode
   replacement: "Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
-- path: database.ssl.key
-  replacement: "Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey."
+- path: securityContext
+  replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
 - path: taskRunners.authToken.value
   replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
 {{- end -}}
