@@ -22,6 +22,18 @@ Pass your values file with `-f`. Do not use `--reuse-values`. It keeps the defau
 
 If your values file sets a key the chart no longer reads, the render fails. The message names each such key and what replaces it, all in one render. The chart stops rather than ignoring the key, so a setting cannot quietly stop working. See [decision 0020](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0020-retired-values-keys-fail-the-render.md).
 
+#### Worker probes
+
+A worker probe is now HTTP against the worker health endpoint, or an exec probe that runs the `command` you set. See [decision 0013](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0013-worker-probes-use-the-queue-health-endpoint.md).
+
+| If your values set | Do this |
+|---|---|
+| `probes.worker.liveness.type` or `probes.worker.readiness.type` | Remove it. Set `command` on the probe for an exec probe, or leave `command` empty to probe the health endpoint. The render fails until you do. |
+| `command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]` on a worker probe | Remove it. This check always passes, because `pgrep` matches its own shell. The chart does not detect it. |
+| `redis.healthCheck.enabled: false` | Remove it to probe the health endpoint, which is the default. To keep it, set `command` on each enabled worker probe, or set `enabled: false` on the probe. The render fails until you do. |
+
+A values file copied whole from chart 1.16 or earlier sets all three. Remove all three, and the workers use the health endpoint.
+
 ### Database
 
 `database.type` alone chooses the database: `postgresdb`, the default, or `sqlite`. See [decision 0018](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0018-database-type-replaces-useexternal.md).

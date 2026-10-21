@@ -150,80 +150,7 @@ tests:
       - exists:
           path: spec.template.spec.containers[0].startupProbe
 
-  - it: runs an exec probe when type is exec
-    template: templates/deployment-worker.yaml
-    set:
-      probes.worker.liveness.type: exec
-      probes.worker.liveness.command: ["/bin/true"]
-      probes.worker.readiness.type: exec
-      probes.worker.readiness.command: ["/bin/true"]
-    asserts:
-      - equal:
-          path: spec.template.spec.containers[0].livenessProbe.exec.command
-          value: ["/bin/true"]
-      - equal:
-          path: spec.template.spec.containers[0].readinessProbe.exec.command
-          value: ["/bin/true"]
-      - notExists:
-          path: spec.template.spec.containers[0].livenessProbe.httpGet
-
-  - it: falls back to the process check when the health endpoint is off
-    template: templates/deployment-worker.yaml
-    set:
-      redis.healthCheck.enabled: false
-    asserts:
-      - notExists:
-          path: spec.template.spec.containers[0].startupProbe
-      - equal:
-          path: spec.template.spec.containers[0].livenessProbe.exec.command
-          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
-      - equal:
-          path: spec.template.spec.containers[0].readinessProbe.exec.command
-          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
-
-  - it: leaves the health env out of the worker ConfigMap when the endpoint is off
-    template: templates/configmap.yaml
-    documentSelector:
-      path: metadata.name
-      value: RELEASE-NAME-n8n-worker
-    set:
-      redis.healthCheck.enabled: false
-    asserts:
-      - notExists:
-          path: data.QUEUE_HEALTH_CHECK_ACTIVE
-
-  - it: keeps rendering a values file copied from an older chart
-    template: templates/deployment-worker.yaml
-    set:
-      redis.healthCheck.enabled: false
-      probes.worker.liveness:
-        type: exec
-        command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
-      probes.worker.readiness:
-        type: exec
-        command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
-    asserts:
-      - notExists:
-          path: spec.template.spec.containers[0].startupProbe
-      - equal:
-          path: spec.template.spec.containers[0].livenessProbe.exec.command
-          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
-      - equal:
-          path: spec.template.spec.containers[0].readinessProbe.exec.command
-          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
-
-  - it: runs the process check for an exec probe with no command
-    template: templates/deployment-worker.yaml
-    set:
-      probes.worker.liveness.type: exec
-    asserts:
-      - equal:
-          path: spec.template.spec.containers[0].livenessProbe.exec.command
-          value: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
-      - exists:
-          path: spec.template.spec.containers[0].readinessProbe.httpGet
-
-  - it: runs a command set without a type as an exec probe
+  - it: runs a command as an exec probe
     template: templates/deployment-worker.yaml
     set:
       probes.worker.liveness.command: ["/bin/true"]
@@ -235,34 +162,66 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].readinessProbe.exec.command
           value: ["/bin/false"]
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
       - exists:
           path: spec.template.spec.containers[0].startupProbe
 
-  - it: rejects an HTTP liveness probe with the health endpoint off
+  - it: runs a command as an exec probe with the health endpoint off
+    template: templates/deployment-worker.yaml
+    set:
+      redis.healthCheck.enabled: false
+      probes.worker.liveness.command: ["/bin/true"]
+      probes.worker.readiness.command: ["/bin/false"]
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value: ["/bin/true"]
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: ["/bin/false"]
+
+  - it: leaves the health env out of the worker ConfigMap when the endpoint is off
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
+    set:
+      redis.healthCheck.enabled: false
+      probes.worker.liveness.enabled: false
+      probes.worker.readiness.enabled: false
+    asserts:
+      - notExists:
+          path: data.QUEUE_HEALTH_CHECK_ACTIVE
+
+  - it: rejects a liveness probe with nothing to check
     template: templates/deployment-main.yaml
     set:
       redis.healthCheck.enabled: false
-      probes.worker.liveness.type: httpGet
+      probes.worker.readiness.enabled: false
     asserts:
       - failedTemplate:
-          errorMessage: 'probes.worker.liveness.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or remove probes.worker.liveness.type to let the chart choose.'
+          errorMessage: 'probes.worker.liveness has nothing to check. redis.healthCheck.enabled=false turns off the worker health endpoint, and probes.worker.liveness.command is empty. Set redis.healthCheck.enabled=true, set probes.worker.liveness.command, or set probes.worker.liveness.enabled=false.'
 
-  - it: rejects an HTTP readiness probe with the health endpoint off
+  - it: rejects a readiness probe with nothing to check
     template: templates/deployment-main.yaml
     set:
       redis.healthCheck.enabled: false
-      probes.worker.readiness.type: httpGet
+      probes.worker.liveness.enabled: false
     asserts:
       - failedTemplate:
-          errorMessage: 'probes.worker.readiness.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or remove probes.worker.readiness.type to let the chart choose.'
+          errorMessage: 'probes.worker.readiness has nothing to check. redis.healthCheck.enabled=false turns off the worker health endpoint, and probes.worker.readiness.command is empty. Set redis.healthCheck.enabled=true, set probes.worker.readiness.command, or set probes.worker.readiness.enabled=false.'
 
-  - it: accepts a disabled HTTP probe with the health endpoint off
+  - it: accepts the health endpoint off when every probe has a command or is disabled
     template: templates/deployment-main.yaml
     set:
       redis.healthCheck.enabled: false
-      probes.worker.liveness:
-        enabled: false
-        type: httpGet
+      probes.worker.liveness.command: ["/bin/true"]
+      probes.worker.readiness.enabled: false
     asserts:
       - notFailedTemplate: {}
 
@@ -271,6 +230,31 @@ tests:
     set:
       queueMode.workerReplicaCount: 0
       redis.healthCheck.enabled: false
-      probes.worker.liveness.type: httpGet
     asserts:
       - notFailedTemplate: {}
+
+  - it: names the replacement for probes.worker.liveness.type
+    template: templates/deployment-main.yaml
+    set:
+      probes.worker.liveness.type: httpGet
+    asserts:
+      - failedTemplate:
+          errorMessage: 'probes.worker.liveness.type is no longer a chart value. Remove it. Set probes.worker.liveness.command for an exec probe, or leave command empty to probe the health endpoint. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: names the replacement for probes.worker.readiness.type
+    template: templates/deployment-main.yaml
+    set:
+      probes.worker.readiness.type: exec
+    asserts:
+      - failedTemplate:
+          errorMessage: 'probes.worker.readiness.type is no longer a chart value. Remove it. Set probes.worker.readiness.command for an exec probe, or leave command empty to probe the health endpoint. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: rejects the worker probes from a 1.16 values file
+    template: templates/deployment-main.yaml
+    values:
+      - values/chart-1.16-worker-probes.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: |-
+            - probes.worker.liveness.type is no longer a chart value. Remove it. Set probes.worker.liveness.command for an exec probe, or leave command empty to probe the health endpoint. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - probes.worker.readiness.type is no longer a chart value. Remove it. Set probes.worker.readiness.command for an exec probe, or leave command empty to probe the health endpoint. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
