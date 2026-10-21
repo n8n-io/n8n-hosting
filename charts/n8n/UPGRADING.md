@@ -189,11 +189,11 @@ Controller and cloud annotations:
 
 The chart no longer sets annotations for a specific ingress controller or cloud. Set them yourself in `ingress.annotations` and `serviceAccount.annotations`. The examples show them for ingress-nginx and EKS. See [decision 0026](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0026-no-vendor-defaults-in-the-templates.md).
 
-| If your values set | Do this |
-|---|---|
-| Any `ingress.sticky` key | Remove `ingress.sticky`. On ingress-nginx, copy the four `nginx.ingress.kubernetes.io/` cookie annotations from [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) into `ingress.annotations`. The render fails until you remove it. |
-| `serviceAccount.awsRoleArn` | Remove it, and set `eks.amazonaws.com/role-arn` to the same role in `serviceAccount.annotations`. If you already set that annotation, only remove the key. The render fails until you remove it. |
-| `s3.auth.autoDetect: true` with EKS Pod Identity, or another credential source | Nothing. The chart no longer requires `serviceAccount.awsRoleArn` with it. |
+| If your values set | What changes | Do this |
+|---|---|---|
+| Any `ingress.sticky` key | The render fails and names `ingress.annotations`. | Remove `ingress.sticky`. On ingress-nginx, copy the four `nginx.ingress.kubernetes.io/` cookie annotations from [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) into `ingress.annotations`. |
+| `serviceAccount.awsRoleArn` | The render fails and names `serviceAccount.annotations`. | Remove it, and set `eks.amazonaws.com/role-arn` to the same role in `serviceAccount.annotations`. If you already set that annotation, only remove the key. |
+| `s3.auth.autoDetect: true` without `serviceAccount.awsRoleArn` | The render no longer fails. | Nothing. EKS Pod Identity and other credential sources work without a role annotation. |
 
 ### Security contexts
 

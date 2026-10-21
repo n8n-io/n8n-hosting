@@ -5,7 +5,7 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/000
 
 ## Context
 
-In 1.x, `ingress.sticky` added ingress-nginx cookie affinity annotations to the main Ingress, and `serviceAccount.awsRoleArn` added the EKS IRSA annotation to the ServiceAccount. Each one served a single controller or a single cloud. Kubernetes announced the retirement of ingress-nginx in November 2025. Users on Traefik, an ALB, GKE or AKS had keys that did nothing for them, and `s3.auth.autoDetect` required `awsRoleArn` even where the pod got its AWS identity another way, such as EKS Pod Identity.
+In 1.x, `ingress.sticky` added ingress-nginx cookie affinity annotations to the main Ingress, and `serviceAccount.awsRoleArn` added the EKS IRSA annotation to the ServiceAccount. Each one served a single controller or a single cloud. Kubernetes [announced the retirement of ingress-nginx](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in November 2025. Users on Traefik, an ALB, GKE or AKS had keys that did nothing for them, and `s3.auth.autoDetect` required `awsRoleArn` even where the pod got its AWS identity another way, such as EKS Pod Identity.
 
 ## Decision
 

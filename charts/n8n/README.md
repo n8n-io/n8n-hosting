@@ -244,7 +244,7 @@ Some load balancers send traffic straight to the pod IPs, such as the AWS Load B
 
 MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so scaling `webhookProcessor.replicaCount` (or its HPA/KEDA) scales MCP alongside regular webhooks — no dedicated single-replica pod or session affinity is required. This relies on n8n's queue-mode/multi-instance MCP support added in **n8n 2.8.0** ([n8n-io/n8n#25147](https://github.com/n8n-io/n8n/pull/25147)), which recreates MCP sessions from Redis and runs tool calls on workers.
 
-Multi-main deployments need sticky sessions at the load-balancing layer. Set your ingress controller's affinity annotations in `ingress.annotations`, or set `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. The chart sets no controller annotations of its own. [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) shows cookie affinity for ingress-nginx.
+Multi-main deployments need sticky sessions at the load-balancing layer. Set your ingress controller's affinity annotations in `ingress.annotations`, or set `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) shows cookie affinity for ingress-nginx.
 
 See [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) for a complete HTTPS example.
 

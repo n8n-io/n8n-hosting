@@ -30,7 +30,7 @@ tests:
             nginx.ingress.kubernetes.io/affinity: cookie
             nginx.ingress.kubernetes.io/session-cookie-name: n8n_affinity
 
-  - it: merges commonAnnotations under ingress.annotations
+  - it: merges its annotations over commonAnnotations
     template: templates/ingress.yaml
     set:
       commonAnnotations:
