@@ -14,9 +14,9 @@ metadata:
 spec:
   replicas: {{ include "n8n.mainReplicas" . }}
   revisionHistoryLimit: 3
-  {{- with .Values.strategy }}
+  {{- with include "n8n.strategy" . }}
   strategy:
-    {{- toYaml . | nindent 4 }}
+    {{- . | nindent 4 }}
   {{- end }}
   selector:
     matchLabels:
@@ -41,6 +41,7 @@ spec:
       {{- if hasKey .Values.serviceAccount "automountServiceAccountToken" }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
 
       {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "main") }}
       securityContext:

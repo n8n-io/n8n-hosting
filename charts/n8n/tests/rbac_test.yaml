@@ -1,0 +1,59 @@
+# n8n never calls the Kubernetes API and runs code its users write, so its
+# pods get no Role and no ServiceAccount token unless a user asks for them.
+suite: 'rbac and ServiceAccount token'
+templates:
+  - templates/role.yaml
+  - templates/rolebinding.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  database.type: postgresdb
+  database.useExternal: true
+  database.host: postgres.example.com
+  queueMode.enabled: true
+  redis.host: redis.example.com
+  webhookProcessor.enabled: true
+tests:
+  - it: renders no Role or RoleBinding by default
+    templates:
+      - templates/role.yaml
+      - templates/rolebinding.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the Role and RoleBinding when rbac.create is true
+    set:
+      rbac.create: true
+    templates:
+      - templates/role.yaml
+      - templates/rolebinding.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: does not mount the ServiceAccount token into any pod by default
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
+  - it: mounts the token into every pod when automountServiceAccountToken is true
+    set:
+      serviceAccount.automountServiceAccountToken: true
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true

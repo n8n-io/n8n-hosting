@@ -172,9 +172,17 @@ taskRunners:
       failureThreshold: 6
 
 # ----- Deployment Strategy -----
-# Set to { type: Recreate } when using persistence with a RWO PVC (e.g. SQLite)
-# to avoid Multi-Attach errors during upgrades.
+# Update strategy for the main Deployment. Left empty, it is Recreate when
+# persistence is enabled and every persistence.accessModes entry is
+# ReadWriteOnce or ReadWriteOncePod, because a rolling update cannot attach
+# that volume to the new pod.
 strategy: {}
+
+# ----- Service links -----
+# Kubernetes injects <SERVICE>_SERVICE_HOST, <SERVICE>_PORT and related
+# variables for every Service in the namespace into each pod. n8n reads
+# N8N_PORT, so a Service named n8n breaks it, and nothing in n8n needs them.
+enableServiceLinks: false
 
 # ----- Pod Labels -----
 # Extra labels added to main / worker / webhook-processor pod templates.
@@ -444,8 +452,10 @@ containerSecurityContext:
   taskRunner: {}
 
 # ----- RBAC ServiceAccount & Network Policy -----
+# A Role that can read ConfigMaps and Secrets in the namespace, bound to the
+# ServiceAccount. n8n never calls the Kubernetes API, so it is off by default.
 rbac:
-  create: true
+  create: false
 
 serviceAccount:
   # Create a new service account for n8n pods
@@ -474,12 +484,12 @@ serviceAccount:
   awsRoleArn: ""
   # Additional annotations for the service account
   annotations: {}
-  # Whether the projected ServiceAccount token is mounted into n8n pods.
-  # Omit for the Kubernetes default (true). Set to false to remove the token
-  # from each pod's /var/run/secrets/kubernetes.io/serviceaccount path — n8n
-  # workloads that don't call the Kubernetes API don't need it. Applied at
-  # the pod-spec level so it works regardless of serviceAccount.create.
-  # automountServiceAccountToken: false
+  # Whether the ServiceAccount token is mounted into n8n pods at
+  # /var/run/secrets/kubernetes.io/serviceaccount. n8n never calls the
+  # Kubernetes API and runs code its users write, so it is off by default.
+  # Applied on the pod spec, so it works whether or not the chart creates the
+  # ServiceAccount.
+  automountServiceAccountToken: false
 
 networkPolicy:
   enabled: false
