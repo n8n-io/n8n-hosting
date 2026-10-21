@@ -93,3 +93,31 @@ tests:
       taskRunners.extraEnv: []
     asserts:
       - notFailedTemplate: {}
+
+  - it: refuses database.useExternal and names database.type
+    template: templates/deployment-main.yaml
+    set:
+      database.useExternal: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.useExternal is no longer a chart value. Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses database.useExternal set to false
+    template: templates/deployment-main.yaml
+    set:
+      database.type: sqlite
+      database.useExternal: false
+      queueMode.enabled: false
+      redis.enabled: false
+      persistence.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.useExternal is no longer a chart value. Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses redis.useExternal
+    template: templates/deployment-main.yaml
+    set:
+      redis.useExternal: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'redis.useExternal is no longer a chart value. Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'

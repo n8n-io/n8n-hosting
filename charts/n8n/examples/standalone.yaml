@@ -7,7 +7,6 @@ queueMode:
 
 database:
   type: sqlite
-  useExternal: false
 
 redis:
   enabled: false

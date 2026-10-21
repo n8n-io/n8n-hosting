@@ -25,10 +25,9 @@ queueMode:
   workerReplicaCount: 1
   workerConcurrency: 5
 
-# Database configuration (MUST be external)
+# PostgreSQL connection (required for queue mode)
 database:
   type: postgresdb
-  useExternal: true  # Chart only supports external databases
   host: "your-postgres-host.com"
   port: 5432
   database: n8n
@@ -38,10 +37,9 @@ database:
     name: "n8n-db-secret"
     key: "password"
 
-# Redis configuration (MUST be external)
+# Redis connection (required for queue mode)
 redis:
   enabled: true
-  useExternal: true  # Chart only supports external Redis
   host: "your-redis-host.com"
   port: 6379
 

@@ -18,7 +18,6 @@ secretRefs:
   existingSecret: "n8n-core-secrets"
 
 database:
-  useExternal: true
   host: "postgres.example.internal"
   passwordSecret:
     name: "n8n-db-secret"
@@ -26,7 +25,6 @@ database:
 
 redis:
   enabled: true
-  useExternal: true
   host: "redis.example.internal"
   passwordSecret:
     name: "n8n-redis-secret"

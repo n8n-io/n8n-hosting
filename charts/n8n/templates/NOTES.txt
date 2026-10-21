@@ -37,8 +37,8 @@ Deployment Configuration:
   - Mode: Standalone
   - Main pods: {{ .Values.replicaCount }}
 {{- end }}
-{{- if .Values.database.useExternal }}
-  - Database: {{ if eq .Values.database.type "postgresdb" }}PostgreSQL{{ else }}{{ .Values.database.type }}{{ end }} ({{ .Values.database.host }})
+{{- if eq .Values.database.type "postgresdb" }}
+  - Database: PostgreSQL ({{ .Values.database.host }})
 {{- else }}
   - Database: SQLite (local storage)
 {{- end }}

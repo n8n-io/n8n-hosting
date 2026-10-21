@@ -783,9 +783,10 @@ secretRefs:
 
 # ----- Database (PostgreSQL - required for queue mode) -----
 database:
+  # postgresdb connects to your PostgreSQL. Queue mode and multi-main need it.
+  # sqlite keeps the database on the PersistentVolumeClaim, for standalone
+  # mode only. The settings below apply to postgresdb.
   type: postgresdb
-  # External database is required for queue mode
-  useExternal: true
   host: "your-postgres-hostname"     # <-- Change to your actual PostgreSQL host
   port: 5432
   database: n8n
@@ -817,7 +818,6 @@ database:
 redis:
   # Redis is required for queue mode
   enabled: true
-  useExternal: true
   host: "your-redis-hostname"                      # <-- Change to your actual Redis host
   port: 6379
   # Redis authentication

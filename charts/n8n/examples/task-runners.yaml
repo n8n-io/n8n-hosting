@@ -60,7 +60,6 @@ taskRunners:
 # External database
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host.com"
   port: 5432
   database: n8n
@@ -73,7 +72,6 @@ database:
 # External Redis
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host.com"
   port: 6379
 

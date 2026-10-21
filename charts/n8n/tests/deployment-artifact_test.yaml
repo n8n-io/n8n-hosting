@@ -12,7 +12,6 @@ set:
   queueMode.enabled: true
   webhookProcessor.enabled: true
   database.type: postgresdb
-  database.useExternal: true
   database.host: postgres.acme.example.com
   database.passwordSecret.name: n8n-db
   redis.host: redis.acme.example.com

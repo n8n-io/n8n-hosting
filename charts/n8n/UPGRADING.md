@@ -24,6 +24,15 @@ If your values file sets a key the chart no longer reads, the render fails. The 
 
 ### Database
 
+`database.type` alone chooses the database: `postgresdb`, the default, or `sqlite`. See [decision 0018](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0018-database-type-replaces-useexternal.md).
+
+| If your values set | Do this |
+|---|---|
+| `database.useExternal` | Remove it. Leave `database.type` as it is. |
+| `redis.useExternal` | Remove it. Nothing replaces it. Queue mode connects to the Redis at `redis.host`. |
+
+If your values set `database.type: sqlite` without `useExternal`, the chart stops passing PostgreSQL settings to n8n and drops the NetworkPolicy egress rule to the database port. n8n did not use either with SQLite. The pods restart once on upgrade.
+
 ### Secrets and host settings
 
 The chart's Secret holds only secrets. Host, port and protocol are no longer read from it. See [decision 0012](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0012-env-as-per-component-maps.md).
