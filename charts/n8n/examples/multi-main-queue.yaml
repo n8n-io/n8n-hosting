@@ -139,17 +139,6 @@ executions:
     # In queue mode n8n uses this as each worker's concurrency.
     productionLimit: 100
   timeout: 7200  # 2 hours
-  dataRetention:
-    saveOnError: true
-    saveOnSuccess: true
-    saveOnProgress: false
-    saveManualExecutions: true
-    prune: true
-    maxAge: 2160  # 90 days
-    maxCount: 100000
-    hardDeleteBuffer: 24  # 24 hours
-    pruneHardDeleteInterval: "0 2 * * *"  # Daily at 2 AM
-    pruneSoftDeleteInterval: "0 3 * * *"  # Daily at 3 AM
 
 # Core secrets
 # The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
@@ -157,7 +146,7 @@ secretRefs:
   existingSecret: "n8n-enterprise-secrets"
 
 # Pod disruption budget for high availability
-podDisruptionBudget:
+pdb:
   enabled: true
   minAvailable: 2
 
@@ -174,13 +163,3 @@ networkPolicy:
           port: 5678
   egress:
     - to: []  # Allow all egress (customize as needed)
-
-# Monitoring and observability (if using Prometheus)
-monitoring:
-  enabled: true
-  serviceMonitor:
-    enabled: true
-    interval: 30s
-    scrapeTimeout: 10s
-  prometheusRule:
-    enabled: true

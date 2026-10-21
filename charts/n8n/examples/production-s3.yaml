@@ -175,7 +175,7 @@ probes:
     failureThreshold: 3
 
 # Pod disruption budget for high availability
-podDisruptionBudget:
+pdb:
   enabled: true
   minAvailable: 1
 

@@ -55,14 +55,8 @@ service:
   type: ClusterIP
   port: 5678
 
-# Resource limits (adjust based on your needs)
-resources:
-  requests:
-    memory: "256Mi"
-    cpu: "200m"
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
+# Resources are set per component under resources.main, resources.worker and
+# resources.webhookProcessor. This example uses the chart's defaults.
 
 # Storage (filesystem by default, S3 recommended for production)
 # This chart uses filesystem storage by default
