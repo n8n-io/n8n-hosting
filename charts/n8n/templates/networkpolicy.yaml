@@ -17,6 +17,9 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes: [Ingress, Egress]
   ingress:
+    {{- with .Values.networkPolicy.ingress }}
+    {{- toYaml . | nindent 4 }}
+    {{- else }}
     # Allow intra-pod communication (main <-> worker <-> webhook-processor)
     - from:
         - podSelector:
@@ -31,31 +34,12 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.service.port }}
+    {{- end }}
   egress:
-    # Allow DNS resolution
-    - to: []
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-    {{- if .Values.database.useExternal }}
-    # Allow PostgreSQL
-    - to: []
-      ports:
-        - protocol: TCP
-          port: {{ .Values.database.port }}
+    {{- with .Values.networkPolicy.egress }}
+    {{- toYaml . | nindent 4 }}
+    {{- else }}
+    # n8n calls whatever systems its workflows name, on any port
+    - {}
     {{- end }}
-    {{- if .Values.queueMode.enabled }}
-    # Allow Redis
-    - to: []
-      ports:
-        - protocol: TCP
-          port: {{ .Values.redis.port }}
-    {{- end }}
-    # Allow HTTPS (for webhooks, external APIs, license checks)
-    - to: []
-      ports:
-        - protocol: TCP
-          port: 443
 {{- end }}

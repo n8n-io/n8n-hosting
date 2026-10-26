@@ -483,6 +483,14 @@ serviceAccount:
 
 networkPolicy:
   enabled: false
+  # NetworkPolicy ingress rules for the n8n pods. A set list replaces the
+  # chart's rules; it does not merge with them. Empty allows the release's
+  # own pods and any source on service.port.
+  ingress: []
+  # NetworkPolicy egress rules for the n8n pods. A set list replaces the
+  # chart's rules; it does not merge with them. Empty allows all egress,
+  # because workflows call external systems on any port.
+  egress: []
 
 # ----- Health checks -----
 probes:

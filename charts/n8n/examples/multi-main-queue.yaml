@@ -161,19 +161,28 @@ podDisruptionBudget:
   enabled: true
   minAvailable: 2
 
-# Network policies for enterprise security
+# Network policies for enterprise security. These ingress rules replace the
+# chart's, so only the ingress controller's namespace and the release's own
+# pods, such as the helm test pod, reach n8n. The pod rule matches a release
+# named n8n. Egress is left empty, which allows all egress.
 networkPolicy:
   enabled: true
   ingress:
     - from:
         - namespaceSelector:
             matchLabels:
-              name: ingress-system
+              kubernetes.io/metadata.name: ingress-system
       ports:
         - protocol: TCP
           port: 5678
-  egress:
-    - to: []  # Allow all egress (customize as needed)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: n8n
+              app.kubernetes.io/instance: n8n
+      ports:
+        - protocol: TCP
+          port: 5678
 
 # Monitoring and observability (if using Prometheus)
 monitoring:
