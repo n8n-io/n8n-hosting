@@ -180,8 +180,8 @@ strategy: {}
 
 # ----- Service links -----
 # Kubernetes injects <SERVICE>_SERVICE_HOST, <SERVICE>_PORT and related
-# variables for every Service in the namespace into each pod. n8n reads
-# N8N_PORT, so a Service named n8n breaks it, and nothing in n8n needs them.
+# variables for every Service in the namespace into each pod. n8n reads none
+# of them.
 enableServiceLinks: false
 
 # ----- Pod Labels -----

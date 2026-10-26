@@ -1,6 +1,5 @@
 # Kubernetes injects <SERVICE>_PORT and friends for every Service in the
-# namespace unless enableServiceLinks is false. n8n reads N8N_PORT, so a
-# Service named n8n would set it to tcp://... and stop n8n starting.
+# namespace unless enableServiceLinks is false. n8n reads none of them.
 suite: 'enableServiceLinks'
 templates:
   - templates/deployment-main.yaml
