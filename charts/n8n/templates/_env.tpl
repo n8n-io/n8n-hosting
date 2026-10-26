@@ -177,7 +177,7 @@ rather than queueMode.enabled. */ -}}
 {{- end -}}
 
 {{- else if eq .component "taskRunner" -}}
-{{- $_ := set $e "N8N_RUNNERS_TASK_BROKER_URI" (dict "value" (printf "http://localhost:%v" $v.taskRunners.broker.port) "from" "taskRunners.broker.port") -}}
+{{- $_ := set $e "N8N_RUNNERS_TASK_BROKER_URI" (dict "value" (printf "http://127.0.0.1:%v" $v.taskRunners.broker.port) "from" "taskRunners.broker.port") -}}
 {{- $_ := set $e "N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT" (dict "value" $v.taskRunners.launcher.autoShutdownTimeout "from" "taskRunners.launcher.autoShutdownTimeout") -}}
 {{- $_ := set $e "N8N_RUNNERS_LAUNCHER_LOG_LEVEL" (dict "value" $v.taskRunners.launcher.logLevel "from" "taskRunners.launcher.logLevel") -}}
 
@@ -198,7 +198,6 @@ rather than queueMode.enabled. */ -}}
 {{- end -}}
 {{- if include "n8n.hasTaskRunner" (dict "root" .root "component" .component) -}}
 {{- $_ := set $e "N8N_RUNNERS_MODE" (dict "value" $v.taskRunners.mode "from" "taskRunners.mode") -}}
-{{- $_ := set $e "N8N_RUNNERS_BROKER_LISTEN_ADDRESS" (dict "value" $v.taskRunners.broker.listenAddress "from" "taskRunners.broker.listenAddress") -}}
 {{- $_ := set $e "N8N_NATIVE_PYTHON_RUNNER" (dict "value" $v.taskRunners.nativePythonRunner "from" "taskRunners.nativePythonRunner") -}}
 {{- end -}}
 {{- if and (eq .component "worker") $v.redis.healthCheck.enabled -}}
