@@ -39,6 +39,7 @@ spec:
       {{- if hasKey .Values.serviceAccount "automountServiceAccountToken" }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
 
       {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "worker") }}
       securityContext:
