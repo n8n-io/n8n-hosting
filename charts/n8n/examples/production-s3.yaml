@@ -42,7 +42,6 @@ hpa:
 
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host.com"  # Replace with your PostgreSQL endpoint
   port: 5432
   database: n8n
@@ -63,7 +62,6 @@ database:
 
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host.com"  # Replace with your Redis endpoint
   port: 6379
 

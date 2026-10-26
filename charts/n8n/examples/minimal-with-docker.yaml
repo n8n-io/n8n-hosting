@@ -20,7 +20,6 @@ queueMode:
 # External PostgreSQL (Docker container)
 database:
   type: postgresdb
-  useExternal: true
   host: "host.docker.internal"  # For Docker Desktop, use "localhost" for direct connection
   port: 5432
   database: n8n
@@ -33,7 +32,6 @@ database:
 # External Redis (Docker container)
 redis:
   enabled: true
-  useExternal: true
   host: "host.docker.internal"  # For Docker Desktop, use "localhost" for direct connection  
   port: 6379
 

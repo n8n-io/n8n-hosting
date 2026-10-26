@@ -9,13 +9,13 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: requires an external database in queue mode
+  - it: requires postgresdb in queue mode
     template: templates/deployment-main.yaml
     set:
-      database.useExternal: false
+      database.type: sqlite
     asserts:
       - failedTemplate:
-          errorMessage: 'database.useExternal must be true when queueMode.enabled=true. Queue mode requires external PostgreSQL.'
+          errorMessage: 'database.type must be postgresdb when queueMode.enabled=true. Queue mode requires PostgreSQL.'
 
   - it: requires redis.host in queue mode
     template: templates/deployment-main.yaml

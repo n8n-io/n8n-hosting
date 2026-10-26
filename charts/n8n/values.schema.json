@@ -1139,8 +1139,14 @@
     "database": {
       "type": "object",
       "properties": {
-        "type": { "type": "string", "enum": ["postgresdb", "sqlite"] },
-        "useExternal": { "type": "boolean" },
+        "type": {
+          "type": "string",
+          "enum": ["postgresdb", "sqlite"],
+          "description": "postgresdb connects to your PostgreSQL. sqlite keeps the database on the PersistentVolumeClaim, in standalone mode only."
+        },
+        "useExternal": {
+          "description": "Retired. Use database.type. The render fails while this key is set."
+        },
         "host": { "type": "string" },
         "port": { "type": "integer" },
         "database": { "type": "string" },
@@ -1174,6 +1180,9 @@
     "redis": {
       "type": "object",
       "properties": {
+        "useExternal": {
+          "description": "Retired. Nothing replaces it. The render fails while this key is set."
+        },
         "host": { "type": "string" },
         "port": { "type": "integer" },
         "username": { "type": "string" },
@@ -1359,61 +1368,25 @@
         }
       },
       "then": {
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "database": {
-                  "properties": { "useExternal": { "const": true } },
-                  "required": ["useExternal"]
-                }
-              }
-            },
-            "then": {
-              "properties": {
-                "database": {
-                  "required": ["host", "port", "database", "user", "passwordSecret"]
-                }
-              },
-              "errorMessage": "database.type=postgresdb & useExternal=true requires host, port, database, user and passwordSecret"
-            }
-          },
-          {
-            "if": {
-              "properties": {
-                "database": {
-                  "properties": { "useExternal": { "const": false } },
-                  "required": ["useExternal"]
-                }
-              }
-            },
-            "then": {
-              "properties": {
-                "database": {
-                  "required": ["database", "user"]
-                }
-              },
-              "errorMessage": "database.type=postgresdb & useExternal=false requires at least database and user (host/port/secret are provided by the in-cluster DB)"
-            }
+        "properties": {
+          "database": {
+            "required": ["host", "port", "database", "user", "passwordSecret"]
           }
-        ]
+        },
+        "errorMessage": "database.type=postgresdb requires host, port, database, user and passwordSecret"
       }
     },
     {
       "if": {
         "properties": {
           "database": {
-            "properties": { "useExternal": { "const": false } },
-            "required": ["useExternal"]
+            "properties": { "type": { "const": "sqlite" } },
+            "required": ["type"]
           }
         }
       },
       "then": {
         "properties": {
-          "database": {
-            "properties": { "type": { "const": "sqlite" } },
-            "required": ["type"]
-          },
           "queueMode": {
             "properties": { "enabled": { "const": false } },
             "required": ["enabled"]
@@ -1423,7 +1396,7 @@
             "required": ["enabled"]
           }
         },
-        "errorMessage": "useExternal=false enforces SQLite and disables queueMode and multiMain"
+        "errorMessage": "database.type=sqlite runs in standalone mode only, so queueMode and multiMain must be disabled"
       }
     },
     {

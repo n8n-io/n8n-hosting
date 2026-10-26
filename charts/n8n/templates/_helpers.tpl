@@ -278,6 +278,10 @@ contains a dot cannot be listed. Each key also gets a note in UPGRADING.md.
 The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_test.yaml.
 */}}
 {{- define "n8n.retiredKeys" -}}
+- path: database.useExternal
+  replacement: "Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim."
+- path: redis.useExternal
+  replacement: "Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host."
 - path: retiredKeysTest.first
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
@@ -319,8 +323,8 @@ per mistake.
 
 {{/* --- Queue mode infrastructure --- */}}
 {{- if .Values.queueMode.enabled -}}
-{{- if not .Values.database.useExternal -}}
-{{- $errs = append $errs "database.useExternal must be true when queueMode.enabled=true. Queue mode requires external PostgreSQL." -}}
+{{- if ne .Values.database.type "postgresdb" -}}
+{{- $errs = append $errs "database.type must be postgresdb when queueMode.enabled=true. Queue mode requires PostgreSQL." -}}
 {{- end -}}
 {{- if not .Values.database.host -}}
 {{- $errs = append $errs "database.host is required when queueMode.enabled=true. Set it to your PostgreSQL hostname." -}}
@@ -346,8 +350,8 @@ per mistake.
 
 {{/* --- Standalone mode constraints --- */}}
 {{- if not .Values.queueMode.enabled -}}
-{{- if and (not .Values.persistence.enabled) (not .Values.database.useExternal) -}}
-{{- $errs = append $errs "persistence.enabled must be true when queueMode.enabled=false and database.useExternal=false. Standalone mode requires persistent storage when no external database." -}}
+{{- if and (not .Values.persistence.enabled) (eq .Values.database.type "sqlite") -}}
+{{- $errs = append $errs "persistence.enabled must be true when database.type=sqlite. SQLite keeps its data on the PersistentVolumeClaim." -}}
 {{- end -}}
 {{- if .Values.multiMain.enabled -}}
 {{- $errs = append $errs "multiMain.enabled=true requires queueMode.enabled=true" -}}
