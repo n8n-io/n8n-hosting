@@ -18,7 +18,7 @@ prompt_secret() {
 }
 
 echo "This script will create the following secrets:"
-echo "  • n8n-core-secrets (encryption key)"
+echo "  • n8n-core-secrets (encryption key, task runner token)"
 echo "  • n8n-db-secret (database password)"
 echo "  • s3-credentials (AWS S3 secret key, optional)"
 echo
@@ -44,6 +44,9 @@ echo "=== Core n8n Configuration ==="
 
 N8N_ENCRYPTION_KEY=$(openssl rand -base64 32)
 echo "Generated new encryption key: ${N8N_ENCRYPTION_KEY:0:16}..."
+
+N8N_RUNNERS_AUTH_TOKEN=$(openssl rand -base64 32)
+echo "Generated new task runner auth token"
 
 echo
 
@@ -72,6 +75,7 @@ echo "  Database password: [HIDDEN]"
 if [ "$CREATE_S3_SECRET" = true ]; then
     echo "  S3 secret key: [HIDDEN]"
 fi
+echo "  Task runner token: Generated"
 
 echo
 read -p "Create these secrets? (y/N): " confirm
@@ -88,6 +92,7 @@ echo "   Creating secrets..."
 echo "Creating n8n-core-secrets..."
 kubectl create secret generic n8n-core-secrets \
     --from-literal=N8N_ENCRYPTION_KEY="$N8N_ENCRYPTION_KEY" \
+    --from-literal=N8N_RUNNERS_AUTH_TOKEN="$N8N_RUNNERS_AUTH_TOKEN" \
     --dry-run=client -o yaml | kubectl apply -f -
 
 # Create database secret

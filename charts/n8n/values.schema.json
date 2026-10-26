@@ -231,7 +231,10 @@
           "properties": {
             "existingSecret": { "type": "string" },
             "existingSecretKey": { "type": "string" },
-            "value": { "type": "string" }
+            "value": {
+              "type": "string",
+              "description": "Retired. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, or add N8N_RUNNERS_AUTH_TOKEN to the Secret in secretRefs.existingSecret."
+            }
           }
         },
         "broker": {
@@ -534,6 +537,23 @@
     "rbac": {
       "type": "object",
       "properties": { "create": { "type": "boolean" } }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "ingress": {
+          "type": "array",
+          "description": "NetworkPolicy ingress rules. When set, they replace the chart's ingress rules. Empty allows the release's own pods and any source on service.port.",
+          "items": { "type": "object" }
+        },
+        "egress": {
+          "type": "array",
+          "description": "NetworkPolicy egress rules. When set, they replace the chart's egress rules. Empty allows all egress.",
+          "items": { "type": "object" }
+        }
+      }
     },
     "probes": {
       "type": "object",
@@ -1106,6 +1126,10 @@
               "type": "string",
               "pattern": "^(/.*)?$",
               "description": "Absolute path of a mounted encryption key file. When set, n8n containers read the key from this file instead of N8N_ENCRYPTION_KEY"
+            },
+            "N8N_RUNNERS_AUTH_TOKEN": {
+              "type": "string",
+              "description": "Task-runner auth token for the chart-managed Secret. With secretRefs.existingSecret, put the token in that Secret instead"
             }
           },
           "additionalProperties": { "type": "string" }

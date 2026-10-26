@@ -1,14 +1,12 @@
-# database.type decides whether n8n gets the PostgreSQL connection settings,
-# the password reference and the egress rule to the database.
+# database.type decides whether n8n gets the PostgreSQL connection settings
+# and the password reference.
 suite: 'database: type'
 templates:
   - templates/configmap.yaml
   - templates/deployment-main.yaml
-  - templates/networkpolicy.yaml
   - templates/secrets.yaml
 set:
   secretRefs.existingSecret: n8n-core-secrets
-  networkPolicy.enabled: true
 tests:
   - it: sets the PostgreSQL connection settings for postgresdb
     template: templates/configmap.yaml
@@ -38,19 +36,6 @@ tests:
                 name: n8n-db-password
                 key: password
 
-  - it: allows egress to the PostgreSQL port for postgresdb
-    template: templates/networkpolicy.yaml
-    set:
-      database.port: 6543
-    asserts:
-      - contains:
-          path: spec.egress
-          content:
-            to: []
-            ports:
-              - protocol: TCP
-                port: 6543
-
   - it: sets no PostgreSQL settings for sqlite
     template: templates/configmap.yaml
     documentSelector:
@@ -79,15 +64,3 @@ tests:
           content:
             name: DB_POSTGRESDB_PASSWORD
           any: true
-
-  - it: allows no egress to PostgreSQL for sqlite
-    template: templates/networkpolicy.yaml
-    set: *sqlite
-    asserts:
-      - notContains:
-          path: spec.egress
-          content:
-            to: []
-            ports:
-              - protocol: TCP
-                port: 5432

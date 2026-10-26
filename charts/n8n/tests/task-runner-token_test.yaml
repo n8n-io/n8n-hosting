@@ -1,0 +1,143 @@
+suite: 'task-runner auth token'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: reads the token from the core Secret by default
+    template: templates/deployment-worker.yaml
+    asserts:
+      - notFailedTemplate: {}
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: N8N_RUNNERS_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: n8n-core-secrets
+                key: N8N_RUNNERS_AUTH_TOKEN
+
+  - it: reads the token from the core Secret on the standalone main pod
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_RUNNERS_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: n8n-core-secrets
+                key: N8N_RUNNERS_AUTH_TOKEN
+
+  - it: renders secretRefs.env.N8N_RUNNERS_AUTH_TOKEN into the chart's Secret
+    template: templates/secrets.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-encryption-key
+      secretRefs.env.N8N_RUNNERS_AUTH_TOKEN: test-token
+    asserts:
+      - equal:
+          path: stringData.N8N_RUNNERS_AUTH_TOKEN
+          value: test-token
+
+  - it: reads the token from the chart's Secret without secretRefs.existingSecret
+    template: templates/deployment-worker.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-encryption-key
+      secretRefs.env.N8N_RUNNERS_AUTH_TOKEN: test-token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: N8N_RUNNERS_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-n8n
+                key: N8N_RUNNERS_AUTH_TOKEN
+
+  - it: fails without a token when the chart manages the core Secret
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-encryption-key
+    asserts:
+      - failedTemplate:
+          errorMessage: 'taskRunners.enabled=true requires an auth token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN to a token, which you can generate with: openssl rand -base64 32. Or set taskRunners.authToken.existingSecret to a Secret that holds it.'
+
+  - it: reads the token from taskRunners.authToken.existingSecret
+    template: templates/deployment-worker.yaml
+    set:
+      taskRunners.authToken.existingSecret: n8n-runner-token
+      taskRunners.authToken.existingSecretKey: auth-token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: N8N_RUNNERS_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: n8n-runner-token
+                key: auth-token
+
+  - it: accepts taskRunners.authToken.existingSecret when the chart manages the core Secret
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-encryption-key
+      taskRunners.authToken.existingSecret: n8n-runner-token
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: leaves the token out of the chart's Secret with taskRunners.authToken.existingSecret
+    template: templates/secrets.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-encryption-key
+      taskRunners.authToken.existingSecret: n8n-runner-token
+    asserts:
+      - notExists:
+          path: stringData.N8N_RUNNERS_AUTH_TOKEN
+
+  - it: rejects secretRefs.env.N8N_RUNNERS_AUTH_TOKEN with secretRefs.existingSecret
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_RUNNERS_AUTH_TOKEN: test-token
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_RUNNERS_AUTH_TOKEN has no effect with secretRefs.existingSecret. Add the token to n8n-core-secrets under the key N8N_RUNNERS_AUTH_TOKEN, and remove secretRefs.env.N8N_RUNNERS_AUTH_TOKEN.'
+
+  - it: rejects secretRefs.env.N8N_RUNNERS_AUTH_TOKEN with taskRunners.authToken.existingSecret
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-encryption-key
+      secretRefs.env.N8N_RUNNERS_AUTH_TOKEN: test-token
+      taskRunners.authToken.existingSecret: n8n-runner-token
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_RUNNERS_AUTH_TOKEN and taskRunners.authToken.existingSecret are mutually exclusive. Use one or the other.'
+
+  - it: leaves the token out of the chart's Secret when task runners are disabled
+    template: templates/secrets.yaml
+    set:
+      taskRunners.enabled: false
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-encryption-key
+      secretRefs.env.N8N_RUNNERS_AUTH_TOKEN: test-token
+    asserts:
+      - notExists:
+          path: stringData.N8N_RUNNERS_AUTH_TOKEN
+
+  - it: names the replacement for taskRunners.authToken.value
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.authToken.value: test-token
+    asserts:
+      - failedTemplate:
+          errorMessage: 'taskRunners.authToken.value is no longer a chart value. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
