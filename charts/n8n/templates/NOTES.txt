@@ -75,8 +75,9 @@ value can express what you need:
 {{- end }}
 {{- end }}
 
-{{- /* With no editor URL, n8n builds its editor and OAuth callback URLs from
-N8N_HOST, which defaults to localhost. */}}
+{{- /* With no editor URL, n8n uses the webhook URL for the editor and OAuth
+callback URLs. With neither, it builds them from N8N_HOST, which defaults to
+localhost. */}}
 {{- if not (include "n8n.editorBaseUrl" .) }}
 {{- $urlEnv := false }}
 {{- $webhookEnv := and .Values.webhook.enabled (include "n8n.webhookUrl" .) }}
@@ -87,8 +88,8 @@ N8N_HOST, which defaults to localhost. */}}
 {{- if not $urlEnv }}
 {{- if $webhookEnv }}
 
-WARNING: No editor URL is set, so n8n builds its editor and OAuth callback
-URLs from localhost. If users reach n8n at another address, set editor.url.
+WARNING: No editor URL is set, so n8n uses the webhook URL for the editor and
+OAuth callback URLs. Set editor.url if the editor lives at another address.
 {{- else }}
 
 WARNING: No editor URL is set, so n8n builds its editor, webhook and OAuth

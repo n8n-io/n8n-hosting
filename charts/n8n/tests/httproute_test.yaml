@@ -68,7 +68,6 @@ tests:
     set:
       queueMode.enabled: true
       database.type: postgresdb
-      database.useExternal: true
       database.host: postgres.example.com
       webhookProcessor.enabled: true
     asserts:
@@ -109,7 +108,6 @@ tests:
     set:
       queueMode.enabled: true
       database.type: postgresdb
-      database.useExternal: true
       database.host: postgres.example.com
       webhookProcessor.enabled: true
       httpRoute.webhook:
@@ -195,6 +193,22 @@ tests:
       - equal:
           path: data.N8N_WEBHOOK_URL
           value: https://hooks.example.com
+
+  - it: refuses webhook hostnames without editor hostnames
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.hostnames: []
+      httpRoute.webhook.hostnames: [hooks.example.com]
+    asserts:
+      - failedTemplate:
+          errorMessage: 'httpRoute.webhook.hostnames is set but httpRoute.hostnames is empty, so the editor route matches every hostname, the webhook hosts included. Set httpRoute.hostnames.'
+
+  - it: accepts webhook hostnames with editor hostnames
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.webhook.hostnames: [hooks.example.com]
+    asserts:
+      - notFailedTemplate: {}
 
   - it: refuses webhook hostnames with the route off
     template: templates/deployment-main.yaml

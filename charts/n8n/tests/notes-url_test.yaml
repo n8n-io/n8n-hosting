@@ -58,7 +58,7 @@ tests:
       - matchRegexRaw:
           pattern: 'kubectl port-forward service/RELEASE-NAME-n8n-main'
       - matchRegexRaw:
-          pattern: 'WARNING: No editor URL is set, so n8n builds its editor and OAuth callback'
+          pattern: 'WARNING: No editor URL is set, so n8n uses the webhook URL for the editor and'
 
   - it: prints port-forward steps and a localhost warning when no public URL is set
     set:
@@ -71,7 +71,7 @@ tests:
       - matchRegexRaw:
           pattern: 'WARNING: No editor URL is set, so n8n builds its editor, webhook and OAuth'
 
-  - it: names webhooks in the warning when webhook.enabled is false
+  - it: names webhooks in the localhost warning when webhook.enabled is false
     set:
       ingress.enabled: false
       webhook.enabled: false
@@ -80,13 +80,13 @@ tests:
       - matchRegexRaw:
           pattern: 'builds its editor, webhook and OAuth'
 
-  - it: leaves webhooks out of the warning when env.shared sets N8N_WEBHOOK_URL
+  - it: says n8n uses the webhook URL when env.shared sets N8N_WEBHOOK_URL
     set:
       ingress.enabled: false
       env.shared.N8N_WEBHOOK_URL: https://hooks.example.com
     asserts:
       - matchRegexRaw:
-          pattern: 'builds its editor and OAuth callback'
+          pattern: 'uses the webhook URL for the editor and'
 
   - it: leaves out the localhost warning when a public URL is set
     asserts:

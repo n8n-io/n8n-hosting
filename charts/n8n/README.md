@@ -146,7 +146,7 @@ n8n has two public URLs: the editor URL (`N8N_EDITOR_BASE_URL`), for the UI and 
 
 The `https://` default assumes TLS ends at the ingress or in front of it, for example at a cloud load balancer. If n8n is served over plain HTTP, has no ingress, or is reached at another host, set `editor.url`, and `webhook.url` when webhooks have a host of their own. Set `webhook.url` too when webhooks arrive at an address the chart does not route, such as a separate load balancer or API gateway.
 
-The chart does not set `N8N_HOST` or `N8N_PROTOCOL`. n8n reads them only to build a fallback for a URL that is not set.
+The chart does not set `N8N_HOST` or `N8N_PROTOCOL`. With no editor URL, n8n uses the webhook URL for the editor. It reads `N8N_HOST` and `N8N_PROTOCOL` only to build a URL it has nothing else for.
 
 ### One host for the editor and webhooks
 
@@ -187,6 +187,17 @@ ingress:
 ```
 
 The editor URL is `https://n8n.internal.example.com` and the webhook URL is `https://hooks.example.com`. The editor host sends every path to main. The webhook host carries only `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/`, which go to the webhook processors when they run and to main otherwise, and `/webhook-test/`, `/form-test/` and `/mcp-test/`, which go to main. n8n builds test URLs from the webhook URL as well, so they work on the webhook host.
+
+In this layout, test calls from the editor, such as test forms and the Chat Trigger, go to the webhook host. If an authenticating proxy guards each host on its own, those calls fail with a CORS error. To keep test URLs on the editor host, set the webhook URL through n8n's older `WEBHOOK_URL` variable, which covers production webhooks only. n8n logs it as deprecated.
+
+```yaml
+chartEnvOverrides:
+  shared:
+    N8N_WEBHOOK_URL: ""
+env:
+  shared:
+    WEBHOOK_URL: https://hooks.example.com
+```
 
 ### MCP Server Trigger with multiple webhook processors
 

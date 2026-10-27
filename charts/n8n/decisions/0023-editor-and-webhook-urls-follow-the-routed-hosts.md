@@ -6,7 +6,7 @@ Supersedes: [0006](0006-public-urls-default-to-https.md)
 
 ## Context
 
-n8n has two public URLs: `N8N_EDITOR_BASE_URL` for the editor, OAuth callbacks and links in emails, and `N8N_WEBHOOK_URL` for webhooks, forms and MCP. n8n builds every webhook, form and MCP URL it shows from the webhook URL, test URLs included. When a URL is not set, n8n builds it from `N8N_HOST` and `N8N_PROTOCOL`, which default to `localhost` and `http`.
+n8n has two public URLs: `N8N_EDITOR_BASE_URL` for the editor, OAuth callbacks and links in emails, and `N8N_WEBHOOK_URL` for webhooks, forms and MCP. n8n builds every webhook, form and MCP URL it shows from the webhook URL, test URLs included. When the editor URL is not set, n8n uses the webhook URL. When the webhook URL is not set, or both are not set, n8n builds them from `N8N_HOST` and `N8N_PROTOCOL`, which default to `localhost` and `http`.
 
 Under 0006, both URLs defaulted to `https://` and the first ingress host. Two setups got the wrong webhook URL: a plain-HTTP install that set `editor.url` still got an `https://` webhook URL, and an install with `editor.url` and no ingress got `http://localhost:5678`. `webhook.url` also stood in for the editor URL when the ingress was off.
 
@@ -29,7 +29,7 @@ The chart never derives a scheme from TLS settings, and it does not set `N8N_HOS
 ## Consequences
 
 - Plain-HTTP installs and installs without an ingress or `HTTPRoute` set `editor.url`, and `webhook.url` only when webhooks have a host of their own.
-- `webhook.url` never sets the editor URL. An install that sets only `webhook.url` and routes nothing gets no editor URL, and `NOTES.txt` warns about it.
+- `webhook.url` never sets the editor URL. An install that sets only `webhook.url` and routes nothing gets no editor URL from the chart, so n8n uses the webhook URL for it, as the chart did under 0006. `NOTES.txt` says so.
 - `ingress.webhookProcessor` is retired for `ingress.webhook`, which no longer has an `enabled` switch. The webhook Ingress renders when `ingress.enabled` is true and webhook processors run or webhook hosts are set.
 - A wildcard first host fails the render unless the matching URL value is set, because `https://*.example.com` is not an address n8n can use.
 - `NOTES.txt` prints the editor URL the chart sets, so the install output and n8n agree.

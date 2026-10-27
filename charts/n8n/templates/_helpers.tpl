@@ -398,6 +398,11 @@ per mistake.
 {{- if and ((.Values.httpRoute.webhook).hostnames) (not .Values.httpRoute.enabled) -}}
 {{- $errs = append $errs "httpRoute.webhook.hostnames is set, but httpRoute.enabled is false, so the chart renders no HTTPRoute for it. Set httpRoute.enabled to true, or remove httpRoute.webhook.hostnames." -}}
 {{- end -}}
+{{- /* An HTTPRoute with no hostnames matches every hostname on its listener,
+so the editor route would also answer on the webhook hosts. */}}
+{{- if and .Values.httpRoute.enabled ((.Values.httpRoute.webhook).hostnames) (not .Values.httpRoute.hostnames) -}}
+{{- $errs = append $errs "httpRoute.webhook.hostnames is set but httpRoute.hostnames is empty, so the editor route matches every hostname, the webhook hosts included. Set httpRoute.hostnames." -}}
+{{- end -}}
 
 {{/* --- HTTPRoute --- */}}
 {{- if .Values.httpRoute.enabled -}}
