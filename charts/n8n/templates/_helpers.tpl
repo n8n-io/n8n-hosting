@@ -306,16 +306,18 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
 {{- define "n8n.retiredKeys" -}}
 - path: database.useExternal
   replacement: "Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim."
+- path: ingress.webhookProcessor
+  replacement: "Move className, annotations and tls to ingress.webhook, and remove enabled. The webhook Ingress renders whenever webhookProcessor.enabled is true."
 - path: redis.useExternal
   replacement: "Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host."
 - path: retiredKeysTest.first
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
   replacement: "Remove it; nothing replaces it."
-- path: securityContext
-  replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
 - path: s3.storage.mode
   replacement: "Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
+- path: securityContext
+  replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
 - path: taskRunners.authToken.value
   replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
 - path: taskRunners.broker.listenAddress
@@ -389,9 +391,37 @@ per mistake.
 {{- end -}}
 {{- end -}}
 
-{{/* --- Webhook processor --- */}}
-{{- if and .Values.ingress.webhookProcessor.enabled (not .Values.webhookProcessor.enabled) -}}
-{{- $errs = append $errs "ingress.webhookProcessor.enabled=true requires webhookProcessor.enabled=true" -}}
+{{/* --- Webhook hosts --- */}}
+{{- if and ((.Values.ingress.webhook).hosts) (not .Values.ingress.enabled) -}}
+{{- $errs = append $errs "ingress.webhook.hosts is set, but ingress.enabled is false, so the chart renders no Ingress for it. Set ingress.enabled to true, or remove ingress.webhook.hosts." -}}
+{{- end -}}
+{{- if and ((.Values.httpRoute.webhook).hostnames) (not .Values.httpRoute.enabled) -}}
+{{- $errs = append $errs "httpRoute.webhook.hostnames is set, but httpRoute.enabled is false, so the chart renders no HTTPRoute for it. Set httpRoute.enabled to true, or remove httpRoute.webhook.hostnames." -}}
+{{- end -}}
+{{- /* An HTTPRoute with no hostnames matches every hostname on its listener,
+so the editor route would also answer on the webhook hosts. */}}
+{{- if and .Values.httpRoute.enabled ((.Values.httpRoute.webhook).hostnames) (not .Values.httpRoute.hostnames) -}}
+{{- $errs = append $errs "httpRoute.webhook.hostnames is set but httpRoute.hostnames is empty, so the editor route matches every hostname, the webhook hosts included. Set httpRoute.hostnames." -}}
+{{- end -}}
+
+{{/* --- HTTPRoute --- */}}
+{{- if .Values.httpRoute.enabled -}}
+{{- if .Values.ingress.enabled -}}
+{{- $errs = append $errs "httpRoute.enabled and ingress.enabled are both true. The chart routes n8n through one of them. Set one to false." -}}
+{{- end -}}
+{{- if not .Values.httpRoute.parentRefs -}}
+{{- $errs = append $errs "httpRoute.parentRefs is empty, so the route attaches to no Gateway. Name the Gateway, for example [{name: my-gateway, namespace: gateway-system}]." -}}
+{{- end -}}
+{{- end -}}
+{{- with include "n8n.editorHost" . -}}
+{{- if and (hasPrefix "*" .) (not $.Values.editor.url) -}}
+{{- $errs = append $errs (printf "The first editor host, %s, is a wildcard, so the chart cannot build the editor address from it. Set editor.url." .) -}}
+{{- end -}}
+{{- end -}}
+{{- with include "n8n.webhookHost" . -}}
+{{- if and (hasPrefix "*" .) (not $.Values.webhook.url) -}}
+{{- $errs = append $errs (printf "The first webhook host, %s, is a wildcard, so the chart cannot build the webhook address from it. Set webhook.url." .) -}}
+{{- end -}}
 {{- end -}}
 
 {{/* --- KEDA --- */}}
@@ -630,17 +660,69 @@ so workers handle code execution and main pods do not need runner sidecars.
 {{- end -}}
 
 {{/*
+The first editor host: the first ingress host, or the first HTTPRoute
+hostname. The validation refuses both on together. Empty when the chart routes
+nothing.
+*/}}
+{{- define "n8n.editorHost" -}}
+{{- if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
+{{ (index .Values.ingress.hosts 0).host }}
+{{- else if and .Values.httpRoute .Values.httpRoute.enabled .Values.httpRoute.hostnames -}}
+{{ first .Values.httpRoute.hostnames }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The first webhook host: the first ingress.webhook host, or the first
+httpRoute.webhook hostname. Empty when webhooks share the editor hosts.
+*/}}
+{{- define "n8n.webhookHost" -}}
+{{- if and .Values.ingress .Values.ingress.enabled .Values.ingress.webhook .Values.ingress.webhook.hosts -}}
+{{ first .Values.ingress.webhook.hosts }}
+{{- else if and .Values.httpRoute .Values.httpRoute.enabled .Values.httpRoute.webhook .Values.httpRoute.webhook.hostnames -}}
+{{ first .Values.httpRoute.webhook.hostnames }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The production webhook paths, which webhook processors serve when they run.
+Both APIs match prefixes on whole segments, so /mcp/ leaves /mcp-test/ on main.
+*/}}
+{{- define "n8n.webhookPaths" -}}
+{{- list "/webhook/" "/webhook-waiting/" "/form/" "/form-waiting/" "/mcp/" | toYaml -}}
+{{- end -}}
+
+{{/*
+The test webhook paths. Only main serves them.
+*/}}
+{{- define "n8n.webhookTestPaths" -}}
+{{- list "/webhook-test/" "/form-test/" "/mcp-test/" | toYaml -}}
+{{- end -}}
+
+{{/*
 The public editor URL, rendered as N8N_EDITOR_BASE_URL and printed by NOTES.txt.
-editor.url wins. The ingress fallback uses https://, which assumes TLS ends at
-the ingress or in front of it. Empty when no public URL is configured.
+editor.url wins. The https:// fallback assumes TLS ends at or before the route.
 */}}
 {{- define "n8n.editorBaseUrl" -}}
 {{- if .Values.editor.url -}}
 {{ .Values.editor.url }}
-{{- else if and .Values.ingress .Values.ingress.enabled (gt (len .Values.ingress.hosts) 0) -}}
-https://{{ (index .Values.ingress.hosts 0).host }}
-{{- else if and .Values.webhook.url (hasPrefix "http" (.Values.webhook.url | toString)) -}}
+{{- else if include "n8n.editorHost" . -}}
+https://{{ include "n8n.editorHost" . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The public webhook URL, rendered as N8N_WEBHOOK_URL. webhook.url wins, then
+https:// and the first webhook host. Without webhook hosts, webhooks share the
+editor hosts, so they follow the editor URL.
+*/}}
+{{- define "n8n.webhookUrl" -}}
+{{- if .Values.webhook.url -}}
 {{ .Values.webhook.url }}
+{{- else if include "n8n.webhookHost" . -}}
+https://{{ include "n8n.webhookHost" . }}
+{{- else -}}
+{{ include "n8n.editorBaseUrl" . }}
 {{- end -}}
 {{- end -}}
 

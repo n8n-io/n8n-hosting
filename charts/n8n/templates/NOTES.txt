@@ -4,6 +4,12 @@ n8n has been successfully deployed!
 
 Your n8n instance is available at:
   {{ . }}
+{{- $webhookUrl := include "n8n.webhookUrl" $ }}
+{{- if and $.Values.webhook.enabled (ne $webhookUrl .) }}
+
+Webhooks, forms and MCP triggers are served at:
+  {{ $webhookUrl }}
+{{- end }}
 
 {{- else }}
 
@@ -69,18 +75,27 @@ value can express what you need:
 {{- end }}
 {{- end }}
 
-{{- /* With no public URL, n8n builds its webhook and OAuth callback URLs from
-N8N_HOST, which defaults to localhost. */}}
+{{- /* With no editor URL, n8n uses the webhook URL for the editor and OAuth
+callback URLs. With neither, it builds them from N8N_HOST, which defaults to
+localhost. */}}
 {{- if not (include "n8n.editorBaseUrl" .) }}
 {{- $urlEnv := false }}
+{{- $webhookEnv := and .Values.webhook.enabled (include "n8n.webhookUrl" .) }}
 {{- range include "n8n.userEnv" (dict "root" . "component" "main") | fromJsonArray }}
 {{- if has .name (list "N8N_EDITOR_BASE_URL" "N8N_HOST") }}{{- $urlEnv = true }}{{- end }}
+{{- if eq .name "N8N_WEBHOOK_URL" }}{{- $webhookEnv = true }}{{- end }}
 {{- end }}
 {{- if not $urlEnv }}
+{{- if $webhookEnv }}
 
-WARNING: No public URL is set, so n8n builds its webhook and OAuth callback
-URLs from localhost. If users reach n8n at another address, set editor.url
-and webhook.url.
+WARNING: No editor URL is set, so n8n uses the webhook URL for the editor and
+OAuth callback URLs. Set editor.url if the editor lives at another address.
+{{- else }}
+
+WARNING: No editor URL is set, so n8n builds its editor, webhook and OAuth
+callback URLs from localhost. If users reach n8n at another address, set
+editor.url.
+{{- end }}
 {{- if or (and .Values.envFrom .Values.envFrom.shared) (and .Values.envFrom .Values.envFrom.main) }}
 The chart cannot see inside envFrom sources. Ignore this warning if one of
 them sets N8N_EDITOR_BASE_URL or N8N_HOST.

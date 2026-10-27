@@ -102,7 +102,7 @@ tests:
       path: metadata.name
       value: RELEASE-NAME-n8n
     set:
-      webhook.url: https://n8n.example.com
+      editor.url: https://n8n.example.com
       license.enabled: true
       license.activationKey: test-key
     asserts:

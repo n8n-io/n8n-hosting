@@ -12,7 +12,6 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
   database.type: postgresdb
-  database.useExternal: true
   database.host: postgres.example.com
   queueMode.enabled: true
   redis.host: redis.example.com

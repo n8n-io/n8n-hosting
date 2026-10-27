@@ -2,6 +2,7 @@
 
 Date: 2026-10-09
 PR: https://github.com/n8n-io/n8n-hosting/pull/243
+Superseded by: [0023](0023-editor-and-webhook-urls-follow-the-routed-hosts.md)
 
 ## Context
 
