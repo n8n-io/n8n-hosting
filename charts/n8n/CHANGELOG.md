@@ -4,6 +4,43 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [2.0.0-rc.1](https://github.com/n8n-io/n8n-hosting/compare/v2.0.0-rc.0...v2.0.0-rc.1) (2026-10-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **chart:** give webhooks a host of their own, and add an opt-in Gateway API HTTPRoute ([#258](https://github.com/n8n-io/n8n-hosting/issues/258))
+* **chart:** leave the task-runner broker on n8n's default listen address ([#265](https://github.com/n8n-io/n8n-hosting/issues/265))
+* **chart:** turn off service links, RBAC and the token mount by default, and recreate main on ReadWriteOnce storage ([#266](https://github.com/n8n-io/n8n-hosting/issues/266))
+* **chart:** retire useExternal in favour of database.type ([#264](https://github.com/n8n-io/n8n-hosting/issues/264))
+* **chart:** honour networkPolicy ingress and egress values ([#263](https://github.com/n8n-io/n8n-hosting/issues/263))
+* **chart:** run task runners by default and require a token source ([#252](https://github.com/n8n-io/n8n-hosting/issues/252))
+* **chart:** store binary data in S3 when s3.enabled is set, instead of on pod-local disk ([#220](https://github.com/n8n-io/n8n-hosting/issues/220))
+* **chart:** merge per-role security contexts over a shared block ([#254](https://github.com/n8n-io/n8n-hosting/issues/254))
+* **chart:** env as per-component maps delivered via envFrom ([#250](https://github.com/n8n-io/n8n-hosting/issues/250))
+
+### Features
+
+* **chart:** add imagePullSecrets option ([#180](https://github.com/n8n-io/n8n-hosting/issues/180)) ([5688ee8](https://github.com/n8n-io/n8n-hosting/commit/5688ee86ce325e1859b048d6453b0d05b68ac3c3))
+* **chart:** bump n8n to 2.44.5 ([#267](https://github.com/n8n-io/n8n-hosting/issues/267)) ([b690a87](https://github.com/n8n-io/n8n-hosting/commit/b690a87c814aed2f56981047fb617d22e488b861))
+* **chart:** env as per-component maps delivered via envFrom ([#250](https://github.com/n8n-io/n8n-hosting/issues/250)) ([7a22e91](https://github.com/n8n-io/n8n-hosting/commit/7a22e91a7660e5e443c296d148f3ca8eec880aa3))
+* **chart:** fail the render on retired values keys ([#247](https://github.com/n8n-io/n8n-hosting/issues/247)) ([b6281ce](https://github.com/n8n-io/n8n-hosting/commit/b6281ce80d3780d76cefaa03869696f881e2c29b))
+* **chart:** give webhooks a host of their own, and add an opt-in Gateway API HTTPRoute ([#258](https://github.com/n8n-io/n8n-hosting/issues/258)) ([cdda0c7](https://github.com/n8n-io/n8n-hosting/commit/cdda0c7f6560789a55d86a7eedb69460d8f04edd))
+* **chart:** honour networkPolicy ingress and egress values ([#263](https://github.com/n8n-io/n8n-hosting/issues/263)) ([d2ea07d](https://github.com/n8n-io/n8n-hosting/commit/d2ea07d583a9004453c4cdcf3b62d150d8511545))
+* **chart:** leave the task-runner broker on n8n's default listen address ([#265](https://github.com/n8n-io/n8n-hosting/issues/265)) ([e785ab7](https://github.com/n8n-io/n8n-hosting/commit/e785ab70cafe6cf666a51678e84956cf33b88c29))
+* **chart:** merge per-role security contexts over a shared block ([#254](https://github.com/n8n-io/n8n-hosting/issues/254)) ([59159ee](https://github.com/n8n-io/n8n-hosting/commit/59159ee6de8a0eb8c9027835d2b41ab12e720432))
+* **chart:** report the deployment artifact from every artefact ([#239](https://github.com/n8n-io/n8n-hosting/issues/239)) ([14a4cf5](https://github.com/n8n-io/n8n-hosting/commit/14a4cf543f61327aba40d0a2439b52d80f703104))
+* **chart:** retire useExternal in favour of database.type ([#264](https://github.com/n8n-io/n8n-hosting/issues/264)) ([682de90](https://github.com/n8n-io/n8n-hosting/commit/682de9060e530b40d41601a8c1246cb31c035452))
+* **chart:** run task runners by default and require a token source ([#252](https://github.com/n8n-io/n8n-hosting/issues/252)) ([e662c4f](https://github.com/n8n-io/n8n-hosting/commit/e662c4f220bdb262b44fa341033725aa05e501fa))
+* **chart:** store binary data in S3 when s3.enabled is set, instead of on pod-local disk ([#220](https://github.com/n8n-io/n8n-hosting/issues/220)) ([b8ec6d1](https://github.com/n8n-io/n8n-hosting/commit/b8ec6d1d34dccb9198d43cbc9f919b9ab934a3b4))
+* **chart:** turn off service links, RBAC and the token mount by default, and recreate main on ReadWriteOnce storage ([#266](https://github.com/n8n-io/n8n-hosting/issues/266)) ([42ce197](https://github.com/n8n-io/n8n-hosting/commit/42ce197fe5715981c80e6c41bd0ece49f5016a33))
+
+
+### Bug Fixes
+
+* **chart:** probe workers on the queue health endpoint ([#233](https://github.com/n8n-io/n8n-hosting/issues/233)) ([30ba43b](https://github.com/n8n-io/n8n-hosting/commit/30ba43b96c9ec797e6498fa4edfde650667598cb))
+* **chart:** start workers and webhook processors through the image entrypoint ([#241](https://github.com/n8n-io/n8n-hosting/issues/241)) ([40c4e4b](https://github.com/n8n-io/n8n-hosting/commit/40c4e4b3827dce83c9adb11cbef3a3a916e9e793))
+
 ## [1.16.0](https://github.com/n8n-io/n8n-hosting/compare/v1.15.0...v1.16.0) (2026-10-14)
 
 
