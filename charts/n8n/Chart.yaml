@@ -16,6 +16,11 @@ type: application
 annotations:
   artifacthub.io/license: MIT
   artifacthub.io/category: integration-delivery
+  # main releases 2.0.0 release candidates until 2.0.0 itself. Helm skips a
+  # version with an -rc suffix on its own, but Artifact Hub lists it as the
+  # chart's latest version unless this says otherwise. Remove it in the change
+  # that releases 2.0.0.
+  artifacthub.io/prerelease: "true"
   # Artifact Hub builds the package page from inside the .tgz, so these
   # annotations and the README beside them are the whole of what it shows.
   # `home` and `sources` above are rendered separately; this is for the rest.
