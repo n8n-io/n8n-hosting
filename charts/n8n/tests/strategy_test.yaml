@@ -9,7 +9,6 @@ set:
   secretRefs.existingSecret: n8n-core-secrets
   queueMode.enabled: false
   database.type: sqlite
-  database.useExternal: false
   redis.enabled: false
   persistence.enabled: true
 tests:
@@ -46,7 +45,6 @@ tests:
     set:
       queueMode.enabled: true
       database.type: postgresdb
-      database.useExternal: true
       database.host: postgres.example.com
       redis.enabled: true
       redis.host: redis.example.com
@@ -78,7 +76,6 @@ tests:
       persistence.enabled: false
       queueMode.enabled: true
       database.type: postgresdb
-      database.useExternal: true
       database.host: postgres.example.com
       redis.enabled: true
       redis.host: redis.example.com
