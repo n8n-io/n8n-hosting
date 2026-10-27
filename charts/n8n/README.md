@@ -325,7 +325,7 @@ serviceAccount:
   name: "my-external-sa"   # must already exist in the release namespace
 ```
 
-For EKS IRSA, or workload identity on another cloud, set the annotation the platform reads in `serviceAccount.annotations`. The chart adds none of its own:
+For EKS IRSA, or workload identity on another cloud, set the annotation the platform reads in `serviceAccount.annotations`. The chart adds none of its own. It applies these annotations only to a ServiceAccount it creates. With `create: false`, annotate the existing ServiceAccount directly:
 
 ```yaml
 serviceAccount:

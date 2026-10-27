@@ -191,8 +191,8 @@ The chart no longer sets annotations for a specific ingress controller or cloud.
 
 | If your values set | What changes | Do this |
 |---|---|---|
-| Any `ingress.sticky` key | The render fails and names `ingress.annotations`. | Remove `ingress.sticky`. On ingress-nginx, copy the four `nginx.ingress.kubernetes.io/` cookie annotations from [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) into `ingress.annotations`. |
-| `serviceAccount.awsRoleArn` | The render fails and names `serviceAccount.annotations`. | Remove it, and set `eks.amazonaws.com/role-arn` to the same role in `serviceAccount.annotations`. If you already set that annotation, only remove the key. |
+| Any `ingress.sticky` key | The render fails and names `ingress.annotations`. | Remove `ingress.sticky`. On ingress-nginx, copy the four `nginx.ingress.kubernetes.io/` cookie annotations from [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) into `ingress.annotations`. If you changed `cookieName`, `cookieExpires` or `cookieMaxAge`, put your values in `session-cookie-name`, `session-cookie-expires` and `session-cookie-max-age`. |
+| `serviceAccount.awsRoleArn` | The render fails and names `serviceAccount.annotations`. | Remove it, and set `eks.amazonaws.com/role-arn` to the same role in `serviceAccount.annotations`. If you already set that annotation, only remove the key. With `serviceAccount.create: false`, the chart does not manage the ServiceAccount, so annotate the existing one directly. |
 | `s3.auth.autoDetect: true` without `serviceAccount.awsRoleArn` | The render no longer fails. | Nothing. EKS Pod Identity and other credential sources work without a role annotation. |
 
 ### Security contexts

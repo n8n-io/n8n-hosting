@@ -9,7 +9,7 @@ In 1.x, `ingress.sticky` added ingress-nginx cookie affinity annotations to the 
 
 ## Decision
 
-Under "Portable primitives with portable defaults" in `../DESIGN.md`, nothing in `templates/` names an ingress controller or a cloud. `ingress.sticky` and `serviceAccount.awsRoleArn` are retired. Controller and cloud settings arrive through `ingress.annotations` and `serviceAccount.annotations`, and the examples show them: `examples/https-ingress.yaml` for ingress-nginx cookie affinity, and `examples/production-s3.yaml` for IRSA.
+Under "Portable primitives with portable defaults" in `../DESIGN.md`, the templates set no annotations for a specific ingress controller or cloud. `ingress.sticky` and `serviceAccount.awsRoleArn` are retired. Controller and cloud settings arrive through `ingress.annotations` and `serviceAccount.annotations`, and the examples show them: `examples/https-ingress.yaml` for ingress-nginx cookie affinity, and `examples/production-s3.yaml` for IRSA.
 
 `s3.auth.autoDetect` stays. It sets n8n's `N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT`, which tells the AWS SDK to find credentials itself. That works with IRSA, Pod Identity, node roles and environment credentials, so it is not tied to one platform. It no longer requires `awsRoleArn`.
 

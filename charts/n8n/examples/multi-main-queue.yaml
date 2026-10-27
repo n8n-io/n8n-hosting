@@ -74,7 +74,7 @@ serviceAccount:
   create: true
   name: n8n-enterprise
   annotations:
-    # IRSA on EKS. Remove it if you use Pod Identity or access keys.
+    # IRSA on EKS. Remove it if you use Pod Identity.
     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
 
 # n8n Enterprise License Configuration

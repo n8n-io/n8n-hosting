@@ -541,7 +541,8 @@ serviceAccount:
   # never created and fail to start. The chart will refuse to render in that
   # case (see n8n.validate in templates/_helpers.tpl).
   name: n8n
-  # Annotations for the service account. For EKS IRSA, set:
+  # Annotations for the service account the chart creates. With create: false,
+  # annotate the existing service account directly. For EKS IRSA, set:
   # eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/n8n
   annotations: {}
   # Whether the ServiceAccount token is mounted into n8n pods at

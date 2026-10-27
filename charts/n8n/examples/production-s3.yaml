@@ -88,7 +88,7 @@ serviceAccount:
   create: true
   name: n8n-prod
   annotations:
-    # IRSA on EKS. Remove it if you use Pod Identity or access keys.
+    # IRSA on EKS. Remove it if you use Pod Identity or Option 2 above.
     eks.amazonaws.com/role-arn: "arn:aws:iam::your-account-id:role/your-n8n-s3-role"
 
 # Service configuration with session affinity for WebSocket stability
