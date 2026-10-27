@@ -24,13 +24,13 @@ If your values file sets a key the chart no longer reads, the render fails. The 
 
 #### Worker probes
 
-A worker probe is now HTTP against the worker health endpoint, or an exec probe that runs the `command` you set. See [decision 0013](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0013-worker-probes-use-the-queue-health-endpoint.md).
+A worker probe is now HTTP against the worker health endpoint, or an exec probe that runs the `command` you set. See [decision 0027](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0027-worker-probes-run-a-command-or-the-health-endpoint.md).
 
 | If your values set | Do this |
 |---|---|
 | `probes.worker.liveness.type` or `probes.worker.readiness.type` | Remove it. Set `command` on the probe for an exec probe, or leave `command` empty to probe the health endpoint. The render fails until you do. |
 | `command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]` on a worker probe | Remove it. This check always passes, because `pgrep` matches its own shell. The chart does not detect it. |
-| `redis.healthCheck.enabled: false` | Remove it to probe the health endpoint, which is the default. To keep it, set `command` on each enabled worker probe, or set `enabled: false` on the probe. The render fails until you do. |
+| `redis.healthCheck.enabled: false` | Remove it to probe the health endpoint, which is the default. To keep it, set `command` on each enabled liveness or readiness probe, or set `enabled: false` on that probe. The startup probe needs nothing, because the chart leaves it out when the health endpoint is off. The render fails until you do. |
 
 A values file copied whole from chart 1.16 or earlier sets all three. Remove all three, and the workers use the health endpoint.
 
