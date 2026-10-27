@@ -1,7 +1,7 @@
 # 0026. The templates set no ingress controller or cloud annotations
 
 Date: 2026-10-21
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/274
 
 ## Context
 
