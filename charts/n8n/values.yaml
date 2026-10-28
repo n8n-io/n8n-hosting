@@ -298,9 +298,15 @@ httpRoute:
 # ----- Persistence -----
 persistence:
   enabled: false
-  accessModes: ["ReadWriteOnce"]
-  size: 10Gi
-  storageClassName: ""
+  # Shape of the chart's PVC. Leave size and storageClassName unset with
+  # existingClaim, because the chart does not create that PVC; the render
+  # fails if you set them. With existingClaim, set accessModes to match your
+  # claim, because they decide the main Deployment's update strategy.
+  # accessModes: ["ReadWriteOnce"]   # <-- Default when unset
+  # size: 10Gi                       # <-- Default when unset
+  # storageClassName: ""             # <-- Unset uses the cluster's default StorageClass
+  # Name of a PVC you manage, used instead of the chart's.
+  # existingClaim: ""
   # Annotations on the chart-managed PVC only, merged over commonAnnotations.
   # Useful for backup and retention tooling, e.g. helm.sh/resource-policy: keep.
   # The render fails if this is set with existingClaim, because the chart does
@@ -874,7 +880,6 @@ database:
     enabled: false                   # <-- Enable SSL connection
     ca: ""                           # <-- CA certificate as PEM contents, not a file path
     cert: ""                         # <-- Client certificate as PEM contents, not a file path
-    key: ""                          # <-- Not read by the chart. Use existingSecret.keyKey instead
     rejectUnauthorized: true         # <-- Reject unauthorized SSL connections
     # TLS material from a Secret you manage. Each key you set is passed to n8n
     # from that Secret; leave a key empty to skip it. A cert-manager Certificate

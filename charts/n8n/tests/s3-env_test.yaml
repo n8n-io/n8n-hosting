@@ -61,13 +61,12 @@ tests:
       - notExists:
           path: data.N8N_DEFAULT_BINARY_DATA_MODE
 
-  # The schema allows unknown keys under s3.storage, so values files written
-  # for older chart versions keep rendering.
-  - it: ignores s3.storage.availableModes
+  # n8n has no setting for the available modes, so the schema rejects the key
+  # rather than rendering without it.
+  - it: rejects s3.storage.availableModes
     template: templates/configmap.yaml
     set:
       s3.storage.availableModes: filesystem,s3
     asserts:
-      - notFailedTemplate: {}
-      - notExists:
-          path: data.N8N_AVAILABLE_BINARY_DATA_MODES
+      - failedTemplate:
+          errorPattern: "at '/s3/storage': additional properties 'availableModes' not allowed"

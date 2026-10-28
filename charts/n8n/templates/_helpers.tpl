@@ -269,13 +269,14 @@ on an existing Deployment, which it rejects alongside Recreate.
 rollingUpdate: null
 {{- end -}}
 {{- else if .Values.persistence.enabled -}}
+{{- $modes := .Values.persistence.accessModes | default (list "ReadWriteOnce") -}}
 {{- $multiNode := false -}}
-{{- range .Values.persistence.accessModes -}}
+{{- range $modes -}}
 {{- if not (has . (list "ReadWriteOnce" "ReadWriteOncePod")) -}}
 {{- $multiNode = true -}}
 {{- end -}}
 {{- end -}}
-{{- if and .Values.persistence.accessModes (not $multiNode) -}}
+{{- if not $multiNode -}}
 type: Recreate
 rollingUpdate: null
 {{- end -}}
@@ -304,6 +305,8 @@ contains a dot cannot be listed. Each key also gets a note in UPGRADING.md.
 The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_test.yaml.
 */}}
 {{- define "n8n.retiredKeys" -}}
+- path: database.ssl.key
+  replacement: "Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey."
 - path: database.useExternal
   replacement: "Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim."
 - path: ingress.webhookProcessor
@@ -504,6 +507,18 @@ runner and n8n drift onto different versions. */ -}}
 {{/* --- Persistence --- */}}
 {{- if and .Values.persistence.annotations .Values.persistence.existingClaim -}}
 {{- $errs = append $errs (printf "persistence.annotations has no effect with persistence.existingClaim, because the chart does not create that PVC. Annotate %s directly, or remove persistence.annotations." .Values.persistence.existingClaim) -}}
+{{- end -}}
+{{- if .Values.persistence.existingClaim -}}
+{{- $pvcKeys := list -}}
+{{- range $k := list "size" "storageClassName" -}}
+{{- if hasKey $.Values.persistence $k -}}
+{{- $pvcKeys = append $pvcKeys (printf "persistence.%s" $k) -}}
+{{- end -}}
+{{- end -}}
+{{- with $pvcKeys -}}
+{{- $one := eq (len .) 1 -}}
+{{- $errs = append $errs (printf "%s %s no effect with persistence.existingClaim, because the chart does not create that PVC. Remove %s, or remove persistence.existingClaim to use the chart's PVC." (join " and " .) (ternary "has" "have" $one) (ternary "it" "them" $one)) -}}
+{{- end -}}
 {{- end -}}
 
 {{/* --- S3 --- */}}
