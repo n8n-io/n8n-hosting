@@ -45,6 +45,14 @@ tests:
       - failedTemplate:
           errorPattern: "at '/redis/host': minLength"
 
+  - it: names the replacement for redis.worker.maxStalledCount
+    template: templates/deployment-main.yaml
+    set:
+      redis.worker.maxStalledCount: 1
+    asserts:
+      - failedTemplate:
+          errorMessage: 'redis.worker.maxStalledCount is no longer a chart value. Remove it. n8n 2.0 removed the setting, and n8n ignores QUEUE_WORKER_MAX_STALLED_COUNT. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
   - it: rejects a filesystem binary data mode in env.shared
     template: templates/deployment-main.yaml
     set:

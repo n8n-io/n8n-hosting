@@ -46,7 +46,6 @@ matches the snapshot:
       QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD: "10000"
       QUEUE_WORKER_LOCK_DURATION: "60000"
       QUEUE_WORKER_LOCK_RENEW_TIME: "10000"
-      QUEUE_WORKER_MAX_STALLED_COUNT: "1"
       QUEUE_WORKER_STALLED_INTERVAL: "30000"
       TZ: UTC
     kind: ConfigMap
@@ -98,7 +97,6 @@ matches the snapshot:
       EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
       EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
       EXECUTIONS_TIMEOUT_MAX: "3600"
-      N8N_NATIVE_PYTHON_RUNNER: "true"
       N8N_RUNNERS_MODE: external
       QUEUE_HEALTH_CHECK_ACTIVE: "true"
       QUEUE_HEALTH_CHECK_PORT: "5678"
@@ -154,7 +152,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: b8c265fa897c6fce98f96116fb9b670dda209e5a386db62f08b02884f606732b
+            checksum/config: 3ddf73c27b6696326eed75aaa4d8cfa701d551035a94feec985f223a21d09502
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: main
@@ -269,7 +267,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: faa4097a965e8f1e7939269b40ed2ec38fde3b06cc094aac000cbf0e6570c43a
+            checksum/config: cf5f2cf645d8de68021d0e4f5be04b759b064dfca39a95a551e4abeb80b7a3e4
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: worker

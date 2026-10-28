@@ -313,6 +313,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Move className, annotations and tls to ingress.webhook, and remove enabled. The webhook Ingress renders whenever webhookProcessor.enabled is true."
 - path: redis.useExternal
   replacement: "Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host."
+- path: redis.worker.maxStalledCount
+  replacement: "Remove it. n8n 2.0 removed the setting, and n8n ignores QUEUE_WORKER_MAX_STALLED_COUNT."
 - path: retiredKeysTest.first
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
@@ -325,6 +327,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
 - path: taskRunners.broker.listenAddress
   replacement: "Remove it. The broker listens on localhost, where the task-runner sidecar reaches it. For a runner outside the pod, set N8N_RUNNERS_BROKER_LISTEN_ADDRESS in env.worker, or in env.main in standalone mode."
+- path: taskRunners.nativePythonRunner
+  replacement: "Remove it. The task runner image decides whether Python runs, and the default image runs it."
 {{- end -}}
 
 {{/*

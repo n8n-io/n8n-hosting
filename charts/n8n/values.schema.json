@@ -308,7 +308,9 @@
           },
           "additionalProperties": false
         },
-        "nativePythonRunner": { "type": "boolean" },
+        "nativePythonRunner": {
+          "description": "Retired. Remove it; the task runner image decides whether Python runs."
+        },
         "customConfig": {
           "type": "object",
           "properties": {
@@ -1392,7 +1394,9 @@
             "lockDuration": { "type": "integer", "minimum": 1000 },
             "lockRenewTime": { "type": "integer", "minimum": 1000 },
             "stalledInterval": { "type": "integer", "minimum": 1000 },
-            "maxStalledCount": { "type": "integer", "minimum": 1 }
+            "maxStalledCount": {
+              "description": "Retired. Remove it; n8n 2.0 removed the setting."
+            }
           },
           "additionalProperties": false
         },
