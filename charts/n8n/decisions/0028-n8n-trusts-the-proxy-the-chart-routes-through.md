@@ -1,7 +1,7 @@
 # 0028. n8n trusts the proxy the chart routes through
 
 Date: 2026-10-28
-PR: https://github.com/n8n-io/n8n-hosting/pull/TBD
+PR: https://github.com/n8n-io/n8n-hosting/pull/279
 
 ## Context
 
