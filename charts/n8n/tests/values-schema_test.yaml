@@ -57,3 +57,14 @@ tests:
       strategy.rollingUpdate.maxSurge: 25%
     asserts:
       - notFailedTemplate: {}
+
+  - it: accepts values that Kubernetes and Redis accept
+    template: templates/deployment-main.yaml
+    set:
+      hpa.main.targetCPUUtilizationPercentage: 150
+      hpa.worker.targetMemoryUtilizationPercentage: 150
+      hpa.webhookProcessor.targetCPUUtilizationPercentage: 150
+      persistence.size: 500Mi
+      redis.database: 16
+    asserts:
+      - notFailedTemplate: {}
