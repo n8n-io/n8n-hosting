@@ -199,6 +199,20 @@ env:
     WEBHOOK_URL: https://hooks.example.com
 ```
 
+### Client IP addresses
+
+When `ingress.enabled` or `httpRoute.enabled` is true, the chart sets `N8N_PROXY_HOPS` to `1` on main and the webhook processors. n8n then reads the client's IP address from the `X-Forwarded-For` header that the ingress controller or Gateway adds, rather than taking the proxy pod's address. IP allowlists on Webhook nodes and the addresses n8n logs depend on it. Workers take no client traffic, so they do not get it.
+
+If another proxy sits in front of the ingress controller or Gateway, such as a CDN or a cloud load balancer that adds its own hop, raise the count:
+
+```yaml
+chartEnvOverrides:
+  shared:
+    N8N_PROXY_HOPS: 2
+```
+
+Without an Ingress or a route, the chart does not set `N8N_PROXY_HOPS`, and n8n's default applies. If a proxy the chart does not render sits in front of n8n, set it in `env.shared` instead.
+
 ### MCP Server Trigger with multiple webhook processors
 
 MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so scaling `webhookProcessor.replicaCount` (or its HPA/KEDA) scales MCP alongside regular webhooks — no dedicated single-replica pod or session affinity is required. This relies on n8n's queue-mode/multi-instance MCP support added in **n8n 2.8.0** ([n8n-io/n8n#25147](https://github.com/n8n-io/n8n/pull/25147)), which recreates MCP sessions from Redis and runs tool calls on workers.
@@ -224,6 +238,8 @@ httpRoute:
 The route sends every path to the main pods. When `webhookProcessor.enabled=true`, it sends `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/` to the webhook processor pods, the same split as the webhook Ingress.
 
 The first hostname sets the editor URL, and the webhook URL follows it, in the same way as the first ingress host. Set `editor.url` if the Gateway serves n8n over plain HTTP.
+
+The route also sets `N8N_PROXY_HOPS`, in the same way as the Ingress. See [Client IP addresses](#client-ip-addresses).
 
 For a separate webhook host, set `httpRoute.webhook`. The chart renders a second route for it, with the same paths as the webhook Ingress on a separate host, and the editor route sends every path to main. The webhook route can attach to a different Gateway, for example a public one:
 
@@ -381,9 +397,9 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
 | `taskRunners.enabled` | Task runner sidecars. Requires an auth token: `N8N_RUNNERS_AUTH_TOKEN` in the core Secret (`secretRefs.existingSecret` or `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`), or a Secret of its own in `taskRunners.authToken.existingSecret` | `true` |
-| `ingress.enabled` | Create Ingress resource | `false` |
+| `ingress.enabled` | Create Ingress resource, and set `N8N_PROXY_HOPS` to 1 | `false` |
 | `ingress.webhook.hosts` | Hosts of their own for webhooks; the first sets the webhook URL | `[]` |
-| `httpRoute.enabled` | Create a Gateway API HTTPRoute | `false` |
+| `httpRoute.enabled` | Create a Gateway API HTTPRoute, and set `N8N_PROXY_HOPS` to 1 | `false` |
 | `httpRoute.webhook.hostnames` | Hostnames of their own for webhooks, on a second route; the first sets the webhook URL | `[]` |
 | `persistence.enabled` | PVC for main pods | `false` |
 | `s3.enabled` | Store binary data in an S3 bucket. Requires an n8n Business or Enterprise licence and `license.enabled` | `false` |

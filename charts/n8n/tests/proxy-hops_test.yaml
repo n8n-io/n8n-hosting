@@ -1,0 +1,137 @@
+# When the chart routes traffic through an Ingress or an HTTPRoute, n8n trusts
+# one proxy hop, so it reads the client's address from X-Forwarded-For rather
+# than taking the proxy's. Only the pods that take client traffic get it.
+suite: 'env: N8N_PROXY_HOPS'
+templates:
+  - templates/configmap.yaml
+  - templates/deployment-main.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  webhookProcessor.enabled: true
+tests:
+  - it: trusts one hop on main and the webhook processors behind an Ingress
+    template: templates/configmap.yaml
+    set:
+      ingress.enabled: true
+    asserts:
+      - equal:
+          path: data.N8N_PROXY_HOPS
+          value: "1"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.N8N_PROXY_HOPS
+          value: "1"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+
+  - it: trusts one hop on main and the webhook processors behind an HTTPRoute
+    template: templates/configmap.yaml
+    set:
+      httpRoute.enabled: true
+      httpRoute.parentRefs:
+        - name: n8n-gateway
+    asserts:
+      - equal:
+          path: data.N8N_PROXY_HOPS
+          value: "1"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.N8N_PROXY_HOPS
+          value: "1"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+
+  - it: leaves the hop count to n8n when the chart routes nothing
+    template: templates/configmap.yaml
+    asserts:
+      - notExists:
+          path: data.N8N_PROXY_HOPS
+
+  - it: never sets it on workers or in the shared ConfigMap, which take no client traffic
+    template: templates/configmap.yaml
+    set:
+      ingress.enabled: true
+    asserts:
+      - notExists:
+          path: data.N8N_PROXY_HOPS
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-worker
+      - notExists:
+          path: data.N8N_PROXY_HOPS
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n
+
+  - it: never sets it on workers behind an HTTPRoute
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-worker
+    set:
+      httpRoute.enabled: true
+      httpRoute.parentRefs:
+        - name: n8n-gateway
+    asserts:
+      - notExists:
+          path: data.N8N_PROXY_HOPS
+
+  - it: takes a higher hop count from chartEnvOverrides
+    template: templates/configmap.yaml
+    set:
+      ingress.enabled: true
+      chartEnvOverrides.shared.N8N_PROXY_HOPS: 2
+    asserts:
+      - equal:
+          path: data.N8N_PROXY_HOPS
+          value: "2"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.N8N_PROXY_HOPS
+          value: "2"
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+
+  - it: refuses the hop count in env, and names chartEnvOverrides
+    template: templates/deployment-main.yaml
+    set:
+      ingress.enabled: true
+      env.main.N8N_PROXY_HOPS: 2
+    asserts:
+      - failedTemplate:
+          errorPattern: "env.main.N8N_PROXY_HOPS is set by the chart from ingress.enabled. Put it in chartEnvOverrides.main to override the chart deliberately."
+
+  - it: names httpRoute.enabled when the route sets it
+    template: templates/deployment-main.yaml
+    set:
+      httpRoute.enabled: true
+      httpRoute.parentRefs:
+        - name: n8n-gateway
+      env.webhookProcessor.N8N_PROXY_HOPS: 2
+    asserts:
+      - failedTemplate:
+          errorPattern: "env.webhookProcessor.N8N_PROXY_HOPS is set by the chart from httpRoute.enabled. Put it in chartEnvOverrides.webhookProcessor to override the chart deliberately."
+
+  # A proxy the chart does not render, such as a Traefik IngressRoute in
+  # extraObjects, gets its hop count from env.
+  - it: takes the hop count from env when the chart routes nothing
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-main
+    set:
+      env.main.N8N_PROXY_HOPS: 1
+    asserts:
+      - equal:
+          path: data.N8N_PROXY_HOPS
+          value: "1"
