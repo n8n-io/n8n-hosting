@@ -32,7 +32,6 @@ If your values file sets a key the chart no longer reads, the render fails. The 
 
 ### Database
 
-<<<<<<< HEAD
 `database.type` alone chooses the database: `postgresdb`, the default, or `sqlite`. See [decision 0018](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0018-database-type-replaces-useexternal.md).
 
 | If your values set | Do this |
@@ -41,9 +40,8 @@ If your values file sets a key the chart no longer reads, the render fails. The 
 | `redis.useExternal` | Remove it. Nothing replaces it. Queue mode connects to the Redis at `redis.host`. |
 
 If your values set `database.type: sqlite` without `useExternal`, the chart stops passing PostgreSQL settings to n8n. n8n did not use them with SQLite. The pods restart once on upgrade.
-=======
+
 The chart never read `database.ssl.key`, and setting it now fails the render. Put the client key in a Secret, and set `database.ssl.existingSecret.name` and `database.ssl.existingSecret.keyKey`. See [decision 0002](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0002-postgres-tls-material-from-an-existing-secret.md).
->>>>>>> 6236c53 (feat(chart)!: reject values keys the schema does not declare)
 
 ### Secrets and host settings
 
@@ -236,7 +234,7 @@ If your values set a non-empty list, check it before you upgrade. Those rules no
 
 ### Persistence
 
-With `persistence.existingClaim`, remove `persistence.size`, `persistence.storageClassName` and `persistence.accessModes` from your values. The chart does not create a PVC when you supply one, so those keys did nothing, and the render now fails on them.
+With `persistence.existingClaim`, remove `persistence.size` and `persistence.storageClassName` from your values. The chart does not create a PVC when you supply one, so those keys did nothing, and the render now fails on them. Keep `persistence.accessModes`, and set it to match your claim.
 
 ### Changed defaults
 

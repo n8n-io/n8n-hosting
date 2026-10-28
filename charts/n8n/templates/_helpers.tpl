@@ -510,15 +510,14 @@ runner and n8n drift onto different versions. */ -}}
 {{- end -}}
 {{- if .Values.persistence.existingClaim -}}
 {{- $pvcKeys := list -}}
-{{- range $k := list "accessModes" "size" "storageClassName" -}}
+{{- range $k := list "size" "storageClassName" -}}
 {{- if hasKey $.Values.persistence $k -}}
 {{- $pvcKeys = append $pvcKeys (printf "persistence.%s" $k) -}}
 {{- end -}}
 {{- end -}}
 {{- with $pvcKeys -}}
 {{- $one := eq (len .) 1 -}}
-{{- $named := ternary (first .) (printf "%s and %s" (initial . | join ", ") (last .)) $one -}}
-{{- $errs = append $errs (printf "%s %s no effect with persistence.existingClaim, because the chart does not create that PVC. Remove %s, or remove persistence.existingClaim to use the chart's PVC." $named (ternary "has" "have" $one) (ternary "it" "them" $one)) -}}
+{{- $errs = append $errs (printf "%s %s no effect with persistence.existingClaim, because the chart does not create that PVC. Remove %s, or remove persistence.existingClaim to use the chart's PVC." (join " and " .) (ternary "has" "have" $one) (ternary "it" "them" $one)) -}}
 {{- end -}}
 {{- end -}}
 
