@@ -38,6 +38,7 @@ If your values file sets a key the chart no longer reads, the render fails. The 
 |---|---|
 | `database.useExternal` | Remove it. Leave `database.type` as it is. |
 | `redis.useExternal` | Remove it. Nothing replaces it. Queue mode connects to the Redis at `redis.host`. |
+| `redis.worker.maxStalledCount` | Remove it. n8n 2.0 removed the setting, so it had no effect. |
 
 If your values set `database.type: sqlite` without `useExternal`, the chart stops passing PostgreSQL settings to n8n. n8n did not use them with SQLite. The pods restart once on upgrade.
 
@@ -132,6 +133,8 @@ With task runners enabled, the runner and the broker need a shared auth token. T
 A new token works straight away. The runner and the broker share a pod, and every pod restarts on upgrade, so you do not need to keep the token the 1.x chart generated.
 
 The chart does not render a separate task-runner Secret, so Helm removes the one ending in `-task-runners` on upgrade. Do not name that Secret in `taskRunners.authToken.existingSecret`.
+
+Remove `taskRunners.nativePythonRunner` from your values. The render fails while it is set. The task runner image decides whether Python runs, and the default `n8nio/runners` image runs both JavaScript and Python. n8n no longer reads the variable the key set.
 
 The task broker now listens on localhost only, which is n8n's default. The runner sidecar reaches it there, so the default setup needs no change. Remove `taskRunners.broker.listenAddress` from your values. The render fails while it is set. If you run a runner outside the pod, set `N8N_RUNNERS_BROKER_LISTEN_ADDRESS` in `env.worker`, or in `env.main` in standalone mode. See [decision 0024](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0024-task-runner-broker-listens-on-localhost.md).
 
@@ -271,5 +274,61 @@ If you installed the 1.x release with Helm 4, the first upgrade can fail with `s
 `serviceAccount.automountServiceAccountToken` is now `false`, so n8n's pods no longer get a Kubernetes API token at `/var/run/secrets/kubernetes.io/serviceaccount`. n8n does not call the Kubernetes API. If a container you add calls it, set `serviceAccount.automountServiceAccountToken: true`.
 
 ### n8n 3.0
+
+Chart 2.0.0 runs n8n 3.0. Read [n8n's 3.0 breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes/) before you upgrade. Then open the Migration Report in n8n, under **Settings > Migration Report**. It lists what in your instance needs to change. It needs n8n 2.39 or later, and the latest 2.x release has the newest checks.
+
+This section covers the changes you can handle in your chart values, and some that n8n's page does not list.
+
+#### Before you upgrade
+
+Take a full backup of your database. The move to n8n 3.0 is one way. To go back to n8n 2.x, restore that backup.
+
+#### Changed defaults in n8n 3.0
+
+The chart does not set these, so n8n's new defaults apply as soon as the chart runs n8n 3.0. Workflows with long-running Code nodes or large archives are the most likely to be affected.
+
+| What changes in n8n 3.0 | To keep the n8n 2.x behaviour, set |
+|---|---|
+| A JavaScript Code node task times out after 60 seconds, down from 300. | `N8N_RUNNERS_TASK_TIMEOUT: 300` in both `env.shared` and `env.taskRunner`. n8n and the runner each apply the limit. Python tasks, which stopped at 60 seconds in n8n 2.x, then also get 300. |
+| The Compression node stops at 256 MiB of decompressed data, down from 2 GiB. | `N8N_COMPRESSION_NODE_MAX_DECOMPRESSED_SIZE_BYTES: 2147483648` in `env.shared` |
+| The Compression node stops at 1,000 entries in an archive, down from 5,000. | `N8N_COMPRESSION_NODE_MAX_ZIP_ENTRIES: 5000` in `env.shared` |
+| n8n does not install or load community packages that n8n has not verified. Unverified packages you already installed stop loading. | `N8N_UNVERIFIED_PACKAGES_ENABLED: true` in `env.shared` |
+| n8n enforces its Content-Security-Policy. n8n 2.x only reported violations. | `N8N_CONTENT_SECURITY_POLICY: "{}"` and `N8N_CONTENT_SECURITY_POLICY_REPORT_ONLY: default` in `env.shared` |
+| Chat Hub is off. | Add `chat-hub` to `N8N_ENABLED_MODULES` in `env.shared`. Do not also list it in `N8N_DISABLED_MODULES`, or n8n fails at startup. n8n 4 removes Chat Hub. |
+
+You can set these before the chart moves to n8n 3.0. n8n 2.45 and later 2.x versions read each of them, so the behaviour does not change at the upgrade.
+
+If you set `N8N_COMMUNITY_PACKAGES_MANAGED_BY_ENV: true`, an unverified package in `N8N_COMMUNITY_PACKAGES` stops main from starting. Set `N8N_UNVERIFIED_PACKAGES_ENABLED: true`, or remove the package from the list.
+
+With the Content-Security-Policy enforced, scripts that do not carry n8n's nonce stop running. This includes snippets that an ingress controller or a CDN adds to the page. If yours adds one, keep the 2.x behaviour with the lines in the table, or stop adding the snippet.
+
+SSRF protection is off by default. If you set `N8N_SSRF_PROTECTION_ENABLED: true`, the `default` block list in n8n 3.0 also blocks `100.64.0.0/10`, `::/128`, `2002::/16` and `64:ff9b::/96`. Requests to hosts in these ranges fail. Some pod networks use `100.64.0.0/10`. If your workflows call services in one of these ranges, add the range to `N8N_SSRF_ALLOWED_IP_RANGES`.
+
+#### Encryption key rotation
+
+n8n 3.0 turns on encryption key rotation. On its first start, main creates a data key in the database. If its database user cannot create the key, main exits. See [Before you upgrade](#before-you-upgrade).
+
+#### Removed variables
+
+n8n 3.0 no longer reads these variables. It logs a warning at startup for each one you still set, except where the table says otherwise. The chart does not check for them, so remove them from your `env` maps.
+
+| Variable | What to do |
+|---|---|
+| `N8N_DB_PING_TIMEOUT` | Set `DB_PING_TIMEOUT_MS` instead. |
+| `N8N_WORKFLOW_TAGS_DISABLED` | Remove it. Workflow tags are always on. |
+| `N8N_PRE_EXECUTE_ERROR_CREATES_EXECUTION` | Remove it. Nothing replaces it. |
+| `N8N_RUNNERS_ENABLED` | Remove it. Nothing replaces it. |
+| `N8N_MIGRATE_FS_STORAGE_PATH` | Remove it. The storage directory rename always runs. n8n logs no warning. |
+| `N8N_DEFAULT_BINARY_DATA_MODE: default` | Remove it, or set another mode. n8n 3.0 has no in-memory mode, and falls back to `filesystem`, or to `database` in queue mode. |
+| `N8N_AGENTS_SKILLS_HUB_ENABLED`, `N8N_ENV_FEAT_CRED_SHARING` | Remove them. n8n 2.46 removed them, and both features are always on. |
+| `N8N_INSTANCE_AI_LOCAL_GATEWAY_DISABLED`, `N8N_INSTANCE_AI_GATEWAY_API_KEY` | Remove them. n8n 2.46 removed them with the local gateway. n8n logs no warning. |
+
+#### Image changes
+
+The n8n image no longer includes GraphicsMagick. If a derived image or an Execute Command node calls `gm`, install it in your own image. The base image has no `apk-tools`, so you cannot add it with `apk` in a later layer.
+
+If you mount your own `n8n-task-runners.json` through `taskRunners.customConfig`, add `--no-experimental-webstorage` to the JavaScript runner's arguments. A file copied from n8n 2.x does not have it.
+
+#### Storage directory
 
 On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist, n8n refuses to start and names them. Move the contents of `binaryData` into `storage`, remove `binaryData`, and start n8n again.
