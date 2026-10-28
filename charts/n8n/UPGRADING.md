@@ -181,7 +181,7 @@ With an Ingress or an HTTPRoute, the chart now sets `N8N_PROXY_HOPS` to `1` on m
 |---|---|---|
 | `ingress.enabled` or `httpRoute.enabled`, with nothing in front of the ingress controller or Gateway | n8n sees each client's IP address. In 1.x every request came from the proxy pod's address. | Check any Webhook node IP allowlist that lists the proxy's address. |
 | `ingress.enabled` or `httpRoute.enabled`, behind another proxy such as a CDN or a cloud load balancer that adds its own hop | n8n takes the address that proxy added, not the client's. | Set `chartEnvOverrides.shared.N8N_PROXY_HOPS` to the number of proxies in front of n8n, for example `2`. |
-| `N8N_PROXY_HOPS` in `env`, with `ingress.enabled` or `httpRoute.enabled` | The render fails, because the chart now sets it. | Move it to `chartEnvOverrides`, under the same component. |
+| `N8N_PROXY_HOPS` in `env.shared`, `env.main` or `env.webhookProcessor`, with `ingress.enabled` or `httpRoute.enabled` | The render fails, because the chart now sets it on main and the webhook processors. | Move it to `chartEnvOverrides`, under the same component. `env.worker` can keep it. |
 
 ### Security contexts
 

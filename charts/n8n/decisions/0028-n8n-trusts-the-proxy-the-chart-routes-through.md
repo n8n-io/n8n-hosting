@@ -19,6 +19,6 @@ There is no values key for the count. A deployment with more proxies raises it t
 
 ## Consequences
 
-Installs with an Ingress or an HTTPRoute see their clients' real addresses after the upgrade. An install behind a further proxy now sees that proxy's address until it raises the count. An install that sets `N8N_PROXY_HOPS` in `env` alongside an Ingress or an HTTPRoute fails the render, and moves the value to `chartEnvOverrides`. The change lands on 2.0, because it changes which address n8n records and trusts for every install with an ingress.
+Installs with an Ingress or an HTTPRoute see their clients' real addresses after the upgrade. An install behind a further proxy now sees that proxy's address until it raises the count. An install that sets `N8N_PROXY_HOPS` in `env.shared`, `env.main` or `env.webhookProcessor` alongside an Ingress or an HTTPRoute fails the render, and moves the value to `chartEnvOverrides`. The change lands on 2.0, because it changes which address n8n records and trusts for every install with an ingress.
 
 A route the chart does not render, such as a Traefik `IngressRoute` in `extraObjects`, gets no hop count. Those installs set `N8N_PROXY_HOPS` in `env`.
