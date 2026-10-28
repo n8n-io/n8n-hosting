@@ -140,3 +140,53 @@ jobs:
             --certificate-identity "$IDENTITY" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             > /dev/null
+
+  # A job of its own so the Slack token never shares a runner with the OIDC
+  # token publish signs with. It runs only once the chart is pushed and
+  # verified, so the post never announces a release users cannot install.
+  announce:
+    needs: [release, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            charts/n8n/Chart.yaml
+            scripts/slack-release-message.jq
+          sparse-checkout-cone-mode: false
+
+      - name: Build the message
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          app_version=$(awk -F'"' '/^appVersion:/ { print $2 }' charts/n8n/Chart.yaml)
+          if [[ -z "$app_version" ]]; then
+            echo "::error::could not read appVersion from charts/n8n/Chart.yaml."
+            exit 1
+          fi
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body,url,tagName,isPrerelease |
+            jq --arg channel C036AELNMV0 --arg app_version "$app_version" \
+              -f scripts/slack-release-message.jq > /tmp/message.json
+
+      # Called directly rather than through an action, so nothing but curl is
+      # handed the token. Slack answers 200 with ok: false on most errors, so
+      # the body is checked rather than the status.
+      - name: Post to #updates-and-product-releases
+        env:
+          SLACK_TOKEN: ${{ secrets.RELEASE_SLACK_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          response=$(curl -sS --fail-with-body https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_TOKEN" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            --data @/tmp/message.json)
+          if ! jq -e '.ok' <<<"$response" > /dev/null; then
+            echo "::error::Slack did not post the release: $(jq -r '.error' <<<"$response")"
+            exit 1
+          fi
