@@ -68,3 +68,11 @@ tests:
       redis.database: 16
     asserts:
       - notFailedTemplate: {}
+
+  - it: rejects a persistence.size that is not a Kubernetes quantity
+    template: templates/deployment-main.yaml
+    set:
+      persistence.size: 10 GB
+    asserts:
+      - failedTemplate:
+          errorPattern: "at '/persistence/size': '10 GB' does not match pattern"
