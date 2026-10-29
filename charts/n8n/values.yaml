@@ -302,6 +302,9 @@ httpRoute:
     annotations: {}
 
 # ----- Persistence -----
+# A PVC for /home/node/.n8n on the main pod. In standalone mode it also holds
+# binary data, unless s3.enabled. Without it, that data is on an emptyDir and
+# is lost when the pod is deleted or rescheduled.
 persistence:
   enabled: false
   # Shape of the chart's PVC. Leave size and storageClassName unset with
@@ -925,11 +928,13 @@ redis:
     enabled: true                                  # <-- Serve /healthz and /healthz/readiness on workers
     port: 5678                                     # <-- Port the worker health endpoint listens on
 
-# ----- S3 External Storage (required for queue mode with binary data) -----
+# ----- S3 External Storage -----
 s3:
   # With S3 enabled, n8n stores binary data in the bucket. This needs an n8n
   # Business or Enterprise licence and license.enabled=true. To store binary
   # data elsewhere, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE.
+  # With S3 disabled, the chart sets no mode. n8n stores binary data in the
+  # database in queue mode, and under /home/node/.n8n/storage otherwise.
   enabled: false
   # S3 bucket configuration
   bucket:

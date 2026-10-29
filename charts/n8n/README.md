@@ -336,11 +336,15 @@ n8n stores binary data, such as files passed between nodes, in one of several pl
 | `s3.enabled: true` | `s3` | The S3 bucket |
 | Queue mode | `database` | The n8n database |
 | Standalone with `persistence.enabled: true` | `filesystem` | `/home/node/.n8n/storage` on the PVC |
-| Standalone without persistence | `filesystem` | An emptyDir, lost when the pod restarts |
+| Standalone on PostgreSQL without persistence | `filesystem` | An emptyDir, lost when the pod is deleted or rescheduled |
 
-An install that already has `/home/node/.n8n/binaryData` keeps using it on n8n 2.x. n8n 3.0 renames it to `storage` on first start.
+Standalone on SQLite needs `persistence.enabled: true` for its database, so without S3 its binary data is on the PVC.
+
+On n8n 2.x, an install that already has `/home/node/.n8n/binaryData` keeps using it, and a new install uses `storage`. n8n 3.0 renames `binaryData` to `storage` on its first start, and the files in it stay readable. See [UPGRADING.md](UPGRADING.md#n8n-30) for the case where both directories exist.
 
 S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot and logs that the licence is missing, so the chart requires `license.enabled: true` alongside `s3.enabled: true`.
+
+The bucket must exist before n8n starts. If it does not, n8n exits at boot with `Failed to connect to S3`. That message suggests checking the host, port and protocol, but a missing bucket causes it too.
 
 In `database` mode, n8n rejects files over 512 MiB. `N8N_BINARY_DATA_DATABASE_MAX_FILE_SIZE` in `env.shared` raises the limit, up to 1024 MiB.
 

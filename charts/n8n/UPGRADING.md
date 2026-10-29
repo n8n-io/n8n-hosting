@@ -272,4 +272,30 @@ If you installed the 1.x release with Helm 4, the first upgrade can fail with `s
 
 ### n8n 3.0
 
-On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist, n8n refuses to start and names them. Move the contents of `binaryData` into `storage`, remove `binaryData`, and start n8n again.
+On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist before that first start, n8n refuses to start and names them. This needs `persistence.enabled: true`, because an emptyDir starts empty in each new pod. The main pod then restarts in a loop, and it is the only pod that mounts the volume. To fix it:
+
+1. Scale the main Deployment to 0, and wait for its pod to be deleted.
+2. Start a temporary pod that mounts the same PVC, running as user 1000. The PVC is `persistence.existingClaim` if you set it, and otherwise the one `kubectl get pvc` lists for the release.
+3. Move the contents of `binaryData` into `storage`, and remove `binaryData`. If a file exists in both, decide which copy to keep first.
+4. Delete the temporary pod, and scale the main Deployment back up.
+
+For a release named `n8n` with the chart's PVC, the commands below do this. The temporary pod meets the `restricted` Pod Security Standard. If a file exists in both directories, it lists the file and stops without changing anything. Remove the copy you do not want, and run it again.
+
+```bash
+kubectl scale deployment/n8n-main --replicas=0
+kubectl wait --for=delete pod -l app.kubernetes.io/instance=n8n,app.kubernetes.io/component=main --timeout=300s
+kubectl run fix-storage --rm -i --restart=Never --image=busybox:1.36 --overrides='{
+  "spec": {
+    "securityContext": {"runAsNonRoot": true, "runAsUser": 1000, "runAsGroup": 1000, "seccompProfile": {"type": "RuntimeDefault"}},
+    "volumes": [{"name": "data", "persistentVolumeClaim": {"claimName": "n8n"}}],
+    "containers": [{
+      "name": "fix-storage",
+      "image": "busybox:1.36",
+      "command": ["sh", "-c", "cd /data/binaryData && both=$(find . -type f | while read -r f; do [ ! -e \"/data/storage/$f\" ] || echo \"$f\"; done) && if [ -n \"$both\" ]; then echo \"In both directories:\"; echo \"$both\"; exit 1; fi && cp -a . /data/storage/ && cd / && rm -rf /data/binaryData"],
+      "securityContext": {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}},
+      "volumeMounts": [{"name": "data", "mountPath": "/data"}]
+    }]
+  }
+}'
+kubectl scale deployment/n8n-main --replicas=1
+```
