@@ -344,6 +344,8 @@ On n8n 2.x, an install that already has `/home/node/.n8n/binaryData` keeps using
 
 S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot and logs that the licence is missing, so the chart requires `license.enabled: true` alongside `s3.enabled: true`.
 
+The bucket must exist before n8n starts. If it does not, n8n exits at boot with `Failed to connect to S3`. That message suggests checking the host, port and protocol, but a missing bucket causes it too.
+
 In `database` mode, n8n rejects files over 512 MiB. `N8N_BINARY_DATA_DATABASE_MAX_FILE_SIZE` in `env.shared` raises the limit, up to 1024 MiB.
 
 In queue mode, the render fails if `N8N_DEFAULT_BINARY_DATA_MODE` is `filesystem` in an `env` map or in `chartEnvOverrides`. The pods do not share a disk, so one pod cannot read binary data that another pod writes.
