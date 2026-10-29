@@ -38,9 +38,6 @@ taskRunners:
     logLevel: info
     autoShutdownTimeout: 15
 
-  # Enable Python runner support
-  nativePythonRunner: true
-
   # Resource limits for runner sidecar (tune based on workflow complexity)
   resources:
     requests:
