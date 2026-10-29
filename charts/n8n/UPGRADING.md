@@ -353,4 +353,9 @@ If you mount your own `n8n-task-runners.json` through `taskRunners.customConfig`
 
 #### Storage directory
 
-On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist, n8n refuses to start and names them. Move the contents of `binaryData` into `storage`, remove `binaryData`, and start n8n again.
+On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist before that first start, n8n refuses to start and names them. The main pod then restarts in a loop, and it is the only pod that mounts the volume. To fix it:
+
+1. Scale the main Deployment to 0.
+2. Start a temporary pod that mounts the same PVC, running as user 1000.
+3. Move the contents of `binaryData` into `storage`, and remove `binaryData`.
+4. Delete the temporary pod, and scale the main Deployment back up.
