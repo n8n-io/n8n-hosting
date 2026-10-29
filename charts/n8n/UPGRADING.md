@@ -111,7 +111,7 @@ env:
         key: password
 ```
 
-An empty list is ignored, so you only need to move the lists that hold entries.
+Remove each list once its entries have moved, including empty lists. The render fails on any of these keys while it is set.
 
 `env.shared` reaches every n8n process: main, workers and webhook processors. It does not reach the task runner sidecar. Use `env.taskRunner` for the sidecar.
 
@@ -122,6 +122,30 @@ Check these behaviour changes:
 - **`webhook.timeout` is removed.** n8n never read the variable it set, so it had no effect. Remove it from your values.
 
 Every pod restarts once on upgrade, because its environment moves into the new ConfigMaps. After that, a change to one component's map restarts only that component's pods.
+
+### Worker concurrency
+
+`executions.concurrency.productionLimit` is removed. Set `N8N_CONCURRENCY_PRODUCTION_LIMIT` in an `env` map instead. See [decision 0029](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0029-production-limit-moves-to-env.md).
+
+| If your values set | Do this |
+|---|---|
+| `productionLimit`, in queue mode | Set `env.worker.N8N_CONCURRENCY_PRODUCTION_LIMIT` to the same number. Remove `queueMode.workerConcurrency` if you set it. |
+| `productionLimit`, in standalone mode | Set `env.main.N8N_CONCURRENCY_PRODUCTION_LIMIT` to the same number. |
+| `productionLimit: -1` | Remove it. -1 is n8n's default. |
+
+```yaml
+# 1.x
+executions:
+  concurrency:
+    productionLimit: 50
+
+# 2.0, queue mode
+env:
+  worker:
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: 50
+```
+
+In queue mode, n8n uses the variable as each worker's concurrency and ignores `queueMode.workerConcurrency`. The render fails if a worker gets both, from `env.shared` or `env.worker`.
 
 ### Task runners
 
@@ -278,8 +302,6 @@ With `persistence.existingClaim`, remove `persistence.size` and `persistence.sto
 With `networkPolicy.enabled` and no `networkPolicy.egress` set, the NetworkPolicy now allows all egress. See [Network policy](#network-policy).
 
 `queueMode.workerConcurrency` is now empty by default, so workers start without a `--concurrency` flag and use n8n's default of 10.
-
-In queue mode, the render fails if you set `queueMode.workerConcurrency` together with `executions.concurrency.productionLimit`, or together with `N8N_CONCURRENCY_PRODUCTION_LIMIT` in `env.shared` or `env.worker`. n8n uses the production limit as each worker's concurrency and ignores the flag. To keep the concurrency your workers run at today, keep `productionLimit` and remove `workerConcurrency`.
 
 `taskRunners.enabled` is now `true`. See [Task runners](#task-runners).
 

@@ -1,6 +1,6 @@
 # n8n takes a worker's concurrency from N8N_CONCURRENCY_PRODUCTION_LIMIT when
 # it is set, and ignores --concurrency. Either setting works alone; both
-# together fail, because one would be ignored.
+# together fail, because the flag would be ignored.
 suite: 'worker concurrency'
 templates:
   - templates/deployment-main.yaml
@@ -27,21 +27,12 @@ tests:
           path: spec.template.spec.containers[0].args
           content: --concurrency=20
 
-  - it: accepts executions.concurrency.productionLimit alone
+  - it: accepts the variable alone in a worker map
     template: templates/deployment-main.yaml
     set:
-      executions.concurrency.productionLimit: 20
+      env.worker.N8N_CONCURRENCY_PRODUCTION_LIMIT: 20
     asserts:
       - notFailedTemplate: {}
-
-  - it: refuses both settings in queue mode
-    template: templates/deployment-main.yaml
-    set:
-      queueMode.workerConcurrency: 20
-      executions.concurrency.productionLimit: 100
-    asserts:
-      - failedTemplate:
-          errorMessage: "queueMode.workerConcurrency and executions.concurrency.productionLimit both set each worker's concurrency, and n8n uses productionLimit. Remove one of them."
 
   - it: refuses the flag with the variable in a worker map
     template: templates/deployment-main.yaml
@@ -59,6 +50,6 @@ tests:
       database.type: sqlite
       persistence.enabled: true
       queueMode.workerConcurrency: 20
-      executions.concurrency.productionLimit: 100
+      env.shared.N8N_CONCURRENCY_PRODUCTION_LIMIT: 100
     asserts:
       - notFailedTemplate: {}
