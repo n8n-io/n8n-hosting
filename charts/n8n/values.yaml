@@ -212,6 +212,10 @@ service:
 
 # ----- Ingress -----
 ingress:
+  # Also sets N8N_PROXY_HOPS to 1 on main and the webhook processors, so n8n
+  # sees the client's IP address rather than the ingress controller's. If
+  # another proxy sits in front, such as a CDN or a cloud load balancer, raise
+  # it with chartEnvOverrides.shared.N8N_PROXY_HOPS.
   enabled: false
   # IngressClass to use for the main n8n ingress. Examples: nginx, alb, traefik.
   className: ""
@@ -264,6 +268,8 @@ ingress:
 # whenever it is enabled, so the Gateway API CRDs must be installed. Use it
 # instead of ingress, not with it.
 httpRoute:
+  # Also sets N8N_PROXY_HOPS to 1 on main and the webhook processors. Raise it
+  # with chartEnvOverrides.shared.N8N_PROXY_HOPS if another proxy sits in front.
   enabled: false
   # Annotations on the HTTPRoute, merged over commonAnnotations.
   annotations: {}

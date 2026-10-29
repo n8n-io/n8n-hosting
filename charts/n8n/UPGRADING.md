@@ -173,6 +173,18 @@ The webhook Ingress:
 | Any `ingress.webhookProcessor` key | The render fails and names `ingress.webhook`. | Move `className`, `annotations` and `tls` to `ingress.webhook`, and remove `enabled`. An empty `ingress.webhook.className` now uses `ingress.className`, so set it to keep another class. The Ingress keeps its name. |
 | `webhookProcessor.enabled` and `ingress.enabled`, with `ingress.webhookProcessor.enabled` false or unset | The chart now renders the webhook Ingress, which sends the production webhook paths to the webhook processors. In 1.x they reached main. | Nothing on ingress-nginx and other controllers that merge Ingresses for the same host. A controller that gives each Ingress its own load balancer, such as the AWS Load Balancer Controller, now creates a second one. To share one, put the same group annotation, for example `alb.ingress.kubernetes.io/group.name`, in `ingress.annotations` and `ingress.webhook.annotations`. |
 
+Client IP addresses:
+
+With an Ingress or an HTTPRoute, the chart now sets `N8N_PROXY_HOPS` to `1` on main and the webhook processors. n8n records and checks the client's IP address, which it reads from `X-Forwarded-For`, rather than the ingress controller's or Gateway's. This applies to IP allowlists on Webhook nodes and the addresses n8n logs. See [decision 0028](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0028-n8n-trusts-the-proxy-the-chart-routes-through.md).
+
+| If your values set | What changes | Do this |
+|---|---|---|
+| `ingress.enabled` or `httpRoute.enabled`, with nothing in front of the ingress controller or Gateway | n8n sees each client's IP address. In 1.x every request came from the proxy pod's address. | Check any Webhook node IP allowlist that lists the proxy's address. |
+| `ingress.enabled` or `httpRoute.enabled`, behind another proxy such as a CDN or a cloud load balancer that adds its own hop | n8n takes the address that proxy added, not the client's. | Set `chartEnvOverrides.shared.N8N_PROXY_HOPS` to the number of proxies in front of n8n, for example `2`. |
+| `N8N_PROXY_HOPS` in `env.shared`, `env.main` or `env.webhookProcessor`, with `ingress.enabled` or `httpRoute.enabled` | The render fails, because the chart now sets it on main and the webhook processors. | Move it to `chartEnvOverrides`, under the same component. `env.worker` can keep it. |
+
+n8n now takes the client address from `X-Forwarded-For`, which a caller that reaches the pods directly can set. If you rely on the client address, for example in a Webhook node IP allowlist, allow only the ingress controller or Gateway, and the release's own pods, to reach the n8n pods. See [Client IP addresses](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/README.md#client-ip-addresses) in the README for a `networkPolicy.ingress` example.
+
 ### Security contexts
 
 The chart-wide `securityContext` block is retired. `podSecurityContext` and `containerSecurityContext` each have a `shared` block that applies to every pod or container. Each role block merges over `shared` field by field, and the role wins. Set a field to `null` to remove it. See [decision 0021](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0021-security-contexts-merge-over-shared.md).

@@ -194,6 +194,16 @@ rather than queueMode.enabled. */ -}}
 {{- $_ := set $e "N8N_DISABLE_PRODUCTION_MAIN_PROCESS" (dict "value" "true" "from" "webhookProcessor.disableProductionWebhooksOnMainProcess") -}}
 {{- end -}}
 {{- end -}}
+{{- /* The Ingress or route puts one proxy in front of the pods that take client
+traffic, so n8n reads the client's address from X-Forwarded-For. Another
+proxy in front of that one needs an override, as the chart cannot see it. */ -}}
+{{- if has .component (list "main" "webhookProcessor") -}}
+{{- $from := "" -}}
+{{- if $v.ingress.enabled -}}{{- $from = "ingress.enabled" -}}{{- else if $v.httpRoute.enabled -}}{{- $from = "httpRoute.enabled" -}}{{- end -}}
+{{- with $from -}}
+{{- $_ := set $e "N8N_PROXY_HOPS" (dict "value" "1" "from" . "overrideOnly" true) -}}
+{{- end -}}
+{{- end -}}
 {{- if include "n8n.hasTaskRunner" (dict "root" .root "component" .component) -}}
 {{- $_ := set $e "N8N_RUNNERS_MODE" (dict "value" $v.taskRunners.mode "from" "taskRunners.mode") -}}
 {{- $_ := set $e "N8N_NATIVE_PYTHON_RUNNER" (dict "value" $v.taskRunners.nativePythonRunner "from" "taskRunners.nativePythonRunner") -}}
