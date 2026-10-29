@@ -272,9 +272,28 @@ If you installed the 1.x release with Helm 4, the first upgrade can fail with `s
 
 ### n8n 3.0
 
-On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist before that first start, n8n refuses to start and names them. The main pod then restarts in a loop, and it is the only pod that mounts the volume. To fix it:
+On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist before that first start, n8n refuses to start and names them. This needs `persistence.enabled: true`, because an emptyDir starts empty in each new pod. The main pod then restarts in a loop, and it is the only pod that mounts the volume. To fix it:
 
 1. Scale the main Deployment to 0.
-2. Start a temporary pod that mounts the same PVC, running as user 1000.
+2. Start a temporary pod that mounts the same PVC, running as user 1000. The PVC is `persistence.existingClaim` if you set it, and otherwise the one `kubectl get pvc` lists for the release.
 3. Move the contents of `binaryData` into `storage`, and remove `binaryData`.
 4. Delete the temporary pod, and scale the main Deployment back up.
+
+For a release named `n8n` with the chart's PVC:
+
+```bash
+kubectl scale deployment/n8n-main --replicas=0
+kubectl run fix-storage --rm -i --restart=Never --image=busybox:1.36 --overrides='{
+  "spec": {
+    "securityContext": {"runAsUser": 1000, "runAsGroup": 1000},
+    "volumes": [{"name": "data", "persistentVolumeClaim": {"claimName": "n8n"}}],
+    "containers": [{
+      "name": "fix-storage",
+      "image": "busybox:1.36",
+      "command": ["sh", "-c", "cp -a /data/binaryData/. /data/storage/ && rm -rf /data/binaryData"],
+      "volumeMounts": [{"name": "data", "mountPath": "/data"}]
+    }]
+  }
+}'
+kubectl scale deployment/n8n-main --replicas=1
+```

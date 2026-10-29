@@ -304,7 +304,7 @@ httpRoute:
 # ----- Persistence -----
 # A PVC for /home/node/.n8n on the main pod. In standalone mode it also holds
 # binary data, unless s3.enabled. Without it, that data is on an emptyDir and
-# is lost when the pod restarts.
+# is lost when the pod is deleted or rescheduled.
 persistence:
   enabled: false
   # Shape of the chart's PVC. Leave size and storageClassName unset with

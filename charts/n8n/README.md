@@ -336,9 +336,9 @@ n8n stores binary data, such as files passed between nodes, in one of several pl
 | `s3.enabled: true` | `s3` | The S3 bucket |
 | Queue mode | `database` | The n8n database |
 | Standalone with `persistence.enabled: true` | `filesystem` | `/home/node/.n8n/storage` on the PVC |
-| Standalone on PostgreSQL without persistence | `filesystem` | An emptyDir, lost when the pod restarts |
+| Standalone on PostgreSQL without persistence | `filesystem` | An emptyDir, lost when the pod is deleted or rescheduled |
 
-Standalone on SQLite needs `persistence.enabled: true`, so its binary data is always on the PVC.
+Standalone on SQLite needs `persistence.enabled: true` for its database, so without S3 its binary data is on the PVC.
 
 On n8n 2.x, an install that already has `/home/node/.n8n/binaryData` keeps using it, and a new install uses `storage`. n8n 3.0 renames `binaryData` to `storage` on its first start, and the files in it stay readable. See [UPGRADING.md](UPGRADING.md#n8n-30) for the case where both directories exist.
 
