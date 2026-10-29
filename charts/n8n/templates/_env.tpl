@@ -238,9 +238,6 @@ proxy in front of that one needs an override, as the chart cannot see it. */ -}}
 {{- with $exec.pruning.softDeleteInterval -}}
 {{- $_ := set $e "EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL" (dict "value" . "from" "executions.pruning.softDeleteInterval") -}}
 {{- end -}}
-{{- if and $exec.concurrency.productionLimit (ne ($exec.concurrency.productionLimit | int) -1) -}}
-{{- $_ := set $e "N8N_CONCURRENCY_PRODUCTION_LIMIT" (dict "value" $exec.concurrency.productionLimit "from" "executions.concurrency.productionLimit") -}}
-{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- range $k, $entry := $e -}}
