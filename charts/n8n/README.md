@@ -582,6 +582,8 @@ keda:
           listLength: "5"
 ```
 
+A `redis` trigger with no `address` connects to the Redis that n8n uses: the chart sets `address` from `redis.host` and `redis.port`, and `databaseIndex` from `redis.database`. A value you set on the trigger wins.
+
 Set `keda.worker.pause: true` to pause worker autoscaling. This adds `autoscaling.keda.sh/paused: "true"` to the worker ScaledObject, and KEDA holds the workers at whatever replica count they are currently running, which is what you want whilst troubleshooting a scaling issue.
 
 To pause and hold a specific count instead, set `pausedReplicaCount`. Setting it to `0` scales workers down entirely:

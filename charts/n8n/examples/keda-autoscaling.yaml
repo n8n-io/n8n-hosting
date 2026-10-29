@@ -33,7 +33,8 @@ keda:
     triggers:
       - type: redis
         metadata:
-          # Leave empty to auto-derive from redis.host:redis.port
+          # Leave empty to auto-derive from redis.host:redis.port, with
+          # databaseIndex taken from redis.database
           address: ""
           # Bull queue key for waiting jobs: "<prefix>:jobs:wait" (prefix defaults
           # to "bull"). If you set redis.prefix, update this to "<prefix>:jobs:wait".
