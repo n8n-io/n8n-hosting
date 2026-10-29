@@ -213,7 +213,7 @@ chartEnvOverrides:
 
 Without an Ingress or a route, the chart does not set `N8N_PROXY_HOPS`, and n8n's default applies. If a proxy the chart does not render sits in front of n8n, set it in `env.shared` instead.
 
-n8n trusts the last `X-Forwarded-For` entry from whatever connects to the pods. A caller that reaches a pod directly, without going through the ingress controller or Gateway, can set that entry to any address. To make the client address reliable, allow only the ingress controller or Gateway, and the release's own pods, to reach n8n. `networkPolicy.enabled: true` on its own does not do this, because the chart's default rules allow any source on `service.port`. Set `networkPolicy.ingress` as well:
+n8n reads the client address from `X-Forwarded-For`, counting `N8N_PROXY_HOPS` entries back from the end. It does this for every connection, not only those from the ingress controller or Gateway. A caller that reaches a pod directly can put any address in that header. To make the client address reliable, allow only the ingress controller or Gateway, and the release's own pods, to reach n8n. `networkPolicy.enabled: true` on its own does not do this, because the chart's default rules allow any source on `service.port`. Set `networkPolicy.ingress` as well:
 
 ```yaml
 networkPolicy:
@@ -223,7 +223,7 @@ networkPolicy:
     - from:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: n8n
+              app.kubernetes.io/name: n8n          # nameOverride, if you set it
               app.kubernetes.io/instance: my-n8n   # your release name
       ports:
         - protocol: TCP
@@ -238,7 +238,7 @@ networkPolicy:
           port: 5678
 ```
 
-Add a rule for anything else that calls n8n directly, such as a Prometheus that scrapes `/metrics`.
+Some load balancers send traffic straight to the pod IPs, such as the AWS Load Balancer Controller in IP target mode. That traffic does not come from a pod in the controller's namespace, so allow the load balancer's source addresses with an `ipBlock` rule instead. Add a rule for anything else that calls n8n directly, such as a Prometheus that scrapes `/metrics`.
 
 ### MCP Server Trigger with multiple webhook processors
 
