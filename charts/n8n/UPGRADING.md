@@ -185,6 +185,16 @@ With an Ingress or an HTTPRoute, the chart now sets `N8N_PROXY_HOPS` to `1` on m
 
 n8n now takes the client address from `X-Forwarded-For`, which a caller that reaches the pods directly can set. If you rely on the client address, for example in a Webhook node IP allowlist, allow only the ingress controller or Gateway, and the release's own pods, to reach the n8n pods. See [Client IP addresses](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/README.md#client-ip-addresses) in the README for a `networkPolicy.ingress` example.
 
+Controller and cloud annotations:
+
+The chart no longer sets annotations for a specific ingress controller or cloud. Set them yourself in `ingress.annotations` and `serviceAccount.annotations`. The examples show them for ingress-nginx and EKS. See [decision 0026](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0026-no-vendor-defaults-in-the-templates.md).
+
+| If your values set | What changes | Do this |
+|---|---|---|
+| Any `ingress.sticky` key | The render fails and names `ingress.annotations`. | Remove `ingress.sticky`. On ingress-nginx, copy the four `nginx.ingress.kubernetes.io/` cookie annotations from [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) into `ingress.annotations`. If you changed `cookieName`, `cookieExpires` or `cookieMaxAge`, put your values in `session-cookie-name`, `session-cookie-expires` and `session-cookie-max-age`. |
+| `serviceAccount.awsRoleArn` | The render fails and names `serviceAccount.annotations`. | Remove it, and set `eks.amazonaws.com/role-arn` to the same role in `serviceAccount.annotations`. If you already set that annotation, only remove the key. With `serviceAccount.create: false`, the chart does not manage the ServiceAccount, so annotate the existing one directly. |
+| `s3.auth.autoDetect: true` without `serviceAccount.awsRoleArn` | The render no longer fails. | Nothing. EKS Pod Identity and other credential sources work without a role annotation. |
+
 ### Security contexts
 
 The chart-wide `securityContext` block is retired. `podSecurityContext` and `containerSecurityContext` each have a `shared` block that applies to every pod or container. Each role block merges over `shared` field by field, and the role wins. Set a field to `null` to remove it. See [decision 0021](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0021-security-contexts-merge-over-shared.md).

@@ -431,14 +431,7 @@
         },
         "tls": { "type": "array" },
         "sticky": {
-          "type": "object",
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "cookieName": { "type": "string" },
-            "cookieExpires": { "type": "string" },
-            "cookieMaxAge": { "type": "string" }
-          },
-          "additionalProperties": false
+          "description": "Retired. Set your ingress controller's session affinity annotations in ingress.annotations instead."
         },
         "webhook": {
           "type": "object",
@@ -632,6 +625,9 @@
         "automountServiceAccountToken": {
           "type": "boolean",
           "description": "Mount the ServiceAccount token into n8n pods. n8n does not call the Kubernetes API."
+        },
+        "awsRoleArn": {
+          "description": "Retired. Set the role in serviceAccount.annotations as eks.amazonaws.com/role-arn instead."
         }
       },
       "additionalProperties": false

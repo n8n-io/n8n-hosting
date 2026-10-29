@@ -71,8 +71,10 @@ s3:
     name: "your-s3-bucket-name"  # Replace with your S3 bucket name
     region: "us-east-1"          # Replace with your S3 bucket region
   auth:
-    # Option 1: IRSA (IAM Roles for Service Accounts) - Recommended for AWS EKS
-    autoDetect: true  # Only works with AWS S3, requires serviceAccount.awsRoleArn
+    # Option 1: the AWS SDK credential chain. On EKS, give the pod a role with
+    # IRSA (the serviceAccount annotation below) or with Pod Identity, which
+    # needs no annotation.
+    autoDetect: true
     
     # Option 2: Access Keys - Alternative authentication method
     # autoDetect: false
@@ -85,10 +87,8 @@ s3:
 serviceAccount:
   create: true
   name: n8n-prod
-  # AWS IAM Role ARN (only needed if using S3 with autoDetect: true)
-  awsRoleArn: "arn:aws:iam::your-account-id:role/your-n8n-s3-role"
   annotations:
-    # EKS annotation for IRSA (only needed for AWS EKS)
+    # IRSA on EKS. Remove it if you use Pod Identity or Option 2 above.
     eks.amazonaws.com/role-arn: "arn:aws:iam::your-account-id:role/your-n8n-s3-role"
 
 # Service configuration with session affinity for WebSocket stability

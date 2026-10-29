@@ -244,7 +244,7 @@ Some load balancers send traffic straight to the pod IPs, such as the AWS Load B
 
 MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so scaling `webhookProcessor.replicaCount` (or its HPA/KEDA) scales MCP alongside regular webhooks — no dedicated single-replica pod or session affinity is required. This relies on n8n's queue-mode/multi-instance MCP support added in **n8n 2.8.0** ([n8n-io/n8n#25147](https://github.com/n8n-io/n8n/pull/25147)), which recreates MCP sessions from Redis and runs tool calls on workers.
 
-Use `ingress.sticky.enabled=true` for nginx cookie affinity, or `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. Multi-main deployments require sticky sessions at the load-balancing layer.
+Multi-main deployments need sticky sessions at the load-balancing layer. Set your ingress controller's affinity annotations in `ingress.annotations`, or set `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) shows cookie affinity for ingress-nginx.
 
 See [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) for a complete HTTPS example.
 
@@ -323,6 +323,14 @@ By default the chart creates a ServiceAccount named `n8n`. To use an externally-
 serviceAccount:
   create: false
   name: "my-external-sa"   # must already exist in the release namespace
+```
+
+For EKS IRSA, or workload identity on another cloud, set the annotation the platform reads in `serviceAccount.annotations`. The chart adds none of its own. It applies these annotations only to a ServiceAccount it creates. With `create: false`, annotate the existing ServiceAccount directly:
+
+```yaml
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/n8n"
 ```
 
 To use the namespace's default ServiceAccount, set `name: ""`. If you set `create: false` without also changing `name` from the chart default `"n8n"`, rendering will fail with a clear error — this prevents pods from being wired to a ServiceAccount that was never created.

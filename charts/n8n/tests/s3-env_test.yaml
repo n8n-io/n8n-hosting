@@ -13,8 +13,17 @@ set:
   s3.bucket.name: n8n-data
   s3.bucket.region: eu-west-1
   s3.auth.autoDetect: true
-  serviceAccount.awsRoleArn: arn:aws:iam::123456789012:role/n8n
 tests:
+  - it: uses the AWS SDK credential chain with autoDetect
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    asserts:
+      - equal:
+          path: data.N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT
+          value: "true"
+
   - it: stores binary data in S3 by default, without setting the available modes
     template: templates/configmap.yaml
     documentSelector:

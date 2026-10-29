@@ -16,7 +16,7 @@ This directory contains common configuration examples for different deployment s
 - **[keda-autoscaling.yaml](./keda-autoscaling.yaml)** - Redis queue-length worker scaling with KEDA
 
 ### Community Examples (Ingress)
-- **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress with TLS, sticky sessions, and webhook processor routing
+- **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress on ingress-nginx with TLS, cookie affinity, and webhook processor routing
 - **[mcp-server.yaml](./mcp-server.yaml)** - Scale the MCP Server Trigger (`/mcp`) across multiple webhook processors (requires n8n ≥ 2.8.0)
 
 ### Community Examples (Gateway API)
@@ -146,8 +146,8 @@ s3:
     name: "your-bucket"
     region: "your-region"
   auth:
-    # Option 1: IRSA (recommended for AWS EKS)
-    autoDetect: true  # Only works with AWS S3
+    # Option 1: the AWS SDK credential chain, such as EKS IRSA or Pod Identity
+    autoDetect: true
     
     # Option 2: Access Keys
     # autoDetect: false
@@ -156,9 +156,10 @@ s3:
     #   name: "s3-credentials"
     #   key: "secret-access-key"
 
-# Service account (required for IRSA authentication)
+# Service account annotation for EKS IRSA. Pod Identity needs none.
 serviceAccount:
-  awsRoleArn: "arn:aws:iam::ACCOUNT:role/n8n-s3-role"  # Only for autoDetect: true
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT:role/n8n-s3-role"
 ```
 
 ## Troubleshooting
@@ -171,12 +172,12 @@ serviceAccount:
 
 **Connection issues:**
 - Enable session affinity: `service.sessionAffinity.enabled: true`
-- For nginx Ingress, enable cookie affinity: `ingress.sticky.enabled: true`
+- For ingress-nginx, set the cookie affinity annotations from [https-ingress.yaml](./https-ingress.yaml) in `ingress.annotations`
 - Check database SSL settings if using cloud databases
 
 **Storage issues:**
 - Verify S3 bucket permissions and region
-- For IRSA, ensure the service account has the correct role ARN
+- For IRSA, check that `serviceAccount.annotations` sets `eks.amazonaws.com/role-arn` to the correct role
 
 **Performance issues:**
 - Increase worker replicas: `queueMode.workerReplicaCount`

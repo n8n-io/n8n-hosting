@@ -219,8 +219,11 @@ ingress:
   enabled: false
   # IngressClass to use for the main n8n ingress. Examples: nginx, alb, traefik.
   className: ""
-  # Controller-specific annotations. For cert-manager, set:
+  # Controller-specific annotations. The chart sets none of its own. For
+  # cert-manager, set:
   # cert-manager.io/cluster-issuer: letsencrypt-prod
+  # Multi-main needs session affinity: set your controller's affinity
+  # annotations here. examples/https-ingress.yaml shows them for ingress-nginx.
   annotations: {}
   # TLS configuration for the main n8n ingress.
   # Example:
@@ -229,11 +232,6 @@ ingress:
   #     hosts:
   #       - n8n.example.com
   tls: []
-  sticky:
-    enabled: false
-    cookieName: n8n_affinity
-    cookieExpires: "172800"  # 2 days in seconds
-    cookieMaxAge: "172800"   # 2 days in seconds
   hosts:
     - host: n8n.example.com   # <-- Change to your actual domain
       paths:
@@ -543,10 +541,9 @@ serviceAccount:
   # never created and fail to start. The chart will refuse to render in that
   # case (see n8n.validate in templates/_helpers.tpl).
   name: n8n
-  # AWS IAM Role ARN for IRSA (IAM Roles for Service Accounts)
-  # Required when s3.auth.autoDetect=true for AWS S3 access
-  awsRoleArn: ""
-  # Additional annotations for the service account
+  # Annotations for the service account the chart creates. With create: false,
+  # annotate the existing service account directly. For EKS IRSA, set:
+  # eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/n8n
   annotations: {}
   # Whether the ServiceAccount token is mounted into n8n pods at
   # /var/run/secrets/kubernetes.io/serviceaccount. n8n never calls the
@@ -938,7 +935,7 @@ s3:
     host: ""                                   # <-- S3 endpoint (optional for AWS S3)
   # Authentication
   auth:
-    autoDetect: false                          # <-- Use AWS credential provider chain (requires serviceAccount.awsRoleArn)
+    autoDetect: false                          # <-- Use the AWS SDK credential chain, such as EKS IRSA or Pod Identity
     accessKeyId: ""                            # <-- S3 access key ID (not needed if autoDetect=true)
     secretAccessKeySecret:                     # <-- Secret containing S3 secret access key (not needed if autoDetect=true)
       name: ""                                 # <-- K8s Secret name

@@ -309,6 +309,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey."
 - path: database.useExternal
   replacement: "Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim."
+- path: ingress.sticky
+  replacement: "Set your ingress controller's session affinity annotations in ingress.annotations. examples/https-ingress.yaml shows them for ingress-nginx."
 - path: ingress.webhookProcessor
   replacement: "Move className, annotations and tls to ingress.webhook, and remove enabled. The webhook Ingress renders whenever webhookProcessor.enabled is true."
 - path: redis.useExternal
@@ -321,6 +323,8 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
 - path: securityContext
   replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
+- path: serviceAccount.awsRoleArn
+  replacement: "Set the role in serviceAccount.annotations as eks.amazonaws.com/role-arn instead."
 - path: taskRunners.authToken.value
   replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
 - path: taskRunners.broker.listenAddress
@@ -531,9 +535,6 @@ runner and n8n drift onto different versions. */ -}}
 {{- end -}}
 {{- if and (not .Values.s3.auth.autoDetect) (not .Values.s3.auth.accessKeyId) -}}
 {{- $errs = append $errs "s3.auth.accessKeyId is required when s3.enabled=true and s3.auth.autoDetect=false" -}}
-{{- end -}}
-{{- if and .Values.s3.auth.autoDetect (not .Values.serviceAccount.awsRoleArn) -}}
-{{- $errs = append $errs "serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)" -}}
 {{- end -}}
 {{- if not .Values.license.enabled -}}
 {{- $errs = append $errs "s3.enabled=true requires license.enabled=true. n8n stores binary data in S3 only with a Business or Enterprise licence, and exits at boot without one. Set license.activationKey or license.existingSecret.name, or set license.enabled=true alone if the licence reaches n8n another way." -}}
