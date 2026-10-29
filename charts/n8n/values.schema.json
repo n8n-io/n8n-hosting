@@ -773,9 +773,8 @@
               "type": "object",
               "properties": {
                 "enabled": { "type": "boolean" },
-                "type": { 
-                  "type": "string",
-                  "enum": ["", "httpGet", "exec"]
+                "type": {
+                  "description": "Retired. Set probes.worker.readiness.command for an exec probe, or leave command empty to probe the health endpoint."
                 },
                 "path": { "type": "string" },
                 "command": { 
@@ -794,8 +793,7 @@
               "properties": {
                 "enabled": { "type": "boolean" },
                 "type": {
-                  "type": "string",
-                  "enum": ["", "httpGet", "exec"]
+                  "description": "Retired. Set probes.worker.liveness.command for an exec probe, or leave command empty to probe the health endpoint."
                 },
                 "path": { "type": "string" },
                 "command": {

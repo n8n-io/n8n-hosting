@@ -311,6 +311,10 @@ The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_t
   replacement: "Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim."
 - path: ingress.webhookProcessor
   replacement: "Move className, annotations and tls to ingress.webhook, and remove enabled. The webhook Ingress renders whenever webhookProcessor.enabled is true."
+- path: probes.worker.liveness.type
+  replacement: "Remove it. Set probes.worker.liveness.command for an exec probe, or leave command empty to probe the health endpoint."
+- path: probes.worker.readiness.type
+  replacement: "Remove it. Set probes.worker.readiness.command for an exec probe, or leave command empty to probe the health endpoint."
 - path: redis.useExternal
   replacement: "Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host."
 - path: retiredKeysTest.first
@@ -375,8 +379,8 @@ per mistake.
 {{- if and .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) -}}
 {{- range $name := list "liveness" "readiness" -}}
 {{- $probe := index $.Values.probes.worker $name -}}
-{{- if and $probe.enabled (eq $probe.type "httpGet") (not $.Values.redis.healthCheck.enabled) -}}
-{{- $errs = append $errs (printf "probes.worker.%s.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or remove probes.worker.%s.type to let the chart choose." $name $name) -}}
+{{- if and $probe.enabled (not $probe.command) (not $.Values.redis.healthCheck.enabled) -}}
+{{- $errs = append $errs (printf "probes.worker.%s has nothing to check. redis.healthCheck.enabled=false turns off the worker health endpoint, and probes.worker.%s.command is empty. Set redis.healthCheck.enabled=true, set probes.worker.%s.command, or set probes.worker.%s.enabled=false." $name $name $name $name) -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -811,40 +815,21 @@ Main pod replica count: multiMain.replicas under multi-main, otherwise replicaCo
 {{- end -}}
 
 {{/*
-Probe type for a worker liveness or readiness probe. An explicit type wins.
-Otherwise a command means exec, and the health endpoint means httpGet, so
-partial overrides keep rendering the probe they asked for.
-
-Call with (dict "probe" .Values.probes.worker.liveness "root" .)
-*/}}
-{{- define "n8n.workerProbeType" -}}
-{{- if .probe.type -}}
-{{- .probe.type -}}
-{{- else if .probe.command -}}
-exec
-{{- else if .root.Values.redis.healthCheck.enabled -}}
-httpGet
-{{- else -}}
-exec
-{{- end -}}
-{{- end -}}
-
-{{/*
-Handler for a worker liveness or readiness probe. With the health endpoint
-off and no command, it falls back to a process check. pgrep matches its own
-shell, so that check passes whenever the container can run a shell; the
-health endpoint is the real check.
+Handler for a worker liveness or readiness probe. A command runs as an exec
+probe; without one, the worker is probed on its health endpoint.
+n8n.validate fails the render when the endpoint is off and there is no
+command.
 
 Call with (dict "probe" .Values.probes.worker.liveness "root" .)
 */}}
 {{- define "n8n.workerProbeHandler" -}}
-{{- if eq (include "n8n.workerProbeType" .) "httpGet" -}}
+{{- if .probe.command -}}
+exec:
+  command:
+    {{- toYaml .probe.command | nindent 4 }}
+{{- else -}}
 httpGet:
   path: {{ .probe.path }}
   port: {{ .root.Values.redis.healthCheck.port }}
-{{- else -}}
-exec:
-  command:
-    {{- toYaml (.probe.command | default (list "/bin/sh" "-c" "pgrep -f 'n8n worker' > /dev/null")) | nindent 4 }}
 {{- end -}}
 {{- end -}}

@@ -258,6 +258,8 @@ See [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/cha
 
 Workers consume jobs from Redis and do not receive inbound HTTP traffic, so the chart intentionally does not create a Kubernetes Service for worker pods. The worker port serves health checks only. Worker readiness fails until the worker has its database, migrations and Redis connection.
 
+To probe a worker with your own check, set `probes.worker.liveness.command` or `probes.worker.readiness.command`. A probe with a command runs as an exec probe. If you set `redis.healthCheck.enabled=false`, give each enabled liveness or readiness probe a command, or disable it. Otherwise the render fails, because the probe would have nothing to check. The chart leaves the startup probe out when the health endpoint is off.
+
 ## Scaling Guidance
 
 Scale execution throughput with `queueMode.workerReplicaCount` and `queueMode.workerConcurrency`. The built-in HPA can scale main, worker, and webhook processor deployments from CPU and optional memory utilization.

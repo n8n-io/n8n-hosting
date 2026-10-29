@@ -579,8 +579,9 @@ probes:
   # Worker probes. Workers serve /healthz and /healthz/readiness on
   # redis.healthCheck.port when redis.healthCheck.enabled is true.
   # /healthz/readiness answers 503 until the worker has its database,
-  # migrations and Redis connection. With the health endpoint off and no
-  # command, liveness and readiness fall back to a process check.
+  # migrations and Redis connection. Set a probe's command to run it as an
+  # exec probe instead. With the health endpoint off, each enabled liveness
+  # or readiness probe needs a command.
   worker:
     # Holds off liveness until the health endpoint answers. The worker
     # starts it only after database migrations, so this budget also
@@ -593,18 +594,16 @@ probes:
       failureThreshold: 30
     readiness:
       enabled: true
-      type: ""                               # <-- httpGet or exec; empty picks exec if command is set, else httpGet
       path: /healthz/readiness
-      command: []
+      command: []                            # <-- Runs as an exec probe when set
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 3
       failureThreshold: 6
     liveness:
       enabled: true
-      type: ""                               # <-- httpGet or exec; empty picks exec if command is set, else httpGet
       path: /healthz
-      command: []
+      command: []                            # <-- Runs as an exec probe when set
       initialDelaySeconds: 60
       periodSeconds: 30
       timeoutSeconds: 5
