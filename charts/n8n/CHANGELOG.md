@@ -4,6 +4,20 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [2.0.0-rc.2](https://github.com/n8n-io/n8n-hosting/compare/v2.0.0-rc.1...v2.0.0-rc.2) (2026-10-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **chart:** set N8N_PROXY_HOPS when the chart routes traffic through an Ingress or HTTPRoute ([#279](https://github.com/n8n-io/n8n-hosting/issues/279))
+* **chart:** reject values keys the schema does not declare ([#270](https://github.com/n8n-io/n8n-hosting/issues/270))
+
+### Features
+
+* **chart:** bump n8n to 2.45.5 ([#275](https://github.com/n8n-io/n8n-hosting/issues/275)) ([2178b3e](https://github.com/n8n-io/n8n-hosting/commit/2178b3e508bd299bc7168e87ed475f1b20e879c1))
+* **chart:** reject values keys the schema does not declare ([#270](https://github.com/n8n-io/n8n-hosting/issues/270)) ([3e5b64c](https://github.com/n8n-io/n8n-hosting/commit/3e5b64cb61e490e5c885937be4ff49d2ed1da0e4))
+* **chart:** set N8N_PROXY_HOPS when the chart routes traffic through an Ingress or HTTPRoute ([#279](https://github.com/n8n-io/n8n-hosting/issues/279)) ([94a7776](https://github.com/n8n-io/n8n-hosting/commit/94a7776df4cf817f8db92e510a3c02f67670a7ca))
+
 ## [2.0.0-rc.1](https://github.com/n8n-io/n8n-hosting/compare/v2.0.0-rc.0...v2.0.0-rc.1) (2026-10-27)
 
 
