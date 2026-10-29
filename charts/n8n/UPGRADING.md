@@ -183,6 +183,8 @@ With an Ingress or an HTTPRoute, the chart now sets `N8N_PROXY_HOPS` to `1` on m
 | `ingress.enabled` or `httpRoute.enabled`, behind another proxy such as a CDN or a cloud load balancer that adds its own hop | n8n takes the address that proxy added, not the client's. | Set `chartEnvOverrides.shared.N8N_PROXY_HOPS` to the number of proxies in front of n8n, for example `2`. |
 | `N8N_PROXY_HOPS` in `env.shared`, `env.main` or `env.webhookProcessor`, with `ingress.enabled` or `httpRoute.enabled` | The render fails, because the chart now sets it on main and the webhook processors. | Move it to `chartEnvOverrides`, under the same component. `env.worker` can keep it. |
 
+n8n now takes the client address from `X-Forwarded-For`, which a caller that reaches the pods directly can set. If you rely on the client address, for example in a Webhook node IP allowlist, allow only the ingress controller or Gateway to reach the n8n pods. See [Client IP addresses](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/README.md#client-ip-addresses) in the README for a `networkPolicy.ingress` example.
+
 ### Security contexts
 
 The chart-wide `securityContext` block is retired. `podSecurityContext` and `containerSecurityContext` each have a `shared` block that applies to every pod or container. Each role block merges over `shared` field by field, and the role wins. Set a field to `null` to remove it. See [decision 0021](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0021-security-contexts-merge-over-shared.md).

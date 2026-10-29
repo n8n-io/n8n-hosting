@@ -213,6 +213,33 @@ chartEnvOverrides:
 
 Without an Ingress or a route, the chart does not set `N8N_PROXY_HOPS`, and n8n's default applies. If a proxy the chart does not render sits in front of n8n, set it in `env.shared` instead.
 
+n8n trusts the last `X-Forwarded-For` entry from whatever connects to the pods. A caller that reaches a pod directly, without going through the ingress controller or Gateway, can set that entry to any address. To make the client address reliable, allow only the ingress controller or Gateway, and the release's own pods, to reach n8n. `networkPolicy.enabled: true` on its own does not do this, because the chart's default rules allow any source on `service.port`. Set `networkPolicy.ingress` as well:
+
+```yaml
+networkPolicy:
+  enabled: true
+  ingress:
+    # The release's own pods
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: n8n
+              app.kubernetes.io/instance: my-n8n   # your release name
+      ports:
+        - protocol: TCP
+          port: 5678   # service.port
+    # The namespace your ingress controller or Gateway runs in
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 5678
+```
+
+Add a rule for anything else that calls n8n directly, such as a Prometheus that scrapes `/metrics`.
+
 ### MCP Server Trigger with multiple webhook processors
 
 MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so scaling `webhookProcessor.replicaCount` (or its HPA/KEDA) scales MCP alongside regular webhooks — no dedicated single-replica pod or session affinity is required. This relies on n8n's queue-mode/multi-instance MCP support added in **n8n 2.8.0** ([n8n-io/n8n#25147](https://github.com/n8n-io/n8n/pull/25147)), which recreates MCP sessions from Redis and runs tool calls on workers.
