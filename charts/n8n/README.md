@@ -1,6 +1,14 @@
 # n8n Helm Chart
 
-Production-grade Helm chart for [n8n](https://n8n.io), the workflow automation platform. Supports queue mode, multi-main HA, webhook processors, task runners, HPA, PDB, network policies, and S3 external storage.
+The official Helm chart for [n8n](https://n8n.io), the workflow automation platform, maintained by n8n. It is built for production use and supports queue mode, multi-main HA, webhook processors, task runners, HPA, PDB, network policies, and S3 external storage.
+
+## Release schedule
+
+We release a new chart version every week. Each Wednesday, the day after n8n's weekly release, the chart moves to the latest `stable` n8n version.
+
+Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [release notes](https://github.com/n8n-io/n8n-hosting/releases) to see which n8n version a release carries.
+
+Chart 1.x installs n8n 2.x. It is maintained on the [`release/n8n-2.x`](https://github.com/n8n-io/n8n-hosting/tree/release/n8n-2.x) branch, and its weekly releases stay on n8n 2.x. Chart 2.0 is being built on `main` and is published as release candidates, `2.0.0-rc.1`, `2.0.0-rc.2` and so on. Helm skips release candidates unless you pass `--devel` or name the exact version, so `helm install` and `helm upgrade` keep resolving to the latest 1.x release.
 
 ## Prerequisites
 
@@ -17,6 +25,22 @@ Production-grade Helm chart for [n8n](https://n8n.io), the workflow automation p
 helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-values.yaml
 ```
 
+### Verify the chart
+
+Each release is signed with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) keyless signing. The signature records that the chart was built by this repository's release workflow, on `main` or on a `release/n8n-<major>.x` maintenance branch. No key is involved, so there is nothing for you to download first.
+
+To check a chart version before you install it, run the command below. Replace `<chart-version>` with the version you pass to `helm install --version`, for example `1.14.0`. This is the chart version, not the n8n version.
+
+```bash
+cosign verify ghcr.io/n8n-io/n8n-helm-chart/n8n:<chart-version> \
+  --certificate-identity-regexp '^https://github\.com/n8n-io/n8n-hosting/\.github/workflows/release\.yml@refs/heads/(main|release/n8n-[0-9]+\.x)$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+The command fails if the chart is unsigned, if it was signed by anything other than that workflow, or if the chart changed after it was signed.
+
+Versions released before signing was introduced have no signature, so the command fails for them.
+
 ## Quick Start
 
 1. **Set up external services** — PostgreSQL and Redis for queue mode (not needed for standalone mode)
@@ -26,7 +50,7 @@ helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-v
    ./examples/create-secrets.sh
    ```
 
-3. **Choose a values file** from the [examples](./examples/) directory and customize it
+3. **Choose a values file** from the [examples](https://github.com/n8n-io/n8n-hosting/tree/main/charts/n8n/examples) directory and customize it
 
 4. **Deploy:**
    ```bash
@@ -54,28 +78,167 @@ All three use the same n8n container image, differentiated by command/args.
 
 | File | Use case |
 |---|---|
-| [standalone.yaml](./examples/standalone.yaml) | Single pod with SQLite, no external dependencies |
-| [minimal.yaml](./examples/minimal.yaml) | Single main pod, minimum config |
-| [minimal-with-docker.yaml](./examples/minimal-with-docker.yaml) | Quick testing with Docker Postgres/Redis |
-| [multi-main-queue.yaml](./examples/multi-main-queue.yaml) | Multi-main HA (Enterprise license required) |
-| [task-runners.yaml](./examples/task-runners.yaml) | Queue mode with task runner sidecars |
-| [production-s3.yaml](./examples/production-s3.yaml) | Production with S3, HPA, multi-main |
-| [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
-| [https-ingress.yaml](./examples/https-ingress.yaml) | HTTPS Ingress with TLS and webhook processor routing |
+| [standalone.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/standalone.yaml) | Single pod with SQLite, no external dependencies |
+| [minimal.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/minimal.yaml) | Single main pod, minimum config |
+| [minimal-with-docker.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/minimal-with-docker.yaml) | Quick testing with Docker Postgres/Redis |
+| [multi-main-queue.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/multi-main-queue.yaml) | Multi-main HA (Enterprise license required) |
+| [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/task-runners.yaml) | Queue mode with task runner sidecars |
+| [production-s3.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/production-s3.yaml) | Production with S3, HPA, multi-main |
+| [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) | Redis queue-length scaling with KEDA |
+| [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) | HTTPS Ingress with TLS and webhook processor routing |
+| [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-httproute.yaml) | Gateway API HTTPRoute with webhook processor routing |
+| [gateway-webhook-host.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-webhook-host.yaml) | Gateway API with the editor on an internal Gateway and webhooks on a public host |
+| [extra-objects.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/extra-objects.yaml) | Extra objects beside the chart: a Traefik IngressRoute, a PrometheusRule and a string entry |
 
 ## Secret Management
 
-1. **Core secrets** (`secretRefs.existingSecret`): `N8N_ENCRYPTION_KEY`, `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL` — always required
-2. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
-3. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
+1. **Encryption key** (`secretRefs.existingSecret`): in env mode, a Secret with the key `N8N_ENCRYPTION_KEY`. The chart reads only that key, so other keys in the Secret are ignored. In file mode the chart reads no Secret: mount the encryption key file and set its path in `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`
+2. **Licence key** (`license.existingSecret`): the activation key from a Secret you manage. An inline `license.activationKey` goes in the chart's own Secret instead, never in a ConfigMap
+3. **Database password** (`database.passwordSecret`): PostgreSQL password — queue mode only
+4. **Redis password** (`redis.passwordSecret`): optional, for authenticated Redis — queue mode only
 
 For production, use an external secrets operator (e.g., [External Secrets Operator](https://external-secrets.io/)) rather than storing secrets in values files.
+
+### Encryption key file
+
+By default, the chart injects `N8N_ENCRYPTION_KEY` from the core Secret. To use n8n's file-based configuration instead, set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE` to the absolute path of a mounted key file. A non-empty file path makes the chart inject `N8N_ENCRYPTION_KEY_FILE` and omit `N8N_ENCRYPTION_KEY` from every main, worker, and webhook-processor n8n container.
+
+The existing global `extraVolumes` and `extraVolumeMounts` values apply to all of these containers:
+
+```yaml
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+  env:
+    N8N_ENCRYPTION_KEY_FILE: "/run/secrets/n8n/encryption-key"
+
+extraVolumes:
+  - name: encryption-key
+    secret:
+      secretName: n8n-encryption-key
+      items:
+        - key: N8N_ENCRYPTION_KEY
+          path: encryption-key
+
+extraVolumeMounts:
+  - name: encryption-key
+    mountPath: /run/secrets/n8n
+    readOnly: true
+```
+
+In file mode, the chart reads nothing from `n8n-core-secrets`. The file path is taken from Helm values even when `secretRefs.existingSecret` is set; Helm cannot inspect an externally managed Secret to select the mode automatically. Global extra volume mounts are not added to task-runner or user-supplied sidecars, which do not need the n8n encryption key; declare sidecar mounts explicitly if needed.
+
+When the path is set, it wins, and any `N8N_ENCRYPTION_KEY` in values is ignored. The containers receive the path directly, so the chart-managed Secret never stores it. In file mode that Secret also leaves out `N8N_ENCRYPTION_KEY`, because no container reads it.
+
+> **Warning:** the key file must hold the same key the install already uses. n8n encrypts every stored credential with this key. If the value changes when you switch between `N8N_ENCRYPTION_KEY` and `N8N_ENCRYPTION_KEY_FILE`, n8n can no longer read those credentials.
 
 ## Ingress and HTTPS
 
 Set `ingress.enabled=true` to create the main Ingress for the n8n UI, API, and test webhooks. Configure `ingress.className`, controller-specific `ingress.annotations`, and `ingress.tls` for HTTPS termination. For cert-manager, add the issuer annotation and set `ingress.tls[].secretName` to the certificate Secret cert-manager should create.
 
-When `webhookProcessor.enabled=true`, enable `ingress.webhookProcessor.enabled` to create a second Ingress for production webhook traffic. The webhook processor Ingress routes `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/`, and `/mcp/` to webhook processor pods. Test paths such as `/webhook-test/` and `/mcp-test/` stay on the main Ingress.
+### Public URLs
+
+n8n has two public URLs: the editor URL (`N8N_EDITOR_BASE_URL`), for the UI and OAuth callbacks, and the webhook URL (`N8N_WEBHOOK_URL`), for webhooks, forms and MCP. The chart sets them from the hosts it routes:
+
+| URL | Set from, in order |
+|---|---|
+| Editor | `editor.url`, then `https://` and the first ingress host or `httpRoute` hostname |
+| Webhook | `webhook.url`, then `https://` and the first `ingress.webhook` host or `httpRoute.webhook` hostname, then the editor URL |
+
+The `https://` default assumes TLS ends at the ingress or in front of it, for example at a cloud load balancer. If n8n is served over plain HTTP, has no ingress, or is reached at another host, set `editor.url`, and `webhook.url` when webhooks have a host of their own. Set `webhook.url` too when webhooks arrive at an address the chart does not route, such as a separate load balancer or API gateway.
+
+The chart does not set `N8N_HOST` or `N8N_PROTOCOL`. With no editor URL, n8n uses the webhook URL for the editor. It reads `N8N_HOST` and `N8N_PROTOCOL` only to build a URL it has nothing else for.
+
+### One host for the editor and webhooks
+
+```yaml
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+```
+
+Both URLs are `https://n8n.example.com`. When `webhookProcessor.enabled=true`, the chart adds a second Ingress on the same hosts that routes `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/` to the webhook processor pods. Test paths such as `/webhook-test/` and `/mcp-test/` stay on main. Set its `className`, `annotations` and `tls` under `ingress.webhook`.
+
+### A separate host for webhooks
+
+Use this to keep the editor on an internal host and take webhooks on a public one:
+
+```yaml
+ingress:
+  enabled: true
+  className: nginx-internal
+  hosts:
+    - host: n8n.internal.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  webhook:
+    className: nginx-external   # empty uses ingress.className
+    hosts:
+      - hooks.example.com
+    tls:
+      - secretName: hooks-tls
+        hosts:
+          - hooks.example.com
+```
+
+The editor URL is `https://n8n.internal.example.com` and the webhook URL is `https://hooks.example.com`. The editor host sends every path to main. The webhook host carries only `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/`, which go to the webhook processors when they run and to main otherwise, and `/webhook-test/`, `/form-test/` and `/mcp-test/`, which go to main. n8n builds test URLs from the webhook URL as well, so they work on the webhook host.
+
+In this layout, test calls from the editor, such as test forms and the Chat Trigger, go to the webhook host. If an authenticating proxy guards each host on its own, those calls fail with a CORS error. To keep test URLs on the editor host, set the webhook URL through n8n's older `WEBHOOK_URL` variable, which covers production webhooks only. n8n logs it as deprecated.
+
+```yaml
+chartEnvOverrides:
+  shared:
+    N8N_WEBHOOK_URL: ""
+env:
+  shared:
+    WEBHOOK_URL: https://hooks.example.com
+```
+
+### Client IP addresses
+
+When `ingress.enabled` or `httpRoute.enabled` is true, the chart sets `N8N_PROXY_HOPS` to `1` on main and the webhook processors. n8n then reads the client's IP address from the `X-Forwarded-For` header that the ingress controller or Gateway adds, rather than taking the proxy pod's address. IP allowlists on Webhook nodes and the addresses n8n logs depend on it. Workers take no client traffic, so they do not get it.
+
+If another proxy sits in front of the ingress controller or Gateway, such as a CDN or a cloud load balancer that adds its own hop, raise the count:
+
+```yaml
+chartEnvOverrides:
+  shared:
+    N8N_PROXY_HOPS: 2
+```
+
+Without an Ingress or a route, the chart does not set `N8N_PROXY_HOPS`, and n8n's default applies. If a proxy the chart does not render sits in front of n8n, set it in `env.shared` instead.
+
+n8n reads the client address from `X-Forwarded-For`, counting `N8N_PROXY_HOPS` entries back from the end. It does this for every connection, not only those from the ingress controller or Gateway. A caller that reaches a pod directly can put any address in that header. To make the client address reliable, allow only the ingress controller or Gateway, and the release's own pods, to reach n8n. `networkPolicy.enabled: true` on its own does not do this, because the chart's default rules allow any source on `service.port`. Set `networkPolicy.ingress` as well:
+
+```yaml
+networkPolicy:
+  enabled: true
+  ingress:
+    # The release's own pods
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: n8n          # nameOverride, if you set it
+              app.kubernetes.io/instance: my-n8n   # your release name
+      ports:
+        - protocol: TCP
+          port: 5678   # service.port
+    # The namespace your ingress controller or Gateway runs in
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 5678
+```
+
+Some load balancers send traffic straight to the pod IPs, such as the AWS Load Balancer Controller in IP target mode. That traffic does not come from a pod in the controller's namespace, so allow the load balancer's source addresses with an `ipBlock` rule instead. Add a rule for anything else that calls n8n directly, such as a Prometheus that scrapes `/metrics`.
 
 ### MCP Server Trigger with multiple webhook processors
 
@@ -83,7 +246,49 @@ MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so 
 
 Use `ingress.sticky.enabled=true` for nginx cookie affinity, or `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. Multi-main deployments require sticky sessions at the load-balancing layer.
 
-See [https-ingress.yaml](./examples/https-ingress.yaml) for a complete HTTPS example.
+See [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) for a complete HTTPS example.
+
+## Gateway API
+
+Set `httpRoute.enabled=true` to expose n8n through a Gateway API implementation, such as Envoy Gateway, Istio or Cilium. The chart renders an `HTTPRoute` and attaches it to the Gateways in `httpRoute.parentRefs`. It never creates a Gateway. TLS is configured on the Gateway's listener.
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: shared-gateway
+      namespace: gateway-system
+  hostnames:
+    - n8n.example.com
+```
+
+The route sends every path to the main pods. When `webhookProcessor.enabled=true`, it sends `/webhook/`, `/webhook-waiting/`, `/form/`, `/form-waiting/` and `/mcp/` to the webhook processor pods, the same split as the webhook Ingress.
+
+The first hostname sets the editor URL, and the webhook URL follows it, in the same way as the first ingress host. Set `editor.url` if the Gateway serves n8n over plain HTTP.
+
+The route also sets `N8N_PROXY_HOPS`, in the same way as the Ingress. See [Client IP addresses](#client-ip-addresses).
+
+For a separate webhook host, set `httpRoute.webhook`. The chart renders a second route for it, with the same paths as the webhook Ingress on a separate host, and the editor route sends every path to main. The webhook route can attach to a different Gateway, for example a public one:
+
+```yaml
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: internal-gateway
+      namespace: gateway-system
+  hostnames:
+    - n8n.internal.example.com
+  webhook:
+    parentRefs:          # empty uses httpRoute.parentRefs
+      - name: public-gateway
+        namespace: gateway-system
+    hostnames:
+      - hooks.example.com
+```
+
+The route renders whenever it is enabled, so the Gateway API CRDs must be installed before you install the chart. Use the route or the Ingress, not both. The render fails if `httpRoute.enabled` is set with `ingress.enabled`, or without `parentRefs`.
+
+See [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-httproute.yaml) and [gateway-webhook-host.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-webhook-host.yaml) for complete examples.
 
 ## Ports and Health Checks
 
@@ -91,16 +296,22 @@ See [https-ingress.yaml](./examples/https-ingress.yaml) for a complete HTTPS exa
 |---|---:|---|
 | main | `service.port` (default `5678`) | HTTP liveness `/healthz`; readiness `/healthz/readiness` |
 | webhook-processor | `service.port` (default `5678`) | HTTP liveness `/healthz`; readiness `/healthz/readiness` |
-| worker | no Service | exec probe checks the `n8n worker` process |
+| worker | `redis.healthCheck.port` (default `5678`), no Service | HTTP startup and liveness `/healthz`; readiness `/healthz/readiness` |
 | task runner broker | `taskRunners.broker.port` (default `5679`) | localhost broker used by task runner sidecars |
 
-Workers consume jobs from Redis and do not receive inbound HTTP traffic, so the chart intentionally does not create a Kubernetes Service for worker pods.
+Workers consume jobs from Redis and do not receive inbound HTTP traffic, so the chart intentionally does not create a Kubernetes Service for worker pods. The worker port serves health checks only. Worker readiness fails until the worker has its database, migrations and Redis connection.
 
 ## Scaling Guidance
 
 Scale execution throughput with `queueMode.workerReplicaCount` and `queueMode.workerConcurrency`. The built-in HPA can scale main, worker, and webhook processor deployments from CPU and optional memory utilization.
 
 For queue-based scaling, enable `keda.enabled=true` and configure Redis triggers for workers. KEDA creates `ScaledObject` resources for workers, and optionally webhook processors, instead of the built-in worker/webhook HPAs.
+
+Once something will actually scale a worker or webhook-processor Deployment, the chart stops setting that Deployment's `replicas` and leaves the count to the HPA or the `ScaledObject`. That means KEDA with triggers configured for the component, or the built-in HPA with `keda.enabled` off, since `keda.enabled` replaces the worker and webhook HPAs. Kubernetes defaults the field to 1 on first create and the autoscaler takes over from there, so later upgrades neither reset the count nor show as drift on a GitOps sync.
+
+On the first upgrade from a chart version that set `replicas`, Helm removes the field it used to manage, so an autoscaled Deployment drops to 1 replica once before the autoscaler scales it back up.
+
+`queueMode.workerReplicaCount` and `webhookProcessor.replicaCount` still size the Deployments where nothing else will, and `queueMode.workerReplicaCount: 0` still removes the worker Deployment altogether.
 
 Webhook processors are an optional scaling layer for high-volume production webhook traffic. Enable them when webhook load should be isolated from the UI/API main pods, and configure ingress or load-balancer routing as described above.
 
@@ -116,32 +327,182 @@ serviceAccount:
 
 To use the namespace's default ServiceAccount, set `name: ""`. If you set `create: false` without also changing `name` from the chart default `"n8n"`, rendering will fail with a clear error — this prevents pods from being wired to a ServiceAccount that was never created.
 
+## Binary data
+
+n8n stores binary data, such as files passed between nodes, in one of several places. The chart sets the mode only when `s3.enabled` is true. Otherwise n8n picks it for the topology.
+
+| Configuration | Mode | Where the data lives |
+|---|---|---|
+| `s3.enabled: true` | `s3` | The S3 bucket |
+| Queue mode | `database` | The n8n database |
+| Standalone with `persistence.enabled: true` | `filesystem` | `/home/node/.n8n/storage` on the PVC |
+| Standalone without persistence | `filesystem` | An emptyDir, lost when the pod restarts |
+
+An install that already has `/home/node/.n8n/binaryData` keeps using it on n8n 2.x. n8n 3.0 renames it to `storage` on first start.
+
+S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot and logs that the licence is missing, so the chart requires `license.enabled: true` alongside `s3.enabled: true`.
+
+In `database` mode, n8n rejects files over 512 MiB. `N8N_BINARY_DATA_DATABASE_MAX_FILE_SIZE` in `env.shared` raises the limit, up to 1024 MiB.
+
+In queue mode, the render fails if `N8N_DEFAULT_BINARY_DATA_MODE` is `filesystem` in an `env` map or in `chartEnvOverrides`. The pods do not share a disk, so one pod cannot read binary data that another pod writes.
+
+To keep the bucket for execution data and store binary data elsewhere, set the mode in `chartEnvOverrides`:
+
+```yaml
+s3:
+  enabled: true
+chartEnvOverrides:
+  shared:
+    N8N_DEFAULT_BINARY_DATA_MODE: database
+env:
+  shared:
+    N8N_EXECUTION_DATA_STORAGE_MODE: s3
+```
+
+If you turn S3 off later, n8n can no longer read the binary data it stored in the bucket.
+
+## Environment variables
+
+Set n8n environment variables per component, as flat maps:
+
+```yaml
+env:
+  shared:            # main, worker and webhook-processor pods
+    N8N_LOG_LEVEL: info
+    NO_PROXY: "localhost,.svc,.cluster.local"
+    N8N_SMTP_PASS:   # a reference, written as you would under valueFrom
+      secretKeyRef:
+        name: smtp
+        key: password
+  worker:            # worker pods only, over shared
+    N8N_LOG_LEVEL: debug
+  main: {}
+  webhookProcessor: {}
+  taskRunner: {}     # the task-runner sidecar only; shared does not reach it
+```
+
+The chart renders each map into a ConfigMap, together with the variables it computes from values, and loads them with `envFrom`. Maps merge across values files, so an overlay only needs the variables it changes. Values can be strings, numbers or booleans.
+
+A value can also be a reference: `secretKeyRef`, `configMapKeyRef`, `fieldRef` or `resourceFieldRef`, written as you would under `valueFrom`. References go in the container's `env` list rather than the ConfigMap. A component's value still wins over a shared one of the same name, whichever of the two is a reference.
+
+Some variables are set by the chart from a value, for example `DB_POSTGRESDB_HOST` from `database.host` and `N8N_PORT` from `service.port`. Setting one of these in a map fails the render, and the error names the value to set instead. The check covers only what the chart sets in your configuration, so `AWS_ACCESS_KEY_ID` is free to use when S3 is off.
+
+To replace a variable the chart sets, when no value can express what you need, use `chartEnvOverrides` with the same component keys. It accepts only variables the chart sets in your configuration, and not ones it reads from a Secret. `NOTES.txt` lists the overrides in effect.
+
+To load whole ConfigMaps or Secrets, for example from External Secrets, list them under `envFrom` with the same component keys:
+
+```yaml
+envFrom:
+  shared:
+    - secretRef:
+        name: n8n-smtp
+```
+
+The order, from lowest to highest precedence:
+
+1. The chart's shared ConfigMap: computed variables, literals from `env.shared`, and `chartEnvOverrides.shared` for variables the chart sets there
+2. The chart's component ConfigMap: computed variables, literals from `env.<component>`, `chartEnvOverrides.shared` for variables the chart sets only on that component, and `chartEnvOverrides.<component>`
+3. `envFrom.shared`, then `envFrom.<component>`
+4. The container's `env` list: variables the chart reads from a Secret, and references from the `env` maps
+
+Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The chart cannot see inside them, so it cannot check for clashes, and changing them does not restart pods.
+
 ## Key Configuration
 
 | Value | Description | Default |
 |---|---|---|
 | `image.repository` | n8n image | `docker.n8n.io/n8nio/n8n` |
-| `image.tag` | n8n version | `1.110.1` |
+| `image.tag` | n8n version | `""` (uses the chart's `appVersion`) |
+| `image.digest` | Pin the n8n image by digest (`sha256:...`); replaces `image.tag` when set | `""` |
+| `taskRunners.image.digest` | Pin the runner image by digest; replaces `taskRunners.image.tag` when set. With task runners enabled, set both digests or neither | `""` |
+| `imagePullSecrets` | Existing pull Secrets for private image registries, as a list of `- name: <secret>` entries | `[]` |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
-| `queueMode.workerConcurrency` | Jobs per worker | `10` |
-| `multiMain.enabled` | Multi-main HA (Enterprise) | `false` |
+| `queueMode.workerConcurrency` | Jobs per worker, passed as `--concurrency`. Empty uses n8n's default of 10. Fails together with `executions.concurrency.productionLimit`, which n8n uses for workers instead | `null` |
+| `env.<component>` | Environment variables for `shared`, `main`, `worker`, `webhookProcessor` or `taskRunner` | `{}` |
+| `chartEnvOverrides.<component>` | Replacements for variables the chart sets | `{}` |
+| `envFrom.<component>` | ConfigMaps and Secrets loaded whole | `[]` |
+| `multiMain.enabled` | Multi-main HA (Enterprise). Requires `queueMode.enabled` and `license.enabled` | `false` |
 | `webhookProcessor.enabled` | Dedicated webhook pods | `false` |
-| `taskRunners.enabled` | Task runner sidecars | `false` |
-| `ingress.enabled` | Create Ingress resource | `false` |
+| `taskRunners.enabled` | Task runner sidecars. Requires an auth token: `N8N_RUNNERS_AUTH_TOKEN` in the core Secret (`secretRefs.existingSecret` or `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN`), or a Secret of its own in `taskRunners.authToken.existingSecret` | `true` |
+| `ingress.enabled` | Create Ingress resource, and set `N8N_PROXY_HOPS` to 1 | `false` |
+| `ingress.webhook.hosts` | Hosts of their own for webhooks; the first sets the webhook URL | `[]` |
+| `httpRoute.enabled` | Create a Gateway API HTTPRoute, and set `N8N_PROXY_HOPS` to 1 | `false` |
+| `httpRoute.webhook.hostnames` | Hostnames of their own for webhooks, on a second route; the first sets the webhook URL | `[]` |
 | `persistence.enabled` | PVC for main pods | `false` |
-| `strategy` | Deployment update strategy | `{}` (k8s default) |
+| `s3.enabled` | Store binary data in an S3 bucket. Requires an n8n Business or Enterprise licence and `license.enabled` | `false` |
+| `persistence.annotations` | Annotations on the PVC, merged over `commonAnnotations`. Not allowed with `persistence.existingClaim` | `{}` |
+| `persistence.existingClaim` | A PVC you manage, used instead of the chart's. Not allowed with `persistence.size` or `persistence.storageClassName`. Set `persistence.accessModes` to match the claim | unset |
+| `strategy` | Update strategy for the main Deployment. Empty uses `Recreate` when `persistence.enabled` is true and every `persistence.accessModes` entry is `ReadWriteOnce` or `ReadWriteOncePod` (unset means `ReadWriteOnce`), and the Kubernetes default otherwise | `{}` |
+| `enableServiceLinks` | Inject `<SERVICE>_SERVICE_HOST`, `<SERVICE>_PORT` and related variables for every Service in the namespace into n8n pods | `false` |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
-| `hpa.main.enabled` | HPA for main pods | `false` |
+| `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
+| `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
+| `keda.worker.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
+| `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods | `false` |
+| `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
+| `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `networkPolicy.enabled` | Network policies | `false` |
+| `networkPolicy.ingress` | Ingress rules that replace the chart's. Empty allows the release's own pods and any source on `service.port` | `[]` |
+| `networkPolicy.egress` | Egress rules that replace the chart's. Empty allows all egress | `[]` |
+| `extraObjects` | Additional Kubernetes objects rendered with the release | `[]` |
+| `extraVolumes` / `extraVolumeMounts` | Volumes and n8n-container mounts shared by main, worker, and webhook-processor pods | `[]` / `[]` |
 | `extraContainers` | Additional sidecar containers on main, worker, and webhook-processor pods | `[]` |
 | `nodePlacement` | Component-specific node placement overrides | `{}` |
 | `extraInitContainers` | Init containers (incl. native sidecars) on all n8n pods | `[]` |
 | `dnsPolicy` / `dnsConfig` | Pod DNS policy + configuration for all n8n pods | `""` / `{}` |
-| `serviceAccount.automountServiceAccountToken` | Pod-level toggle for ServiceAccount token automount | unset |
+| `hostAliases` | Extra `/etc/hosts` entries for all n8n pods | `[]` |
+| `podSecurityContext.shared` | Pod securityContext for every n8n pod | UID, GID and `fsGroup` 1000, non-root, `RuntimeDefault` seccomp |
+| `podSecurityContext.<role>` | Merged over `shared` for `main`, `worker` or `webhookProcessor` | `{}` |
+| `containerSecurityContext.shared` | Container securityContext for every n8n container and the task-runner sidecar | no privilege escalation, all capabilities dropped |
+| `containerSecurityContext.<role>` | Merged over `shared` for `main`, `worker`, `webhookProcessor` or `taskRunner` | `{}` |
+| `serviceAccount.automountServiceAccountToken` | Mount the ServiceAccount token into n8n pods. n8n does not call the Kubernetes API | `false` |
+| `rbac.create` | Create a Role that reads ConfigMaps and Secrets, bound to the ServiceAccount. n8n does not use it | `false` |
 
-See [values.yaml](./values.yaml) for the full list of configurable values.
+See [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml) for the full list of configurable values.
+
+The schema rejects any key it does not declare, so a misspelt key fails the install instead of being ignored. Free-form blocks such as annotations, labels, `affinity` and each component's `resources` accept any key, and the `extra*` lists accept any entry.
+
+## Extra objects
+
+Use `extraObjects` to deploy additional Kubernetes resources with the n8n release, such as a Traefik `IngressRoute`, a `SecretProviderClass` or a `PrometheusRule`. The chart does not need to know the kind.
+
+Each entry is a map or a YAML string. Both are passed through Helm `tpl`, so an entry can reference the release:
+
+```yaml
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: '{{ include "n8n.fullname" . }}-extra'
+    data:
+      mainService: '{{ include "n8n.fullname" . }}-main'
+```
+
+To template from values of your own, put them under `global`, which the schema leaves open, and read them as `{{ .Values.global.myValue }}`. The same goes for YAML anchors. Other top-level keys fail the schema.
+
+Escape any literal `{{` as `{{ "{{" }}`. This matters for objects that carry their own templates, such as Prometheus alert annotations. Without the escape, the render fails with `undefined variable`:
+
+```yaml
+extraObjects:
+  - apiVersion: monitoring.coreos.com/v1
+    kind: PrometheusRule
+    metadata:
+      name: n8n-alerts
+    spec:
+      groups:
+        - name: n8n
+          rules:
+            - alert: N8nDown
+              expr: up{job="n8n"} == 0
+              annotations:
+                summary: '{{ "{{" }} $labels.instance }} is down'
+```
+
+The chart adds the `app.kubernetes.io/name`, `instance`, `version` and `managed-by` labels to every object. A label the object sets itself wins. `helm.sh/chart` and `commonLabels` are not added. An object without `metadata.namespace` goes into the release namespace. An object that sets one keeps it. Every entry must set `apiVersion`, `kind` and `metadata.name`.
+
+See [extra-objects.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/extra-objects.yaml) for a complete example.
 
 ## Extra containers (sidecars)
 
@@ -182,30 +543,62 @@ nodePlacement:
 
 > **Note:** When `multiMain.enabled=true`, the chart emits an automatic pod-anti-affinity rule to spread main replicas across nodes. Setting `nodePlacement.main.affinity` replaces that auto rule — include your own pod-anti-affinity term if you still want main replicas spread.
 
-See [`examples/node-placement.yaml`](./examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
+See [`examples/node-placement.yaml`](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
+
+## Security Context
+
+`podSecurityContext.shared` and `containerSecurityContext.shared` apply to every n8n pod and container. Each role block merges over `shared` field by field, and the role wins. Set only the fields that change. Set a field to `null` to remove it, in `shared` or for one role. A list such as `capabilities.drop` replaces the inherited list whole.
+
+Every n8n pod runs with UID, GID and `fsGroup` 1000, `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. Set `podSecurityContext.shared: null` to drop these defaults.
+
+```yaml
+# OpenShift: let the restricted SCC assign the UID and GID.
+podSecurityContext:
+  shared:
+    fsGroup: null
+    runAsUser: null
+    runAsGroup: null
+```
+
+The n8n containers and the task-runner sidecar set `allowPrivilegeEscalation: false` and drop all capabilities. Containers added with `extraContainers` or `extraInitContainers` get none of them. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
+
+```yaml
+# Run the task runner as nobody (UID and GID 65532), as n8n's hardening guide recommends.
+containerSecurityContext:
+  taskRunner:
+    runAsUser: 65532
+    runAsGroup: 65532
+```
+
+`readOnlyRootFilesystem` needs writable volumes at the paths n8n writes to, such as `/tmp` and `~/.n8n`. `extraVolumes` and `extraVolumeMounts` add them to the n8n containers. They do not reach the task-runner sidecar, so if you set `readOnlyRootFilesystem` in `shared`, set it to `null` for `taskRunner`.
 
 ## Task Runners
 
-Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. When enabled, each main and worker pod gets a runner sidecar.
+Task runners execute user-provided JavaScript and Python code in isolated sidecar containers, separate from the main n8n process. They are on by default. Worker pods get a runner sidecar in queue mode (manual executions are offloaded to workers). In standalone mode (`queueMode.enabled=false`), the main pod gets a runner sidecar instead.
 
-**How it works:** The n8n container runs a task broker on port 5679. The runner sidecar connects to this broker over localhost to receive and execute code tasks.
+Each sidecar requests 100m CPU and 128Mi of memory, with limits of 500m and 512Mi. Change them under `taskRunners.resources`. To run code inside the n8n process instead, set `taskRunners.enabled: false`. n8n deprecates this internal mode from 3.0.
 
-**Enable task runners:**
-```yaml
-taskRunners:
-  enabled: true
-  authToken:
-    existingSecret: "n8n-runner-token"
-    existingSecretKey: "auth-token"
-```
+**How it works:** The n8n process that executes workflows runs a task broker on port 5679, and its runner sidecar connects to that broker over localhost to receive and execute code tasks. In queue mode the executing process is the worker, so only worker pods run a broker and get a sidecar. n8n does not start a broker on main pods when manual executions are offloaded to workers, which the chart always enables in queue mode.
 
-Create the auth token secret:
-```bash
-kubectl create secret generic n8n-runner-token \
-  --from-literal=auth-token=$(openssl rand -base64 32)
-```
+**Requires n8n 2.13.0 or later.** Earlier versions also run a broker on main pods, and 1.108.0 to 2.12.x need a runner there for the MCP Server Trigger, so pinning `image.tag` below 2.13.0 leaves those executions without a runner. The chart does not enforce this version floor when `image.tag` is overridden.
 
-See [task-runners.yaml](./examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
+**Auth token:** the runner and the broker authenticate with a shared token. The chart reads it from the core Secret, the one that holds the encryption key, under the key `N8N_RUNNERS_AUTH_TOKEN`:
+
+- With `secretRefs.existingSecret`, add the key to that Secret:
+  ```bash
+  kubectl patch secret n8n-core-secrets --type merge --patch-file /dev/stdin <<EOF
+  {"stringData":{"N8N_RUNNERS_AUTH_TOKEN":"$(openssl rand -base64 32)"}}
+  EOF
+  ```
+- Without it, set `secretRefs.env.N8N_RUNNERS_AUTH_TOKEN` next to the encryption key, and the chart renders it into its Secret.
+
+Each pod reads the token when its containers start. If you change the token in an existing Secret while n8n is running, restart the n8n Deployments with `kubectl rollout restart`. Otherwise a sidecar that restarts on its own reads a token its n8n container does not hold.
+
+To keep the token in a Secret of its own, set `taskRunners.authToken.existingSecret`, and `existingSecretKey` if the key is not `N8N_RUNNERS_AUTH_TOKEN`. The chart never generates the token, so `helm template` and Argo CD render the same output as `helm install`.
+
+**Health probe:** the sidecar has a liveness probe on the launcher's health endpoint, `/healthz` on port `5680`. The launcher answers this endpoint itself, so a runner busy with a long task does not fail the probe. Kubernetes restarts the sidecar only when the launcher stops responding. The launcher already restarts a runner that stops responding. Tune or disable the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `env.taskRunner`, the probe uses that port. Set it as a literal, because the chart cannot read a reference and leaves the probe out in that case.
+
+See [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/task-runners.yaml) for a complete example including resource tuning and Python runner support.
 
 ## KEDA Autoscaling
 
@@ -222,6 +615,7 @@ helm install keda kedacore/keda --namespace keda-system --create-namespace
 keda:
   enabled: true
   worker:
+    pause: false
     minReplicaCount: 2
     maxReplicaCount: 20
     triggers:
@@ -231,8 +625,35 @@ keda:
           listLength: "5"
 ```
 
+Set `keda.worker.pause: true` to pause worker autoscaling. This adds `autoscaling.keda.sh/paused: "true"` to the worker ScaledObject, and KEDA holds the workers at whatever replica count they are currently running, which is what you want whilst troubleshooting a scaling issue.
+
+To pause and hold a specific count instead, set `pausedReplicaCount`. Setting it to `0` scales workers down entirely:
+
+```yaml
+keda:
+  worker:
+    pause: true
+    pausedReplicaCount: 0
+```
+
+`pausedReplicaCount` is only applied when `pause: true`, and leaving it unset is what gives you the freeze-at-current behaviour. With both annotations set KEDA scales the workers to the count first, then pauses autoscaling.
+
+Webhook processors have the same pair under `keda.webhookProcessor`, and `pause` on its own freezes them at their current count just as it does for workers. Taking them to zero stops those pods accepting webhook traffic, so treat `pausedReplicaCount: 0` here as a maintenance-window setting rather than the troubleshooting one it is for workers:
+
+```yaml
+keda:
+  webhookProcessor:
+    pause: true
+    pausedReplicaCount: 0
+```
+
+Webhook processors only autoscale in queue mode, with `keda.enabled`, `webhookProcessor.enabled` and `keda.webhookProcessor.enabled` all set, and at least one trigger of their own. `keda.webhookProcessor.triggers` is empty by default, and the chart fails the install rather than leave you with webhook processors that look autoscaled and are not. To run KEDA for workers alone, leave `keda.webhookProcessor.enabled` off, which is the default. To run it for webhook processors alone, empty `keda.worker.triggers`, since workers have no enabled flag of their own.
+
+Either component merges these annotations with anything you set in `commonAnnotations`. The chart-managed keys win on a collision, so you cannot end up with the same annotation twice.
+
 The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
 
+<<<<<<< HEAD
 ### Incremental scaling
 
 By default, the HPA behind KEDA can scale directly to the computed replica count (e.g. 3→20). Set `keda.worker.advanced.horizontalPodAutoscalerConfig.behavior` to cap how many pods are added or removed per interval:
@@ -256,12 +677,25 @@ keda:
                 periodSeconds: 60
 ```
 
-See [keda-autoscaling.yaml](./examples/keda-autoscaling.yaml) for a complete example.
+See [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) for a complete example.
 
 ## Upgrading
 
-Chart version bumps are automated via semantic-release. Check the [CHANGELOG](../../CHANGELOG.md) for breaking changes before upgrading.
+Chart version bumps are automated via Release Please. Check the [CHANGELOG](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) for breaking changes before upgrading.
+
+Before you move to a new major version, read [UPGRADING.md](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md). It explains how to find the values you must change, and what else each major changes. The guidance for 2.0 is still being written while 2.0 is in development.
 
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml
 ```
+
+## Development
+
+The chart's unit tests use the [helm-unittest](https://github.com/helm-unittest/helm-unittest) plugin. From a clone of the repository, run:
+
+```bash
+helm unittest --strict charts/n8n
+helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
+```
+
+See [CONTRIBUTING.md](https://github.com/n8n-io/n8n-hosting/blob/main/CONTRIBUTING.md) for how to install the plugin and the other local checks.

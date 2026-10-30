@@ -11,7 +11,6 @@ multiMain:
 queueMode:
   enabled: true
   workerReplicaCount: 5
-  workerConcurrency: 15
 
 # Load balancer must route /webhook/*, /form/*, and /form-waiting/* to webhook processor service
 webhookProcessor:
@@ -43,7 +42,6 @@ hpa:
 
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host.com"  # Replace with your PostgreSQL endpoint
   port: 5432
   database: n8n
@@ -52,10 +50,18 @@ database:
   passwordSecret:
     name: "n8n-db-secret"
     key: "password"
+  ssl:
+    enabled: true
+    rejectUnauthorized: true           # Set to false only for self-signed certs (not recommended for production), instead consider providing the server's CA below
+    # If the server's CA is not publicly trusted (Amazon RDS, for example), put
+    # the provider's CA bundle in a Secret and reference it:
+    #   kubectl create secret generic postgres-ca --from-file=ca.crt=global-bundle.pem
+    # existingSecret:
+    #   name: postgres-ca
+    #   caKey: ca.crt
 
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host.com"  # Replace with your Redis endpoint
   port: 6379
 
@@ -74,10 +80,6 @@ s3:
     # secretAccessKeySecret:
     #   name: "s3-credentials"
     #   key: "secret-access-key"
-  
-  storage:
-    mode: "s3"
-    availableModes: "filesystem,s3"
 
 # Service Account with AWS IAM Role
 serviceAccount:
@@ -124,26 +126,17 @@ resources:
 # Production configuration
 config:
   timezone: Europe/Berlin
-  extraEnv:
+
+env:
+  shared:
     # Security settings
-    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
-      value: "true"
-    
-    - name: DB_POSTGRESDB_SSL_ENABLED
-      value: "true"
-    - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-      value: "true"  # Set to "false" only if using self-signed certs (not recommended for production)
-    
-    - name: N8N_LOG_LEVEL
-      value: "info"
-    - name: N8N_LOG_OUTPUT
-      value: "console"
-    
-    - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
-      value: "50"
+    N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+    N8N_LOG_LEVEL: info
+    N8N_LOG_OUTPUT: console
 
 executions:
   concurrency:
+    # In queue mode n8n uses this as each worker's concurrency.
     productionLimit: 50
   timeout: 3600  # 1 hour
   data:
@@ -159,10 +152,8 @@ executions:
     hardDeleteInterval: 15   # minutes between hard delete runs
     softDeleteInterval: 60   # minutes between soft delete runs
 
-webhook:
-  timeout: 300000  # 5 minutes
-
 # Core secrets reference
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 
@@ -181,14 +172,8 @@ probes:
     timeoutSeconds: 5
     failureThreshold: 3
 
-# Security context
-securityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
-
 # Pod disruption budget for high availability
-podDisruptionBudget:
+pdb:
   enabled: true
   minAvailable: 1
 

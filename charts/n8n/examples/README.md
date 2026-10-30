@@ -6,7 +6,7 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (No License Required)
 - **[standalone.yaml](./standalone.yaml)** - Single pod with SQLite, no external dependencies
-- **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis; includes `commonLabels` and `commonAnnotations` example
+- **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis
 - **[minimal-with-docker.yaml](./minimal-with-docker.yaml)** - Quick testing with Docker containers
 
 ### Community Examples (Task Runners)
@@ -19,8 +19,15 @@ This directory contains common configuration examples for different deployment s
 - **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress with TLS, sticky sessions, and webhook processor routing
 - **[mcp-server.yaml](./mcp-server.yaml)** - Scale the MCP Server Trigger (`/mcp`) across multiple webhook processors (requires n8n ≥ 2.8.0)
 
+### Community Examples (Gateway API)
+- **[gateway-httproute.yaml](./gateway-httproute.yaml)** - Gateway API HTTPRoute with webhook processor routing
+- **[gateway-webhook-host.yaml](./gateway-webhook-host.yaml)** - Editor on an internal Gateway, webhooks on a public host
+
 ### Community Examples (Node Placement)
 - **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
+
+### Community Examples (Extra objects)
+- **[extra-objects.yaml](./extra-objects.yaml)** - Deploy objects the chart does not template, such as a Traefik `IngressRoute` and a `PrometheusRule`, with `extraObjects`
 
 ### Enterprise Examples (License Required)
 - **[production-s3.yaml](./production-s3.yaml)** - Production setup with multi-main, webhooks, S3 storage, and autoscaling
@@ -60,7 +67,7 @@ helm install n8n ./charts/n8n -f my-values.yaml
 For quick testing with Docker:
 ```bash
 # Start PostgreSQL
-docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:16
+docker run -d --name n8n-postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=n8npassword -p 5432:5432 postgres:18
 
 # Start Redis
 docker run -d --name n8n-redis -p 6379:6379 redis:7-alpine
@@ -207,7 +214,7 @@ When `disableProductionWebhooksOnMainProcess: true`, configure your load balance
 - `/form-test/*` → main service (test form triggers)
 - `/*` → main service (UI, API, everything else)
 
-The chart can create this split routing with `ingress.webhookProcessor.enabled=true`; see [https-ingress.yaml](./https-ingress.yaml).
+With `ingress.enabled=true`, the chart creates this split routing; see [https-ingress.yaml](./https-ingress.yaml). With a Gateway API implementation, `httpRoute.enabled=true` creates the same split when `webhookProcessor.enabled=true`; see [gateway-httproute.yaml](./gateway-httproute.yaml).
 
 ### Testing
 ```bash

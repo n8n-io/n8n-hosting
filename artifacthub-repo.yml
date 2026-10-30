@@ -1,0 +1,26 @@
+# Artifact Hub repository metadata.
+#
+# Artifact Hub never reads this repository. It reads the OCI registry, so this
+# file reaches it as an artifact pushed to
+# ghcr.io/n8n-io/n8n-helm-chart/n8n:artifacthub.io by
+# .github/workflows/artifact-hub-metadata.yml. It lives here so that it is
+# reviewed and versioned like everything else we publish.
+#
+# repositoryID is the identifier Artifact Hub generates for our repository
+# entry. Placing it inside the registry is what proves we control the registry
+# the listing points at, which is what grants the verified publisher badge.
+repositoryID: 6c82d709-cb5e-4d6a-a114-b9718c59fac6
+
+# Checked by Artifact Hub if anyone ever files an ownership claim against this
+# repository. Each email has to match that owner's Artifact Hub account.
+owners:
+  - name: Toby Wilds
+    email: toby.wilds@n8n.io
+
+# Artifact Hub indexes every tag in the registry that parses as semver, which
+# includes the prerelease tags we push for preview and release-candidate
+# builds. Those are not versions anyone should install, so they are kept off
+# the listing.
+ignore:
+  - name: n8n
+    version: '^[0-9]+\.[0-9]+\.[0-9]+-'

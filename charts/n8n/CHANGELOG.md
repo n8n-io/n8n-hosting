@@ -1,0 +1,313 @@
+# Changelog
+
+All notable changes to the n8n Helm chart will be documented in this file.
+
+This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
+
+## [2.0.0-rc.1](https://github.com/n8n-io/n8n-hosting/compare/v2.0.0-rc.0...v2.0.0-rc.1) (2026-10-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **chart:** give webhooks a host of their own, and add an opt-in Gateway API HTTPRoute ([#258](https://github.com/n8n-io/n8n-hosting/issues/258))
+* **chart:** leave the task-runner broker on n8n's default listen address ([#265](https://github.com/n8n-io/n8n-hosting/issues/265))
+* **chart:** turn off service links, RBAC and the token mount by default, and recreate main on ReadWriteOnce storage ([#266](https://github.com/n8n-io/n8n-hosting/issues/266))
+* **chart:** retire useExternal in favour of database.type ([#264](https://github.com/n8n-io/n8n-hosting/issues/264))
+* **chart:** honour networkPolicy ingress and egress values ([#263](https://github.com/n8n-io/n8n-hosting/issues/263))
+* **chart:** run task runners by default and require a token source ([#252](https://github.com/n8n-io/n8n-hosting/issues/252))
+* **chart:** store binary data in S3 when s3.enabled is set, instead of on pod-local disk ([#220](https://github.com/n8n-io/n8n-hosting/issues/220))
+* **chart:** merge per-role security contexts over a shared block ([#254](https://github.com/n8n-io/n8n-hosting/issues/254))
+* **chart:** env as per-component maps delivered via envFrom ([#250](https://github.com/n8n-io/n8n-hosting/issues/250))
+
+### Features
+
+* **chart:** add imagePullSecrets option ([#180](https://github.com/n8n-io/n8n-hosting/issues/180)) ([5688ee8](https://github.com/n8n-io/n8n-hosting/commit/5688ee86ce325e1859b048d6453b0d05b68ac3c3))
+* **chart:** bump n8n to 2.44.5 ([#267](https://github.com/n8n-io/n8n-hosting/issues/267)) ([b690a87](https://github.com/n8n-io/n8n-hosting/commit/b690a87c814aed2f56981047fb617d22e488b861))
+* **chart:** env as per-component maps delivered via envFrom ([#250](https://github.com/n8n-io/n8n-hosting/issues/250)) ([7a22e91](https://github.com/n8n-io/n8n-hosting/commit/7a22e91a7660e5e443c296d148f3ca8eec880aa3))
+* **chart:** fail the render on retired values keys ([#247](https://github.com/n8n-io/n8n-hosting/issues/247)) ([b6281ce](https://github.com/n8n-io/n8n-hosting/commit/b6281ce80d3780d76cefaa03869696f881e2c29b))
+* **chart:** give webhooks a host of their own, and add an opt-in Gateway API HTTPRoute ([#258](https://github.com/n8n-io/n8n-hosting/issues/258)) ([cdda0c7](https://github.com/n8n-io/n8n-hosting/commit/cdda0c7f6560789a55d86a7eedb69460d8f04edd))
+* **chart:** honour networkPolicy ingress and egress values ([#263](https://github.com/n8n-io/n8n-hosting/issues/263)) ([d2ea07d](https://github.com/n8n-io/n8n-hosting/commit/d2ea07d583a9004453c4cdcf3b62d150d8511545))
+* **chart:** leave the task-runner broker on n8n's default listen address ([#265](https://github.com/n8n-io/n8n-hosting/issues/265)) ([e785ab7](https://github.com/n8n-io/n8n-hosting/commit/e785ab70cafe6cf666a51678e84956cf33b88c29))
+* **chart:** merge per-role security contexts over a shared block ([#254](https://github.com/n8n-io/n8n-hosting/issues/254)) ([59159ee](https://github.com/n8n-io/n8n-hosting/commit/59159ee6de8a0eb8c9027835d2b41ab12e720432))
+* **chart:** report the deployment artifact from every artefact ([#239](https://github.com/n8n-io/n8n-hosting/issues/239)) ([14a4cf5](https://github.com/n8n-io/n8n-hosting/commit/14a4cf543f61327aba40d0a2439b52d80f703104))
+* **chart:** retire useExternal in favour of database.type ([#264](https://github.com/n8n-io/n8n-hosting/issues/264)) ([682de90](https://github.com/n8n-io/n8n-hosting/commit/682de9060e530b40d41601a8c1246cb31c035452))
+* **chart:** run task runners by default and require a token source ([#252](https://github.com/n8n-io/n8n-hosting/issues/252)) ([e662c4f](https://github.com/n8n-io/n8n-hosting/commit/e662c4f220bdb262b44fa341033725aa05e501fa))
+* **chart:** store binary data in S3 when s3.enabled is set, instead of on pod-local disk ([#220](https://github.com/n8n-io/n8n-hosting/issues/220)) ([b8ec6d1](https://github.com/n8n-io/n8n-hosting/commit/b8ec6d1d34dccb9198d43cbc9f919b9ab934a3b4))
+* **chart:** turn off service links, RBAC and the token mount by default, and recreate main on ReadWriteOnce storage ([#266](https://github.com/n8n-io/n8n-hosting/issues/266)) ([42ce197](https://github.com/n8n-io/n8n-hosting/commit/42ce197fe5715981c80e6c41bd0ece49f5016a33))
+
+
+### Bug Fixes
+
+* **chart:** probe workers on the queue health endpoint ([#233](https://github.com/n8n-io/n8n-hosting/issues/233)) ([30ba43b](https://github.com/n8n-io/n8n-hosting/commit/30ba43b96c9ec797e6498fa4edfde650667598cb))
+* **chart:** start workers and webhook processors through the image entrypoint ([#241](https://github.com/n8n-io/n8n-hosting/issues/241)) ([40c4e4b](https://github.com/n8n-io/n8n-hosting/commit/40c4e4b3827dce83c9adb11cbef3a3a916e9e793))
+
+## [1.16.0](https://github.com/n8n-io/n8n-hosting/compare/v1.15.0...v1.16.0) (2026-10-14)
+
+
+### Upgrade notes
+
+**Multiple main pods now require multi-main mode.** n8n only coordinates its main processes when multi-main mode is on. Without it, each main pod runs every schedule and trigger on its own, so a workflow fires once per pod and executions collide. Earlier chart versions allowed this to render, which could lead to undesired workflow execution behaviour.
+
+The chart now refuses to render with `replicaCount` above 1, or with `hpa.main` able to scale above 1, unless `multiMain.enabled` is on. Multi-main needs an enterprise licence, so the render also stops if you enable it without one. Set `replicaCount` to 1, or turn on multi-main mode.
+
+**The task-runner sidecar now has a liveness probe.** If the launcher stops answering `/healthz` on port 5680, Kubernetes restarts it after six failed checks ten seconds apart. You can override the probe under `taskRunners.probes.liveness`. If you set `N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT` in `taskRunners.extraEnv`, it has to be a port number, as the probe uses it.
+
+**Single-replica installs no longer get a PodDisruptionBudget.** With one pod and `minAvailable: 1`, the budget stopped nodes draining. The PDB is removed on upgrade and comes back when `replicaCount` is above 1.
+
+### Features
+
+* **artefacts:** report the deployment artifact from every other artefact ([#226](https://github.com/n8n-io/n8n-hosting/issues/226)) ([dc49b73](https://github.com/n8n-io/n8n-hosting/commit/dc49b73677134609e105b029c3de7e3dd4440715))
+* **chart:** add a liveness probe to the task-runner sidecar ([#223](https://github.com/n8n-io/n8n-hosting/issues/223)) ([12dbcf7](https://github.com/n8n-io/n8n-hosting/commit/12dbcf78c074924cd27461cab420ed4d9184ec22))
+* **chart:** add editor.url to set N8N_EDITOR_BASE_URL ([#243](https://github.com/n8n-io/n8n-hosting/issues/243)) ([e97706e](https://github.com/n8n-io/n8n-hosting/commit/e97706e2037b66874f9c4ef165a982888b73b7b2))
+* **chart:** add hostAliases support to main, worker, and webhook-processor pods ([#167](https://github.com/n8n-io/n8n-hosting/issues/167)) ([87a9812](https://github.com/n8n-io/n8n-hosting/commit/87a9812601e13d9449b12681e759e39dca26a3f8))
+* **chart:** add PVC annotations and pin images by digest ([#240](https://github.com/n8n-io/n8n-hosting/issues/240)) ([6e2bf86](https://github.com/n8n-io/n8n-hosting/commit/6e2bf86046bea52f15a6c55b8d32cea4772f6af4))
+* **chart:** bump n8n to 2.43.5 ([#245](https://github.com/n8n-io/n8n-hosting/issues/245)) ([14d31cd](https://github.com/n8n-io/n8n-hosting/commit/14d31cdef55199eeda284303804f726c6e31f8df))
+* **chart:** report the deployment artifact to n8n telemetry ([#224](https://github.com/n8n-io/n8n-hosting/issues/224)) ([97eebcd](https://github.com/n8n-io/n8n-hosting/commit/97eebcdf1b0fe05e8a6ecdf2e41276e2b4934eec))
+* **chart:** set pod and container securityContext per role ([#236](https://github.com/n8n-io/n8n-hosting/issues/236)) ([280f887](https://github.com/n8n-io/n8n-hosting/commit/280f88762c3c5ca88508fa96c99ff9d25ec8f31b))
+* **chart:** support encryption key files and extra objects ([#183](https://github.com/n8n-io/n8n-hosting/issues/183)) ([3dda2e1](https://github.com/n8n-io/n8n-hosting/commit/3dda2e1b3e1480358f9ab3cdb4d43a693909604d))
+
+
+### Bug Fixes
+
+* **chart:** fail the render when several mains would run without multi-main and a licence ([#229](https://github.com/n8n-io/n8n-hosting/issues/229)) ([06d5dbe](https://github.com/n8n-io/n8n-hosting/commit/06d5dbeb071d2930311f64b9fce1f842bf419098))
+* **chart:** give the Artifact Hub logo a square, full-size icon ([#231](https://github.com/n8n-io/n8n-hosting/issues/231)) ([76c2d96](https://github.com/n8n-io/n8n-hosting/commit/76c2d96749c1654f5aee3cda6bb20108a4c79bcf))
+* **chart:** skip the main PDB on single-replica installs, so node drains are not blocked ([#228](https://github.com/n8n-io/n8n-hosting/issues/228)) ([487977c](https://github.com/n8n-io/n8n-hosting/commit/487977c5a70053eb6207b3d6fd39c67070ec6e52))
+
+
+### Reverts
+
+* report the deployment artifact from the chart and other artefacts ([#238](https://github.com/n8n-io/n8n-hosting/issues/238)) ([108f37a](https://github.com/n8n-io/n8n-hosting/commit/108f37af6bf8b7d9251f23af0c7fba6596daa932))
+
+## [1.15.0](https://github.com/n8n-io/n8n-hosting/compare/v1.14.0...v1.15.0) (2026-10-07)
+
+
+### Upgrade notes
+
+**Postgres TLS now applies.** This release addresses a defect where `database.ssl.enabled: true` had no effect on its own and the connection stayed plaintext unless `ssl.ca` or `ssl.cert` was also set.
+
+From this release it now correctly negotiates TLS and verifies the server certificate (assuming `rejectUnauthorized` remains at its default of `true`).
+
+If you set `ssl.enabled: true` against a managed Postgres whose CA is not in Node's default trust store, n8n will fail to connect after the upgrade until you supply the CA. Set `database.ssl.ca` to the PEM contents, or point `database.ssl.existingSecret` at a Secret holding it:
+
+```yaml
+database:
+  ssl:
+    enabled: true
+    existingSecret:
+      name: postgres-tls
+      caKey: ca.crt
+```
+
+`examples/production-s3.yaml` shows an example.
+
+Alternatively, setting `rejectUnauthorized: false` also unblocks the upgrade, but skips verification.
+
+You are not affected if `ssl.enabled` is false (the default) or you already set `ssl.ca`.
+
+**`database.ssl.key` continues to be ignored.** The chart does not pass this value to n8n. To supply a client key, use `database.ssl.existingSecret.keyKey`. Chart 2.0 will refuse to render with `ssl.key` set.
+
+### Features
+
+* **chart:** add extraObjects to deploy extra Kubernetes objects ([#219](https://github.com/n8n-io/n8n-hosting/issues/219)) ([60b692c](https://github.com/n8n-io/n8n-hosting/commit/60b692cb47deda4fa75d8c1f2bda5ec5110edf53))
+* **chart:** bump n8n to 2.42.4 ([#230](https://github.com/n8n-io/n8n-hosting/issues/230)) ([fce51d0](https://github.com/n8n-io/n8n-hosting/commit/fce51d0a247aaeefda072c270e34348eca6b0c91))
+* **chart:** list the chart on Artifact Hub and sign releases ([#214](https://github.com/n8n-io/n8n-hosting/issues/214)) ([5fb4203](https://github.com/n8n-io/n8n-hosting/commit/5fb4203a0498f3602ffd91f0113ee9bdc1e2f885))
+* **chart:** source Postgres TLS certs and key from an existing Secret ([#222](https://github.com/n8n-io/n8n-hosting/issues/222)) ([85eee41](https://github.com/n8n-io/n8n-hosting/commit/85eee41763530a27140278f802396a119a7bba28))
+
+
+### Bug Fixes
+
+* **chart:** use DB_POSTGRESDB_SSL_ENABLED to enable Postgres TLS ([#175](https://github.com/n8n-io/n8n-hosting/issues/175)) ([d5525ec](https://github.com/n8n-io/n8n-hosting/commit/d5525ec43428475d20b6021ae56bde321b634b9a))
+
+## [1.14.0](https://github.com/n8n-io/n8n-hosting/compare/v1.13.0...v1.14.0) (2026-09-30)
+
+
+### Features
+
+* **chart:** bump n8n to 2.41.4 ([#213](https://github.com/n8n-io/n8n-hosting/issues/213)) ([00ff1a6](https://github.com/n8n-io/n8n-hosting/commit/00ff1a670972475459ff9b4808af0084fdd3dd21))
+* **chart:** report every validation failure in one render ([#209](https://github.com/n8n-io/n8n-hosting/issues/209)) ([6bdbd01](https://github.com/n8n-io/n8n-hosting/commit/6bdbd012d8e9017258d25ede5c3450c3792e6d75))
+
+
+### Bug Fixes
+
+* **chart:** drop deprecated N8N_AVAILABLE_BINARY_DATA_MODES ([#185](https://github.com/n8n-io/n8n-hosting/issues/185)) ([bb5e9a6](https://github.com/n8n-io/n8n-hosting/commit/bb5e9a64f7f854c3947666a60ddfd8c793a3f76e))
+
+## [1.13.0](https://github.com/n8n-io/n8n-hosting/compare/v1.12.0...v1.13.0) (2026-09-23)
+
+
+### Features
+
+* **chart:** allow webhook processors to be paused and scaled to zero ([#202](https://github.com/n8n-io/n8n-hosting/issues/202)) ([65e517e](https://github.com/n8n-io/n8n-hosting/commit/65e517e05330e316c72ee14ee1c4042193302c63))
+* **chart:** bump n8n to 2.40.5 ([#206](https://github.com/n8n-io/n8n-hosting/issues/206)) ([5bcae91](https://github.com/n8n-io/n8n-hosting/commit/5bcae91bf00f1814794f32f4be7ff938bd2ba8d4))
+
+
+### Bug Fixes
+
+* **chart:** leave worker and webhook-processor replicas to the autoscaler ([#201](https://github.com/n8n-io/n8n-hosting/issues/201)) ([a344ca3](https://github.com/n8n-io/n8n-hosting/commit/a344ca3ae804a7c92df6f7608a1b20688368c6e4))
+* **chart:** ship README.md inside the packaged chart ([#205](https://github.com/n8n-io/n8n-hosting/issues/205)) ([0cbe882](https://github.com/n8n-io/n8n-hosting/commit/0cbe88280454f7d7fc9f37ff1c458fb3da546a2a))
+
+
+### Documentation
+
+* **chart:** add design principles, decisions and an AGENTS.md ([#204](https://github.com/n8n-io/n8n-hosting/issues/204)) ([05ca169](https://github.com/n8n-io/n8n-hosting/commit/05ca169d5a0940853a7dae2d2af3936e63d5d4ba))
+
+## [1.12.0](https://github.com/n8n-io/n8n-hosting/compare/v1.11.0...v1.12.0) (2026-09-16)
+
+
+### Features
+
+* **chart:** Allow workers to be paused and scaled to zero ([#177](https://github.com/n8n-io/n8n-hosting/issues/177)) ([f017a9f](https://github.com/n8n-io/n8n-hosting/commit/f017a9f83b63c6f59ffa226286502aeddfc905ed))
+* **chart:** bump n8n to 2.39.6 ([#198](https://github.com/n8n-io/n8n-hosting/issues/198)) ([6bf6e75](https://github.com/n8n-io/n8n-hosting/commit/6bf6e7534fac8b7118afcc3b132cb202f0d4b8cd))
+* **chart:** pin n8n to appVersion ([#193](https://github.com/n8n-io/n8n-hosting/issues/193)) ([7fbc10f](https://github.com/n8n-io/n8n-hosting/commit/7fbc10fcfd8d334e3dc3eb88e1be6b3076706727))
+
+
+### Bug Fixes
+
+* align Postgres to the newest supported major (18) ([#181](https://github.com/n8n-io/n8n-hosting/issues/181)) ([6b78193](https://github.com/n8n-io/n8n-hosting/commit/6b78193475d84ae190622d8a8e9ba8598e89b7d1))
+
+## [1.11.0](https://github.com/n8n-io/n8n-hosting/compare/v1.10.1...v1.11.0) (2026-07-17)
+
+
+### Features
+
+* **aws-cloudformation:** production-hardened ECS Fargate templates (dedicated webhook + HA tiers) ([#169](https://github.com/n8n-io/n8n-hosting/issues/169)) ([1790f0a](https://github.com/n8n-io/n8n-hosting/commit/1790f0ab75da5f69167a6dd3375ef0459fe9f5f3))
+* **chart:** route /mcp to webhook processors ([#171](https://github.com/n8n-io/n8n-hosting/issues/171)) ([96349ec](https://github.com/n8n-io/n8n-hosting/commit/96349ec608eb56bd11b82e40ac9652e4ae35ab53))
+
+
+### Bug Fixes
+
+* **chart:** use correct Bull queue key bull:jobs:wait in KEDA examples ([#174](https://github.com/n8n-io/n8n-hosting/issues/174)) ([7610e08](https://github.com/n8n-io/n8n-hosting/commit/7610e084ba3321739f1e5f399dc2b711a13ffc5f))
+
+## [1.10.1](https://github.com/n8n-io/n8n-hosting/compare/v1.10.0...v1.10.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **aws-cloudformation:** make S3 binary bucket name globally unique ([#164](https://github.com/n8n-io/n8n-hosting/issues/164)) ([926bfc7](https://github.com/n8n-io/n8n-hosting/commit/926bfc7230493bd3bf2ce8844eb601aa0e1da0b9))
+* **chart:** report actual database in NOTES.txt for standalone mode ([#162](https://github.com/n8n-io/n8n-hosting/issues/162)) ([16231e3](https://github.com/n8n-io/n8n-hosting/commit/16231e3660a5ee24e79ed90eb8b90a713262afa4))
+
+
+### Documentation
+
+* clarify supported infra versions and align example image tags ([#166](https://github.com/n8n-io/n8n-hosting/issues/166)) ([2ccf1b3](https://github.com/n8n-io/n8n-hosting/commit/2ccf1b3d7eaa7fdbc5b4b287bf3252a8f14f2608))
+
+## [1.10.0](https://github.com/n8n-io/n8n-hosting/compare/v1.9.1...v1.10.0) (2026-06-17)
+
+
+### Features
+
+* **chart:** add podLabels for pod templates ([#158](https://github.com/n8n-io/n8n-hosting/issues/158)) ([f8c056c](https://github.com/n8n-io/n8n-hosting/commit/f8c056c4fd17a27ea89d9970c2bdad9cd624e477))
+
+
+### Documentation
+
+* improve deployment guidance ([#156](https://github.com/n8n-io/n8n-hosting/issues/156)) ([f561c73](https://github.com/n8n-io/n8n-hosting/commit/f561c732b94a51a12d967849b834968fd1a4a453))
+
+## [1.9.1](https://github.com/n8n-io/n8n-hosting/compare/v1.9.0...v1.9.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* default readiness probe to /healthz/readiness ([#149](https://github.com/n8n-io/n8n-hosting/issues/149)) ([d7d2988](https://github.com/n8n-io/n8n-hosting/commit/d7d2988a2aaa376e4d392208cd61e30141696be0))
+  * Pods now wait for DB connectivity and migrations before becoming Ready, instead of just for the process being alive.
+  * To restore the previous behavior, set `probes.readiness.path: /healthz` in your values overrides.
+
+## [1.9.0](https://github.com/n8n-io/n8n-hosting/compare/v1.8.0...v1.9.0) (2026-06-04)
+
+
+### Features
+
+* **chart:** add extraContainers for arbitrary sidecar injection ([#138](https://github.com/n8n-io/n8n-hosting/issues/138)) ([555704e](https://github.com/n8n-io/n8n-hosting/commit/555704ebceb1f0df974c0924a17ce86430263627))
+
+
+### Bug Fixes
+
+* **chart:** inject N8N_EDITOR_BASE_URL into containers ([#153](https://github.com/n8n-io/n8n-hosting/issues/153)) ([5f74f4a](https://github.com/n8n-io/n8n-hosting/commit/5f74f4aeefa4f528381af45d8dc468ba1cdaaa41))
+
+## [1.8.0](https://github.com/n8n-io/n8n-hosting/compare/v1.7.0...v1.8.0) (2026-05-20)
+
+### Features
+
+* **chart:** add global chart metadata support ([#130](https://github.com/n8n-io/n8n-hosting/issues/130)) ([f25bbb4](https://github.com/n8n-io/n8n-hosting/commit/f25bbb4ff13b446da0e084fa26696fe632e478f7))
+
+## [1.7.0](https://github.com/n8n-io/n8n-hosting/compare/v1.6.1...v1.7.0) (2026-05-20)
+
+### Features
+
+* **chart:** add extraInitContainers, dnsPolicy/dnsConfig, and serviceAccount.automountServiceAccountToken ([#139](https://github.com/n8n-io/n8n-hosting/issues/139)) ([4109dd3](https://github.com/n8n-io/n8n-hosting/commit/4109dd355a1996f6aa3d1649bc5af46acadd3957))
+
+## [1.6.1](https://github.com/n8n-io/n8n-hosting/compare/v1.6.0...v1.6.1) (2026-05-20)
+
+### Bug Fixes
+
+* **chart:** allow standalone mode with external database ([#132](https://github.com/n8n-io/n8n-hosting/issues/132)) ([40240cf](https://github.com/n8n-io/n8n-hosting/commit/40240cf18c28795e8f1f33121b32e4c74c0414e8))
+
+## [1.6.0](https://github.com/n8n-io/n8n-hosting/compare/v1.5.1...v1.6.0) (2026-05-20)
+
+### Features
+
+* **chart:** add node placement per deployment ([#135](https://github.com/n8n-io/n8n-hosting/issues/135)) ([98a6d54](https://github.com/n8n-io/n8n-hosting/commit/98a6d543c6371b61db51a9a7bd5a9091d4bdf845))
+
+## [1.5.1](https://github.com/n8n-io/n8n-hosting/compare/v1.5.0...v1.5.1) (2026-05-15)
+
+### Documentation
+
+* add top-level MIT LICENSE and link from README/CONTRIBUTING ([#136](https://github.com/n8n-io/n8n-hosting/issues/136)) ([34d0e63](https://github.com/n8n-io/n8n-hosting/commit/34d0e63099ec9d879df8cadc9c7777a9dd81ded2))
+
+## [1.5.0](https://github.com/n8n-io/n8n-hosting/compare/v1.4.4...v1.5.0) (2026-05-08)
+
+### Features
+
+* **chart:** add per-component extraEnv for worker and webhook-processor ([#126](https://github.com/n8n-io/n8n-hosting/issues/126)) ([7dc3464](https://github.com/n8n-io/n8n-hosting/commit/7dc3464332b2f4a8a68e6103e5b9b3d06e74fe9a))
+
+## [1.4.4](https://github.com/n8n-io/n8n-hosting/compare/v1.4.3...v1.4.4) (2026-05-08)
+
+### Bug Fixes
+
+* **chart:** emit EXECUTIONS_DATA_PRUNE_MAX_COUNT when set to 0 ([#127](https://github.com/n8n-io/n8n-hosting/issues/127)) ([604e09c](https://github.com/n8n-io/n8n-hosting/commit/604e09c1ab0f78dc0107cacb7e44cb5ee3742774))
+
+## [1.4.3](https://github.com/n8n-io/n8n-hosting/compare/v1.4.2...v1.4.3) (2026-05-01)
+
+### Bug Fixes
+
+* **chart:** only set N8N_RUNNERS_MODE when task runners are enabled ([#121](https://github.com/n8n-io/n8n-hosting/issues/121)) ([51e8b2a](https://github.com/n8n-io/n8n-hosting/commit/51e8b2a76150ebc93fbbbd3a4635f36f6e55cc9d))
+
+## [1.4.2](https://github.com/n8n-io/n8n-hosting/compare/v1.4.1...v1.4.2) (2026-04-23)
+
+### Bug Fixes
+
+* **chart:** fail fast when serviceAccount.create=false with default name ([#117](https://github.com/n8n-io/n8n-hosting/issues/117)) ([2c24b9b](https://github.com/n8n-io/n8n-hosting/commit/2c24b9b2021d836b7516118f132e2d9077cce30a))
+
+## [1.4.1](https://github.com/n8n-io/n8n-hosting/compare/v1.4.0...v1.4.1) (2026-04-23)
+
+### Bug Fixes
+
+* broken form trigger and download binary from s3 ([#115](https://github.com/n8n-io/n8n-hosting/issues/115)) ([b328e4f](https://github.com/n8n-io/n8n-hosting/commit/b328e4f29ac24ad8023764884be762a6070564a2))
+
+## [1.3.1](https://github.com/n8n-io/n8n-hosting/compare/v1.3.0...v1.3.1) (2026-04-08)
+
+### Bug Fixes
+
+* **chart:** allow workerReplicaCount=0 for migration-only deploys ([#109](https://github.com/n8n-io/n8n-hosting/issues/109)) ([f367807](https://github.com/n8n-io/n8n-hosting/commit/f367807b9a36e305bca12a97a151df389998ca8d))
+* correct Traefik PathPrefix rule and remove stale vendor-branch refs ([#104](https://github.com/n8n-io/n8n-hosting/issues/104)) ([5d0ba6a](https://github.com/n8n-io/n8n-hosting/commit/5d0ba6a6d1c4795eeaa2bb65745d757039c71702))
+
+## [1.3.0](https://github.com/n8n-io/n8n-hosting/compare/v1.2.0...v1.3.0) (2026-03-25)
+
+### Features
+
+* **chart:** support independent service annotations for main and webhook-processor ([#100](https://github.com/n8n-io/n8n-hosting/issues/100)) ([41b6345](https://github.com/n8n-io/n8n-hosting/commit/41b634523788c3fe633ab086964081e687be0169))
+
+## [1.0.3](https://github.com/n8n-io/n8n-hosting/compare/v1.0.2...v1.0.3) (2026-03-04)
+
+### Bug Fixes
+
+* **ci:** add concurrency control to release workflow ([#78](https://github.com/n8n-io/n8n-hosting/issues/78)) ([e00e3b2](https://github.com/n8n-io/n8n-hosting/commit/e00e3b2b3f8485d6843198a1142175fe72b69917))
+
+## [1.0.2](https://github.com/n8n-io/n8n-hosting/compare/v1.0.1...v1.0.2) (2026-02-25)
+
+### Features
+
+* **chart:** bump n8n to 2.9.2 ([#76](https://github.com/n8n-io/n8n-hosting/issues/76))
+
+### Bug Fixes
+
+* **ci:** remove non-existent 'automated' label from bump workflow ([#75](https://github.com/n8n-io/n8n-hosting/issues/75)) ([ce882f0](https://github.com/n8n-io/n8n-hosting/commit/ce882f093665f77be8df724e979ab4b2d159300b))

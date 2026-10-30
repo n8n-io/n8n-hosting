@@ -1,0 +1,13 @@
+# Snapshots the smallest values that render, so any change to the default
+# output shows up in review. The chart version and appVersion are pinned so
+# release and n8n bumps don't rewrite the snapshot.
+suite: 'default render'
+chart:
+  version: 0.0.0
+  appVersion: 0.0.0
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: matches the snapshot
+    asserts:
+      - matchSnapshot: {}

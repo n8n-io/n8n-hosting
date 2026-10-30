@@ -1,0 +1,452 @@
+matches the snapshot:
+  1: |
+    raw: |
+      n8n has been successfully deployed!
+
+      To access n8n, run the following commands:
+
+      1. Get the service URL:
+         kubectl get service RELEASE-NAME-n8n-main --namespace NAMESPACE
+
+      2. Port forward to access n8n locally:
+         kubectl port-forward service/RELEASE-NAME-n8n-main --namespace NAMESPACE 5678:5678
+
+      3. Open your browser to:
+         http://localhost:5678
+
+      Deployment Configuration:
+        - Mode: Queue (2 workers)
+        - Main pods: 1
+        - Database: PostgreSQL (your-postgres-hostname)
+        - Cache: Redis (your-redis-hostname)
+        - Task runners: sidecar on worker pods, token from Secret n8n-core-secrets, key N8N_RUNNERS_AUTH_TOKEN
+
+      WARNING: No editor URL is set, so n8n builds its editor, webhook and OAuth
+      callback URLs from localhost. If users reach n8n at another address, set
+      editor.url.
+
+      Documentation: https://docs.n8n.io/
+      Issues: https://github.com/n8n-io/n8n-hosting/issues
+  2: |
+    apiVersion: v1
+    data:
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_HOST: your-postgres-hostname
+      DB_POSTGRESDB_PORT: "5432"
+      DB_POSTGRESDB_SCHEMA: public
+      DB_POSTGRESDB_USER: n8n
+      DB_TYPE: postgresdb
+      EXECUTIONS_MODE: queue
+      N8N_DEPLOYMENT_ARTIFACT: helm-chart/0.0.0
+      N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "30"
+      N8N_PORT: "5678"
+      OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
+      QUEUE_BULL_REDIS_HOST: your-redis-hostname
+      QUEUE_BULL_REDIS_PORT: "6379"
+      QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD: "10000"
+      QUEUE_WORKER_LOCK_DURATION: "60000"
+      QUEUE_WORKER_LOCK_RENEW_TIME: "10000"
+      QUEUE_WORKER_MAX_STALLED_COUNT: "1"
+      QUEUE_WORKER_STALLED_INTERVAL: "30000"
+      TZ: UTC
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n
+      namespace: NAMESPACE
+  3: |
+    apiVersion: v1
+    data:
+      EXECUTIONS_DATA_HARD_DELETE_BUFFER: "1"
+      EXECUTIONS_DATA_MAX_AGE: "336"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL: "15"
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: "10000"
+      EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL: "60"
+      EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS: "true"
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
+      EXECUTIONS_TIMEOUT_MAX: "3600"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-main
+      namespace: NAMESPACE
+  4: |
+    apiVersion: v1
+    data:
+      EXECUTIONS_DATA_HARD_DELETE_BUFFER: "1"
+      EXECUTIONS_DATA_MAX_AGE: "336"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL: "15"
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: "10000"
+      EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL: "60"
+      EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS: "true"
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
+      EXECUTIONS_TIMEOUT_MAX: "3600"
+      N8N_NATIVE_PYTHON_RUNNER: "true"
+      N8N_RUNNERS_MODE: external
+      QUEUE_HEALTH_CHECK_ACTIVE: "true"
+      QUEUE_HEALTH_CHECK_PORT: "5678"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-worker
+      namespace: NAMESPACE
+  5: |
+    apiVersion: v1
+    data:
+      N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT: "15"
+      N8N_RUNNERS_LAUNCHER_LOG_LEVEL: info
+      N8N_RUNNERS_TASK_BROKER_URI: http://127.0.0.1:5679
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/component: task-runner
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-task-runner
+      namespace: NAMESPACE
+  6: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-main
+      namespace: NAMESPACE
+    spec:
+      replicas: 1
+      revisionHistoryLimit: 3
+      selector:
+        matchLabels:
+          app.kubernetes.io/component: main
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: n8n
+      template:
+        metadata:
+          annotations:
+            checksum/config: b8c265fa897c6fce98f96116fb9b670dda209e5a386db62f08b02884f606732b
+            checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+          labels:
+            app.kubernetes.io/component: main
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: n8n
+            app.kubernetes.io/version: 0.0.0
+            helm.sh/chart: n8n-0.0.0
+        spec:
+          automountServiceAccountToken: false
+          containers:
+            - env:
+                - name: DB_POSTGRESDB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: password
+                      name: n8n-db-password
+                - name: N8N_ENCRYPTION_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: N8N_ENCRYPTION_KEY
+                      name: n8n-core-secrets
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-n8n
+                - configMapRef:
+                    name: RELEASE-NAME-n8n-main
+              image: docker.n8n.io/n8nio/n8n:0.0.0
+              imagePullPolicy: IfNotPresent
+              lifecycle:
+                preStop:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - sleep 10
+              livenessProbe:
+                failureThreshold: 6
+                httpGet:
+                  path: /healthz
+                  port: http
+                initialDelaySeconds: 30
+                periodSeconds: 20
+                timeoutSeconds: 5
+              name: n8n-main
+              ports:
+                - containerPort: 5678
+                  name: http
+              readinessProbe:
+                failureThreshold: 6
+                httpGet:
+                  path: /healthz/readiness
+                  port: http
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                timeoutSeconds: 3
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+                requests:
+                  cpu: 200m
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
+                periodSeconds: 10
+              volumeMounts:
+                - mountPath: /home/node/.n8n
+                  name: data
+          enableServiceLinks: false
+          securityContext:
+            fsGroup: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
+          volumes:
+            - emptyDir: {}
+              name: data
+  7: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-worker
+      namespace: NAMESPACE
+    spec:
+      replicas: 2
+      revisionHistoryLimit: 3
+      selector:
+        matchLabels:
+          app.kubernetes.io/component: worker
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: n8n
+      template:
+        metadata:
+          annotations:
+            checksum/config: faa4097a965e8f1e7939269b40ed2ec38fde3b06cc094aac000cbf0e6570c43a
+            checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+          labels:
+            app.kubernetes.io/component: worker
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: n8n
+            app.kubernetes.io/version: 0.0.0
+            helm.sh/chart: n8n-0.0.0
+        spec:
+          automountServiceAccountToken: false
+          containers:
+            - args:
+                - worker
+              env:
+                - name: DB_POSTGRESDB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: password
+                      name: n8n-db-password
+                - name: N8N_ENCRYPTION_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: N8N_ENCRYPTION_KEY
+                      name: n8n-core-secrets
+                - name: N8N_RUNNERS_AUTH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: N8N_RUNNERS_AUTH_TOKEN
+                      name: n8n-core-secrets
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-n8n
+                - configMapRef:
+                    name: RELEASE-NAME-n8n-worker
+              image: docker.n8n.io/n8nio/n8n:0.0.0
+              imagePullPolicy: IfNotPresent
+              lifecycle:
+                preStop:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - sleep 10
+              livenessProbe:
+                failureThreshold: 3
+                httpGet:
+                  path: /healthz
+                  port: 5678
+                initialDelaySeconds: 60
+                periodSeconds: 30
+                timeoutSeconds: 5
+              name: n8n-worker
+              readinessProbe:
+                failureThreshold: 6
+                httpGet:
+                  path: /healthz/readiness
+                  port: 5678
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                timeoutSeconds: 3
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+                requests:
+                  cpu: 200m
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: 5678
+                periodSeconds: 10
+              volumeMounts: null
+            - env:
+                - name: N8N_RUNNERS_AUTH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: N8N_RUNNERS_AUTH_TOKEN
+                      name: n8n-core-secrets
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-n8n-task-runner
+              image: n8nio/runners:0.0.0
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 6
+                httpGet:
+                  path: /healthz
+                  port: 5680
+                initialDelaySeconds: 5
+                periodSeconds: 10
+                timeoutSeconds: 30
+              name: task-runner
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+          enableServiceLinks: false
+          securityContext:
+            fsGroup: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
+          volumes: null
+  8: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-main
+      namespace: NAMESPACE
+    spec:
+      ports:
+        - name: http
+          port: 5678
+          targetPort: http
+      selector:
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/name: n8n
+      type: ClusterIP
+  9: |
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: n8n
+      namespace: NAMESPACE
+  10: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      annotations:
+        helm.sh/hook: test
+        helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: n8n
+        app.kubernetes.io/version: 0.0.0
+        helm.sh/chart: n8n-0.0.0
+      name: RELEASE-NAME-n8n-test-connection
+    spec:
+      containers:
+        - command:
+            - wget
+            - --spider
+            - --timeout=10
+            - http://RELEASE-NAME-n8n-main:5678/healthz
+          image: busybox:1.36
+          name: wget
+      restartPolicy: Never

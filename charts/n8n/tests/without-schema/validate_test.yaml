@@ -1,0 +1,145 @@
+# The schema rejects these inputs before the templates render, so the fail
+# calls behind them only run under --skip-schema-validation. CI runs this
+# directory with that flag to keep them covered.
+suite: 'validate: fail calls the schema also guards'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: requires postgresdb in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      database.type: sqlite
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.type must be postgresdb when queueMode.enabled=true. Queue mode requires PostgreSQL.'
+
+  - it: requires redis.host in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      redis.host: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: 'redis.host is required when queueMode.enabled=true. Set it to your Redis hostname.'
+
+  - it: rejects multi-main outside queue mode
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: false
+      multiMain.enabled: true
+      multiMain.replicas: 2
+      license.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'multiMain.enabled=true requires queueMode.enabled=true'
+
+  - it: rejects multi-main with one replica
+    template: templates/deployment-main.yaml
+    set:
+      multiMain.enabled: true
+      multiMain.replicas: 1
+      license.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'multiMain.enabled=true requires multiMain.replicas >= 2'
+
+  - it: rejects any task runner mode other than external
+    template: templates/deployment-main.yaml
+    set:
+      taskRunners.enabled: true
+      taskRunners.mode: internal
+    asserts:
+      - failedTemplate:
+          errorMessage: 'taskRunners.mode must be ''external''. This chart only supports external task runner sidecars.'
+
+  - it: rejects a non-string pod label value
+    template: templates/deployment-main.yaml
+    set:
+      podLabels:
+        enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'podLabels."enabled" must be a string (got bool). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. "enabled": "true".'
+
+  - it: rejects an extraObjects entry that is neither a map nor a string
+    template: templates/deployment-main.yaml
+    set:
+      extraObjects:
+        - 42
+    asserts:
+      - failedTemplate:
+          errorPattern: '^extraObjects\[0\] must render to a single Kubernetes object, as a map or a YAML string\.'
+
+  - it: rejects a relative key file path
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_ENCRYPTION_KEY_FILE: secrets/encryption-key
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_ENCRYPTION_KEY_FILE must be an absolute path'
+
+  - it: refuses an invalid variable name in an env map
+    template: templates/deployment-main.yaml
+    set:
+      env.shared:
+        N8N-LOG-LEVEL: info
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N-LOG-LEVEL is not a valid environment variable name. Use letters, digits and underscores, starting with a letter or underscore.'
+
+  - it: refuses a nested map as an env value
+    template: templates/deployment-main.yaml
+    set:
+      chartEnvOverrides.main.N8N_LOG:
+        level: info
+    asserts:
+      - failedTemplate:
+          errorPattern: 'chartEnvOverrides.main.N8N_LOG must be a string, number or boolean.'
+
+  - it: refuses an unknown env component
+    template: templates/deployment-main.yaml
+    set:
+      env.webhook.N8N_LOG_LEVEL: info
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.webhook is not a component. Use one of: shared, main, worker, webhookProcessor, taskRunner.'
+
+  - it: refuses an env component that is not a map
+    template: templates/deployment-main.yaml
+    values:
+      - ../values/env-main-not-a-map.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.main must be a map of NAME: value.'
+
+  - it: refuses an env value that is neither a literal nor a single reference
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        valueFrom:
+          secretKeyRef:
+            name: smtp
+            key: password
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N_SMTP_PASS must be a string, number or boolean, or a reference with exactly one of secretKeyRef, configMapKeyRef, fieldRef or resourceFieldRef.'
+
+  - it: refuses a reference whose source is not a map
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_SMTP_PASS:
+        secretKeyRef: smtp
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N_SMTP_PASS must be a string, number or boolean, or a reference with exactly one of secretKeyRef, configMapKeyRef, fieldRef or resourceFieldRef.'
+
+  - it: refuses an env block that is not a map
+    template: templates/deployment-main.yaml
+    values:
+      - ../values/env-not-a-map.yaml
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env must be a map with the keys shared, main, worker, webhookProcessor and taskRunner.'

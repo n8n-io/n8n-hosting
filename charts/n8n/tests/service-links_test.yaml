@@ -1,0 +1,49 @@
+# Kubernetes injects <SERVICE>_PORT and friends for every Service in the
+# namespace unless enableServiceLinks is false. n8n reads none of them.
+suite: 'enableServiceLinks'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  database.type: postgresdb
+  database.host: postgres.example.com
+  queueMode.enabled: true
+  redis.host: redis.example.com
+  webhookProcessor.enabled: true
+tests:
+  - it: turns service links off on the main pod by default
+    template: templates/deployment-main.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.enableServiceLinks
+          value: false
+
+  - it: turns service links off on the worker pod by default
+    template: templates/deployment-worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.enableServiceLinks
+          value: false
+
+  - it: turns service links off on the webhook processor pod by default
+    template: templates/deployment-webhook-processor.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.enableServiceLinks
+          value: false
+
+  - it: turns service links back on for every pod when enableServiceLinks is true
+    set:
+      enableServiceLinks: true
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.enableServiceLinks
+          value: true

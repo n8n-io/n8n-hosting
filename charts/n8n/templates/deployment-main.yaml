@@ -12,11 +12,11 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ ternary .Values.multiMain.replicas .Values.replicaCount .Values.multiMain.enabled }}
+  replicas: {{ include "n8n.mainReplicas" . }}
   revisionHistoryLimit: 3
-  {{- with .Values.strategy }}
+  {{- with include "n8n.strategy" . }}
   strategy:
-    {{- toYaml . | nindent 4 }}
+    {{- . | nindent 4 }}
   {{- end }}
   selector:
     matchLabels:
@@ -25,27 +25,27 @@ spec:
       app.kubernetes.io/component: main
   template:
     metadata:
-      {{- $podAnns := merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
+      {{- $podAnns := merge (dict "checksum/config" (include "n8n.envChecksum" (dict "root" $ "component" "main")) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
       annotations:
         {{- toYaml $podAnns | nindent 8 }}
       labels:
         {{- include "n8n.podLabels" (dict "root" . "component" "main") | nindent 8 }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with include "n8n.serviceAccountName" . }}
       serviceAccountName: {{ . }}
       {{- end }}
       {{- if hasKey .Values.serviceAccount "automountServiceAccountToken" }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- end }}
+      enableServiceLinks: {{ .Values.enableServiceLinks }}
 
-      {{- if .Values.securityContext.enabled }}
+      {{- with include "n8n.podSecurityContext" (dict "root" $ "role" "main") }}
       securityContext:
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- . | nindent 8 }}
       {{- end }}
 
       {{- with .Values.dnsPolicy }}
@@ -53,6 +53,10 @@ spec:
       {{- end }}
       {{- with .Values.dnsConfig }}
       dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
@@ -67,13 +71,12 @@ spec:
 
       containers:
         - name: n8n-main
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ include "n8n.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with include "n8n.containerSecurityContext" (dict "root" $ "role" "main") }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- . | nindent 12 }}
+          {{- end }}
 
           {{- if .Values.lifecycle.main.preStop.enabled }}
           lifecycle:
@@ -83,74 +86,7 @@ spec:
                   {{- toYaml .Values.lifecycle.main.preStop.command | nindent 18 }}
           {{- end }}
 
-          env:
-            {{- with .Values.webhook.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-
-            # Shared configuration from ConfigMap
-            {{- include "n8n.sharedConfigMapEnv" . | nindent 12 }}
-            
-            # Main-specific configuration from ConfigMap
-            {{- include "n8n.mainConfigMapEnv" . | nindent 12 }}
-            
-            {{- if .Values.database.useExternal }}
-            # Database password (secret)
-            - name: DB_POSTGRESDB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.database.passwordSecret.name }}
-                  key: {{ .Values.database.passwordSecret.key }}
-            {{- end }}
-            {{- if .Values.queueMode.enabled }}
-            # Redis password (secret)
-            {{- with .Values.redis.passwordSecret }}
-            {{- if and .name .key }}
-            - name: QUEUE_BULL_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .name }}
-                  key: {{ .key }}
-            {{- end }}
-            {{- end }}
-
-            # Health check settings
-            {{- if .Values.redis.healthCheck.enabled }}
-            - name: QUEUE_HEALTH_CHECK_ACTIVE
-              value: "true"
-            - name: QUEUE_HEALTH_CHECK_PORT
-              value: "{{ .Values.redis.healthCheck.port }}"
-            {{- end }}
-
-            # Redis-specific extra environment variables
-            {{- with .Values.redis.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-            {{- end }}
-
-            # S3 External Storage
-            {{- include "n8n.s3Env" . | nindent 12 }}
-
-            # Executions Configuration  
-            {{- include "n8n.executionsEnv" . | nindent 12 }}
-
-            # License Configuration
-            {{- include "n8n.licenseEnv" . | nindent 12 }}
-
-            # Core n8n secrets
-            {{- include "n8n.coreSecretsEnv" . | nindent 12 }}
-
-            # Task Runners Configuration
-            {{- include "n8n.taskRunnerBrokerEnv" . | nindent 12 }}
-
-            {{- with .Values.config.extraEnv }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
-
-          {{- with .Values.config.extraEnvFrom }}
-          envFrom:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+          {{- include "n8n.containerEnv" (dict "root" $ "component" "main") | trim | nindent 10 }}
 
           ports:
             - containerPort: {{ .Values.service.port }}
@@ -197,30 +133,9 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
 
-        {{- if .Values.taskRunners.enabled }}
+        {{- if include "n8n.mainTaskRunnersEnabled" . }}
         # Task Runner sidecar container
-        - name: task-runner
-          image: "{{ .Values.taskRunners.image.repository }}:{{ default .Values.image.tag .Values.taskRunners.image.tag }}"
-          imagePullPolicy: {{ .Values.taskRunners.image.pullPolicy }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-
-          env:
-            {{- include "n8n.taskRunnerSidecarEnv" . | nindent 12 }}
-
-          resources:
-            {{- toYaml .Values.taskRunners.resources | nindent 12 }}
-
-          {{- if .Values.taskRunners.customConfig.enabled }}
-          volumeMounts:
-            - name: task-runner-config
-              mountPath: /etc/n8n-task-runners.json
-              subPath: {{ .Values.taskRunners.customConfig.configMapKey }}
-              readOnly: true
-          {{- end }}
+        {{- include "n8n.taskRunnerContainer" . | nindent 8 }}
         {{- end }}
 
         {{- with .Values.extraContainers }}
@@ -237,7 +152,7 @@ spec:
         - name: data
           emptyDir: {}
         {{- end }}
-        {{- if and .Values.taskRunners.enabled .Values.taskRunners.customConfig.enabled }}
+        {{- if and (include "n8n.mainTaskRunnersEnabled" .) .Values.taskRunners.customConfig.enabled }}
         - name: task-runner-config
           configMap:
             name: {{ .Values.taskRunners.customConfig.configMapName }}

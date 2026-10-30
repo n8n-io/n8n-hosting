@@ -1,8 +1,29 @@
 # ----- Image -----
 image:
   repository: docker.n8n.io/n8nio/n8n
-  tag: "stable"
+  # Leave empty to use the chart's appVersion, which is the n8n version this
+  # chart release was built and tested against.
+  # Set explicitly to run a different n8n version.
+  tag: ""
+  # Pin the image by digest, e.g. "sha256:3f1c...". When set, the image is
+  # pulled as repository@digest and tag is ignored. The chart never fills
+  # this in: the weekly n8n bump moves appVersion only, so a pinned digest
+  # stays on the image you chose until you change it.
+  digest: ""
   pullPolicy: IfNotPresent
+
+# ----- Image pull secrets -----
+# Existing Secrets of type kubernetes.io/dockerconfigjson, for pulling images
+# from a private or authenticated registry.
+# The main, worker and webhook-processor pods and the Helm test pod reference
+# them at pod level. Every container in those pods uses them, including the
+# task-runner sidecar, extraContainers and extraInitContainers.
+# Pods you add through extraObjects need their own.
+# See https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# Example:
+# imagePullSecrets:
+#   - name: my-registry-credentials
 
 # ----- Names -----
 nameOverride: ""
@@ -33,16 +54,11 @@ commonAnnotations: {}
 queueMode:
   enabled: true
   workerReplicaCount: 2
-  # Worker concurrency (number of jobs each worker can handle simultaneously)
-  workerConcurrency: 10
-  # Additional environment variables injected into worker pods only.
-  # Use for worker-specific tuning that must not affect main or webhook-processor pods.
-  # For env vars that should apply to all pods, use `config.extraEnv` instead.
-  # Example:
-  # workerExtraEnv:
-  #   - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
-  #     value: "10"
-  workerExtraEnv: []
+  # Jobs each worker runs at once, passed as --concurrency. Leave empty to use
+  # n8n's default of 10. n8n also takes this from
+  # executions.concurrency.productionLimit, which wins over the flag, so set
+  # one or the other; the render fails when both are set.
+  workerConcurrency: null
 
 # ----- Webhook processors (optional scaling layer) -----
 webhookProcessor:
@@ -51,17 +67,8 @@ webhookProcessor:
   replicaCount: 2
   # Disable webhook processing in main process when webhook processors are enabled
   disableProductionWebhooksOnMainProcess: true
-  # Additional environment variables injected into webhook-processor pods only.
-  # Use this when a variable must NOT also be set on the main pod.
-  # For webhook-related env vars that apply to both webhook-handling pods
-  # (main + webhook-processor), use `webhook.extraEnv` instead.
-  # Example:
-  # extraEnv:
-  #   - name: N8N_LOG_LEVEL
-  #     value: "debug"
-  extraEnv: []
 
-# ----- Multi-main (optional, requires queue mode) -----
+# ----- Multi-main (optional, requires queue mode and license.enabled) -----
 multiMain:
   enabled: false
   replicas: 2
@@ -79,8 +86,13 @@ multiMain:
 # ----- Task Runners (external mode with sidecar containers) -----
 taskRunners:
   # Enable task runners for executing user-provided JavaScript and Python code
-  # When enabled, a sidecar container (n8nio/runners) is added to main and worker pods
-  enabled: false
+  # When enabled, a sidecar container (n8nio/runners) is added to:
+  #   - worker pods in queue mode (main offloads manual executions to workers)
+  #   - main pods in standalone mode (queueMode.enabled=false)
+  # Requires an auth token; see authToken below.
+  # Set to false to run code inside the n8n process instead (internal mode,
+  # which n8n deprecates from 3.0).
+  enabled: true
 
   # Task runner image configuration
   image:
@@ -89,25 +101,30 @@ taskRunners:
     # Leave empty to automatically use the same tag as the main n8n image
     # Set explicitly only if you need a different version (not recommended)
     tag: ""
+    # Pin the runner image by digest, e.g. "sha256:9a2b...". When set, tag is
+    # ignored. The runner is a separate image, so image.digest does not
+    # apply here. With task runners enabled, set both digests or neither, from
+    # the same n8n version; the render fails otherwise. The weekly n8n bump
+    # does not move this digest either.
+    digest: ""
     pullPolicy: IfNotPresent
 
   # Task runner mode (only external mode is supported in this chart)
   mode: external
 
-  # Authentication token for task runners to connect to the broker
-  # This should be a random secure shared secret
-  # You can generate one with: openssl rand -base64 32
+  # Authentication token for task runners to connect to the broker. By
+  # default it is read from the core Secret under the key
+  # N8N_RUNNERS_AUTH_TOKEN: the Secret in secretRefs.existingSecret, or the
+  # chart's Secret rendered from secretRefs.env.N8N_RUNNERS_AUTH_TOKEN.
+  # Create a token with: openssl rand -base64 32
   authToken:
-    # Use existing secret for auth token
+    # Read the token from a different Secret instead
     existingSecret: ""
     existingSecretKey: ""
-    # Or provide the token directly (not recommended for production)
-    value: ""
 
-  # Task broker configuration (runs within n8n main/worker containers)
+  # Task broker configuration (runs within n8n main/worker containers).
+  # The broker listens on localhost, which the sidecar shares with n8n.
   broker:
-    # Listen address for the task broker (0.0.0.0 allows external connections from sidecar)
-    listenAddress: "0.0.0.0"
     # Port for task broker to listen on
     port: 5679
 
@@ -136,22 +153,35 @@ taskRunners:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
-
-  # Additional environment variables for task runners
-  extraEnv: []
-  # Example:
-  # extraEnv:
-  #   - name: N8N_RUNNERS_LAUNCHER_LOG_LEVEL
-  #     value: debug
+  # Liveness probe against the launcher's health endpoint in the sidecar.
+  # It uses port 5680, or N8N_RUNNERS_LAUNCHER_HEALTH_CHECK_PORT when you set
+  # it as a literal in env.taskRunner. The chart cannot read a port set through
+  # envFrom.taskRunner, so set it in env.taskRunner, or disable this probe.
+  probes:
+    liveness:
+      enabled: true
+      path: /healthz
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 30
+      failureThreshold: 6
 
 # ----- Deployment Strategy -----
-# Set to { type: Recreate } when using persistence with a RWO PVC (e.g. SQLite)
-# to avoid Multi-Attach errors during upgrades.
+# Update strategy for the main Deployment. Left empty, it is Recreate when
+# persistence is enabled and every persistence.accessModes entry is
+# ReadWriteOnce or ReadWriteOncePod, because a rolling update cannot attach
+# that volume to the new pod.
 strategy: {}
+
+# ----- Service links -----
+# Kubernetes injects <SERVICE>_SERVICE_HOST, <SERVICE>_PORT and related
+# variables for every Service in the namespace into each pod. n8n reads none
+# of them.
+enableServiceLinks: false
 
 # ----- Pod Labels -----
 # Extra labels added to main / worker / webhook-processor pod templates.
@@ -164,6 +194,7 @@ strategy: {}
 podLabels: {}
 
 # ----- Main replicas (when multi-main is disabled) -----
+# Keep this at 1. To run several mains, enable multiMain and set multiMain.replicas.
 replicaCount: 1
 
 # ----- Service -----
@@ -181,6 +212,10 @@ service:
 
 # ----- Ingress -----
 ingress:
+  # Also sets N8N_PROXY_HOPS to 1 on main and the webhook processors, so n8n
+  # sees the client's IP address rather than the ingress controller's. If
+  # another proxy sits in front, such as a CDN or a cloud load balancer, raise
+  # it with chartEnvOverrides.shared.N8N_PROXY_HOPS.
   enabled: false
   # IngressClass to use for the main n8n ingress. Examples: nginx, alb, traefik.
   className: ""
@@ -204,19 +239,102 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-  # Separate Ingress for webhook processor pods (requires webhookProcessor.enabled=true)
-  webhookProcessor:
-    enabled: false
+  # A second Ingress for webhook traffic. With no hosts, webhooks share
+  # ingress.hosts, and the Ingress renders only when webhookProcessor.enabled
+  # is true, to send the production webhook paths to the webhook processors.
+  # With hosts, webhooks get hosts of their own that carry the webhook paths
+  # only, and the first one sets the webhook URL when webhook.url is empty.
+  # Example:
+  # webhook:
+  #   className: nginx-external
+  #   hosts:
+  #     - hooks.example.com
+  #   tls:
+  #     - secretName: hooks-tls
+  #       hosts:
+  #         - hooks.example.com
+  webhook:
+    hosts: []
+    # IngressClass for the webhook Ingress. Empty uses ingress.className.
     className: ""
     annotations: {}
     tls: []
 
+# ----- Gateway API -----
+# An HTTPRoute that attaches n8n to a Gateway the cluster already runs. The
+# chart never creates the Gateway. The route sends every path to main, and the
+# webhook paths (/webhook/, /webhook-waiting/, /form/, /form-waiting/, /mcp/)
+# to the webhook processors when webhookProcessor.enabled=true. It renders
+# whenever it is enabled, so the Gateway API CRDs must be installed. Use it
+# instead of ingress, not with it.
+httpRoute:
+  # Also sets N8N_PROXY_HOPS to 1 on main and the webhook processors. Raise it
+  # with chartEnvOverrides.shared.N8N_PROXY_HOPS if another proxy sits in front.
+  enabled: false
+  # Annotations on the HTTPRoute, merged over commonAnnotations.
+  annotations: {}
+  # The Gateways the route attaches to. Required when enabled.
+  # Example:
+  # parentRefs:
+  #   - name: my-gateway
+  #     namespace: gateway-system
+  #     sectionName: https
+  parentRefs: []
+  # Hostnames the route matches. The first one sets the editor URL when
+  # editor.url is empty, with https://.
+  hostnames: []
+  # A second HTTPRoute for webhook hosts of their own. It carries the webhook
+  # paths only, and the first hostname sets the webhook URL when webhook.url
+  # is empty. Without hostnames, webhooks share httpRoute.hostnames.
+  # Example:
+  # webhook:
+  #   parentRefs:
+  #     - name: public-gateway
+  #       namespace: gateway-system
+  #   hostnames:
+  #     - hooks.example.com
+  webhook:
+    hostnames: []
+    # The Gateways the webhook route attaches to. Empty uses
+    # httpRoute.parentRefs.
+    parentRefs: []
+    # Annotations on the webhook route, merged over commonAnnotations.
+    annotations: {}
+
 # ----- Persistence -----
 persistence:
   enabled: false
-  accessModes: ["ReadWriteOnce"]
-  size: 10Gi
-  storageClassName: ""
+  # Shape of the chart's PVC. Leave size and storageClassName unset with
+  # existingClaim, because the chart does not create that PVC; the render
+  # fails if you set them. With existingClaim, set accessModes to match your
+  # claim, because they decide the main Deployment's update strategy.
+  # accessModes: ["ReadWriteOnce"]   # <-- Default when unset
+  # size: 10Gi                       # <-- Default when unset
+  # storageClassName: ""             # <-- Unset uses the cluster's default StorageClass
+  # Name of a PVC you manage, used instead of the chart's.
+  # existingClaim: ""
+  # Annotations on the chart-managed PVC only, merged over commonAnnotations.
+  # Useful for backup and retention tooling, e.g. helm.sh/resource-policy: keep.
+  # The render fails if this is set with existingClaim, because the chart does
+  # not create that PVC. Annotate your own claim directly instead.
+  annotations: {}
+
+# ----- Additional Kubernetes resources -----
+# Arbitrary Kubernetes objects rendered as part of this Helm release.
+# Each entry is a map or a YAML string, and is passed through Helm tpl, so it
+# can reference the release (e.g. `{{ include "n8n.fullname" . }}-main` for the
+# main Service). Escape any literal `{{` as `{{ "{{" }}`, for example in a
+# Prometheus alert annotation. The chart adds the app.kubernetes.io/* labels
+# and the release namespace, unless the object sets its own.
+extraObjects: []
+# Examples:
+# extraObjects:
+#   - apiVersion: v1
+#     kind: ConfigMap
+#     metadata:
+#       name: '{{ include "n8n.fullname" . }}-extra'
+#     data:
+#       summary: '{{ "{{" }} $labels.instance }} is down'
 
 # ----- External Volumes -----
 extraVolumes: []
@@ -287,6 +405,19 @@ dnsConfig: {}
 #   nameservers:
 #     - 127.0.0.1
 
+# Extra /etc/hosts entries for main, worker, and webhook-processor pods.
+# Use them when a hostname n8n calls does not resolve inside the cluster, or
+# resolves to an address the pods cannot reach. Corporate DNS and split-horizon
+# DNS are the usual cases. Pointing n8n's own public hostname at an internal
+# address also keeps calls n8n makes to itself inside the cluster.
+# See https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/
+hostAliases: []
+# Example:
+# hostAliases:
+#   - ip: 10.0.0.10
+#     hostnames:
+#       - n8n.example.com
+
 # ----- Resources -----
 resources:
   main:
@@ -337,18 +468,58 @@ nodePlacement: {}
 #         effect: NoSchedule
 
 # ----- Security -----
-# Note: readOnlyRootFilesystem is intentionally not set. n8n writes to
-# ~/.n8n/, /tmp/, and other paths at runtime. Enabling it would require
-# extensive volumeMount overrides and is not practical for this workload.
-securityContext:
-  enabled: true
-  fsGroup: 1000
-  runAsUser: 1000
-  runAsGroup: 1000
+# Pod securityContext. shared applies to every n8n pod, and each role block
+# merges over it field by field, so set only the fields you want to change.
+# The role wins over shared. Set a field to null to remove it. Set shared to
+# null to drop every default.
+# Example for OpenShift, where the restricted SCC assigns the UID and GID:
+#   podSecurityContext:
+#     shared:
+#       fsGroup: null
+#       runAsUser: null
+#       runAsGroup: null
+podSecurityContext:
+  shared:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+
+# Container securityContext. shared applies to every n8n container and the
+# task-runner sidecar, and each role block merges over it in the same way.
+# taskRunner applies to the task-runner sidecar on main and on worker pods.
+# Containers added with extraContainers or extraInitContainers get none of
+# this.
+# readOnlyRootFilesystem is not set by default. n8n writes to ~/.n8n/, /tmp/
+# and other paths at runtime, so enabling it needs writable volumes mounted
+# at those paths.
+# Example that runs the task runner as nobody (UID and GID 65532), as
+# n8n's task-runner hardening guide recommends:
+#   containerSecurityContext:
+#     taskRunner:
+#       runAsUser: 65532
+#       runAsGroup: 65532
+containerSecurityContext:
+  shared:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
 
 # ----- RBAC ServiceAccount & Network Policy -----
+# A Role that can read ConfigMaps and Secrets in the namespace, bound to the
+# ServiceAccount. n8n never calls the Kubernetes API, so it is off by default.
 rbac:
-  create: true
+  create: false
 
 serviceAccount:
   # Create a new service account for n8n pods
@@ -377,15 +548,23 @@ serviceAccount:
   awsRoleArn: ""
   # Additional annotations for the service account
   annotations: {}
-  # Whether the projected ServiceAccount token is mounted into n8n pods.
-  # Omit for the Kubernetes default (true). Set to false to remove the token
-  # from each pod's /var/run/secrets/kubernetes.io/serviceaccount path — n8n
-  # workloads that don't call the Kubernetes API don't need it. Applied at
-  # the pod-spec level so it works regardless of serviceAccount.create.
-  # automountServiceAccountToken: false
+  # Whether the ServiceAccount token is mounted into n8n pods at
+  # /var/run/secrets/kubernetes.io/serviceaccount. n8n never calls the
+  # Kubernetes API and runs code its users write, so it is off by default.
+  # Applied on the pod spec, so it works whether or not the chart creates the
+  # ServiceAccount.
+  automountServiceAccountToken: false
 
 networkPolicy:
   enabled: false
+  # NetworkPolicy ingress rules for the n8n pods. A set list replaces the
+  # chart's rules; it does not merge with them. Empty allows the release's
+  # own pods and any source on service.port.
+  ingress: []
+  # NetworkPolicy egress rules for the n8n pods. A set list replaces the
+  # chart's rules; it does not merge with them. Empty allows all egress,
+  # because workflows call external systems on any port.
+  egress: []
 
 # ----- Health checks -----
 probes:
@@ -403,28 +582,35 @@ probes:
     periodSeconds: 10
     timeoutSeconds: 3
     failureThreshold: 6
-  # Worker-specific probes (workers don't have HTTP endpoints)
+  # Worker probes. Workers serve /healthz and /healthz/readiness on
+  # redis.healthCheck.port when redis.healthCheck.enabled is true.
+  # /healthz/readiness answers 503 until the worker has its database,
+  # migrations and Redis connection. With the health endpoint off and no
+  # command, liveness and readiness fall back to a process check.
   worker:
+    # Holds off liveness until the health endpoint answers. The worker
+    # starts it only after database migrations, so this budget also
+    # covers a wait on the migration lock. Renders only when
+    # redis.healthCheck.enabled is true.
+    startup:
+      enabled: true
+      path: /healthz
+      periodSeconds: 10
+      failureThreshold: 30
     readiness:
       enabled: true
-      # Custom readiness probe that checks if worker is ready
-      type: "exec"                           # <-- Use exec probe instead of HTTP
-      command:
-        - "/bin/sh"
-        - "-c"
-        - "pgrep -f 'n8n worker' > /dev/null"
+      type: ""                               # <-- httpGet or exec; empty picks exec if command is set, else httpGet
+      path: /healthz/readiness
+      command: []
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 3
       failureThreshold: 6
     liveness:
       enabled: true
-      # Check if n8n worker process is still running
-      type: "exec"
-      command:
-        - "/bin/sh"
-        - "-c"
-        - "pgrep -f 'n8n worker' > /dev/null"
+      type: ""                               # <-- httpGet or exec; empty picks exec if command is set, else httpGet
+      path: /healthz
+      command: []
       initialDelaySeconds: 60
       periodSeconds: 30
       timeoutSeconds: 5
@@ -465,7 +651,7 @@ lifecycle:
 
 # ----- Autoscaling -----
 hpa:
-  # Main pods autoscaling (UI/API pods)
+  # Main pods autoscaling (UI/API pods). When enabled, maxReplicas above 1 requires multiMain.enabled
   main:
     enabled: false
     minReplicas: 1
@@ -491,6 +677,13 @@ hpa:
 keda:
   enabled: false
   worker:
+    # Pause KEDA autoscaling, freezing workers at their current replica count
+    # (sets autoscaling.keda.sh/paused=true)
+    pause: false
+    # Optional replica count to hold while paused (sets autoscaling.keda.sh/paused-replicas).
+    # Only applied when pause=true. Leave unset to freeze at the current count;
+    # set 0 to scale workers down to zero, e.g. to drain the queue before a migration.
+    pausedReplicaCount: null
     pollingInterval: 15
     cooldownPeriod: 300
     minReplicaCount: 2
@@ -534,6 +727,13 @@ keda:
           name: ""
   webhookProcessor:
     enabled: false
+    # Pause KEDA autoscaling, freezing webhook processors at their current
+    # replica count (sets autoscaling.keda.sh/paused=true)
+    pause: false
+    # Optional replica count to hold while paused (sets autoscaling.keda.sh/paused-replicas).
+    # Only applied when pause=true. Leave unset to freeze at the current count;
+    # set 0 to stop handling webhooks entirely, e.g. during a maintenance window.
+    pausedReplicaCount: null
     pollingInterval: 15
     cooldownPeriod: 120
     minReplicaCount: 2
@@ -542,6 +742,10 @@ keda:
     triggers: []
 
 # ----- Pod Disruption Budget -----
+# Covers main pods. When enabled, it renders only when main runs more than
+# one replica: replicaCount or multiMain.replicas above 1, or hpa.main.enabled
+# with hpa.main.minReplicas above 1. A single main pod can then still be
+# evicted during a node drain.
 pdb:
   enabled: true
   minAvailable: 1
@@ -550,15 +754,23 @@ pdb:
 webhook:
   # Enable webhook functionality
   enabled: true
-  # Custom webhook URL base domain (if not set, will use ingress host)
-  # Format: https://your-domain.com (n8n adds /webhook path automatically)
+  # Public base URL for webhooks, for example https://hooks.example.com.
+  # n8n adds the /webhook path itself. Rendered as N8N_WEBHOOK_URL, the base
+  # URL for test and production webhooks, forms and MCP. When empty, the chart
+  # uses https:// and the first ingress.webhook host or httpRoute.webhook
+  # hostname, or else the editor URL. Set it for plain HTTP, or when webhooks
+  # arrive at an address the chart does not route.
   url: ""
-  # Timeout for webhook requests in milliseconds
-  timeout: 120000
-  # Additional webhook-related environment variables.
-  # Applied to BOTH main and webhook-processor pods. For variables that should
-  # only apply to webhook-processor pods, use `webhookProcessor.extraEnv` instead.
-  extraEnv: []
+
+# ----- Editor config -----
+editor:
+  # Public base URL of the n8n editor, for example https://n8n.example.com.
+  # Rendered as N8N_EDITOR_BASE_URL. n8n builds OAuth redirect URLs and links
+  # in emails from it, and webhooks follow it unless webhook.url is set. When
+  # empty, the chart uses https:// and the first ingress host or HTTPRoute
+  # hostname. Set it when n8n is served over plain HTTP, has no ingress or
+  # route, or is reached at another host.
+  url: ""
 
 # ----- Executions config -----
 executions:
@@ -581,40 +793,82 @@ executions:
     softDeleteInterval: 60                      # <-- Soft delete interval in minutes
   # Concurrency settings
   concurrency:
-    productionLimit: -1                         # <-- Max concurrent production executions (-1 = disabled)
-  # Additional execution environment variables
-  extraEnv: []
+    # Max concurrent production executions (-1 = disabled). In queue mode n8n
+    # applies it to each worker instead of queueMode.workerConcurrency.
+    productionLimit: -1
+
+# ----- Environment variables -----
+# Variables for each component, as flat maps of NAME: value. The chart renders
+# them into ConfigMaps loaded with envFrom: one shared by main, worker and
+# webhook-processor pods, and one for each component.
+#   shared:           main, worker and webhook-processor pods
+#   main, worker, webhookProcessor: that component only, over shared
+#   taskRunner:       the task-runner sidecar only; shared does not reach it
+# Values can be strings, numbers or booleans. A value can also be a reference,
+# written as you would under valueFrom: secretKeyRef, configMapKeyRef, fieldRef
+# or resourceFieldRef. References go in the container's env list instead.
+#
+# A variable the chart already sets from a value (DB_POSTGRESDB_HOST from
+# database.host, for example) fails the render here, and the error names the
+# value to set instead.
+env:
+  shared: {}
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
+# Example:
+# env:
+#   shared:
+#     N8N_LOG_LEVEL: info
+#     NO_PROXY: "localhost,.svc,.cluster.local"
+#     N8N_SMTP_PASS:
+#       secretKeyRef:
+#         name: smtp
+#         key: password
+#   worker:
+#     N8N_LOG_LEVEL: debug
+
+# Replace a variable the chart sets, when its value cannot express what you
+# need. Only variables the chart sets in this configuration are accepted, and
+# not ones read from a Secret. NOTES lists the overrides in effect.
+chartEnvOverrides:
+  shared: {}
+  main: {}
+  worker: {}
+  webhookProcessor: {}
+  taskRunner: {}
+
+# ConfigMaps and Secrets to load whole, with the same component keys as env.
+# They load after the chart's ConfigMaps, so their keys win over the chart's
+# values. The chart cannot see inside them, so it cannot check for clashes,
+# and changing them does not restart pods.
+envFrom:
+  shared: []
+  main: []
+  worker: []
+  webhookProcessor: []
+  taskRunner: []
+# Example:
+# envFrom:
+#   shared:
+#     - secretRef:
+#         name: n8n-smtp
 
 # ----- App config -----
 config:
   timezone: UTC
-  # Additional environment variables for n8n container
-  # All n8n environment variables can be set here including:
-  # Proxy: HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY
-  # Core: N8N_EDITOR_BASE_URL, N8N_CONFIG_FILES, N8N_USER_FOLDER, etc.
-  # Features: N8N_DISABLE_UI, N8N_PREVIEW_MODE, N8N_TEMPLATES_ENABLED, etc.
-  # Network: N8N_LISTEN_ADDRESS, N8N_SSL_KEY, N8N_SSL_CERT, etc.
-  # Telemetry: N8N_DIAGNOSTICS_ENABLED, N8N_VERSION_NOTIFICATIONS_ENABLED, etc.
-  # API: N8N_PUBLIC_API_DISABLED, N8N_PUBLIC_API_ENDPOINT, etc.
-  # System: N8N_GRACEFUL_SHUTDOWN_TIMEOUT, N8N_PROXY_HOPS, etc.
-  # Dev: N8N_DEV_RELOAD, N8N_REINSTALL_MISSING_PACKAGES, etc.
-  # See documentation for complete list of supported variables
-  extraEnv: []
-  # Example:
-  # extraEnv:
-  #   - name: HTTP_PROXY
-  #     value: "http://proxy.example.com:8080"
-  #   - name: N8N_EDITOR_BASE_URL
-  #     value: "https://n8n.example.com"
-  #   - name: N8N_DISABLE_UI
-  #     value: "false"
-  extraEnvFrom: []
+  # Sets N8N_DEPLOYMENT_ARTIFACT, which n8n's telemetry reports as the artifact that installed it.
+  # Empty means helm-chart/<chart version>. A chart that wraps this one, such as a marketplace listing, sets its own name and version.
+  deploymentArtifact: ""
 
 # ----- License (for n8n Enterprise) -----
 license:
   # Set to true if using n8n Enterprise
   enabled: false
-  # License activation key (leave empty to use secret)
+  # License activation key (leave empty to use secret). The chart stores it in
+  # its own Secret. For production, prefer existingSecret, so the key stays out
+  # of the Helm release.
   activationKey: ""
   # Or reference existing secret containing the license key
   existingSecret:
@@ -626,15 +880,21 @@ secretRefs:
   existingSecret: ""
   env:
     N8N_ENCRYPTION_KEY: "change-me-to-a-long-random-key"
-    N8N_HOST: "n8n.example.com"  # <-- Change to your actual domain
-    N8N_PORT: "5678"
-    N8N_PROTOCOL: "http"
+    # Set to an absolute path to use a mounted encryption key file instead.
+    # When set, N8N_ENCRYPTION_KEY is not injected into n8n containers and is left
+    # out of the chart-managed Secret. The path goes to the containers directly.
+    N8N_ENCRYPTION_KEY_FILE: ""
+    # Task-runner auth token, used when secretRefs.existingSecret is empty.
+    # With secretRefs.existingSecret, put the token in that Secret under the
+    # key N8N_RUNNERS_AUTH_TOKEN instead.
+    N8N_RUNNERS_AUTH_TOKEN: ""
 
 # ----- Database (PostgreSQL - required for queue mode) -----
 database:
+  # postgresdb connects to your PostgreSQL. Queue mode and multi-main need it.
+  # sqlite keeps the database on the PersistentVolumeClaim, for standalone
+  # mode only. The settings below apply to postgresdb.
   type: postgresdb
-  # External database is required for queue mode
-  useExternal: true
   host: "your-postgres-hostname"     # <-- Change to your actual PostgreSQL host
   port: 5432
   database: n8n
@@ -644,18 +904,27 @@ database:
     name: "n8n-db-password"          # <-- K8s Secret name
     key: "password"                  # <-- Key inside the secret
   # SSL configuration
+  # Server verification needs only a CA, and none at all if the server's CA is
+  # publicly trusted. Mutual TLS also needs a client key, which comes from
+  # existingSecret, and its certificate.
   ssl:
     enabled: false                   # <-- Enable SSL connection
-    ca: ""                           # <-- Path to CA certificate file
-    cert: ""                         # <-- Path to client certificate file
-    key: ""                          # <-- Path to client key file
+    ca: ""                           # <-- CA certificate as PEM contents, not a file path
+    cert: ""                         # <-- Client certificate as PEM contents, not a file path
     rejectUnauthorized: true         # <-- Reject unauthorized SSL connections
+    # TLS material from a Secret you manage. Each key you set is passed to n8n
+    # from that Secret; leave a key empty to skip it. A cert-manager Certificate
+    # Secret holds tls.crt and tls.key, plus ca.crt when its issuer provides one.
+    existingSecret:
+      name: ""                       # <-- K8s Secret name
+      caKey: ""                      # <-- Key holding the CA certificate (instead of ca)
+      certKey: ""                    # <-- Key holding the client certificate (instead of cert)
+      keyKey: ""                     # <-- Key holding the client private key
 
 # ----- Redis (required for queue mode) -----
 redis:
   # Redis is required for queue mode
   enabled: true
-  useExternal: true
   host: "your-redis-hostname"                      # <-- Change to your actual Redis host
   port: 6379
   # Redis authentication
@@ -676,15 +945,16 @@ redis:
     lockRenewTime: 10000                           # <-- Lock renewal frequency (ms)
     stalledInterval: 30000                         # <-- Stalled job check interval (ms)
     maxStalledCount: 1                             # <-- Max stalled job retries
-  # Health check settings
+  # Worker health endpoint, probed by probes.worker
   healthCheck:
-    enabled: false                                 # <-- Enable queue health checks
-    port: 5678                                     # <-- Health check port
-  # Additional Redis environment variables
-  extraEnv: []
+    enabled: true                                  # <-- Serve /healthz and /healthz/readiness on workers
+    port: 5678                                     # <-- Port the worker health endpoint listens on
 
 # ----- S3 External Storage (required for queue mode with binary data) -----
 s3:
+  # With S3 enabled, n8n stores binary data in the bucket. This needs an n8n
+  # Business or Enterprise licence and license.enabled=true. To store binary
+  # data elsewhere, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE.
   enabled: false
   # S3 bucket configuration
   bucket:
@@ -700,11 +970,5 @@ s3:
       key: ""                                  # <-- Key inside the secret
   # Storage configuration
   storage:
-    # Binary data storage mode (filesystem or s3 (filesystem))
-    mode: "filesystem"
-    # Available binary data modes (comma-separated ex: filesystem,s3)
-    availableModes: "filesystem"              # <-- Available storage modes for n8n
     # S3 specific settings
     forcePathStyle: false                      # <-- Force path-style URLs (for S3-compatible providers)
-    # Additional S3 environment variables
-    extraEnv: []

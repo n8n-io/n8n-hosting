@@ -1,16 +1,16 @@
-{{- if .Values.ingress.enabled }}
-{{- range .Values.ingress.hosts }}
+{{- with include "n8n.editorBaseUrl" . }}
 
 n8n has been successfully deployed!
 
 Your n8n instance is available at:
-{{- if $.Values.ingress.tls }}
-  https://{{ .host }}
-{{- else }}
-  http://{{ .host }}
+  {{ . }}
+{{- $webhookUrl := include "n8n.webhookUrl" $ }}
+{{- if and $.Values.webhook.enabled (ne $webhookUrl .) }}
+
+Webhooks, forms and MCP triggers are served at:
+  {{ $webhookUrl }}
 {{- end }}
 
-{{- end }}
 {{- else }}
 
 n8n has been successfully deployed!
@@ -43,8 +43,8 @@ Deployment Configuration:
   - Mode: Standalone
   - Main pods: {{ .Values.replicaCount }}
 {{- end }}
-{{- if .Values.database.useExternal }}
-  - Database: {{ if eq .Values.database.type "postgresdb" }}PostgreSQL{{ else }}{{ .Values.database.type }}{{ end }} ({{ .Values.database.host }})
+{{- if eq .Values.database.type "postgresdb" }}
+  - Database: PostgreSQL ({{ .Values.database.host }})
 {{- else }}
   - Database: SQLite (local storage)
 {{- end }}
@@ -53,6 +53,54 @@ Deployment Configuration:
 {{- end }}
 {{- if .Values.s3.enabled }}
   - Storage: S3 ({{ .Values.s3.bucket.name }})
+{{- end }}
+{{- if .Values.taskRunners.enabled }}
+  - Task runners: sidecar on {{ if .Values.queueMode.enabled }}worker pods{{ else }}the main pod{{ end }}, token from {{ if .Values.taskRunners.authToken.existingSecret }}Secret {{ .Values.taskRunners.authToken.existingSecret }}{{ else if .Values.secretRefs.existingSecret }}Secret {{ .Values.secretRefs.existingSecret }}, key N8N_RUNNERS_AUTH_TOKEN{{ else }}secretRefs.env.N8N_RUNNERS_AUTH_TOKEN{{ end }}
+{{- else }}
+  - Task runners: off (code runs inside the n8n process)
+{{- end }}
+
+{{- $overrides := list }}
+{{- range $c, $_ := (include "n8n.envSection" (list (dict "x" .Values.chartEnvOverrides) "x") | fromJson) }}
+{{- range $k, $_ := (include "n8n.envSection" (list $.Values.chartEnvOverrides $c) | fromJson) }}
+{{- $overrides = append $overrides (printf "chartEnvOverrides.%s.%s" $c $k) }}
+{{- end }}
+{{- end }}
+{{- if $overrides }}
+
+These variables replace values the chart sets. Remove each override once its
+value can express what you need:
+{{- range $overrides }}
+  - {{ . }}
+{{- end }}
+{{- end }}
+
+{{- /* With no editor URL, n8n uses the webhook URL for the editor and OAuth
+callback URLs. With neither, it builds them from N8N_HOST, which defaults to
+localhost. */}}
+{{- if not (include "n8n.editorBaseUrl" .) }}
+{{- $urlEnv := false }}
+{{- $webhookEnv := and .Values.webhook.enabled (include "n8n.webhookUrl" .) }}
+{{- range include "n8n.userEnv" (dict "root" . "component" "main") | fromJsonArray }}
+{{- if has .name (list "N8N_EDITOR_BASE_URL" "N8N_HOST") }}{{- $urlEnv = true }}{{- end }}
+{{- if eq .name "N8N_WEBHOOK_URL" }}{{- $webhookEnv = true }}{{- end }}
+{{- end }}
+{{- if not $urlEnv }}
+{{- if $webhookEnv }}
+
+WARNING: No editor URL is set, so n8n uses the webhook URL for the editor and
+OAuth callback URLs. Set editor.url if the editor lives at another address.
+{{- else }}
+
+WARNING: No editor URL is set, so n8n builds its editor, webhook and OAuth
+callback URLs from localhost. If users reach n8n at another address, set
+editor.url.
+{{- end }}
+{{- if or (and .Values.envFrom .Values.envFrom.shared) (and .Values.envFrom .Values.envFrom.main) }}
+The chart cannot see inside envFrom sources. Ignore this warning if one of
+them sets N8N_EDITOR_BASE_URL or N8N_HOST.
+{{- end }}
+{{- end }}
 {{- end }}
 
 Documentation: https://docs.n8n.io/

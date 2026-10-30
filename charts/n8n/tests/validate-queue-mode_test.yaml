@@ -1,0 +1,98 @@
+suite: 'validate: queue mode'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: accepts the default queue mode shape
+    template: templates/deployment-main.yaml
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects sqlite in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      database.type: sqlite
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/queueMode/enabled': value must be false"
+
+  - it: requires database.host
+    template: templates/deployment-main.yaml
+    set:
+      database.host: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.host is required when queueMode.enabled=true. Set it to your PostgreSQL hostname.'
+
+  - it: requires redis.enabled
+    template: templates/deployment-main.yaml
+    set:
+      redis.enabled: false
+    asserts:
+      - failedTemplate:
+          errorMessage: 'redis.enabled must be true when queueMode.enabled=true. Queue mode requires Redis.'
+
+  - it: rejects an empty redis.host
+    template: templates/deployment-main.yaml
+    set:
+      redis.host: ""
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/redis/host': minLength"
+
+  - it: rejects a filesystem binary data mode in env.shared
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_DEFAULT_BINARY_DATA_MODE: filesystem
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.shared.N8N_DEFAULT_BINARY_DATA_MODE is filesystem, but queueMode.enabled=true. The pods do not share a disk, so one pod cannot read binary data that another pod writes. Remove it, and n8n uses "database" in queue mode, or store binary data in S3 with s3.enabled=true.'
+
+  - it: rejects a filesystem binary data mode in env.worker
+    template: templates/deployment-main.yaml
+    set:
+      env.worker.N8N_DEFAULT_BINARY_DATA_MODE: filesystem
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.worker.N8N_DEFAULT_BINARY_DATA_MODE is filesystem, but queueMode.enabled=true. The pods do not share a disk, so one pod cannot read binary data that another pod writes. Remove it, and n8n uses "database" in queue mode, or store binary data in S3 with s3.enabled=true.'
+
+  - it: rejects a filesystem binary data mode in any letter case
+    template: templates/deployment-main.yaml
+    set:
+      webhookProcessor.enabled: true
+      env.webhookProcessor.N8N_DEFAULT_BINARY_DATA_MODE: Filesystem
+    asserts:
+      - failedTemplate:
+          errorMessage: 'env.webhookProcessor.N8N_DEFAULT_BINARY_DATA_MODE is filesystem, but queueMode.enabled=true. The pods do not share a disk, so one pod cannot read binary data that another pod writes. Remove it, and n8n uses "database" in queue mode, or store binary data in S3 with s3.enabled=true.'
+
+  - it: accepts a database binary data mode
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_DEFAULT_BINARY_DATA_MODE: database
+    asserts:
+      - notFailedTemplate: {}
+
+  # The chart cannot read a value held in a Secret or ConfigMap.
+  - it: accepts a binary data mode from a reference
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_DEFAULT_BINARY_DATA_MODE:
+        configMapKeyRef:
+          name: n8n-settings
+          key: binary-data-mode
+    asserts:
+      - notFailedTemplate: {}
+
+  # n8n picks database itself in queue mode.
+  - it: sets no binary data mode by default
+    template: templates/configmap.yaml
+    set:
+      webhookProcessor.enabled: true
+    asserts:
+      - notExists:
+          path: data.N8N_DEFAULT_BINARY_DATA_MODE

@@ -1,0 +1,12 @@
+# Overlay for installing examples/mcp-server.yaml on kind. It replaces the
+# placeholders with the fixtures in ../fixtures/ and scales the example down
+# to fit a hosted runner. No ingress controller runs, so the Ingress objects
+# are created but serve nothing; https-ingress covers routing.
+queueMode:
+  workerReplicaCount: 1
+webhookProcessor:
+  replicaCount: 1
+database:
+  host: postgres
+redis:
+  host: redis

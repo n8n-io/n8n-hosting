@@ -5,19 +5,10 @@
 # You must set up these services before deploying n8n
 # 
 # For quick testing, you can use Docker:
-# docker run -d --name postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:16
+# docker run -d --name postgres -e POSTGRES_DB=n8n -e POSTGRES_USER=n8n -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:18
 # docker run -d --name redis -p 6379:6379 redis:7-alpine
 #
 # Use this as a starting point for development or testing
-
-# Global metadata applied to all rendered Kubernetes resources
-commonLabels:
-  my-platform.io/team: automation
-  my-platform.io/cost-centre: PE24
-
-commonAnnotations:
-  secret.reloader.stakater.com/auto: "true"
-  my-platform.io/contact: team@example.com
 
 # Basic deployment settings
 queueMode:
@@ -25,10 +16,9 @@ queueMode:
   workerReplicaCount: 1
   workerConcurrency: 5
 
-# Database configuration (MUST be external)
+# PostgreSQL connection (required for queue mode)
 database:
   type: postgresdb
-  useExternal: true  # Chart only supports external databases
   host: "your-postgres-host.com"
   port: 5432
   database: n8n
@@ -38,14 +28,14 @@ database:
     name: "n8n-db-secret"
     key: "password"
 
-# Redis configuration (MUST be external)
+# Redis connection (required for queue mode)
 redis:
   enabled: true
-  useExternal: true  # Chart only supports external Redis
   host: "your-redis-host.com"
   port: 6379
 
 # Core secrets (you must create this secret manually)
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 
@@ -54,14 +44,8 @@ service:
   type: ClusterIP
   port: 5678
 
-# Resource limits (adjust based on your needs)
-resources:
-  requests:
-    memory: "256Mi"
-    cpu: "200m"
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
+# Resources are set per component under resources.main, resources.worker and
+# resources.webhookProcessor. This example uses the chart's defaults.
 
 # Storage (filesystem by default, S3 recommended for production)
 # This chart uses filesystem storage by default

@@ -1,0 +1,54 @@
+# Every n8n role starts through the image ENTRYPOINT, which imports the CA
+# certificates in /opt/custom-certificates and runs n8n under tini. Setting
+# command on a container replaces that entrypoint, so the roles pass only args.
+suite: 'render: image entrypoint'
+templates:
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  queueMode.enabled: true
+  webhookProcessor.enabled: true
+tests:
+  - it: leaves the main container on the image entrypoint
+    template: templates/deployment-main.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: n8n-main
+      - notExists:
+          path: spec.template.spec.containers[0].command
+      - notExists:
+          path: spec.template.spec.containers[0].args
+
+  - it: starts the worker through the image entrypoint with the worker args
+    template: templates/deployment-worker.yaml
+    set:
+      queueMode.workerConcurrency: 7
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: n8n-worker
+      - notExists:
+          path: spec.template.spec.containers[0].command
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - worker
+            - --concurrency=7
+
+  - it: starts the webhook processor through the image entrypoint with the webhook args
+    template: templates/deployment-webhook-processor.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: n8n-webhook-processor
+      - notExists:
+          path: spec.template.spec.containers[0].command
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - webhook

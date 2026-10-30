@@ -1,0 +1,42 @@
+# NOTES.txt says where the sidecar runs and where its token comes from, so an
+# install shows the cost of the default and the token source it used.
+suite: 'notes: task runners'
+templates:
+  - templates/NOTES.txt
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: names the core Secret and the worker sidecar in queue mode
+    asserts:
+      - matchRegexRaw:
+          pattern: '- Task runners: sidecar on worker pods, token from Secret n8n-core-secrets, key N8N_RUNNERS_AUTH_TOKEN\n'
+
+  - it: names the main pod sidecar in standalone mode
+    set:
+      queueMode.enabled: false
+    asserts:
+      - matchRegexRaw:
+          pattern: '- Task runners: sidecar on the main pod, token from Secret n8n-core-secrets, key N8N_RUNNERS_AUTH_TOKEN\n'
+
+  - it: names taskRunners.authToken.existingSecret as the token source
+    set:
+      taskRunners.authToken.existingSecret: n8n-runner-token
+    asserts:
+      - matchRegexRaw:
+          pattern: 'token from Secret n8n-runner-token\n'
+
+  - it: names secretRefs.env as the token source for the chart's Secret
+    set:
+      secretRefs.existingSecret: ""
+      secretRefs.env.N8N_ENCRYPTION_KEY: test-encryption-key
+      secretRefs.env.N8N_RUNNERS_AUTH_TOKEN: test-token
+    asserts:
+      - matchRegexRaw:
+          pattern: 'token from secretRefs\.env\.N8N_RUNNERS_AUTH_TOKEN\n'
+
+  - it: says code runs in the n8n process with task runners disabled
+    set:
+      taskRunners.enabled: false
+    asserts:
+      - matchRegexRaw:
+          pattern: '- Task runners: off \(code runs inside the n8n process\)\n'

@@ -7,6 +7,7 @@ x-shared: &shared
   restart: always
   image: docker.n8n.io/n8nio/n8n:${N8N_VERSION}
   environment:
+    - N8N_DEPLOYMENT_ARTIFACT=docker-compose
     - DB_TYPE=postgresdb
     - DB_POSTGRESDB_HOST=postgres
     - DB_POSTGRESDB_PORT=5432
@@ -37,7 +38,7 @@ x-runner: &runner
 
 services:
   postgres:
-    image: postgres:16
+    image: postgres:18
     restart: always
     environment:
       - POSTGRES_USER
@@ -45,6 +46,9 @@ services:
       - POSTGRES_DB
       - POSTGRES_NON_ROOT_USER
       - POSTGRES_NON_ROOT_PASSWORD
+      # postgres:18 moved its default data dir. Pinning it keeps the volume
+      # mount stable across major versions.
+      - PGDATA=/var/lib/postgresql/data
     volumes:
       - db_storage:/var/lib/postgresql/data
       - ./init-data.sh:/docker-entrypoint-initdb.d/init-data.sh

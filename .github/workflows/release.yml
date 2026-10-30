@@ -1,54 +1,142 @@
+# Each branch releases its own line from its own release-please config and
+# manifest: main the current chart major, and each release/n8n-<major>.x branch
+# the chart line for that n8n major. Every branch releases through its own
+# copy of this file. A change here is made on main, and brought to a
+# maintenance branch when it changes what a release does there.
 name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release/**"]
     paths:
       - "charts/**"
-      - "CHANGELOG.md"
       - "release-please-config.json"
       - ".release-please-manifest.json"
       - ".github/workflows/release.yml"
 
-permissions:
-  contents: write
-  packages: write
-  pull-requests: write
+# Granted per job below, so that only the publish job can request the OIDC
+# token the chart is signed with.
+permissions: {}
 
+# One group per branch. A group keeps a single pending run and cancels the one
+# it replaces, so a shared group would let a push to one line cancel another
+# line's release that was waiting its turn.
 concurrency:
-  group: release
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   release:
+    # A fork inherits this workflow, and it has nothing to publish to.
+    if: github.repository == 'n8n-io/n8n-hosting'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      # release-please prefixes its outputs with the package path from
+      # release-please-config.json, so these are charts/n8n--*.
+      release_created: ${{ steps.release.outputs['charts/n8n--release_created'] }}
+      version: ${{ steps.release.outputs['charts/n8n--version'] }}
+    env:
+      # Mapped here because the `secrets` context is not available to a step's
+      # `if`, and the step below has to be able to tell whether the App exists.
+      RELEASE_APP_ID: ${{ secrets.RELEASE_APP_ID }}
     steps:
+      # A PR opened under GITHUB_TOKEN gets no pull_request event, so
+      # release-please's PRs get no CI at all: #182 sat for weeks with zero
+      # checks. Opening them as the App fixes that, and it is what lets
+      # ci.yml's gate run install-test on a release-please-- branch.
+      #
+      # Skipped while the App's secrets are absent, with release-please falling
+      # back to GITHUB_TOKEN, so releases keep working exactly as they do now
+      # and switch over on their own once the secrets land.
+      - name: Mint bot token
+        id: app-token
+        if: env.RELEASE_APP_ID != ''
+        # SHA pinned because this one is handed a private key.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Run Release Please
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          target-branch: ${{ github.ref_name }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+  # A job of its own because it holds id-token: write. Every step that can mint
+  # the OIDC token can produce a signature that passes our own verification,
+  # so the token is kept away from release-please and its tag-referenced
+  # actions.
+  publish:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
       - uses: azure/setup-helm@v4
-        if: steps.release.outputs.release_created == 'true'
         with:
           version: "3.17.0"
 
       - uses: actions/checkout@v4
-        if: steps.release.outputs.release_created == 'true'
 
+      # SHA pinned because the binary it installs is handed this run's OIDC
+      # token, and a signature made with that token says this workflow built
+      # the chart.
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      # Helm and cosign keep separate credential stores, so each logs in.
       - name: Log in to GHCR
-        if: steps.release.outputs.release_created == 'true'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            cosign login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Package and push to GHCR
-        if: steps.release.outputs.release_created == 'true'
+        id: push
         env:
-          CHART_VERSION: ${{ steps.release.outputs.version }}
+          CHART_VERSION: ${{ needs.release.outputs.version }}
         run: |
+          set -euo pipefail
+
           helm package charts/n8n --destination /tmp/chart-pkg/
-          helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io/n8n-helm-chart
+          helm push "/tmp/chart-pkg/n8n-${CHART_VERSION}.tgz" oci://ghcr.io/n8n-io/n8n-helm-chart 2>&1 | tee /tmp/push.log
+
+          # The chart is signed by digest rather than by tag: a tag can be moved
+          # to other content later, a digest cannot.
+          digest=$(awk '$1 == "Digest:" { print $2 }' /tmp/push.log)
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::could not read the pushed chart's digest from helm push, so there is nothing to sign."
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # helm push appends the chart name, so the chart lives one level below
+      # the push target above.
+      - name: Sign the chart
+        env:
+          CHART: ghcr.io/n8n-io/n8n-helm-chart/n8n@${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "$CHART"
+
+      # The command the README gives users, by version tag as they run it. This
+      # checks the tag resolves to the signed digest as well as the signature,
+      # and fails the release if either is wrong. The README matches any
+      # release branch; this pins the one that just published.
+      - name: Verify the signature
+        env:
+          CHART: ghcr.io/n8n-io/n8n-helm-chart/n8n:${{ needs.release.outputs.version }}
+          IDENTITY: https://github.com/n8n-io/n8n-hosting/.github/workflows/release.yml@${{ github.ref }}
+        run: |
+          cosign verify "$CHART" \
+            --certificate-identity "$IDENTITY" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            > /dev/null

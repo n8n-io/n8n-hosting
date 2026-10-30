@@ -1,0 +1,100 @@
+# A rolling update starts the new main pod before the old one stops, which
+# cannot happen while a ReadWriteOnce volume is attached to the old pod.
+suite: 'strategy'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  queueMode.enabled: false
+  database.type: sqlite
+  redis.enabled: false
+  persistence.enabled: true
+tests:
+  - it: recreates the main pod with ReadWriteOnce persistence
+    template: templates/deployment-main.yaml
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: Recreate
+            rollingUpdate: null
+
+  - it: recreates the main pod with ReadWriteOncePod persistence
+    template: templates/deployment-main.yaml
+    set:
+      persistence.accessModes: ["ReadWriteOncePod"]
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: Recreate
+            rollingUpdate: null
+
+  - it: leaves the Kubernetes default when any access mode is shared
+    template: templates/deployment-main.yaml
+    set:
+      persistence.accessModes: ["ReadWriteOnce", "ReadWriteMany"]
+    asserts:
+      - notExists:
+          path: spec.strategy
+
+  - it: leaves the Kubernetes default without persistence
+    template: templates/deployment-main.yaml
+    set:
+      queueMode.enabled: true
+      database.type: postgresdb
+      database.host: postgres.example.com
+      redis.enabled: true
+      redis.host: redis.example.com
+      persistence.enabled: false
+    asserts:
+      - notExists:
+          path: spec.strategy
+
+  - it: keeps an explicit strategy over the ReadWriteOnce default
+    template: templates/deployment-main.yaml
+    set:
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 0
+          maxUnavailable: 1
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: RollingUpdate
+            rollingUpdate:
+              maxSurge: 0
+              maxUnavailable: 1
+
+  - it: clears rollingUpdate when an explicit strategy is Recreate
+    template: templates/deployment-main.yaml
+    set:
+      persistence.enabled: false
+      queueMode.enabled: true
+      database.type: postgresdb
+      database.host: postgres.example.com
+      redis.enabled: true
+      redis.host: redis.example.com
+      strategy:
+        type: Recreate
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: Recreate
+            rollingUpdate: null
+
+  - it: rejects rollingUpdate settings alongside Recreate
+    template: templates/deployment-main.yaml
+    set:
+      strategy:
+        type: Recreate
+        rollingUpdate:
+          maxSurge: 1
+    asserts:
+      - failedTemplate:
+          errorPattern: "/strategy/rollingUpdate"

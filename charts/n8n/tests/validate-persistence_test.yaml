@@ -1,0 +1,86 @@
+suite: 'validate: persistence'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  persistence.enabled: true
+tests:
+  - it: rejects persistence.annotations with existingClaim
+    template: templates/deployment-main.yaml
+    set:
+      persistence.existingClaim: my-n8n-data
+      persistence.annotations:
+        backup.example.com/schedule: daily
+    asserts:
+      - failedTemplate:
+          errorMessage: "persistence.annotations has no effect with persistence.existingClaim, because the chart does not create that PVC. Annotate my-n8n-data directly, or remove persistence.annotations."
+
+  - it: accepts existingClaim without persistence.annotations
+    template: templates/deployment-main.yaml
+    set:
+      persistence.existingClaim: my-n8n-data
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects persistence.size with existingClaim
+    template: templates/deployment-main.yaml
+    set:
+      persistence.existingClaim: my-n8n-data
+      persistence.size: 20Gi
+    asserts:
+      - failedTemplate:
+          errorMessage: "persistence.size has no effect with persistence.existingClaim, because the chart does not create that PVC. Remove it, or remove persistence.existingClaim to use the chart's PVC."
+
+  - it: accepts persistence.accessModes with existingClaim
+    template: templates/deployment-main.yaml
+    set:
+      persistence.existingClaim: my-n8n-data
+      persistence.accessModes: [ReadWriteMany]
+    asserts:
+      - notFailedTemplate: {}
+      - notExists:
+          path: spec.strategy
+
+  - it: rejects persistence.storageClassName with existingClaim
+    template: templates/deployment-main.yaml
+    set:
+      persistence.existingClaim: my-n8n-data
+      persistence.storageClassName: fast
+    asserts:
+      - failedTemplate:
+          errorMessage: "persistence.storageClassName has no effect with persistence.existingClaim, because the chart does not create that PVC. Remove it, or remove persistence.existingClaim to use the chart's PVC."
+
+  - it: names every PVC key set with existingClaim in one message
+    template: templates/deployment-main.yaml
+    set:
+      persistence.existingClaim: my-n8n-data
+      persistence.size: 20Gi
+      persistence.storageClassName: fast
+    asserts:
+      - failedTemplate:
+          errorMessage: "persistence.size and persistence.storageClassName have no effect with persistence.existingClaim, because the chart does not create that PVC. Remove them, or remove persistence.existingClaim to use the chart's PVC."
+
+  - it: accepts the PVC keys without existingClaim
+    template: templates/deployment-main.yaml
+    set:
+      persistence.size: 20Gi
+      persistence.accessModes: [ReadWriteMany]
+      persistence.storageClassName: fast
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: accepts the defaults
+    template: templates/deployment-main.yaml
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: rejects an explicitly empty storageClassName with existingClaim
+    template: templates/deployment-main.yaml
+    set:
+      persistence.existingClaim: my-n8n-data
+      persistence.storageClassName: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "persistence.storageClassName has no effect with persistence.existingClaim, because the chart does not create that PVC. Remove it, or remove persistence.existingClaim to use the chart's PVC."
