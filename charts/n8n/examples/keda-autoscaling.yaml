@@ -26,6 +26,8 @@ keda:
     cooldownPeriod: 300        # Wait time before scaling down (seconds)
     minReplicaCount: 2
     maxReplicaCount: 20
+    # Optional: gradual scale-up/down via keda.worker.advanced (see values.yaml)
+    advanced: {}
     triggers:
       - type: redis
         metadata:
