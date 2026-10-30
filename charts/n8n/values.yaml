@@ -688,6 +688,30 @@ keda:
     cooldownPeriod: 300
     minReplicaCount: 2
     maxReplicaCount: 20
+    # Incremental scaling (2↔N). KEDA delegates replica changes above minReplicaCount
+    # to the HPA; use advanced.horizontalPodAutoscalerConfig.behavior to limit how
+    # many pods are added or removed per interval instead of jumping straight to the
+    # target (e.g. 3→20 or 20→3). Leave empty {} to use Kubernetes HPA defaults.
+    # See: https://keda.sh/docs/latest/reference/scaledobject-spec/#advanced
+    advanced: {}
+    # Example — add at most 2 pods/min, remove at most 1 pod/min after stabilization:
+    # advanced:
+    #   horizontalPodAutoscalerConfig:
+    #     behavior:
+    #       scaleUp:
+    #         stabilizationWindowSeconds: 0
+    #         policies:
+    #           - type: Pods
+    #             value: 2
+    #             periodSeconds: 60
+    #         selectPolicy: Max
+    #       scaleDown:
+    #         stabilizationWindowSeconds: 300
+    #         policies:
+    #           - type: Pods
+    #             value: 1
+    #             periodSeconds: 60
+    #         selectPolicy: Max
     triggers:
       - type: redis
         metadata:
@@ -714,6 +738,7 @@ keda:
     cooldownPeriod: 120
     minReplicaCount: 2
     maxReplicaCount: 50
+    advanced: {}
     triggers: []
 
 # ----- Pod Disruption Budget -----

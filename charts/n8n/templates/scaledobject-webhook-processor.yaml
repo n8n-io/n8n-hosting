@@ -18,6 +18,10 @@ spec:
   cooldownPeriod: {{ .Values.keda.webhookProcessor.cooldownPeriod }}
   minReplicaCount: {{ .Values.keda.webhookProcessor.minReplicaCount }}
   maxReplicaCount: {{ .Values.keda.webhookProcessor.maxReplicaCount }}
+  {{- if .Values.keda.webhookProcessor.advanced }}
+  advanced:
+    {{- toYaml .Values.keda.webhookProcessor.advanced | nindent 4 }}
+  {{- end }}
   triggers:
     {{- range .Values.keda.webhookProcessor.triggers }}
     - type: {{ .type }}

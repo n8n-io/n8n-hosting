@@ -653,6 +653,29 @@ Either component merges these annotations with anything you set in `commonAnnota
 
 The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
 
+### Incremental scaling
+
+By default, the HPA behind KEDA can scale directly to the computed replica count (e.g. 3→20). Set `keda.worker.advanced.horizontalPodAutoscalerConfig.behavior` to cap how many pods are added or removed per interval:
+
+```yaml
+keda:
+  worker:
+    advanced:
+      horizontalPodAutoscalerConfig:
+        behavior:
+          scaleUp:
+            policies:
+              - type: Pods
+                value: 2
+                periodSeconds: 60
+          scaleDown:
+            stabilizationWindowSeconds: 300
+            policies:
+              - type: Pods
+                value: 1
+                periodSeconds: 60
+```
+
 See [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) for a complete example.
 
 ## Upgrading
