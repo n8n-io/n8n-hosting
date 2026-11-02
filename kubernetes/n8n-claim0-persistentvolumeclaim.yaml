@@ -4,7 +4,7 @@ metadata:
   labels:
     service: n8n-claim0
   name: n8n-claim0
-  namespace: n8n
+  namespace: {{ .Release.Namespace }}
 spec:
   accessModes:
     - ReadWriteOnce
