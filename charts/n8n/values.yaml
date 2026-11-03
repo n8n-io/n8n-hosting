@@ -55,9 +55,8 @@ queueMode:
   enabled: true
   workerReplicaCount: 2
   # Jobs each worker runs at once, passed as --concurrency. Leave empty to use
-  # n8n's default of 10. n8n also takes this from
-  # executions.concurrency.productionLimit, which wins over the flag, so set
-  # one or the other; the render fails when both are set.
+  # n8n's default of 10. n8n ignores the flag when N8N_CONCURRENCY_PRODUCTION_LIMIT
+  # is set, so the render fails when env.shared or env.worker also sets it.
   workerConcurrency: null
 
 # ----- Webhook processors (optional scaling layer) -----
@@ -766,11 +765,6 @@ executions:
     hardDeleteBuffer: 1                         # <-- Buffer hours before hard delete
     hardDeleteInterval: 15                      # <-- Hard delete interval in minutes
     softDeleteInterval: 60                      # <-- Soft delete interval in minutes
-  # Concurrency settings
-  concurrency:
-    # Max concurrent production executions (-1 = disabled). In queue mode n8n
-    # applies it to each worker instead of queueMode.workerConcurrency.
-    productionLimit: -1
 
 # ----- Environment variables -----
 # Variables for each component, as flat maps of NAME: value. The chart renders

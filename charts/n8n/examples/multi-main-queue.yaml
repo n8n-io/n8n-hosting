@@ -131,11 +131,12 @@ env:
     # Enterprise features
     N8N_ENTERPRISE_LICENSE_ENABLED: true
 
+  worker:
+    # Production executions each worker runs at once.
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: 100
+
 # Advanced execution settings
 executions:
-  concurrency:
-    # In queue mode n8n uses this as each worker's concurrency.
-    productionLimit: 100
   timeout: 7200  # 2 hours
 
 # Core secrets

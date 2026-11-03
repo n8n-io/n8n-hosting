@@ -2,6 +2,7 @@
 
 Date: 2026-10-14
 PR: https://github.com/n8n-io/n8n-hosting/pull/250
+Superseded by: [0029](0029-production-limit-moves-to-env.md), for worker concurrency and the removed `extraEnv` lists only
 
 ## Context
 

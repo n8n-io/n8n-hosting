@@ -995,7 +995,7 @@
         "concurrency": {
           "type": "object",
           "properties": {
-            "productionLimit": { "type": "integer" }
+            "productionLimit": { "description": "Retired. Set N8N_CONCURRENCY_PRODUCTION_LIMIT in env.worker in queue mode, or in env.main in standalone mode." }
           },
           "additionalProperties": false
         },

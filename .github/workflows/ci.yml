@@ -459,9 +459,9 @@ jobs:
         run: bash charts/n8n/ci/upgrade/resources.sh snapshot n8n "$RUNNER_TEMP/before.json"
 
       # A values file written for the previous major has to fail on each
-      # retired key it sets, naming it. Any other reason the upgrade fails is
-      # a warning, so a setting retired outside n8n.retiredKeys shows on the
-      # run. --dry-run keeps the release unchanged.
+      # retired key it sets, naming it, and on nothing else. Any other failure
+      # means a setting was retired outside n8n.retiredKeys, so no message
+      # names its replacement. --dry-run keeps the release unchanged.
       - name: Upgrade with the unmigrated values
         run: |
           set -euo pipefail
@@ -499,7 +499,8 @@ jobs:
           fi
           while IFS= read -r problem; do
             if [[ -n "$problem" && "$problem" != *" is no longer a chart value. "* ]]; then
-              echo "::warning::The unmigrated ${EXAMPLE}.yaml fails outside n8n.retiredKeys: ${problem}"
+              echo "::error::The unmigrated ${EXAMPLE}.yaml fails outside n8n.retiredKeys: ${problem}"
+              failed=1
             fi
           done <<< "$problems"
           exit "$failed"
