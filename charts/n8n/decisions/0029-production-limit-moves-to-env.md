@@ -19,6 +19,6 @@ Under decision 0020, the settings decision 0012 retired move into `n8n.retiredKe
 ## Consequences
 
 - Installs that set `productionLimit` move it to `env.worker` or `env.main`. Workers that ran at `productionLimit` keep that concurrency once it moves.
-- A 1.x values file that carries empty `extraEnv` lists must delete them.
-- The rest of `executions.*` stays. Those values do what they say and conflict with no other setting.
+- A 1.x values file that carries empty `extraEnv` or `extraEnvFrom` lists must delete them.
+- `executions.timeout`, `executions.timeoutMax`, `executions.data` and `executions.pruning` stay. Those values do what they say and conflict with no other setting.
 - A check other than a retired key that an unmigrated previous-major example trips fails the upgrade test.

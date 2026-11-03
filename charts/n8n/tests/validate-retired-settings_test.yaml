@@ -100,6 +100,7 @@ tests:
       redis.extraEnv: []
       s3.storage.extraEnv: []
       taskRunners.extraEnv: []
+      webhook.extraEnv: []
       webhookProcessor.extraEnv: []
     asserts:
       - failedTemplate:
@@ -109,6 +110,7 @@ tests:
             - redis.extraEnv is no longer a chart value. Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
             - s3.storage.extraEnv is no longer a chart value. Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
             - taskRunners.extraEnv is no longer a chart value. Set its variables in env.taskRunner as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - webhook.extraEnv is no longer a chart value. Set its variables in env.main and env.webhookProcessor as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
             - webhookProcessor.extraEnv is no longer a chart value. Set its variables in env.webhookProcessor as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
 
   - it: refuses executions.concurrency.productionLimit and names the variable

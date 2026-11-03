@@ -56,7 +56,7 @@ queueMode:
   workerReplicaCount: 2
   # Jobs each worker runs at once, passed as --concurrency. Leave empty to use
   # n8n's default of 10. n8n ignores the flag when N8N_CONCURRENCY_PRODUCTION_LIMIT
-  # is set, so the render fails when a worker gets both.
+  # is set, so the render fails when env.shared or env.worker also sets it.
   workerConcurrency: null
 
 # ----- Webhook processors (optional scaling layer) -----
