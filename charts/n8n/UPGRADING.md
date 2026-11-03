@@ -8,13 +8,28 @@ Chart 2.0 is still in development. This section grows as each 2.0 change lands, 
 
 ### Before you upgrade
 
-Render your values against the new chart before you run `helm upgrade`:
+The chart includes a script that migrates a 1.x values file to 2.0. Pull the chart, and run the script over your values file:
 
 ```bash
-helm template n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml > /dev/null
+helm pull oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> --untar
+bash n8n/scripts/migrate-values.sh my-values.yaml > my-values-2.0.yaml
 ```
 
-The render fails on every values key that 2.0 retired, and names the replacement for each one. Work through the list until the render passes. Then read the sections below for any other changes that apply to your install, and run `helm upgrade` with the same values file.
+The script needs [yq](https://github.com/mikefarah/yq) v4. It moves or removes every values key that 2.0 retired, turns the `extraEnv` lists into `env` maps, and renames or removes the environment variables that n8n 3.0 no longer reads. It prints a report of what it changed, and of what you need to check yourself. Where it cannot decide for you, it keeps the 1.x behaviour and says so in the report. Keys it does not know pass through unchanged. See [decision 0030](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0030-a-script-migrates-1x-values.md).
+
+The script has these limits:
+
+- It reads plain YAML only. It does not read helmfile `.gotmpl` files, or values that Argo CD or another tool generates from templates.
+- It never reads the contents of a Secret. If a Secret needs a change, such as a new key, the report says so, and you make the change.
+- It does not replace this guide. Review its output, and read the sections below.
+
+Render the new values file against the new chart before you run `helm upgrade`:
+
+```bash
+helm template n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values-2.0.yaml > /dev/null
+```
+
+The render fails on every values key that 2.0 retired, and names the replacement for each one. If you skip the script, work through that list until the render passes. Then read the sections below for any other changes that apply to your install, and run `helm upgrade` with the new values file.
 
 Pass your values file with `-f`. Do not use `--reuse-values`. It keeps the defaults of the chart version you installed as well as your own values, so the 2.0 render fails on 1.x defaults that 2.0 no longer reads. If you no longer have your values file, `helm get values <release> -o yaml` prints the values you set. `--reset-then-reuse-values`, in Helm 3.14 or later, reuses your values with the new chart's defaults, and also works.
 
