@@ -232,6 +232,63 @@ jobs:
       - name: Validate extraContainers (minimal + ci overlay)
         run: helm template test charts/n8n -f charts/n8n/examples/minimal.yaml -f charts/n8n/ci/extraContainers-values.yaml --dry-run=client > /dev/null
 
+  # Tests scripts/migrate-values.sh, then migrates every example of the previous
+  # major and renders the result with this chart. A render failure means a
+  # 1.x example no longer migrates to values this chart accepts.
+  migrate-values:
+    runs-on: ubuntu-latest
+    env:
+      PREVIOUS: release/n8n-2.x
+      # The version the script names as tested. The job fails if they drift.
+      YQ_VERSION: "4.53.6"
+      YQ_SHA256: c5f056448f973ae7d39b5401949648a78f2dc1947d6a8eb65be60d5c504b9385
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PREVIOUS }}
+          path: previous
+          sparse-checkout: charts/n8n/examples
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.17.0"
+
+      - name: Install yq
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/yq" "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64"
+          echo "${YQ_SHA256}  $RUNNER_TEMP/yq" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/yq"
+          echo "YQ=$RUNNER_TEMP/yq" >> "$GITHUB_ENV"
+          grep -qx "YQ_TESTED_VERSION=\"${YQ_VERSION}\"" charts/n8n/scripts/migrate-values.sh ||
+            { echo "::error::YQ_VERSION here and YQ_TESTED_VERSION in migrate-values.sh differ."; exit 1; }
+
+      - name: Run the migrate-values tests
+        run: bash charts/n8n/tests/migrate-values/run.sh
+
+      - name: Migrate and render every example from ${{ env.PREVIOUS }}
+        run: |
+          set -euo pipefail
+
+          failed=0
+          for f in previous/charts/n8n/examples/*.yaml; do
+            name=$(basename "$f")
+            echo "Migrating $name"
+            if ! bash charts/n8n/scripts/migrate-values.sh "$f" > "$RUNNER_TEMP/$name"; then
+              echo "::error::migrate-values.sh failed on ${PREVIOUS}'s $name."
+              failed=1
+              continue
+            fi
+            if ! helm template test charts/n8n -f "$RUNNER_TEMP/$name" --dry-run=client > /dev/null; then
+              echo "::error::${PREVIOUS}'s $name, migrated, does not render."
+              failed=1
+            fi
+          done
+
+          exit "$failed"
+
   # helm template proves the chart produces YAML, not that the API server
   # accepts it. This checks every example against the Kubernetes schemas for
   # the chart's minimum version and the newest one with published schemas,
@@ -557,7 +614,7 @@ jobs:
   ci-ok:
     runs-on: ubuntu-latest
     if: always()
-    needs: [gate, lint, unittest, template-validation, kubeconform, install-test, upgrade-test, security-scan]
+    needs: [gate, lint, unittest, template-validation, migrate-values, kubeconform, install-test, upgrade-test, security-scan]
     steps:
       - name: Check the other jobs
         env:
@@ -565,6 +622,7 @@ jobs:
           LINT: ${{ needs.lint.result }}
           UNITTEST: ${{ needs.unittest.result }}
           TEMPLATES: ${{ needs['template-validation'].result }}
+          MIGRATE: ${{ needs['migrate-values'].result }}
           KUBECONFORM: ${{ needs.kubeconform.result }}
           SECURITY: ${{ needs['security-scan'].result }}
           INSTALL: ${{ needs['install-test'].result }}
@@ -576,7 +634,7 @@ jobs:
 
           failed=0
 
-          for job in "gate:$GATE" "lint:$LINT" "unittest:$UNITTEST" "template-validation:$TEMPLATES" "kubeconform:$KUBECONFORM" "security-scan:$SECURITY"; do
+          for job in "gate:$GATE" "lint:$LINT" "unittest:$UNITTEST" "template-validation:$TEMPLATES" "migrate-values:$MIGRATE" "kubeconform:$KUBECONFORM" "security-scan:$SECURITY"; do
             if [[ "${job#*:}" != "success" ]]; then
               echo "::error::${job%%:*} did not pass, it was ${job#*:}."
               failed=1
