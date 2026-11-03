@@ -1,0 +1,7 @@
+queueMode:
+  enabled: true
+executions:
+  timeout: 3600
+env:
+  worker:
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: 50

@@ -1,0 +1,5 @@
+Changed:
+  - Removed executions.concurrency.productionLimit. -1 is n8n's default.
+Check:
+  - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32, or set taskRunners.enabled: false. The render fails until you do.
+Render the output with helm template, and review it before you upgrade.

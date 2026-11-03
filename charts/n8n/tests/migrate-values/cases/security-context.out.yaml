@@ -1,0 +1,6 @@
+podSecurityContext:
+  main:
+    runAsNonRoot: true
+  shared:
+    fsGroup: 2000
+    runAsUser: 2000

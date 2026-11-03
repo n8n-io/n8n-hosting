@@ -1,0 +1,12 @@
+Changed:
+  - Moved config.extraEnv to env.shared: N8N_LOG_LEVEL.
+  - Moved webhook.extraEnv to env.main and env.webhookProcessor: N8N_LOG_LEVEL.
+  - Moved executions.extraEnv to env.main and env.worker: N8N_LOG_LEVEL.
+  - Moved taskRunners.extraEnv to env.taskRunner: N8N_RUNNERS_MAX_CONCURRENCY.
+  - Kept the 1.x value of N8N_LOG_LEVEL on main pods. In 2.0 env.main wins over env.shared, which 1.x did not always do.
+  - Kept the 1.x value of N8N_LOG_LEVEL on worker pods. In 2.0 env.worker wins over env.shared, which 1.x did not always do.
+  - Kept the 1.x value of N8N_LOG_LEVEL on webhookProcessor pods. In 2.0 env.webhookProcessor wins over env.shared, which 1.x did not always do.
+Check:
+  - N8N_RUNNERS_MAX_CONCURRENCY in taskRunners.extraEnv differs from env.taskRunner.N8N_RUNNERS_MAX_CONCURRENCY, which your values already set. The script kept env.taskRunner.N8N_RUNNERS_MAX_CONCURRENCY.
+  - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32, or set taskRunners.enabled: false. The render fails until you do.
+Render the output with helm template, and review it before you upgrade.

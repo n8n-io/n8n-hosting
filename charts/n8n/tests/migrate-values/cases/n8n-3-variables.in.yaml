@@ -1,0 +1,12 @@
+config:
+  extraEnv:
+    - name: N8N_DB_PING_TIMEOUT
+      value: "5000"
+    - name: N8N_RUNNERS_ENABLED
+      value: "true"
+    - name: N8N_DEFAULT_BINARY_DATA_MODE
+      value: "default"
+taskRunners:
+  extraEnv:
+    - name: N8N_WORKFLOW_TAGS_DISABLED
+      value: "false"

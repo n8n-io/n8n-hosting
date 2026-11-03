@@ -1,0 +1,38 @@
+# Every extraEnv list from 1.x, with comments and blank lines around them.
+config:
+  timezone: UTC
+
+redis:
+  host: redis.example.com
+
+queueMode:
+  enabled: true
+
+webhookProcessor:
+  enabled: true
+
+# A key the script does not know passes through.
+global:
+  team: payments
+env:
+  shared:
+    N8N_LOG_LEVEL: "info"
+    N8N_SMTP_PASS:
+      secretKeyRef:
+        name: smtp
+        key: password
+    N8N_EMPTY: ""
+  main:
+    N8N_PAYLOAD_SIZE_MAX: "64"
+    EXECUTIONS_TIMEOUT: "3600"
+  webhookProcessor:
+    N8N_PAYLOAD_SIZE_MAX: "128"
+  worker:
+    EXECUTIONS_TIMEOUT: "3600"
+    N8N_LOG_LEVEL: "warn"
+  taskRunner:
+    N8N_RUNNERS_MAX_CONCURRENCY: "5"
+envFrom:
+  shared:
+    - configMapRef:
+        name: n8n-extra

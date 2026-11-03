@@ -1,0 +1,10 @@
+Changed:
+  - Moved config.extraEnv to env.shared: N8N_DB_PING_TIMEOUT, N8N_RUNNERS_ENABLED, N8N_DEFAULT_BINARY_DATA_MODE.
+  - Moved taskRunners.extraEnv to env.taskRunner: N8N_WORKFLOW_TAGS_DISABLED.
+  - Renamed env.shared.N8N_DB_PING_TIMEOUT to DB_PING_TIMEOUT_MS, which n8n 3.0 reads. Both are in milliseconds.
+  - Removed env.shared.N8N_RUNNERS_ENABLED. n8n 3.0 no longer reads it.
+  - Removed env.shared.N8N_DEFAULT_BINARY_DATA_MODE. n8n 3.0 has no in-memory mode, and uses filesystem, or database in queue mode.
+  - Removed env.taskRunner.N8N_WORKFLOW_TAGS_DISABLED. n8n 3.0 no longer reads it.
+Check:
+  - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32, or set taskRunners.enabled: false. The render fails until you do.
+Render the output with helm template, and review it before you upgrade.

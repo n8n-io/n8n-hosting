@@ -1,0 +1,9 @@
+taskRunners:
+  enabled: true
+  authToken:
+    existingSecret: ""
+    value: "token-from-a-test"
+  broker:
+    listenAddress: "0.0.0.0"
+    port: 5679
+  nativePythonRunner: false

@@ -1,0 +1,9 @@
+Changed:
+  - Removed probes.worker.liveness.type. A command chooses an exec probe now.
+  - Removed probes.worker.liveness.command. Its pgrep check matched its own shell, so it always passed. The probe now uses the health endpoint.
+  - Removed probes.worker.readiness.type. A command chooses an exec probe now.
+  - Removed probes.worker.readiness.command. Its pgrep check matched its own shell, so it always passed. The probe now uses the health endpoint.
+  - Removed redis.healthCheck.enabled. probes.worker.liveness and probes.worker.readiness had no command, so they now probe the worker health endpoint, which this turns back on.
+Check:
+  - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32, or set taskRunners.enabled: false. The render fails until you do.
+Render the output with helm template, and review it before you upgrade.

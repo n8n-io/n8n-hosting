@@ -1,0 +1,12 @@
+ingress:
+  enabled: true
+  hosts:
+    - host: n8n.example.com
+config:
+  extraEnv:
+    - name: N8N_WEBHOOK_URL
+      value: "https://hooks.example.com/"
+    - name: N8N_EDITOR_BASE_URL
+      value: "https://n8n.example.com/"
+    - name: N8N_PROXY_HOPS
+      value: "2"
