@@ -116,8 +116,8 @@ Every pod restarts once on upgrade, because its environment moves into the new C
 
 | If your values set | Do this |
 |---|---|
-| `productionLimit`, in queue mode | Set `env.worker.N8N_CONCURRENCY_PRODUCTION_LIMIT` to the same number. Remove `queueMode.workerConcurrency` if you set it. |
-| `productionLimit`, in standalone mode | Set `env.main.N8N_CONCURRENCY_PRODUCTION_LIMIT` to the same number. |
+| `productionLimit` other than -1, in queue mode | Set `env.worker.N8N_CONCURRENCY_PRODUCTION_LIMIT` to the same number. Remove `queueMode.workerConcurrency` if you set it. |
+| `productionLimit` other than -1, in standalone mode | Set `env.main.N8N_CONCURRENCY_PRODUCTION_LIMIT` to the same number. |
 | `productionLimit: -1` | Remove it. -1 is n8n's default. |
 
 ```yaml
@@ -132,7 +132,7 @@ env:
     N8N_CONCURRENCY_PRODUCTION_LIMIT: 50
 ```
 
-In queue mode, n8n uses the variable as each worker's concurrency and ignores `queueMode.workerConcurrency`. The render fails if a worker gets both, from `env.shared` or `env.worker`.
+When the variable is set in queue mode, n8n uses it as each worker's concurrency and ignores `queueMode.workerConcurrency`. The render fails if a worker gets both, from `env.shared` or `env.worker`.
 
 ### Task runners
 
