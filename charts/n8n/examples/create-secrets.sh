@@ -30,6 +30,10 @@ while [ $# -gt 0 ]; do
             ;;
         --namespace=*)
             NAMESPACE="${1#*=}"
+            if [ -z "$NAMESPACE" ]; then
+                echo "❌ --namespace needs a namespace name"
+                exit 1
+            fi
             shift
             ;;
         -h|--help)
@@ -140,7 +144,7 @@ if [ "$CREATE_S3_SECRET" = true ]; then
     SECRETS+=(s3-credentials)
 fi
 
-# The Secrets are created or replaced as a set. Replacing only some of them
+# One confirmation covers the whole set. Replacing only some of the Secrets
 # would leave the encryption key backup out of step with the cluster.
 EXISTING_SECRETS=()
 for secret in "${SECRETS[@]}"; do
@@ -159,7 +163,8 @@ if [ ${#EXISTING_SECRETS[@]} -gt 0 ]; then
         echo "   Replacing n8n-core-secrets gives n8n a new encryption key."
         echo "   n8n can then no longer decrypt the credentials it has stored."
     fi
-    echo "   Replacing a Secret changes the values n8n reads from it on its next restart."
+    echo "   n8n reads the new values only when its containers restart. Restart the n8n"
+    echo "   Deployments afterwards so every container reads the new values together."
     echo
 
     if [ ! -t 0 ]; then
@@ -222,8 +227,9 @@ fi
 
 echo
 
-# Save the encryption key before any Secret changes, so a failed write leaves
-# the cluster untouched. noclobber refuses to overwrite an earlier backup.
+# Save the encryption key before writing any Secret, so that if the file
+# cannot be written, nothing in the cluster has changed. noclobber refuses to
+# overwrite an earlier backup.
 KEY_FILE="./n8n-encryption-key-${NAMESPACE}-$(date -u +%Y%m%dT%H%M%SZ).txt"
 if ! (set -o noclobber; umask 077; printf '%s\n' "$N8N_ENCRYPTION_KEY" > "$KEY_FILE") 2>/dev/null; then
     echo "❌ Cannot write the encryption key to $KEY_FILE"
@@ -235,22 +241,49 @@ echo "   Saved the encryption key to $KEY_FILE"
 echo
 echo "   Creating secrets in namespace $NAMESPACE..."
 
+# Each Secret is written by its own API call, so a failure part way leaves the
+# earlier ones written. Say which, and whether the key file matches the cluster.
+WRITTEN_SECRETS=()
+report_failed_write() {
+    local failed="$1"
+
+    echo
+    echo "❌ Cannot write $failed in namespace $NAMESPACE"
+    if [ ${#WRITTEN_SECRETS[@]} -gt 0 ]; then
+        echo "   Already written: ${WRITTEN_SECRETS[*]}"
+    else
+        echo "   No Secrets were changed."
+    fi
+    if [[ " ${WRITTEN_SECRETS[*]} " == *" n8n-core-secrets "* ]]; then
+        echo "   n8n-core-secrets holds the encryption key saved in $KEY_FILE"
+    else
+        echo "   n8n-core-secrets was not changed, so n8n does not use the key in $KEY_FILE"
+    fi
+    exit 1
+}
+
 # Create core secrets
 echo "Creating n8n-core-secrets..."
 apply_secret n8n-core-secrets \
     --from-literal=N8N_ENCRYPTION_KEY="$N8N_ENCRYPTION_KEY" \
-    --from-literal=N8N_RUNNERS_AUTH_TOKEN="$N8N_RUNNERS_AUTH_TOKEN"
+    --from-literal=N8N_RUNNERS_AUTH_TOKEN="$N8N_RUNNERS_AUTH_TOKEN" \
+    || report_failed_write n8n-core-secrets
+WRITTEN_SECRETS+=(n8n-core-secrets)
 
 # Create database secret
 echo "Creating n8n-db-secret..."
 apply_secret n8n-db-secret \
-    --from-literal=password="$DB_PASSWORD"
+    --from-literal=password="$DB_PASSWORD" \
+    || report_failed_write n8n-db-secret
+WRITTEN_SECRETS+=(n8n-db-secret)
 
 # Create S3 secret if requested
 if [ "$CREATE_S3_SECRET" = true ]; then
     echo "Creating s3-credentials..."
     apply_secret s3-credentials \
-        --from-literal=secret-access-key="$AWS_SECRET_ACCESS_KEY"
+        --from-literal=secret-access-key="$AWS_SECRET_ACCESS_KEY" \
+        || report_failed_write s3-credentials
+    WRITTEN_SECRETS+=(s3-credentials)
 fi
 
 echo
@@ -260,6 +293,12 @@ echo
 # Show what was created
 echo "  Created secrets:"
 kubectl get secrets -n "$NAMESPACE" "${SECRETS[@]}" 2>/dev/null || true
+
+if [ ${#EXISTING_SECRETS[@]} -gt 0 ]; then
+    echo
+    echo "  Restart n8n so every container reads the new values:"
+    echo "  kubectl rollout restart deployment -n $NAMESPACE -l app.kubernetes.io/name=n8n"
+fi
 
 echo
 echo "  Next steps:"

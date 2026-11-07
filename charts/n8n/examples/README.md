@@ -51,7 +51,7 @@ This directory contains common configuration examples for different deployment s
 ./examples/create-secrets.sh --namespace n8n
 ```
 
-Without `--namespace`, the script uses the namespace of your current kubectl context. Install the chart into the same namespace. If any of the Secrets already exist there, the script lists them and asks before it replaces them.
+Without `--namespace`, the script uses the namespace of your current kubectl context. Install the chart into the same namespace. If any of the Secrets already exist there, the script lists them and requires you to type the namespace name to replace them. Non-interactive runs leave existing Secrets unchanged.
 
 ### 2. Choose Your Example
 Select the example that best matches your use case from the list above.
@@ -62,8 +62,8 @@ Select the example that best matches your use case from the list above.
 cp examples/production-s3.yaml my-values.yaml
 # Edit my-values.yaml with your settings
 
-# Deploy with Helm
-helm install n8n ./charts/n8n -f my-values.yaml
+# Deploy with Helm, into the namespace that holds the Secrets
+helm install n8n ./charts/n8n --namespace n8n -f my-values.yaml
 ```
 
 For quick testing with Docker:
