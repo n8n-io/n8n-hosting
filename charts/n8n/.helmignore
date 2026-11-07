@@ -59,6 +59,9 @@ docker-compose.yaml
 *.dockerfile
 Dockerfile*
 
+# Encryption key backups written by examples/create-secrets.sh
+n8n-encryption-key-*.txt
+
 # Package files
 *.tgz
 *.tar.gz
