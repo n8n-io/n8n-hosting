@@ -2,7 +2,7 @@
 # n8n Helm Chart - Secret Creation Script
 # This script helps create the required Kubernetes secrets for n8n
 
-set -e
+set -eo pipefail
 
 usage() {
     cat <<EOF
@@ -48,12 +48,25 @@ echo "n8n Secrets Creation Script"
 echo "================================"
 echo
 
+# Reads the value exactly as typed: IFS= keeps leading and trailing spaces,
+# and -r keeps backslashes.
 prompt_secret() {
     local prompt="$1"
     local var_name="$2"
+    local input
 
-    read -s -p "$prompt: " input
-    echo
+    while true; do
+        if ! IFS= read -rs -p "$prompt: " input; then
+            echo
+            echo "❌ No value was entered"
+            exit 1
+        fi
+        echo
+        if [ -n "$input" ]; then
+            break
+        fi
+        echo "   The value cannot be empty."
+    done
     printf -v "$var_name" '%s' "$input"
 }
 
@@ -76,6 +89,8 @@ secret_exists() {
 
 # Server-side apply creates the Secret or replaces the keys this script sets,
 # and does not copy the values into a last-applied-configuration annotation.
+# Callers pass each value as --from-file=KEY=<(printf '%s' "$VALUE"), so the
+# value reaches kubectl through a pipe rather than its command line.
 apply_secret() {
     local name="$1"
     shift
@@ -91,10 +106,12 @@ echo "  • n8n-db-secret (database password)"
 echo "  • s3-credentials (AWS S3 secret key, optional)"
 echo
 
-if ! command -v kubectl &> /dev/null; then
-    echo "❌ kubectl is not installed or not in PATH"
-    exit 1
-fi
+for tool in kubectl openssl; do
+    if ! command -v "$tool" &> /dev/null; then
+        echo "❌ $tool is not installed or not in PATH"
+        exit 1
+    fi
+done
 
 if ! kubectl cluster-info &> /dev/null; then
     echo "❌ Cannot connect to Kubernetes cluster"
@@ -238,19 +255,19 @@ echo "   Creating secrets in namespace $NAMESPACE..."
 # Create core secrets
 echo "Creating n8n-core-secrets..."
 apply_secret n8n-core-secrets \
-    --from-literal=N8N_ENCRYPTION_KEY="$N8N_ENCRYPTION_KEY" \
-    --from-literal=N8N_RUNNERS_AUTH_TOKEN="$N8N_RUNNERS_AUTH_TOKEN"
+    --from-file=N8N_ENCRYPTION_KEY=<(printf '%s' "$N8N_ENCRYPTION_KEY") \
+    --from-file=N8N_RUNNERS_AUTH_TOKEN=<(printf '%s' "$N8N_RUNNERS_AUTH_TOKEN")
 
 # Create database secret
 echo "Creating n8n-db-secret..."
 apply_secret n8n-db-secret \
-    --from-literal=password="$DB_PASSWORD"
+    --from-file=password=<(printf '%s' "$DB_PASSWORD")
 
 # Create S3 secret if requested
 if [ "$CREATE_S3_SECRET" = true ]; then
     echo "Creating s3-credentials..."
     apply_secret s3-credentials \
-        --from-literal=secret-access-key="$AWS_SECRET_ACCESS_KEY"
+        --from-file=secret-access-key=<(printf '%s' "$AWS_SECRET_ACCESS_KEY")
 fi
 
 echo
