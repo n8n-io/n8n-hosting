@@ -2,6 +2,7 @@
 
 Date: 2026-10-15
 PR: https://github.com/n8n-io/n8n-hosting/pull/233
+Superseded by: [0027](0027-worker-probes-run-a-command-or-the-health-endpoint.md)
 
 ## Context
 
