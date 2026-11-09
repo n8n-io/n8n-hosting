@@ -5,6 +5,6 @@ Changed:
   - Removed redis.worker.maxStalledCount. n8n has ignored it since n8n 2.0.
   - Removed webhook.timeout. n8n never read the variable it set.
 Check:
-  - database.ssl.key was set, but the chart never read it. Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey.
+  - database.ssl.key was set, but the chart never read it. To use a client key, put it in a Secret. Then set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey.
   - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32, or set taskRunners.enabled: false. The render fails until you do.
-Render the output with helm template, and review it before you upgrade.
+Review the output before you upgrade. Then render it with helm template.

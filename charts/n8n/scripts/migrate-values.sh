@@ -38,8 +38,11 @@ Limits:
     values that Argo CD or another tool generates from templates.
   - It never reads the contents of a Secret, including the Secrets named in
     your values.
-  - Review the output before you upgrade. Render it with helm template, and
-    read the "Upgrading to 2.0" section of UPGRADING.md.
+  - It reads one values file. A setting it cannot see, such as a default from
+    another values file, is not migrated.
+
+Review the output before you upgrade. Render it with helm template. Read the
+"Upgrading to 2.0" section of UPGRADING.md too.
 
 Needs yq v4 (https://github.com/mikefarah/yq), tested with v4.53.6. Set YQ to
 use a yq binary that is not on your PATH.
@@ -143,10 +146,27 @@ set_env() {
   u ".env.${1}[strenv(N)] = (strenv(V) | from_json | ... style=\"\")"
 }
 
+# 1.x rendered redis.extraEnv only in queue mode, and s3.storage.extraEnv only
+# with s3.enabled.
+applied_in_1x() {
+  case "$1" in
+    redis.extraEnv) queue_mode ;;
+    s3.storage.extraEnv) truthy s3.enabled ;;
+    *) true ;;
+  esac
+}
+
 converted=false
 convert_env_list() {
   local src="$1" targets="$2" t names="" name value
   present "$src" || return 0
+  if ! applied_in_1x "$src"; then
+    if [[ "$(q "(.$src // []) | length")" != "0" ]]; then
+      check "$src was dropped. 1.x did not apply it with your values, so moving it to env.$targets would start setting its variables."
+    fi
+    remove "$src" "1.x did not apply it with your values."
+    return 0
+  fi
   case "$(q ".$src | tag")" in
     "!!seq") ;;
     "!!null") remove "$src" "It was empty."; return 0 ;;
@@ -207,7 +227,7 @@ if [[ "$converted" == true ]]; then
       worker) order="redis.extraEnv s3.storage.extraEnv executions.extraEnv config.extraEnv queueMode.workerExtraEnv" ;;
       webhookProcessor) order="redis.extraEnv webhook.extraEnv s3.storage.extraEnv config.extraEnv webhookProcessor.extraEnv" ;;
     esac
-    effective="$(for src in $order; do list_entries "$input" "$src"; done |
+    effective="$(for src in $order; do applied_in_1x "$src" && list_entries "$input" "$src"; done |
       awk -F '\t' '{ v[$2] = $0 } END { for (k in v) print v[k] }' | sort -t "$(printf '\t')" -k2,2)"
     pinned=""
     while IFS=$'\t' read -r _ name value; do
@@ -351,7 +371,7 @@ if present database.useExternal; then
   remove database.useExternal "database.type alone chooses the database."
 fi
 if present database.ssl.key; then
-  [[ -z "$(val database.ssl.key)" ]] || check "database.ssl.key was set, but the chart never read it. Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey."
+  [[ -z "$(val database.ssl.key)" ]] || check "database.ssl.key was set, but the chart never read it. To use a client key, put it in a Secret. Then set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey."
   remove database.ssl.key
 fi
 if present redis.useExternal; then
@@ -551,6 +571,9 @@ if [[ -n "$changes" ]]; then
   if [[ "$(q '.taskRunners.enabled')" != "false" ]] && ! truthy secretRefs.existingSecret &&
     ! truthy secretRefs.env.N8N_RUNNERS_AUTH_TOKEN && ! truthy taskRunners.authToken.existingSecret; then
     check "Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32, or set taskRunners.enabled: false. The render fails until you do."
+  elif [[ "$(q '.taskRunners.enabled')" != "false" ]] && truthy secretRefs.existingSecret &&
+    ! truthy taskRunners.authToken.existingSecret && [[ "$checks" != *N8N_RUNNERS_AUTH_TOKEN* ]]; then
+    check "Task runners are on by default in 2.0 and need a token. Add N8N_RUNNERS_AUTH_TOKEN to the Secret $(val secretRefs.existingSecret), or set taskRunners.enabled: false. The chart cannot see into the Secret, so the render passes, but the pods do not start without the key."
   fi
   if truthy networkPolicy.enabled && [[ "$(q '.networkPolicy.egress // [] | length')" == "0" ]]; then
     check "networkPolicy.egress is empty, so the NetworkPolicy now allows all egress. UPGRADING.md has the 1.x rules to keep them."
@@ -575,6 +598,6 @@ fi
       echo "Check:"
       printf '%s' "$checks"
     fi
-    echo "Render the output with helm template, and review it before you upgrade."
+    echo "Review the output before you upgrade. Then render it with helm template."
   fi
 } >&2

@@ -3,4 +3,4 @@ Changed:
 Check:
   - ingress.sticky.enabled was true, but 1.x adds its annotations for the nginx class only. If you run multi-main, set your controller's session affinity annotations in ingress.annotations.
   - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32, or set taskRunners.enabled: false. The render fails until you do.
-Render the output with helm template, and review it before you upgrade.
+Review the output before you upgrade. Then render it with helm template.

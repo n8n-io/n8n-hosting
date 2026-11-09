@@ -4,4 +4,4 @@ Changed:
   - Removed taskRunners.nativePythonRunner. The task runner image decides whether Python runs.
 Check:
   - taskRunners.nativePythonRunner was false. The task runner image now decides whether Python runs, and the default image runs it.
-Render the output with helm template, and review it before you upgrade.
+Review the output before you upgrade. Then render it with helm template.
