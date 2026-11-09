@@ -1,7 +1,7 @@
 # 0030. A script migrates a 1.x values file to 2.0
 
 Date: 2026-11-03
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/288
 
 ## Context
 
