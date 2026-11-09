@@ -40,7 +40,7 @@ Most work here is a chart change. Take it in this order:
    - Not breaking: pods rolling on upgrade, which is how `helm upgrade` works here. A bug fix that makes the chart do what its values already say. A new `fail` that rejects a combination of values that never worked, because those installs were already broken and the message names the fix.
    - Take care when changing a default. A new default that meaningfully changes a deployment's performance or behaviour, in a way a user would not reasonably expect from a minor or patch release, belongs on a major.
    - Give a new value a default that leaves today's render unchanged.
-   - When you remove or rename a values key, add it to `n8n.retiredKeys` in `_helpers.tpl` with its replacement, in the same change. Keep it declared in `values.schema.json`, described as retired.
+   - When you remove or rename a values key, add it to `n8n.retiredKeys` in `_helpers.tpl` with its replacement, in the same change. Keep it declared in `values.schema.json`, described as retired. Add its transform to `scripts/migrate-values.sh`, with a case in `tests/migrate-values/cases/`.
    - Call out a roll or a new `fail` in the PR description so it reaches the changelog.
    - A breaking change carries its own upgrade path in the same PR: a guard entry that fails the render on each retired key and names its replacement, the lines in `charts/n8n/UPGRADING.md` that tell users what to change, and the examples migrated to the new values.
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.
@@ -56,6 +56,7 @@ helm lint charts/n8n
 for f in charts/n8n/examples/*.yaml; do helm template test charts/n8n -f "$f" --dry-run=client > /dev/null || echo "FAIL $f"; done
 helm unittest --strict charts/n8n
 helm unittest --strict --skip-schema-validation -f 'tests/without-schema/*_test.yaml' charts/n8n
+charts/n8n/tests/migrate-values/run.sh   # needs yq v4
 ```
 
 `ct lint --chart-dirs charts --charts charts/n8n --validate-maintainers=false` matches the CI lint job if `ct` is installed. The kind install test runs in CI only, on labelled PRs and the automated bump and release PRs. On PRs to `main`, the `test-install-v3-rc` label runs it on the newest n8n 3 release candidate. The kind upgrade test, from the last release of the previous major to the PR, runs in CI only, on PRs to `main` labelled `test-upgrade`.

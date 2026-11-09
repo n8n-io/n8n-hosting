@@ -8,7 +8,7 @@ Chart 2.0 is still in development. This section grows as each 2.0 change lands, 
 
 ### Before you upgrade
 
-The chart includes a script that migrates a 1.x values file to 2.0. Pull the chart, and run the script over your values file:
+The chart includes a script that migrates a 1.x values file to 2.0. Pull the chart. Then run the script over your values file:
 
 ```bash
 helm pull oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> --untar
@@ -20,8 +20,8 @@ The script needs [yq](https://github.com/mikefarah/yq) v4. It moves or removes e
 The script has these limits:
 
 - It reads plain YAML only. It does not read helmfile `.gotmpl` files, or values that Argo CD or another tool generates from templates.
-- It never reads the contents of a Secret. If a Secret needs a change, such as a new key, the report says so, and you make the change.
-- It does not replace this guide. Review its output, and read the sections below.
+- It never reads the contents of a Secret. If a Secret needs a change, such as a new key, the report names it. You make the change yourself.
+- It does not replace this guide. Review its output and the sections below before you upgrade.
 
 Render the new values file against the new chart before you run `helm upgrade`:
 
