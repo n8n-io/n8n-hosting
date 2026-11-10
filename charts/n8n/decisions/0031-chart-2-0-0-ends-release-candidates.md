@@ -11,6 +11,8 @@ The 2.0.0 release has to turn both off. release-please must then propose exactly
 
 ## Decision
 
+This sits under "Versioned with n8n, not by n8n": chart 2.0.0 is the first full release of the line for n8n 3.0.
+
 `main` keeps `versioning: prerelease` and drops `prerelease` and `prerelease-type`. With `prerelease` off, this strategy works out the next release candidate and then drops the suffix, so every commit type takes `2.0.0-rc.N` to `2.0.0`. From a version with no suffix, it bumps major, minor and patch in the same way as release-please's default strategy.
 
 The `default` strategy does not reach `2.0.0`. It keeps the suffix when it bumps, so a breaking commit after `2.0.0-rc.1` gives `3.0.0-rc.1`, and a feature gives `2.1.0-rc.1`.
