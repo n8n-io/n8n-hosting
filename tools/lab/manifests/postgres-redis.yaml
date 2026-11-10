@@ -1,0 +1,71 @@
+# Postgres and Redis for one queue-mode namespace. Throwaway storage: deleting the pod resets n8n.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - { name: POSTGRES_USER, value: n8n }
+            - { name: POSTGRES_DB, value: n8n }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: n8n-db-secret, key: password }
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "n8n"]
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector: { app: postgres }
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: redis }
+  template:
+    metadata:
+      labels: { app: redis }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector: { app: redis }
+  ports:
+    - port: 6379
