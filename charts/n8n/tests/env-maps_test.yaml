@@ -302,6 +302,14 @@ tests:
             name: N8N_RUNNERS_AUTH_TOKEN
           any: true
 
+  - it: refuses an override of OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
+    template: templates/deployment-main.yaml
+    set:
+      chartEnvOverrides.shared.OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
+    asserts:
+      - failedTemplate:
+          errorMessage: "chartEnvOverrides.shared.OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS overrides nothing: the chart does not set OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS. Put it in env.shared instead."
+
   - it: refuses N8N_RUNNERS_MODE in the main env map in queue mode
     template: templates/deployment-main.yaml
     set:

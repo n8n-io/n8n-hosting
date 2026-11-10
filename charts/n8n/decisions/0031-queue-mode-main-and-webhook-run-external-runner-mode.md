@@ -21,6 +21,7 @@ Standalone main keeps `taskRunners.mode` while it carries the sidecar, and nothi
 
 ## Consequences
 
-- Queue-mode pods start without the offload or internal-mode warnings on n8n 3.x.
+- Queue-mode main and webhook processor pods start without the offload or internal-mode warnings on n8n 3.x.
 - Workers with `taskRunners.enabled: false` still run in internal mode and still log the warning, which is the warning such installs should see.
 - An install that sets `N8N_RUNNERS_MODE` in `env.shared`, `env.main` or `env.webhookProcessor` in queue mode fails the render, and moves the value to `chartEnvOverrides`.
+- An install that sets `OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS` in `chartEnvOverrides` fails the render, because the override replaces nothing. It removes the entry.
