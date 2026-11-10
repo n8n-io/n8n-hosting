@@ -5,7 +5,7 @@
 # Architecture:
 #   - The n8n container runs a task broker on port 5679
 #   - A runner sidecar container connects to the broker over localhost
-#   - Worker pods get a runner sidecar (main pods do not; queue mode offloads execution to workers)
+#   - Worker pods get a runner sidecar (main pods do not; queue mode runs every execution on workers)
 #
 # Prerequisites:
 #   - External PostgreSQL and Redis (queue mode)
@@ -17,7 +17,7 @@ queueMode:
   workerConcurrency: 10
 
 # Task runner sidecars are on by default; enabled is set here to show the key.
-# In queue mode they run on worker pods, because main offloads executions to
+# In queue mode they run on worker pods, because n8n runs every execution on
 # workers.
 taskRunners:
   enabled: true

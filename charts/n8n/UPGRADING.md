@@ -367,6 +367,8 @@ n8n 3.0 no longer reads these variables. It logs a warning at startup for each o
 | `N8N_AGENTS_SKILLS_HUB_ENABLED`, `N8N_ENV_FEAT_CRED_SHARING` | Remove them. n8n 2.46 removed them, and both features are always on. |
 | `N8N_INSTANCE_AI_LOCAL_GATEWAY_DISABLED`, `N8N_INSTANCE_AI_GATEWAY_API_KEY` | Remove them. n8n 2.46 removed them with the local gateway. n8n logs no warning. |
 
+The chart no longer sets `OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS`. In queue mode, n8n 3.0 always runs manual executions on workers. The chart sets `N8N_RUNNERS_MODE: external` on main and the webhook processors in queue mode, so they log no internal-mode warning. If you set `N8N_RUNNERS_MODE` in `env.shared`, `env.main` or `env.webhookProcessor` in queue mode, the render fails. Move it to `chartEnvOverrides` for the same component. See [decision 0031](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0031-queue-mode-main-and-webhook-run-external-runner-mode.md).
+
 #### Image changes
 
 The n8n image no longer includes GraphicsMagick. If a derived image or an Execute Command node calls `gm`, install it in your own image. The base image has no `apk-tools`, so you cannot add it with `apk` in a later layer.

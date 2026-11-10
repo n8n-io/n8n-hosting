@@ -212,7 +212,7 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-n8n-webhook-processor
 
-  - it: sets the runner broker on workers in queue mode, not on main
+  - it: sets the runner broker on workers in queue mode
     template: templates/configmap.yaml
     set:
       taskRunners.enabled: true
@@ -223,11 +223,6 @@ tests:
         documentSelector:
           path: metadata.name
           value: RELEASE-NAME-n8n-worker
-      - notExists:
-          path: data.N8N_RUNNERS_MODE
-        documentSelector:
-          path: metadata.name
-          value: RELEASE-NAME-n8n-main
       - equal:
           path: data.N8N_RUNNERS_TASK_BROKER_URI
           value: http://127.0.0.1:5679
@@ -252,6 +247,80 @@ tests:
           path: data.QUEUE_WORKER_MAX_STALLED_COUNT
       - notExists:
           path: data.N8N_NATIVE_PYTHON_RUNNER
+
+  # n8n 3.0 always runs manual executions on workers in queue mode.
+  - it: does not render OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS in queue mode
+    template: templates/configmap.yaml
+    asserts:
+      - notExists:
+          path: data.OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
+
+  # Neither runs code in queue mode, so n8n starts no runner on them. Unset,
+  # the mode defaults to internal and n8n logs a deprecation at startup.
+  - it: sets external runner mode on main and webhook processors in queue mode
+    template: templates/configmap.yaml
+    asserts:
+      - equal:
+          path: data.N8N_RUNNERS_MODE
+          value: external
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.N8N_RUNNERS_MODE
+          value: external
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+
+  - it: sets external runner mode on main and webhook processors without task runners
+    template: templates/configmap.yaml
+    set:
+      taskRunners.enabled: false
+    asserts:
+      - equal:
+          path: data.N8N_RUNNERS_MODE
+          value: external
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-main
+      - equal:
+          path: data.N8N_RUNNERS_MODE
+          value: external
+        documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-n8n-webhook-processor
+
+  - it: reads no runner token on main and webhook processors in queue mode
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: N8N_RUNNERS_AUTH_TOKEN
+          any: true
+
+  - it: refuses N8N_RUNNERS_MODE in the main env map in queue mode
+    template: templates/deployment-main.yaml
+    set:
+      env.main.N8N_RUNNERS_MODE: internal
+    asserts:
+      - failedTemplate:
+          errorMessage: "env.main.N8N_RUNNERS_MODE is set by the chart from queueMode.enabled. Put it in chartEnvOverrides.main to override the chart deliberately."
+
+  - it: accepts N8N_RUNNERS_MODE in chartEnvOverrides.webhookProcessor in queue mode
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-webhook-processor
+    set:
+      chartEnvOverrides.webhookProcessor.N8N_RUNNERS_MODE: internal
+    asserts:
+      - equal:
+          path: data.N8N_RUNNERS_MODE
+          value: internal
 
   - it: renders a broker listen address set in a worker env map
     template: templates/configmap.yaml

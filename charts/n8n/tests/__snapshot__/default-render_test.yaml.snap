@@ -40,7 +40,6 @@ matches the snapshot:
       N8N_DEPLOYMENT_ARTIFACT: helm-chart/0.0.0
       N8N_GRACEFUL_SHUTDOWN_TIMEOUT: "30"
       N8N_PORT: "5678"
-      OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
       QUEUE_BULL_REDIS_HOST: your-redis-hostname
       QUEUE_BULL_REDIS_PORT: "6379"
       QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD: "10000"
@@ -72,6 +71,7 @@ matches the snapshot:
       EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
       EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
       EXECUTIONS_TIMEOUT_MAX: "3600"
+      N8N_RUNNERS_MODE: external
     kind: ConfigMap
     metadata:
       labels:
@@ -152,7 +152,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: 3ddf73c27b6696326eed75aaa4d8cfa701d551035a94feec985f223a21d09502
+            checksum/config: 2f72e9cc3ead5476cd563077245d0b2a3fd5d928bb8404e67156299ac99ad6e3
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: main
@@ -267,7 +267,7 @@ matches the snapshot:
       template:
         metadata:
           annotations:
-            checksum/config: cf5f2cf645d8de68021d0e4f5be04b759b064dfca39a95a551e4abeb80b7a3e4
+            checksum/config: 5335b62068c693169e8f935a5eb3726a7f0be15759bdea4b8e26ffbc70869a03
             checksum/secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
           labels:
             app.kubernetes.io/component: worker
