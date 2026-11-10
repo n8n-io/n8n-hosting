@@ -1,7 +1,7 @@
 # 0031. Main and webhook processors run in external runner mode in queue mode
 
 Date: 2026-11-10
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/289
 
 ## Context
 
