@@ -1,7 +1,7 @@
 # 0031. Chart 2.0.0 ends the release candidates on main
 
 Date: 2026-11-10
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/290
 
 ## Context
 
