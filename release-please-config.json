@@ -17,8 +17,6 @@
       "release-type": "go",
       "package-name": "n8n",
       "versioning": "prerelease",
-      "prerelease": true,
-      "prerelease-type": "rc",
       "extra-files": [
         {
           "type": "generic",

@@ -11,7 +11,7 @@ Official deployment artefacts for self-hosted n8n. This file is for AI agents wo
 
 Each n8n major has a chart line, and each line has a branch.
 
-- `main` is chart 2.0, which ships with n8n 3.0. It releases `2.0.0-rc.N` until 2.0.0 ships. Breaking changes land here.
+- `main` is chart 2.x, for n8n 3.x. Breaking changes land here.
 - `release/n8n-2.x` is chart 1.x, for n8n 2.x. It takes fixes and additive features only, and never a breaking change.
 
 Branch from `main` and open the PR against it. The exception is a fix for code that exists only on a maintenance branch, for example a values key that `main` has removed. Branch from the maintenance branch, open the PR against it, and say in the description why the fix is not on `main`.
