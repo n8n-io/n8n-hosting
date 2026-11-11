@@ -1266,8 +1266,7 @@ Resources:
               Value: 60
             - Name: N8N_CONCURRENCY_PRODUCTION_LIMIT
               Value: !Ref ConcurrencyProductionLimit
-            # main hands executions to the workers in queue mode, so it starts no runner.
-            # external keeps n8n from logging the internal-mode deprecation warning.
+            # Code nodes run on the workers. external keeps n8n from logging the internal-mode deprecation warning.
             - Name: N8N_RUNNERS_MODE
               Value: external
             - Name: N8N_RUNNERS_AUTH_TOKEN
@@ -2000,10 +1999,11 @@ Resources:
               Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
-            # webhook processors hand executions to the workers, so they start no runner.
-            # external keeps n8n from logging the internal-mode deprecation warning.
+            # Code nodes run on the workers. external keeps n8n from logging the internal-mode deprecation warning.
             - Name: N8N_RUNNERS_MODE
               Value: external
+            - Name: N8N_RUNNERS_AUTH_TOKEN
+              Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
             - Name: N8N_LOG_LEVEL
               Value: warn
             - Name: QUEUE_HEALTH_CHECK_ACTIVE

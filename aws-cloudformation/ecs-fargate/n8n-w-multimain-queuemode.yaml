@@ -1092,10 +1092,11 @@ Resources:
               Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
-            # main hands executions to the workers in queue mode, so it starts no runner.
-            # external keeps n8n from logging the internal-mode deprecation warning.
+            # Code nodes run on the workers. external keeps n8n from logging the internal-mode deprecation warning.
             - Name: N8N_RUNNERS_MODE
               Value: external
+            - Name: N8N_RUNNERS_AUTH_TOKEN
+              Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
             - Name: N8N_LOG_LEVEL
               Value: warn
             - Name: N8N_MULTI_MAIN_SETUP_ENABLED
