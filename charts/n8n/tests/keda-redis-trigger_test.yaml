@@ -1,0 +1,61 @@
+suite: 'KEDA Redis trigger'
+templates:
+  - templates/scaledobject-worker.yaml
+  - templates/scaledobject-webhook-processor.yaml
+set:
+  keda.enabled: true
+  webhookProcessor.enabled: true
+  keda.webhookProcessor.enabled: true
+  keda.webhookProcessor.triggers:
+    - type: redis
+      metadata:
+        address: ""
+        listName: "bull:jobs:wait"
+        listLength: "5"
+tests:
+  - it: derives the address from redis.host and redis.port and leaves the database at KEDA's default
+    asserts:
+      - equal:
+          path: spec.triggers[0].metadata.address
+          value: "your-redis-hostname:6379"
+      - notExists:
+          path: spec.triggers[0].metadata.databaseIndex
+
+  - it: reads the queue from redis.database when the address is derived
+    set:
+      redis.database: 2
+    asserts:
+      - equal:
+          path: spec.triggers[0].metadata.databaseIndex
+          value: "2"
+
+  - it: keeps a databaseIndex set on the trigger
+    set:
+      redis.database: 2
+      keda.worker.triggers:
+        - type: redis
+          metadata:
+            address: ""
+            listName: "bull:jobs:wait"
+            databaseIndex: "5"
+    template: templates/scaledobject-worker.yaml
+    asserts:
+      - equal:
+          path: spec.triggers[0].metadata.databaseIndex
+          value: "5"
+
+  - it: leaves a trigger with its own address alone
+    set:
+      redis.database: 2
+      keda.worker.triggers:
+        - type: redis
+          metadata:
+            address: "other-redis:6379"
+            listName: "bull:jobs:wait"
+    template: templates/scaledobject-worker.yaml
+    asserts:
+      - equal:
+          path: spec.triggers[0].metadata.address
+          value: "other-redis:6379"
+      - notExists:
+          path: spec.triggers[0].metadata.databaseIndex
