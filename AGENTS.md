@@ -40,7 +40,7 @@ Most work here is a chart change. Take it in this order:
    - Not breaking: pods rolling on upgrade, which is how `helm upgrade` works here. A bug fix that makes the chart do what its values already say. A new `fail` that rejects a combination of values that never worked, because those installs were already broken and the message names the fix.
    - Take care when changing a default. A new default that meaningfully changes a deployment's performance or behaviour, in a way a user would not reasonably expect from a minor or patch release, belongs on a major.
    - Give a new value a default that leaves today's render unchanged.
-   - When you remove or rename a values key, add it to `n8n.retiredKeys` in `_helpers.tpl` with its replacement, in the same change. Keep it declared in `values.schema.json`, described as retired. Add its transform to `scripts/migrate-values.sh`, with a case in `tests/migrate-values/cases/`.
+   - When you remove or rename a values key, add it to `n8n.retiredKeys` in `_helpers.tpl` with its replacement, in the same change. Keep it declared in `values.schema.json`, described as retired. Add its transform to `charts/n8n/scripts/migrate-values.sh`, with a case in `charts/n8n/tests/migrate-values/cases/`.
    - Call out a roll or a new `fail` in the PR description so it reaches the changelog.
    - A breaking change carries its own upgrade path in the same PR: a guard entry that fails the render on each retired key and names its replacement, the lines in `charts/n8n/UPGRADING.md` that tell users what to change, and the examples migrated to the new values.
 5. Update `values.schema.json` in the same change as `values.yaml`. Use `enum` where a value accepts a fixed set of options rather than leaving it a bare string.

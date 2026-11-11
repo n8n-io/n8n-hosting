@@ -5,7 +5,7 @@ PR: https://github.com/n8n-io/n8n-hosting/pull/288
 
 ## Context
 
-Chart 2.0 retires many values keys, turns nine `extraEnv` lists into `env` maps, and runs n8n 3.0, which renames or removes some environment variables. Decision 0020 makes the render fail on every retired key and name its replacement. That tells a user what to change, but they still make every edit by hand, and most of the edits are mechanical.
+Chart 2.0 retires many values keys, turns eight `extraEnv` lists into `env` maps, moves `config.extraEnvFrom` to `envFrom.shared`, and runs n8n 3.0, which renames or removes some environment variables. Decision 0020 makes the render fail on every retired key and name its replacement. That tells a user what to change, but they still make every edit by hand, and most of the edits are mechanical.
 
 ## Decision
 
@@ -15,6 +15,7 @@ The chart includes `scripts/migrate-values.sh`, which reads a 1.x values file an
 - It ships inside the chart, so `helm pull --untar` hands it over with the version it migrates to.
 - It never reads Secret contents and never generates a secret, as the chart never does. Where a Secret needs a change, the report names it.
 - It is idempotent. Running it over a 2.0 values file changes nothing.
+- An existing install keeps its 1.x behaviour where 2.0 changes how a key is read. A `podSecurityContext.<role>` block replaced the pod defaults in 1.x and merges over `shared` in 2.0, so the script sets each `shared` field the block left out to `null`. It does this only in a file that sets a retired key, because the same block is valid 2.0. Defaults that changed in 2.0 are not pinned to their 1.x values. Existing installs get them, and the report lists them with how to opt out.
 
 CI runs every example from the previous major through the script and renders the result with the chart. The script's tests fail when `n8n.retiredKeys` names a key the script does not handle.
 

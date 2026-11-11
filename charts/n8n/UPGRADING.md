@@ -21,6 +21,7 @@ The script has these limits:
 
 - It reads plain YAML only. It does not read helmfile `.gotmpl` files, or values that Argo CD or another tool generates from templates.
 - It never reads the contents of a Secret. If a Secret needs a change, such as a new key, the report names it. You make the change yourself.
+- It reads one values file. A setting in another values file, such as one you pass with a second `-f`, is not migrated.
 - It does not replace this guide. Review its output and the sections below before you upgrade.
 
 Render the new values file against the new chart before you run `helm upgrade`:
@@ -265,7 +266,7 @@ Move your settings as follows:
 
 `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile are now in `podSecurityContext.shared` too, so you can change or remove them. The container defaults are in `containerSecurityContext.shared`. A `containerSecurityContext.<role>` override from 1.x keeps working, because it now merges over `shared`.
 
-A `podSecurityContext.<role>` block from 1.16 now merges over `shared` instead of replacing it. The render does not detect this. If the block left out a field to remove it, set that field to `null`.
+A `podSecurityContext.<role>` block from 1.16 now merges over `shared` instead of replacing it. The render does not detect this. If the block left out a field to remove it, set that field to `null`. `scripts/migrate-values.sh` sets these nulls for you, so each pod keeps its 1.x security context. Remove them to take the 2.0 defaults.
 
 On OpenShift, the restricted SCC assigns the UID and GID. In 1.x you set `securityContext.enabled: false`, or a `podSecurityContext.<role>` block without the IDs. In 2.0, remove the pinned IDs once for every pod:
 
