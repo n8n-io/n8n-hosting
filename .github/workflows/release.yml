@@ -144,13 +144,17 @@ jobs:
   # A job of its own so the Slack token never shares a runner with the OIDC
   # token publish signs with. It runs only once the chart is pushed and
   # verified, so the post never announces a release users cannot install.
+  # The token is a secret of the release-announce environment, which only
+  # main and release/n8n-* can deploy to, so a pushed branch that happens to
+  # match release/** cannot read it.
   announce:
     needs: [release, publish]
     runs-on: ubuntu-latest
+    environment: release-announce
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           sparse-checkout: |
             charts/n8n/Chart.yaml
