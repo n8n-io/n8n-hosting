@@ -1,7 +1,11 @@
-# Example: HTTPS ingress with optional webhook processor routing.
+# Example: HTTPS ingress on ingress-nginx, with webhook processor routing.
+#
+# The chart sets no controller annotations of its own. The ones below are for
+# ingress-nginx. On another controller, replace them with its equivalents.
+# extra-objects.yaml shows a Traefik IngressRoute.
 #
 # Prerequisites:
-# - An ingress controller installed in the cluster.
+# - ingress-nginx installed in the cluster.
 # - A TLS Secret named n8n-tls in the release namespace, or cert-manager
 #   configured to create it from the annotations below.
 # - External PostgreSQL and Redis services for queue mode.
@@ -41,8 +45,11 @@ ingress:
   className: nginx
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-  sticky:
-    enabled: true
+    # Cookie affinity keeps each browser on one main pod.
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "n8n_affinity"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
   hosts:
     - host: n8n.example.com
       paths:
