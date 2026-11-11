@@ -4,6 +4,14 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.19.0](https://github.com/n8n-io/n8n-hosting/compare/v1.18.0...v1.19.0) (2026-11-11)
+
+
+### Features
+
+* **chart:** bump n8n to 2.46.4 ([#285](https://github.com/n8n-io/n8n-hosting/issues/285)) ([dbcaeb9](https://github.com/n8n-io/n8n-hosting/commit/dbcaeb9a767487902e6666cc4ee174f6316ba87f))
+* **chart:** bump n8n to 2.47.4 ([#292](https://github.com/n8n-io/n8n-hosting/issues/292)) ([6294f6f](https://github.com/n8n-io/n8n-hosting/commit/6294f6fc2db51009001af36ad6ea4ab1f8eb8a04))
+
 ## [1.18.0](https://github.com/n8n-io/n8n-hosting/compare/v1.17.0...v1.18.0) (2026-10-28)
 
 
