@@ -8,6 +8,9 @@ podSecurityContext:
     runAsNonRoot: true
     seccompProfile:
       type: RuntimeDefault
+  webhookProcessor:
+    runAsNonRoot: true
+    fsGroup: 3000
 taskRunners:
   authToken:
     value: example-token

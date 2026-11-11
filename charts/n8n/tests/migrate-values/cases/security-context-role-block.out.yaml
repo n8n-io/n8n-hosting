@@ -14,6 +14,12 @@ podSecurityContext:
     fsGroup: null
     runAsUser: null
     runAsGroup: null
+  webhookProcessor:
+    runAsNonRoot: true
+    fsGroup: 3000
+    runAsUser: null
+    runAsGroup: null
+    seccompProfile: null
 secretRefs:
   env:
     N8N_RUNNERS_AUTH_TOKEN: example-token
