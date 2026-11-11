@@ -4,7 +4,7 @@ This file explains what to change when you move to a new major version of the ch
 
 ## Upgrading to 2.0
 
-Chart 2.0 is still in development. This section grows as each 2.0 change lands, and its guidance may change before 2.0.0 is released.
+Chart 2.0 runs n8n 3.0 and changes values keys and defaults. Work through this section before you upgrade from 1.x.
 
 ### Before you upgrade
 
@@ -17,6 +17,8 @@ helm template n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version
 The render fails on every values key that 2.0 retired, and names the replacement for each one. Work through the list until the render passes. Then read the sections below for any other changes that apply to your install, and run `helm upgrade` with the same values file.
 
 Pass your values file with `-f`. Do not use `--reuse-values`. It keeps the defaults of the chart version you installed as well as your own values, so the 2.0 render fails on 1.x defaults that 2.0 no longer reads. If you no longer have your values file, `helm get values <release> -o yaml` prints the values you set. `--reset-then-reuse-values`, in Helm 3.14 or later, reuses your values with the new chart's defaults, and also works.
+
+`helm install` and `helm upgrade` with no `--version` now resolve to chart 2.x. To stay on 1.x and n8n 2.x, pass a 1.x version. See [decision 0031](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0031-chart-2-0-0-ends-release-candidates.md).
 
 ### Values validation
 

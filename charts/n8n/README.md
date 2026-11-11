@@ -8,7 +8,7 @@ We release a new chart version every week. Each Wednesday, the day after n8n's w
 
 Each chart release pins one n8n version as its `appVersion`, and installs that version by default. Chart versions are numbered separately from n8n versions, so check the [release notes](https://github.com/n8n-io/n8n-hosting/releases) to see which n8n version a release carries.
 
-Chart 1.x installs n8n 2.x. It is maintained on the [`release/n8n-2.x`](https://github.com/n8n-io/n8n-hosting/tree/release/n8n-2.x) branch, and its weekly releases stay on n8n 2.x. Chart 2.0 is being built on `main` and is published as release candidates, `2.0.0-rc.1`, `2.0.0-rc.2` and so on. Helm skips release candidates unless you pass `--devel` or name the exact version, so `helm install` and `helm upgrade` keep resolving to the latest 1.x release.
+Chart 2.x installs n8n 3.x and is released from `main`. Chart 1.x installs n8n 2.x. It is maintained on the [`release/n8n-2.x`](https://github.com/n8n-io/n8n-hosting/tree/release/n8n-2.x) branch, and its weekly releases stay on n8n 2.x. Both lines publish to the same OCI repository. To stay on 1.x, pass a 1.x version to `--version`.
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ Chart 1.x installs n8n 2.x. It is maintained on the [`release/n8n-2.x`](https://
 
 ```bash
 # OCI registry (recommended)
-helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-values.yaml
+helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 2.0.0 -f my-values.yaml
 ```
 
 ### Verify the chart
@@ -54,7 +54,7 @@ Versions released before signing was introduced have no signature, so the comman
 
 4. **Deploy:**
    ```bash
-   helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 1.0.0 -f my-values.yaml
+   helm install n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version 2.0.0 -f my-values.yaml
    ```
 
 ## Architecture
@@ -661,7 +661,7 @@ See [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/char
 
 Chart version bumps are automated via Release Please. Check the [CHANGELOG](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) for breaking changes before upgrading.
 
-Before you move to a new major version, read [UPGRADING.md](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md). It explains how to find the values you must change, and what else each major changes. The guidance for 2.0 is still being written while 2.0 is in development.
+Before you move to a new major version, read [UPGRADING.md](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md). It explains how to find the values you must change, and what else each major changes.
 
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml
