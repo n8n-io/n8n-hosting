@@ -431,7 +431,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `taskRunners.image.digest` | Pin the runner image by digest; replaces `taskRunners.image.tag` when set. With task runners enabled, set both digests or neither | `""` |
 | `imagePullSecrets` | Existing pull Secrets for private image registries, as a list of `- name: <secret>` entries | `[]` |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
-| `queueMode.workerConcurrency` | Jobs per worker, passed as `--concurrency`. Empty uses n8n's default of 10. Fails together with `executions.concurrency.productionLimit`, which n8n uses for workers instead | `null` |
+| `queueMode.workerConcurrency` | Jobs per worker, passed as `--concurrency`. Empty uses n8n's default of 10. Fails together with `N8N_CONCURRENCY_PRODUCTION_LIMIT` in `env.shared` or `env.worker`, which n8n uses for workers instead | `null` |
 | `env.<component>` | Environment variables for `shared`, `main`, `worker`, `webhookProcessor` or `taskRunner` | `{}` |
 | `chartEnvOverrides.<component>` | Replacements for variables the chart sets | `{}` |
 | `envFrom.<component>` | ConfigMaps and Secrets loaded whole | `[]` |
