@@ -2,6 +2,9 @@ ingress:
   enabled: true
   hosts:
     - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
 config:
   extraEnv:
     - name: N8N_WEBHOOK_URL

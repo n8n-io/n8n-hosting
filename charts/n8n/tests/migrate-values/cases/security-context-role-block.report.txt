@@ -1,0 +1,5 @@
+Changed:
+  - Set fsGroup, runAsUser, runAsGroup to null in podSecurityContext.main, so these pods keep their 1.x security context. In 1.x the block replaced the defaults. In 2.0 it merges over podSecurityContext.shared. Remove the nulls to take the 2.0 defaults.
+  - Set fsGroup, runAsUser, runAsGroup to null in podSecurityContext.worker, so these pods keep their 1.x security context. In 1.x the block replaced the defaults. In 2.0 it merges over podSecurityContext.shared. Remove the nulls to take the 2.0 defaults.
+  - Moved taskRunners.authToken.value to secretRefs.env.N8N_RUNNERS_AUTH_TOKEN.
+Review the output before you upgrade. Then render it with helm template.

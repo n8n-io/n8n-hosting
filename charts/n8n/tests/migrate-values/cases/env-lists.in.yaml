@@ -23,8 +23,11 @@ redis:
       value: "debug"
 
 s3:
+  enabled: true
   storage:
-    extraEnv: []
+    extraEnv:
+      - name: AWS_REGION
+        value: eu-west-1
 
 queueMode:
   enabled: true

@@ -1,0 +1,5 @@
+persistence:
+  enabled: true
+  existingClaim: n8n-data
+  accessModes:
+    - ReadWriteOnce

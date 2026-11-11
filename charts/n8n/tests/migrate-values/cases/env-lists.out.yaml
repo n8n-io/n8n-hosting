@@ -5,6 +5,9 @@ config:
 redis:
   host: redis.example.com
 
+s3:
+  enabled: true
+
 queueMode:
   enabled: true
 
@@ -17,6 +20,7 @@ global:
 env:
   shared:
     N8N_LOG_LEVEL: "info"
+    AWS_REGION: eu-west-1
     N8N_SMTP_PASS:
       secretKeyRef:
         name: smtp

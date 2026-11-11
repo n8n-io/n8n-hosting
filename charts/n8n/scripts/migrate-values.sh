@@ -133,6 +133,19 @@ queue_mode() {
   [[ "$(q '.queueMode.enabled')" != "false" ]]
 }
 
+# The chart this script ships in. Its values.yaml holds the 2.0 defaults.
+chart="$(cd "$(dirname "$0")/.." && pwd)"
+[[ -f "$chart/values.yaml" && -f "$chart/templates/_helpers.tpl" ]] || die "Run the copy of this script that ships in the chart, next to its values.yaml and templates/."
+
+# A file that sets a retired key was written for 1.x. A file that sets none
+# could be either, so a transform that would change a valid 2.0 file runs
+# only on a 1.x one.
+written_for_1x=false
+while read -r path; do
+  [[ "$path" == retiredKeysTest.* ]] && continue
+  if present "$path"; then written_for_1x=true; break; fi
+done < <(sed -n '/define "n8n.retiredKeys"/,/end -/s/^- path: //p' "$chart/templates/_helpers.tpl")
+
 # --- extraEnv lists to env maps ---
 
 # Print each entry of a 1.x list in FILE as INDEX<tab>NAME<tab>JSON value.
@@ -302,29 +315,32 @@ if { truthy ingress.enabled && [[ "$(q '.ingress.hosts // [] | length')" != "0" 
   routed=true
 fi
 
-if truthy editor.url || [[ "$routed" == true ]]; then
-  for t in shared main webhookProcessor; do
-    [[ "$(q ".env.$t.N8N_WEBHOOK_URL | tag")" == "!!str" ]] || continue
-    if truthy webhook.url; then
-      check "env.$t.N8N_WEBHOOK_URL is set, and so is webhook.url. The render fails until you remove one."
+# The chart sets both URL variables on every n8n container whenever it has an
+# address: editor.url, webhook.url or a routed host.
+move_url_var() {
+  local var="$1" key="$2" t
+  for t in shared main worker webhookProcessor; do
+    [[ "$(q ".env.$t.$var | tag")" == "!!str" ]] || continue
+    if truthy "$key"; then
+      # In 1.x the list entry came after the chart's value, and won.
+      if [[ "$(val "env.$t.$var")" == "$(val "$key")" ]]; then
+        remove "env.$t.$var" "It repeats $key."
+      else
+        u ".chartEnvOverrides.$t.$var = .env.$t.$var | del(.env.$t.$var)"
+        prune_up "env.$t.$var"
+        changed "Moved env.$t.$var to chartEnvOverrides.$t, which keeps your value over the one the chart sets from $key."
+        check "env.$t.$var differs from $key. The script kept your value on $t pods. Remove chartEnvOverrides.$t.$var if $key is the address you want."
+      fi
     else
-      u ".webhook.url = .env.$t.N8N_WEBHOOK_URL | del(.env.$t.N8N_WEBHOOK_URL)"
-      prune_up "env.$t.N8N_WEBHOOK_URL"
-      changed "Moved env.$t.N8N_WEBHOOK_URL to webhook.url. The chart now sets the variable from webhook.url, or from editor.url and the routed hosts."
+      u ".$key = .env.$t.$var | del(.env.$t.$var)"
+      prune_up "env.$t.$var"
+      changed "Moved env.$t.$var to $key, which the chart sets the variable from."
     fi
   done
-fi
-if [[ "$routed" == true ]]; then
-  for t in shared main webhookProcessor; do
-    [[ "$(q ".env.$t.N8N_EDITOR_BASE_URL | tag")" == "!!str" ]] || continue
-    if truthy editor.url; then
-      check "env.$t.N8N_EDITOR_BASE_URL is set, and so is editor.url. The render fails until you remove one."
-    else
-      u ".editor.url = .env.$t.N8N_EDITOR_BASE_URL | del(.env.$t.N8N_EDITOR_BASE_URL)"
-      prune_up "env.$t.N8N_EDITOR_BASE_URL"
-      changed "Moved env.$t.N8N_EDITOR_BASE_URL to editor.url. The chart now sets the variable from editor.url or the routed hosts."
-    fi
-  done
+}
+if truthy editor.url || truthy webhook.url || [[ "$routed" == true ]]; then
+  move_url_var N8N_WEBHOOK_URL webhook.url
+  move_url_var N8N_EDITOR_BASE_URL editor.url
 fi
 
 if truthy ingress.enabled || truthy httpRoute.enabled; then
@@ -332,7 +348,7 @@ if truthy ingress.enabled || truthy httpRoute.enabled; then
     if [[ "$(q "(.env.$t // {}) | has(\"N8N_PROXY_HOPS\")")" == "true" ]]; then
       u ".chartEnvOverrides.$t.N8N_PROXY_HOPS = .env.$t.N8N_PROXY_HOPS | del(.env.$t.N8N_PROXY_HOPS)"
       prune_up "env.$t.N8N_PROXY_HOPS"
-      changed "Moved env.$t.N8N_PROXY_HOPS to chartEnvOverrides.$t. The chart now sets it to 1 behind an Ingress or HTTPRoute."
+      changed "Moved env.$t.N8N_PROXY_HOPS to chartEnvOverrides.$t, which keeps your value. Without it, the chart sets 1 behind an Ingress or HTTPRoute."
     fi
   done
 fi
@@ -342,9 +358,9 @@ for t in shared main worker webhookProcessor; do
   if truthy s3.enabled; then
     u ".chartEnvOverrides.$t.N8N_DEFAULT_BINARY_DATA_MODE = .env.$t.N8N_DEFAULT_BINARY_DATA_MODE | del(.env.$t.N8N_DEFAULT_BINARY_DATA_MODE)"
     prune_up "env.$t.N8N_DEFAULT_BINARY_DATA_MODE"
-    changed "Moved env.$t.N8N_DEFAULT_BINARY_DATA_MODE to chartEnvOverrides.$t. With s3.enabled, the chart sets the mode to s3."
+    changed "Moved env.$t.N8N_DEFAULT_BINARY_DATA_MODE to chartEnvOverrides.$t, which keeps your mode. Without it, s3.enabled sets the mode to s3."
   elif queue_mode && [[ "$(q ".env.$t.N8N_DEFAULT_BINARY_DATA_MODE")" == "filesystem" ]]; then
-    remove "env.$t.N8N_DEFAULT_BINARY_DATA_MODE" "Queue mode cannot share binary data on each pod's disk, so n8n now uses database."
+    remove "env.$t.N8N_DEFAULT_BINARY_DATA_MODE" "In queue mode, one pod cannot read binary data that another pod wrote to its own disk, so n8n now uses database."
   fi
 done
 
@@ -368,7 +384,7 @@ if present executions.concurrency.productionLimit; then
 fi
 
 if present database.useExternal; then
-  remove database.useExternal "database.type alone chooses the database."
+  remove database.useExternal "database.type chooses the database. Your connection settings stay as they are."
 fi
 if present database.ssl.key; then
   [[ -z "$(val database.ssl.key)" ]] || check "database.ssl.key was set, but the chart never read it. To use a client key, put it in a Secret. Then set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey."
@@ -431,21 +447,22 @@ if present ingress.sticky; then
   fi
 fi
 
-# serviceAccount.awsRoleArn: 1.x rendered it as the IRSA annotation. An
+# serviceAccount.awsRoleArn: 1.x rendered it as the IRSA annotation, only on a
+# ServiceAccount it created, with s3.enabled and s3.auth.autoDetect. An
 # annotation you set yourself won over it, and still does.
 if present serviceAccount.awsRoleArn; then
   arn="$(val serviceAccount.awsRoleArn)"
   if [[ -z "$arn" ]]; then
     remove serviceAccount.awsRoleArn "It was empty."
+  elif [[ "$(q '.serviceAccount.create')" == "false" ]] || ! truthy s3.enabled || ! truthy s3.auth.autoDetect; then
+    remove serviceAccount.awsRoleArn "1.x did not render it with your values, because it needs serviceAccount.create, s3.enabled and s3.auth.autoDetect."
+    check "serviceAccount.awsRoleArn was removed without adding an annotation. If the pods need that IAM role, set eks.amazonaws.com/role-arn in serviceAccount.annotations."
   elif [[ "$(q '(.serviceAccount.annotations // {}) | has("eks.amazonaws.com/role-arn")')" == "true" ]]; then
     remove serviceAccount.awsRoleArn "serviceAccount.annotations already sets eks.amazonaws.com/role-arn, which won in 1.x."
   else
     u '.serviceAccount.annotations["eks.amazonaws.com/role-arn"] = .serviceAccount.awsRoleArn | del(.serviceAccount.awsRoleArn)'
     prune_up serviceAccount.awsRoleArn
     changed "Moved serviceAccount.awsRoleArn to the eks.amazonaws.com/role-arn annotation in serviceAccount.annotations."
-    if [[ "$(q '.serviceAccount.create')" == "false" ]]; then
-      check "serviceAccount.create is false, so the chart does not annotate the ServiceAccount. Annotate the existing one with eks.amazonaws.com/role-arn."
-    fi
   fi
 fi
 
@@ -463,9 +480,25 @@ if present securityContext; then
     u 'del(.securityContext)'
     changed "Moved securityContext to podSecurityContext.shared."
   fi
+fi
+
+# A 1.x podSecurityContext.<role> block replaced the pod defaults, and a 2.0
+# one merges over podSecurityContext.shared. Each shared field the block left
+# out is set to null, so the pods keep the context they had in 1.x.
+if [[ "$written_for_1x" == true ]]; then
+  DEFAULTS="$("$YQ" -o=json -I=0 '.podSecurityContext.shared' "$chart/values.yaml")"
+  export DEFAULTS
   for role in main worker webhookProcessor; do
-    if [[ "$(q "(.podSecurityContext.$role | tag == \"!!map\") and (.podSecurityContext.$role | length > 0)")" == "true" ]]; then
-      check "podSecurityContext.$role now merges over podSecurityContext.shared instead of replacing it. If the block left out a field to remove it, set that field to null."
+    [[ "$(q "(.podSecurityContext.$role | tag == \"!!map\") and (.podSecurityContext.$role | length > 0)")" == "true" ]] || continue
+    nulled=()
+    while read -r k; do
+      [[ -n "$k" ]] || continue
+      u ".podSecurityContext.$role.$k = null"
+      nulled+=("$k")
+    done < <(q ". as \$root | select((.podSecurityContext | has(\"shared\") | not) or (.podSecurityContext.shared | tag == \"!!map\")) | (strenv(DEFAULTS) | from_json) * (.podSecurityContext.shared // {}) | to_entries | .[] | select(.value != null) | .key | select(. as \$k | \$root.podSecurityContext.$role | has(\$k) | not)")
+    if [[ ${#nulled[@]} -gt 0 ]]; then
+      list="$(printf ', %s' "${nulled[@]}")"
+      changed "Set ${list#, } to null in podSecurityContext.$role, so these pods keep their 1.x security context. In 1.x the block replaced the defaults. In 2.0 it merges over podSecurityContext.shared. Remove the nulls to take the 2.0 defaults."
     fi
   done
 fi
@@ -497,7 +530,9 @@ fi
 if present taskRunners.authToken.value; then
   token_set=false
   if [[ -n "$(val taskRunners.authToken.value)" ]]; then
-    if truthy secretRefs.existingSecret; then
+    if truthy taskRunners.authToken.existingSecret; then
+      check "taskRunners.authToken.value was removed. 1.x read the token from taskRunners.authToken.existingSecret instead, and still does."
+    elif truthy secretRefs.existingSecret; then
       check "taskRunners.authToken.value was set. Add the token to the Secret $(val secretRefs.existingSecret) under the key N8N_RUNNERS_AUTH_TOKEN. The script does not write to Secrets."
     elif present secretRefs.env.N8N_RUNNERS_AUTH_TOKEN; then
       check "taskRunners.authToken.value was removed. secretRefs.env.N8N_RUNNERS_AUTH_TOKEN already sets the token."
@@ -522,9 +557,8 @@ if present taskRunners.nativePythonRunner; then
   remove taskRunners.nativePythonRunner "The task runner image decides whether Python runs."
 fi
 
-# Worker probes, for probes.worker.liveness.type and
-# probes.worker.readiness.type: a command runs as an exec probe, and no
-# command probes the health endpoint.
+# Worker probes: a command runs as an exec probe, and no command probes the
+# health endpoint.
 noop_probe='["/bin/sh","-c","pgrep -f '"'"'n8n worker'"'"' > /dev/null"]'
 for p in liveness readiness; do
   path="probes.worker.$p"
@@ -554,6 +588,16 @@ if [[ "$(q '.redis.healthCheck.enabled')" == "false" ]]; then
   fi
 fi
 
+# persistence: with an existing claim, the chart creates no PVC, so size and
+# storageClassName did nothing. 2.0 fails the render on them.
+if truthy persistence.existingClaim; then
+  for k in size storageClassName; do
+    if present "persistence.$k"; then
+      remove "persistence.$k" "persistence.existingClaim is set, so the chart creates no PVC and never used it."
+    fi
+  done
+fi
+
 # s3.storage.mode: s3.enabled now sets the mode.
 if present s3.storage.mode; then
   if truthy s3.enabled && [[ "$(val s3.storage.mode)" != "s3" ]] &&
@@ -570,10 +614,10 @@ if [[ -n "$changes" ]]; then
   fi
   if [[ "$(q '.taskRunners.enabled')" != "false" ]] && ! truthy secretRefs.existingSecret &&
     ! truthy secretRefs.env.N8N_RUNNERS_AUTH_TOKEN && ! truthy taskRunners.authToken.existingSecret; then
-    check "Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32, or set taskRunners.enabled: false. The render fails until you do."
+    check "Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32. Or set taskRunners.authToken.existingSecret to a Secret that holds it under N8N_RUNNERS_AUTH_TOKEN. Or set taskRunners.enabled: false. The render fails until you do one of these."
   elif [[ "$(q '.taskRunners.enabled')" != "false" ]] && truthy secretRefs.existingSecret &&
     ! truthy taskRunners.authToken.existingSecret && [[ "$checks" != *N8N_RUNNERS_AUTH_TOKEN* ]]; then
-    check "Task runners are on by default in 2.0 and need a token. Add N8N_RUNNERS_AUTH_TOKEN to the Secret $(val secretRefs.existingSecret), or set taskRunners.enabled: false. The chart cannot see into the Secret, so the render passes, but the pods do not start without the key."
+    check "Task runners are on by default in 2.0 and need a token. Add N8N_RUNNERS_AUTH_TOKEN to the Secret $(val secretRefs.existingSecret). Or set taskRunners.authToken.existingSecret to another Secret that holds it, or set taskRunners.enabled: false. The chart cannot see into the Secret, so the render passes, but the pods do not start without the key."
   fi
   if truthy networkPolicy.enabled && [[ "$(q '.networkPolicy.egress // [] | length')" == "0" ]]; then
     check "networkPolicy.egress is empty, so the NetworkPolicy now allows all egress. UPGRADING.md has the 1.x rules to keep them."

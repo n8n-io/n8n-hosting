@@ -5,7 +5,7 @@
 # expected values, and NAME.report.txt, the expected report. Each output is
 # migrated again to check that a second run changes nothing. So is every
 # example in examples/, which is already written for this chart. Every key in
-# n8n.retiredKeys must appear in the script.
+# n8n.retiredKeys needs a case that migrates it.
 #
 # Usage: run.sh [-u]
 #   -u  rewrite the expected files from the current output.
@@ -27,11 +27,25 @@ fail() {
   failed=1
 }
 
-# Every retired key needs a transform. The retiredKeysTest entries are
-# fixtures for the chart's own tests.
+# True when the dotted path is present in the YAML file, whatever its value.
+has_path() {
+  local parent="" leaf="$2"
+  if [[ "$2" == *.* ]]; then parent="${2%.*}"; leaf="${2##*.}"; fi
+  [[ "$("${YQ:-yq}" "((.${parent} | select(tag == \"!!map\")) // {}) | has(\"$leaf\")" "$1")" == "true" ]]
+}
+
+# Every retired key needs a case that sets it and an expected output without
+# it. The retiredKeysTest entries are fixtures for the chart's own tests.
 while read -r path; do
   [[ "$path" == retiredKeysTest.* ]] && continue
-  grep -qF "$path" "$script" || fail "n8n.retiredKeys retires $path, but migrate-values.sh does not handle it"
+  covered=false
+  for in in "$here"/cases/*.in.yaml; do
+    if has_path "$in" "$path" && ! has_path "${in%.in.yaml}.out.yaml" "$path"; then
+      covered=true
+      break
+    fi
+  done
+  [[ "$covered" == true ]] || fail "n8n.retiredKeys retires $path, but no case in cases/ migrates it"
 done < <(sed -n '/define "n8n.retiredKeys"/,/end -/s/^- path: //p' "$chart/templates/_helpers.tpl")
 
 for in in "$here"/cases/*.in.yaml; do
