@@ -1,0 +1,37 @@
+# Variables the chart sets, in the extraEnv lists. config.extraEnv came after
+# the chart's entries in 1.x, and webhook.extraEnv came before them on main.
+queueMode:
+  enabled: true
+
+webhookProcessor:
+  enabled: true
+
+config:
+  extraEnv:
+    - name: EXECUTIONS_TIMEOUT_MAX
+      value: "7200"
+    - name: TZ
+      value: Europe/Berlin
+    - name: DB_POSTGRESDB_HOST
+      valueFrom:
+        secretKeyRef:
+          name: db-host
+          key: host
+    - name: N8N_ENCRYPTION_KEY
+      valueFrom:
+        secretKeyRef:
+          name: n8n-key
+          key: key
+
+webhook:
+  extraEnv:
+    - name: QUEUE_BULL_REDIS_HOST
+      value: redis-webhooks.acme.internal
+
+redis:
+  extraEnv:
+    - name: EXECUTIONS_DATA_SAVE_ON_SUCCESS
+      value: none
+
+taskRunners:
+  enabled: false

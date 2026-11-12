@@ -364,6 +364,239 @@ for t in shared main worker webhookProcessor; do
   fi
 done
 
+# Every other variable the 2.0 chart sets: name, the pods it sets it on, where
+# 1.x set it (early, before the extraEnv lists; late, after some of them; or
+# secret, read from a Secret), the condition, and the value that controls it.
+# Pods: n8n is main, worker and webhookProcessor; runner is the task-runner
+# sidecar; hasRunner is the pods that carry it. Keep it in step with
+# n8n.chartEnv and n8n.secretEnv in templates/_env.tpl.
+chart_vars='
+TZ n8n early always config.timezone
+N8N_DEPLOYMENT_ARTIFACT n8n early always config.deploymentArtifact
+N8N_PORT n8n late always service.port
+N8N_ENCRYPTION_KEY_FILE n8n late key_file secretRefs.env.N8N_ENCRYPTION_KEY_FILE
+DB_TYPE n8n early always database.type
+DB_POSTGRESDB_DATABASE n8n early postgres database.database
+DB_POSTGRESDB_HOST n8n early postgres database.host
+DB_POSTGRESDB_PORT n8n early postgres database.port
+DB_POSTGRESDB_USER n8n early postgres database.user
+DB_POSTGRESDB_SCHEMA n8n early db_schema database.schema
+DB_POSTGRESDB_SSL_ENABLED n8n early ssl database.ssl.enabled
+DB_POSTGRESDB_SSL_CA n8n early ssl_ca database.ssl.ca
+DB_POSTGRESDB_SSL_CERT n8n early ssl_cert database.ssl.cert
+DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED n8n early ssl_insecure database.ssl.rejectUnauthorized
+EXECUTIONS_MODE n8n early queue queueMode.enabled
+OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS n8n early queue queueMode.enabled
+QUEUE_BULL_REDIS_CLUSTER_NODES n8n early redis_nodes redis.clusterNodes
+QUEUE_BULL_REDIS_HOST n8n early redis_host redis.host
+QUEUE_BULL_REDIS_PORT n8n early redis_host redis.port
+QUEUE_BULL_REDIS_USERNAME n8n early redis_username redis.username
+QUEUE_BULL_REDIS_DB n8n early redis_database redis.database
+QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD n8n early redis_timeout redis.timeout
+QUEUE_BULL_PREFIX n8n early redis_prefix redis.prefix
+QUEUE_BULL_REDIS_TLS n8n early redis_tls redis.tls
+QUEUE_BULL_REDIS_DUALSTACK n8n early redis_dualstack redis.dualstack
+QUEUE_WORKER_LOCK_DURATION n8n early queue redis.worker.lockDuration
+QUEUE_WORKER_LOCK_RENEW_TIME n8n early queue redis.worker.lockRenewTime
+QUEUE_WORKER_STALLED_INTERVAL n8n early queue redis.worker.stalledInterval
+N8N_GRACEFUL_SHUTDOWN_TIMEOUT n8n early queue redis.worker.timeout
+N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME n8n late s3 s3.bucket.name
+N8N_EXTERNAL_STORAGE_S3_BUCKET_REGION n8n late s3 s3.bucket.region
+N8N_EXTERNAL_STORAGE_S3_HOST n8n late s3_host s3.bucket.host
+N8N_EXTERNAL_STORAGE_S3_AUTH_AUTO_DETECT n8n late s3_auto s3.auth.autoDetect
+N8N_EXTERNAL_STORAGE_S3_ACCESS_KEY n8n late s3_key s3.auth.accessKeyId
+AWS_ACCESS_KEY_ID n8n late s3_key s3.auth.accessKeyId
+N8N_EXTERNAL_STORAGE_S3_FORCE_PATH_STYLE n8n late s3_path_style s3.storage.forcePathStyle
+N8N_MULTI_MAIN_SETUP_ENABLED main early multi_main multiMain.enabled
+N8N_MULTI_MAIN_SETUP_KEY_TTL main early multi_main multiMain.setup.keyTtl
+N8N_MULTI_MAIN_SETUP_CHECK_INTERVAL main early multi_main multiMain.setup.checkInterval
+N8N_DISABLE_PRODUCTION_MAIN_PROCESS main early no_main_webhooks webhookProcessor.disableProductionWebhooksOnMainProcess
+N8N_RUNNERS_MODE hasRunner late always taskRunners.mode
+QUEUE_HEALTH_CHECK_ACTIVE worker early health_check redis.healthCheck.enabled
+QUEUE_HEALTH_CHECK_PORT worker early health_check redis.healthCheck.port
+EXECUTIONS_TIMEOUT mainWorker late execution_timeout executions.timeout
+EXECUTIONS_TIMEOUT_MAX mainWorker late always executions.timeoutMax
+EXECUTIONS_DATA_SAVE_ON_ERROR mainWorker late always executions.data.saveOnError
+EXECUTIONS_DATA_SAVE_ON_SUCCESS mainWorker late always executions.data.saveOnSuccess
+EXECUTIONS_DATA_SAVE_ON_PROGRESS mainWorker late always executions.data.saveOnProgress
+EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS mainWorker late always executions.data.saveManualExecutions
+EXECUTIONS_DATA_PRUNE mainWorker late always executions.pruning.enabled
+EXECUTIONS_DATA_MAX_AGE mainWorker late always executions.pruning.maxAge
+EXECUTIONS_DATA_PRUNE_MAX_COUNT mainWorker late always executions.pruning.maxCount
+EXECUTIONS_DATA_HARD_DELETE_BUFFER mainWorker late always executions.pruning.hardDeleteBuffer
+EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL mainWorker late always executions.pruning.hardDeleteInterval
+EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL mainWorker late always executions.pruning.softDeleteInterval
+N8N_RUNNERS_TASK_BROKER_URI runner late always taskRunners.broker.port
+N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT runner late always taskRunners.launcher.autoShutdownTimeout
+N8N_RUNNERS_LAUNCHER_LOG_LEVEL runner late always taskRunners.launcher.logLevel
+N8N_ENCRYPTION_KEY n8n secret encryption_key secretRefs.existingSecret
+DB_POSTGRESDB_PASSWORD n8n secret postgres database.passwordSecret
+QUEUE_BULL_REDIS_PASSWORD n8n secret redis_password redis.passwordSecret
+N8N_EXTERNAL_STORAGE_S3_ACCESS_SECRET n8n secret s3_secret s3.auth.secretAccessKeySecret
+AWS_SECRET_ACCESS_KEY n8n secret s3_secret s3.auth.secretAccessKeySecret
+N8N_LICENSE_ACTIVATION_KEY n8n secret license_key license.existingSecret
+N8N_RUNNERS_AUTH_TOKEN hasRunner secret always secretRefs.env.N8N_RUNNERS_AUTH_TOKEN
+'
+
+# The value at a path, or the chart's default when the values do not set it.
+dval() {
+  if present "$1"; then val "$1"; else "$YQ" ".$1 // \"\" | select((tag != \"!!map\") and (tag != \"!!seq\"))" "$chart/values.yaml"; fi
+}
+dtruthy() {
+  local v
+  v="$(dval "$1")"
+  [[ -n "$v" && "$v" != "false" && "$v" != "0" ]]
+}
+
+# Whether the 2.0 chart sets a variable, by the condition in chart_vars.
+chart_condition() {
+  case "$1" in
+    always) true ;;
+    key_file) dtruthy secretRefs.env.N8N_ENCRYPTION_KEY_FILE ;;
+    encryption_key) ! dtruthy secretRefs.env.N8N_ENCRYPTION_KEY_FILE ;;
+    postgres) [[ "$(dval database.type)" == "postgresdb" ]] ;;
+    db_schema) chart_condition postgres && dtruthy database.schema ;;
+    ssl) chart_condition postgres && dtruthy database.ssl.enabled ;;
+    ssl_ca) chart_condition ssl && dtruthy database.ssl.ca ;;
+    ssl_cert) chart_condition ssl && dtruthy database.ssl.cert ;;
+    ssl_insecure) chart_condition ssl && [[ "$(dval database.ssl.rejectUnauthorized)" == "false" ]] ;;
+    queue) dtruthy queueMode.enabled ;;
+    redis_nodes) chart_condition queue && dtruthy redis.clusterNodes ;;
+    redis_host) chart_condition queue && ! dtruthy redis.clusterNodes ;;
+    redis_username) chart_condition queue && dtruthy redis.username ;;
+    redis_database) chart_condition queue && dtruthy redis.database ;;
+    redis_timeout) chart_condition queue && dtruthy redis.timeout ;;
+    redis_prefix) chart_condition queue && dtruthy redis.prefix ;;
+    redis_tls) chart_condition queue && dtruthy redis.tls ;;
+    redis_dualstack) chart_condition queue && dtruthy redis.dualstack ;;
+    redis_password) chart_condition queue && dtruthy redis.passwordSecret.name && dtruthy redis.passwordSecret.key ;;
+    s3) dtruthy s3.enabled ;;
+    s3_host) chart_condition s3 && dtruthy s3.bucket.host ;;
+    s3_auto) chart_condition s3 && dtruthy s3.auth.autoDetect ;;
+    s3_key) chart_condition s3 && ! dtruthy s3.auth.autoDetect && dtruthy s3.auth.accessKeyId ;;
+    s3_secret) chart_condition s3 && ! dtruthy s3.auth.autoDetect && dtruthy s3.auth.secretAccessKeySecret.name ;;
+    s3_path_style) chart_condition s3 && dtruthy s3.storage.forcePathStyle ;;
+    multi_main) dtruthy multiMain.enabled && dtruthy license.enabled ;;
+    no_main_webhooks) dtruthy webhookProcessor.enabled && dtruthy webhookProcessor.disableProductionWebhooksOnMainProcess ;;
+    health_check) dtruthy redis.healthCheck.enabled ;;
+    execution_timeout) dtruthy executions.timeout && [[ "$(dval executions.timeout)" != "-1" ]] ;;
+    license_key) dtruthy license.enabled && { dtruthy license.activationKey || dtruthy license.existingSecret.name; } ;;
+  esac
+}
+
+# The pods 2.0 renders, as n8n.envComponents and n8n.hasTaskRunner decide.
+rendered="main"
+if dtruthy queueMode.enabled && dtruthy queueMode.workerReplicaCount; then rendered+=" worker"; fi
+if dtruthy queueMode.enabled && dtruthy webhookProcessor.enabled; then rendered+=" webhookProcessor"; fi
+runner_pods=""
+if dtruthy taskRunners.enabled; then
+  if dtruthy queueMode.enabled; then
+    [[ " $rendered " == *" worker "* ]] && runner_pods="worker"
+  else
+    runner_pods="main"
+  fi
+fi
+
+# The pods among $2 that a chart_vars scope covers.
+scope_pods() {
+  local c out=""
+  for c in $2; do
+    case "$1" in
+      n8n) [[ "$c" != taskRunner ]] ;;
+      mainWorker) [[ "$c" == main || "$c" == worker ]] ;;
+      hasRunner) [[ " $runner_pods " == *" $c "* ]] ;;
+      runner) [[ "$c" == taskRunner ]] ;;
+      *) [[ "$c" == "$1" ]] ;;
+    esac && out+="$c "
+  done
+  echo "$out"
+}
+
+# Whether the value from an extraEnv list won over the chart's on a pod in 1.x.
+# Kubernetes takes the last entry of a name, and webhook.extraEnv came first on
+# main, while redis.extraEnv, s3.storage.extraEnv and webhook.extraEnv on
+# webhook processors came before the late variables.
+list_won_in_1x() {
+  local pod="$1" name="$2" group="$3" order src="" s
+  case "$pod" in
+    main) order="webhook.extraEnv redis.extraEnv s3.storage.extraEnv executions.extraEnv config.extraEnv" ;;
+    worker) order="redis.extraEnv s3.storage.extraEnv executions.extraEnv config.extraEnv queueMode.workerExtraEnv" ;;
+    webhookProcessor) order="redis.extraEnv webhook.extraEnv s3.storage.extraEnv config.extraEnv webhookProcessor.extraEnv" ;;
+    *) order="taskRunners.extraEnv" ;;
+  esac
+  for s in $order; do
+    if applied_in_1x "$s" && list_entries "$input" "$s" | cut -f2 | grep -qxF "$name"; then src="$s"; fi
+  done
+  case "$src" in
+    webhook.extraEnv) [[ "$pod" != main && "$group" == early ]] ;;
+    redis.extraEnv) [[ "$group" == early ]] ;;
+    s3.storage.extraEnv) [[ "$group" == early || "$name" == N8N_EXTERNAL_STORAGE_S3_* || "$name" == AWS_* ]] ;;
+    *) true ;;
+  esac
+}
+
+# Each env map and variable the values set, as MAP.NAME.
+env_set="$(q '(.env // {}) | to_entries[] | select(.value | tag == "!!map") | .key as $m | .value | keys[] | $m + "." + .')"
+while read -r name scope group cond from; do
+  [[ -n "$name" ]] || continue
+  grep -q "\.$name\$" <<< "$env_set" || continue
+  export N="$name"
+  for t in shared main worker webhookProcessor taskRunner; do
+    grep -qxF "$t.$name" <<< "$env_set" || continue
+    if [[ "$t" == shared ]]; then pods="$(scope_pods n8n "$rendered")"
+    elif [[ "$t" == taskRunner ]]; then pods="${runner_pods:+taskRunner}"
+    else pods="$(scope_pods "$t" "$rendered")"; fi
+    set_on="$(scope_pods "$scope" "$pods")"
+    if [[ -z "$set_on" ]] || ! chart_condition "$cond"; then continue; fi
+    if [[ "$group" == secret ]]; then
+      remove "env.$t.$name" "The chart reads it from a Secret."
+      check "env.$t.$name was removed, because the chart reads $name from a Secret. Set $from to choose the value."
+      continue
+    fi
+    scalar=false
+    case "$(q ".env.${t}[strenv(N)] | tag")" in '!!str' | '!!int' | '!!bool' | '!!float') scalar=true ;; esac
+    kept="" lost=""
+    for c in $set_on; do
+      if list_won_in_1x "$c" "$name" "$group"; then kept+="$c "; else lost+="$c "; fi
+    done
+    # Pods the chart does not set it on keep the value through their env map.
+    elsewhere=""
+    for c in $pods; do
+      [[ " $set_on " == *" $c "* ]] && continue
+      if [[ "$(q "(.env.$c // {}) | has(strenv(N))")" == "false" ]]; then
+        u ".env.${c}[strenv(N)] = .env.shared[strenv(N)]"
+        elsewhere+="${elsewhere:+, }env.$c"
+      fi
+    done
+    moved=""
+    if [[ -n "$kept" && "$scalar" == true ]]; then
+      if [[ "$t" == shared && -z "$lost" ]]; then targets="shared"; else targets="$kept"; fi
+      for c in $targets; do
+        if [[ "$(q "(.chartEnvOverrides.$c // {}) | has(strenv(N))")" == "false" ]]; then
+          u ".chartEnvOverrides.${c}[strenv(N)] = .env.${t}[strenv(N)]"
+        fi
+        moved+="${moved:+, }chartEnvOverrides.$c"
+      done
+    elif [[ -n "$kept" ]]; then
+      check "env.$t.$name was a reference, and chartEnvOverrides takes only literal values. The script removed it, so the chart sets $name from $from. Set $from to choose the value."
+    fi
+    u "del(.env.${t}[strenv(N)])"
+    prune_up "env.$t.$name"
+    lost="${lost% }"
+    lost_note=""
+    [[ -z "$lost" ]] || lost_note=" On ${lost// / and } pods the chart's value won in 1.x, and still does."
+    if [[ -n "$moved" ]]; then
+      changed "Moved env.$t.$name to $moved${elsewhere:+ and $elsewhere}, which keeps your value over the one the chart sets from $from. To drop the override, set $from instead.$lost_note"
+    elif [[ -n "$elsewhere" ]]; then
+      changed "Moved env.$t.$name to $elsewhere, the pods the chart does not set it on. The chart sets it from $from.$lost_note"
+    elif [[ -n "$lost" ]]; then
+      changed "Removed env.$t.$name. The chart sets it from $from, and its value won over yours in 1.x."
+    else
+      changed "Removed env.$t.$name. The chart sets it from $from."
+    fi
+  done
+done <<< "$chart_vars"
+
 # --- Retired values keys ---
 
 # executions.concurrency.productionLimit: n8n uses the limit as each worker's

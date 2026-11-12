@@ -133,7 +133,7 @@ Remove each list once its entries have moved, including empty lists. The render 
 
 Check these behaviour changes:
 
-- **A variable the chart sets cannot go in an `env` map.** The render fails and names the values key that sets it. Set that key instead. To replace the chart's value on purpose, use `chartEnvOverrides.<component>`. The chart lists the overrides in effect after install.
+- **A variable the chart sets cannot go in an `env` map.** The render fails and names the values key that sets it. Set that key instead. To replace the chart's value on purpose, use `chartEnvOverrides.<component>`. The chart lists the overrides in effect after install. `scripts/migrate-values.sh` moves such a variable from your `extraEnv` lists to `chartEnvOverrides` where your value won in 1.x, and removes it where the chart's value won.
 - **`envFrom` refs now win over the chart's ConfigMap values.** In 1.x the chart's variables took precedence over `config.extraEnvFrom`. In 2.0, `envFrom.shared` and `envFrom.<component>` load after the chart's ConfigMaps, so a key in them replaces the chart's value. Variables the chart reads from a Secret, such as the encryption key and database password, are in the container's `env` list and still win. Check that the ConfigMaps and Secrets you load hold only the keys you mean to set.
 - **`webhook.timeout` is removed.** n8n never read the variable it set, so it had no effect. Remove it from your values.
 
