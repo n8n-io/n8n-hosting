@@ -4,16 +4,34 @@ This file explains what to change when you move to a new major version of the ch
 
 ## Upgrading to 2.0
 
-Chart 2.0 is still in development. This section grows as each 2.0 change lands, and its guidance may change before 2.0.0 is released.
+Chart 2.0 is still in development. Its guidance may change before 2.0.0 is released.
 
-### Before you upgrade
+Chart 2.0 runs n8n 3.0, so this upgrade moves both the chart and n8n. Follow the steps below in order. The sections after them describe each change, and the table in [Which sections apply to you](#which-sections-apply-to-you) tells you which ones to read.
 
-The chart includes a script that migrates a 1.x values file to 2.0. Pull the chart. Then run the script over your values file:
+### Upgrade steps
 
-```bash
-helm pull oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> --untar
-bash n8n/scripts/migrate-values.sh my-values.yaml > my-values-2.0.yaml
-```
+1. **Fix what n8n 3.0 breaks in your instance.** Open the Migration Report in n8n, under **Settings > Migration Report**, as an instance owner or admin. It lists the workflows and instance settings that n8n 3.0 breaks. Fix the issues marked "Upgrade blocked" and "Executions will fail" first. Some instance issues are environment variables, which you change in your values file in step 3. See n8n's [Migration Report guide](https://docs.n8n.io/changelog/v30-migration-tool) and [3.0 breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes/).
+2. **Back up your database.** The move to n8n 3.0 is one way. To go back to n8n 2.x, you restore this backup. Follow n8n's [Back up and restore](https://docs.n8n.io/deploy/host-n8n/keep-n8n-running/backup-and-restore/) guide. Keep the Secret that holds `N8N_ENCRYPTION_KEY` with the backup, because a restored database cannot be decrypted without it. See [Roll back](#roll-back).
+3. **Migrate your values file.** Some values have changes with the 2.0 release. For your convenience, we've provided a migration script to help migrate existing values files. 
+Pull the chart, and run the [migration script](#the-migration-script) over your values file. It will produce a report and a new values file for you to review.
+
+   ```bash
+   helm pull oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> --untar
+   bash n8n/scripts/migrate-values.sh my-values.yaml > my-values-2.0.yaml
+   ```
+
+4. **Render the new values file** against the new chart:
+
+   ```bash
+   helm template n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values-2.0.yaml > /dev/null
+   ```
+
+   The render will fail on any value key that 2.0 retired, and will name the replacement for each one.
+5. **Read the sections that apply to you.** Start with [Changes the render does not catch](#changes-the-render-does-not-catch). A passing render does not mean these are handled.
+6. **Upgrade.** Run `helm upgrade` with the new values file, passed with `-f`. We do not recommend using `--reuse-values`, as it keeps the defaults of the chart version you installed as well as your own values, so the 2.0 render will likely fail on 1.x defaults that 2.0 no longer reads. If you no longer have your values file, `helm get values <release> -o yaml` prints the values you set. `--reset-then-reuse-values`, in Helm 3.14 or later, reuses your values with the new chart's defaults, and also works.
+7. **Check the upgrade.** See [Check the upgrade](#check-the-upgrade).
+
+### The migration script
 
 The script needs [yq](https://github.com/mikefarah/yq) v4. It moves or removes every values key that 2.0 retired, turns the `extraEnv` lists into `env` maps, and renames or removes the environment variables that n8n 3.0 no longer reads. It prints a report of what it changed, and of what you need to check yourself. Where it cannot decide for you, it keeps the 1.x behaviour and says so in the report. Keys it does not know pass through unchanged. See [decision 0030](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0030-a-script-migrates-1x-values.md).
 
@@ -22,74 +40,91 @@ The script has these limits:
 - It reads plain YAML only. It does not read helmfile `.gotmpl` files, or values that Argo CD or another tool generates from templates.
 - It never reads the contents of a Secret. If a Secret needs a change, such as a new key, the report names it. You make the change yourself.
 - It reads one values file. A setting in another values file, such as one you pass with a second `-f`, is not migrated.
-- It does not replace this guide. Review its output and the sections below before you upgrade.
 
-Render the new values file against the new chart before you run `helm upgrade`:
+### Which sections apply to you
 
-```bash
-helm template n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values-2.0.yaml > /dev/null
-```
+Every install needs [Values validation](#values-validation), [Environment variables](#environment-variables), [Task runners](#task-runners) and [n8n 3.0](#n8n-30). Read the others when your install matches the row.
 
-The render fails on every values key that 2.0 retired, and names the replacement for each one. If you skip the script, work through that list until the render passes. Then read the sections below for any other changes that apply to your install, and run `helm upgrade` with the new values file.
+| If your install | Read |
+|---|---|
+| Runs in queue mode | [Worker concurrency](#worker-concurrency), [Worker probes](#worker-probes) |
+| Sets `secretRefs.existingSecret` | [Secrets and host settings](#secrets-and-host-settings) |
+| Sets `database.useExternal`, `redis.useExternal` or `database.type: sqlite` | [Database](#database) |
+| Sets `s3.enabled: true` | [Binary data and S3](#binary-data-and-s3) |
+| Has an Ingress or HTTPRoute, or sets `editor.url`, `webhook.url` or `webhookProcessor.enabled` | [Ingress and cloud integration](#ingress-and-cloud-integration) |
+| Runs on EKS with an IAM role, or uses ingress-nginx sticky sessions | [Ingress and cloud integration](#ingress-and-cloud-integration) |
+| Runs on OpenShift, or sets `securityContext` or `podSecurityContext` | [Security contexts](#security-contexts) |
+| Sets `networkPolicy.enabled: true` | [Network policy](#network-policy) |
+| Sets `persistence.enabled: true`, or was installed with Helm 4 | [Persistence](#persistence), and [Storage directory](#storage-directory) under n8n 3.0 |
+| Adds containers with `extraContainers` or `extraInitContainers` | [Pod defaults](#pod-defaults), [Security contexts](#security-contexts) |
+| Mounts its own task runner config, or builds its own n8n im0age | [Image changes](#image-changes) |
 
-Pass your values file with `-f`. Do not use `--reuse-values`. It keeps the defaults of the chart version you installed as well as your own values, so the 2.0 render fails on 1.x defaults that 2.0 no longer reads. If you no longer have your values file, `helm get values <release> -o yaml` prints the values you set. `--reset-then-reuse-values`, in Helm 3.14 or later, reuses your values with the new chart's defaults, and also works.
+### Changes the render does not catch
+
+The render fails on every retired key, but these changes pass the render and may change how your install behaves. Check each one that applies to you.
+
+- `envFrom` refs now win over the chart's ConfigMap values. See [Environment variables](#environment-variables).
+- With `secretRefs.existingSecret`, the Secret needs a task runner token, or the pods do not start. See [Task runners](#task-runners).
+- Task runners are on by default, and add a container to each worker pod, or to main in standalone mode. See [Task runners](#task-runners).
+- With `s3.enabled: true`, n8n now stores binary data in the bucket. See [Binary data and S3](#binary-data-and-s3).
+- Webhook URLs can move to another scheme or host. See [Ingress and cloud integration](#ingress-and-cloud-integration).
+- With webhook processors and an Ingress, the chart now renders a webhook Ingress. On the AWS Load Balancer Controller this creates a second load balancer. See [Ingress and cloud integration](#ingress-and-cloud-integration).
+- With an Ingress or HTTPRoute, n8n now sees the client's IP address instead of the proxy's. See [Ingress and cloud integration](#ingress-and-cloud-integration).
+- A `podSecurityContext.<role>` block now merges over `shared` instead of replacing it. See [Security contexts](#security-contexts).
+- With `networkPolicy.enabled`, the policy now allows all egress by default, and the `ingress` and `egress` lists you set now take effect. See [Network policy](#network-policy).
+- A worker probe that runs `pgrep` always passes. See [Worker probes](#worker-probes).
+- A main pod with a `ReadWriteOnce` volume now uses the `Recreate` strategy, so each upgrade has a short outage. See [Persistence](#persistence).
+- The pods no longer get service links, a Kubernetes API token or a Role. See [Pod defaults](#pod-defaults).
+- n8n 3.0 changes several defaults, such as the Code node timeout and the Content-Security-Policy. See [n8n 3.0](#n8n-30).
 
 ### Values validation
 
-The schema rejects any values key it does not know, so a typo or a key from another chart fails the install or upgrade instead of being ignored. Helm checks the schema before it renders, and names each key and where it sits:
+The schema rejects any values key it does not know, so a typo or a key from another chart fails the install or upgrade instead of being ignored. Helm checks the schema before it renders, and names each key and where it sits.
 
 ```
 - at '/queueMode': additional properties 'workerReplicas' not allowed
 ```
 
-Remove each key the error names, or correct its spelling against [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml). Free-form blocks still accept any key: annotations, labels, `nodeSelector`, `tolerations`, `affinity`, `resources`, `strategy`, `dnsConfig` and the `extra*` lists. If you keep your own top-level keys, for YAML anchors or for values your `extraObjects` read through `tpl`, move them under `global`. To skip the schema check for one release, Helm 3.16 and later take `--skip-schema-validation`. The chart's own checks still run. See [decision 0016](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0016-values-schema-rejects-unknown-keys.md).
-
-If your values file sets a key the chart no longer reads, the render fails. The message names each such key and what replaces it, all in one render. The chart stops rather than ignoring the key, so a setting cannot quietly stop working. See [decision 0020](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0020-retired-values-keys-fail-the-render.md).
-
-#### Worker probes
-
-A worker probe is now HTTP against the worker health endpoint, or an exec probe that runs the `command` you set. See [decision 0027](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0027-worker-probes-run-a-command-or-the-health-endpoint.md).
-
-| If your values set | Do this |
-|---|---|
-| `probes.worker.liveness.type` or `probes.worker.readiness.type` | Remove it. Set `command` on the probe for an exec probe, or leave `command` empty to probe the health endpoint. The render fails until you do. |
-| `command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]` on a worker probe | Remove it. This check always passes, because `pgrep` matches its own shell. The chart does not detect it. |
-| `redis.healthCheck.enabled: false` | Remove it to probe the health endpoint, which is the default. To keep it, set `command` on each enabled liveness or readiness probe, or set `enabled: false` on that probe. The startup probe needs nothing, because the chart leaves it out when the health endpoint is off. The render fails until you do. |
-
-A values file copied whole from chart 1.16 or earlier sets all three. Remove all three, and the workers use the health endpoint.
+Remove each key the error names, or correct its spelling against [values.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/values.yaml). Free-form blocks still accept any key: annotations, labels, `nodeSelector`, `tolerations`, `affinity`, `resources`, `strategy`, `dnsConfig` and the `extra*` lists. If you keep your own top-level keys, for YAML anchors or for values your `extraObjects` read through `tpl`, move them under `global`. To skip the schema check for one release, Helm 3.16 and later take `--skip-schema-validation`. The chart's own checks still run.
 
 ### Database
 
-`database.type` alone chooses the database: `postgresdb`, the default, or `sqlite`. See [decision 0018](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0018-database-type-replaces-useexternal.md).
+`database.type` alone chooses the database: `postgresdb`, the default, or `sqlite`.
 
 | If your values set | Do this |
 |---|---|
 | `database.useExternal` | Remove it. Leave `database.type` as it is. |
 | `redis.useExternal` | Remove it. Nothing replaces it. Queue mode connects to the Redis at `redis.host`. |
 | `redis.worker.maxStalledCount` | Remove it. n8n 2.0 removed the setting, so it had no effect. |
+| `database.ssl.key` | The chart never read it. Put the client key in a Secret, and set `database.ssl.existingSecret.name` and `database.ssl.existingSecret.keyKey`.|
 
-If your values set `database.type: sqlite` without `useExternal`, the chart stops passing PostgreSQL settings to n8n. n8n did not use them with SQLite. The pods restart once on upgrade.
-
-The chart never read `database.ssl.key`, and setting it now fails the render. Put the client key in a Secret, and set `database.ssl.existingSecret.name` and `database.ssl.existingSecret.keyKey`. See [decision 0002](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0002-postgres-tls-material-from-an-existing-secret.md).
+If your values set `database.type: sqlite` without `useExternal`, the chart stops passing PostgreSQL settings to n8n. n8n did not use them with SQLite.
 
 ### Secrets and host settings
 
-The chart's Secret holds only secrets. Host, port and protocol are no longer read from it. See [decision 0012](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0012-env-as-per-component-maps.md).
+The chart's Secret holds only secrets. Host, port and protocol are no longer read from it.
 
 | If your values set | Do this |
 |---|---|
 | `secretRefs.env.N8N_HOST` or `secretRefs.env.N8N_PROTOCOL` | Remove them. n8n builds its public URLs from `editor.url` and `webhook.url`. If you still need either variable, set it in `env.shared`. |
 | `secretRefs.env.N8N_PORT` | Remove it. The chart sets `N8N_PORT` from `service.port` on every n8n process, workers included. |
+| `secretRefs.existingSecret` naming the chart's own Secret (the release's full name), with `license.activationKey` | Put the licence key in a Secret of your own, and set `license.existingSecret`. The render fails until you do. |
 
-If you use `secretRefs.existingSecret`, the Secret needs the `N8N_ENCRYPTION_KEY` key, unless you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. With task runners enabled, it also needs `N8N_RUNNERS_AUTH_TOKEN`; see [Task runners](#task-runners). The chart reads those keys by name and ignores the rest of the Secret. A Secret that still holds `N8N_HOST`, `N8N_PORT` and `N8N_PROTOCOL` still renders, but n8n no longer receives those values.
+If you use `secretRefs.existingSecret`, the chart reads these keys from it by name, and ignores the rest:
 
-In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`. After that, you can delete the three keys from the Secret.
+| Key | When it is needed |
+|---|---|
+| `N8N_ENCRYPTION_KEY` | Always, unless you set `secretRefs.env.N8N_ENCRYPTION_KEY_FILE`. |
+| `N8N_RUNNERS_AUTH_TOKEN` | With task runners enabled. See [Task runners](#task-runners). |
+| `N8N_HOST`, `N8N_PORT`, `N8N_PROTOCOL` | Never. The Secret still renders with them, but n8n no longer receives their values. Delete them once `editor.url` is set. |
 
-If you set `license.activationKey` inline, the chart now stores it in the chart's Secret and the containers read it from there. You do not need to change anything. If `secretRefs.existingSecret` names the chart's own Secret (the release's full name), the render fails. Put the licence key in a Secret of your own and set `license.existingSecret` instead.
+In 1.x, n8n built its public URLs from `N8N_HOST` and `N8N_PROTOCOL` when no `editor.url`, `webhook.url` or ingress host was set. If your install relies on that, set `editor.url` before you upgrade. Otherwise n8n builds its URLs from `localhost`, so the webhook and OAuth callback URLs it shows point at `localhost`.
+
+If you set `license.activationKey` inline, the chart now stores it in the chart's Secret and the containers read it from there. You do not need to change anything.
 
 ### Environment variables
 
-You now set environment variables as one flat map per component. The chart renders them into one ConfigMap per component, and each container loads its ConfigMaps with `envFrom`. Maps merge across values files, so an overlay file only needs the variables it changes. See [decision 0012](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0012-env-as-per-component-maps.md).
+You now set environment variables as one flat map per component. The chart renders them into one ConfigMap per component, and each container loads its ConfigMaps with `envFrom`. Maps merge across values files, so an overlay file only needs the variables it changes.
 
 The `extraEnv` and `extraEnvFrom` lists are removed. Move each entry to the map in this table:
 
@@ -133,11 +168,9 @@ Remove each list once its entries have moved, including empty lists. The render 
 
 Check these behaviour changes:
 
-- **A variable the chart sets cannot go in an `env` map.** The render fails and names the values key that sets it. Set that key instead. To replace the chart's value on purpose, use `chartEnvOverrides.<component>`. The chart lists the overrides in effect after install. `scripts/migrate-values.sh` moves such a variable from your `extraEnv` lists to `chartEnvOverrides` where your value won in 1.x, and removes it where the chart's value won.
+- **A variable the chart sets cannot go in an `env` map.** The render fails and names the values key that sets it. Set that key instead. To replace the chart's value on purpose, use `chartEnvOverrides.<component>`. The chart lists the overrides in effect after install. The migration script moves such a variable from your `extraEnv` lists to `chartEnvOverrides` where your value won in 1.x, and removes it where the chart's value won.
 - **`envFrom` refs now win over the chart's ConfigMap values.** In 1.x the chart's variables took precedence over `config.extraEnvFrom`. In 2.0, `envFrom.shared` and `envFrom.<component>` load after the chart's ConfigMaps, so a key in them replaces the chart's value. Variables the chart reads from a Secret, such as the encryption key and database password, are in the container's `env` list and still win. Check that the ConfigMaps and Secrets you load hold only the keys you mean to set.
 - **`webhook.timeout` is removed.** n8n never read the variable it set, so it had no effect. Remove it from your values.
-
-Every pod restarts once on upgrade, because its environment moves into the new ConfigMaps. After that, a change to one component's map restarts only that component's pods.
 
 ### Worker concurrency
 
@@ -163,11 +196,25 @@ env:
 
 When the variable is set in queue mode, n8n uses it as each worker's concurrency and ignores `queueMode.workerConcurrency`. The render fails if a worker gets both, from `env.shared` or `env.worker`.
 
+`queueMode.workerConcurrency` is now empty by default, so workers start without a `--concurrency` flag and use n8n's default of 10.
+
+### Worker probes
+
+A worker probe is now HTTP against the worker health endpoint, or an exec probe that runs the `command` you set.
+
+| If your values set | Do this |
+|---|---|
+| `probes.worker.liveness.type` or `probes.worker.readiness.type` | Remove it. Set `command` on the probe for an exec probe, or leave `command` empty to probe the health endpoint. The render fails until you do. |
+| `command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]` on a worker probe | Remove it. This check always passes, because `pgrep` matches its own shell. The chart does not detect it. |
+| `redis.healthCheck.enabled: false` | Remove it to probe the health endpoint, which is the default. To keep it, set `command` on each enabled liveness or readiness probe, or set `enabled: false` on that probe. The startup probe needs nothing, because the chart leaves it out when the health endpoint is off. The render fails until you do. |
+
+A values file copied whole from chart 1.16 or earlier sets all three. Remove all three, and the workers use the health endpoint.
+
 ### Task runners
 
-Task runners are on by default. In queue mode, each worker pod gains a `task-runner` container that requests 100m CPU and 128Mi of memory. In standalone mode, the main pod gains it instead. Plan node capacity for the extra requests, or adjust them under `taskRunners.resources`. To keep code running inside the n8n process, set `taskRunners.enabled: false`. See [decision 0014](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0014-task-runners-on-by-default.md).
+With n8n 3.0, task runners are on by default. In queue mode, each worker pod gains a `task-runner` container that requests 100m CPU and 128Mi of memory, with a 512Mi memory limit. In standalone mode, the main pod gains it instead. Plan node capacity for the extra requests, or adjust them under `taskRunners.resources`. To keep code running inside the n8n process, set `taskRunners.enabled: false`.
 
-With task runners enabled, the runner and the broker need a shared auth token. The chart reads it from the core Secret under the key `N8N_RUNNERS_AUTH_TOKEN`, and never generates it. See [decision 0019](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0019-task-runner-token-in-the-core-secret.md).
+With task runners enabled, the runner and the broker need a shared auth token. The chart reads it from the core Secret under the key `N8N_RUNNERS_AUTH_TOKEN`, and never generates it.
 
 - If you set `secretRefs.existingSecret`, add the token to that Secret. For example:
 
@@ -188,11 +235,11 @@ The chart does not render a separate task-runner Secret, so Helm removes the one
 
 Remove `taskRunners.nativePythonRunner` from your values. The render fails while it is set. The task runner image decides whether Python runs, and the default `n8nio/runners` image runs both JavaScript and Python. n8n no longer reads the variable the key set.
 
-The task broker now listens on localhost only, which is n8n's default. The runner sidecar reaches it there, so the default setup needs no change. Remove `taskRunners.broker.listenAddress` from your values. The render fails while it is set. If you run a runner outside the pod, set `N8N_RUNNERS_BROKER_LISTEN_ADDRESS` in `env.worker`, or in `env.main` in standalone mode. See [decision 0024](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0024-task-runner-broker-listens-on-localhost.md).
+The task broker now listens on localhost only, which is n8n's default. The runner sidecar reaches it there, so the default setup needs no change. Remove `taskRunners.broker.listenAddress` from your values. The render fails while it is set. If you run a runner outside the pod, set `N8N_RUNNERS_BROKER_LISTEN_ADDRESS` in `env.worker`, or in `env.main` in standalone mode.
 
 ### Binary data and S3
 
-With `s3.enabled: true`, n8n now stores binary data in the S3 bucket. In 1.x the chart set the mode to `filesystem`, so n8n wrote binary data to each pod's local disk and the bucket held no binary data. See [decision 0022](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0022-binary-data-mode.md).
+With `s3.enabled: true`, n8n now stores binary data in the S3 bucket. In 1.x the chart set the mode to `filesystem`, so n8n wrote binary data to each pod's local disk and the bucket held no binary data.
 
 S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot, so the chart now requires `license.enabled: true` alongside `s3.enabled: true`. If your install has no such licence, set `s3.enabled: false` before you upgrade.
 
@@ -207,9 +254,11 @@ n8n keeps reading the binary data it stored on disk before the upgrade, as long 
 
 ### Ingress and cloud integration
 
-The chart now sets the webhook URL from the hosts it routes webhooks on. Webhooks share the editor's address unless you give them hosts of their own, under `ingress.webhook.hosts` or `httpRoute.webhook.hostnames`. In 1.x, plain-HTTP installs got `https://` webhook URLs, installs with `editor.url` but no ingress got `http://localhost:5678`, and the chart could not route webhooks on a separate host. See [decision 0023](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0023-editor-and-webhook-urls-follow-the-routed-hosts.md).
+This section covers public URLs, the webhook Ingress, client IP addresses, and controller and cloud annotations.
 
-Public URLs:
+#### Public URLs
+
+The chart now sets the webhook URL from the hosts it routes webhooks on. Webhooks share the editor's address unless you give them hosts of their own, under `ingress.webhook.hosts` or `httpRoute.webhook.hostnames`. In 1.x, plain-HTTP installs got `https://` webhook URLs, installs with `editor.url` but no ingress got `http://localhost:5678`, and the chart could not route webhooks on a separate host.
 
 | If your values set | What changes | Do this |
 |---|---|---|
@@ -221,16 +270,16 @@ Public URLs:
 | `webhook.url` on a separate host, with your own Ingress or route for it | Nothing. | Optionally, move the host to `ingress.webhook.hosts` or `httpRoute.webhook.hostnames`, remove your own Ingress or route, and remove `webhook.url`. |
 | `editor.url`, and `N8N_WEBHOOK_URL` in `env`, without `webhook.url` | The render fails, because the chart now sets `N8N_WEBHOOK_URL` from `editor.url`. | Move the address to `webhook.url`. |
 
-The webhook Ingress:
+#### The webhook Ingress
 
 | If your values set | What changes | Do this |
 |---|---|---|
 | Any `ingress.webhookProcessor` key | The render fails and names `ingress.webhook`. | Move `className`, `annotations` and `tls` to `ingress.webhook`, and remove `enabled`. An empty `ingress.webhook.className` now uses `ingress.className`, so set it to keep another class. The Ingress keeps its name. |
 | `webhookProcessor.enabled` and `ingress.enabled`, with `ingress.webhookProcessor.enabled` false or unset | The chart now renders the webhook Ingress, which sends the production webhook paths to the webhook processors. In 1.x they reached main. | Nothing on ingress-nginx and other controllers that merge Ingresses for the same host. A controller that gives each Ingress its own load balancer, such as the AWS Load Balancer Controller, now creates a second one. To share one, put the same group annotation, for example `alb.ingress.kubernetes.io/group.name`, in `ingress.annotations` and `ingress.webhook.annotations`. |
 
-Client IP addresses:
+#### Client IP addresses
 
-With an Ingress or an HTTPRoute, the chart now sets `N8N_PROXY_HOPS` to `1` on main and the webhook processors. n8n records and checks the client's IP address, which it reads from `X-Forwarded-For`, rather than the ingress controller's or Gateway's. This applies to IP allowlists on Webhook nodes and the addresses n8n logs. See [decision 0028](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0028-n8n-trusts-the-proxy-the-chart-routes-through.md).
+With an Ingress or an HTTPRoute, the chart now sets `N8N_PROXY_HOPS` to `1` on main and the webhook processors. n8n records and checks the client's IP address, which it reads from `X-Forwarded-For`, rather than the ingress controller's or Gateway's. This applies to IP allowlists on Webhook nodes and the addresses n8n logs.
 
 | If your values set | What changes | Do this |
 |---|---|---|
@@ -240,9 +289,9 @@ With an Ingress or an HTTPRoute, the chart now sets `N8N_PROXY_HOPS` to `1` on m
 
 n8n now takes the client address from `X-Forwarded-For`, which a caller that reaches the pods directly can set. If you rely on the client address, for example in a Webhook node IP allowlist, allow only the ingress controller or Gateway, and the release's own pods, to reach the n8n pods. See [Client IP addresses](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/README.md#client-ip-addresses) in the README for a `networkPolicy.ingress` example.
 
-Controller and cloud annotations:
+#### Controller and cloud annotations
 
-The chart no longer sets annotations for a specific ingress controller or cloud. Set them yourself in `ingress.annotations` and `serviceAccount.annotations`. The examples show them for ingress-nginx and EKS. See [decision 0026](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0026-no-vendor-defaults-in-the-templates.md).
+The chart no longer sets annotations for a specific ingress controller or cloud. Set them yourself in `ingress.annotations` and `serviceAccount.annotations`. The examples show them for ingress-nginx and EKS.
 
 | If your values set | What changes | Do this |
 |---|---|---|
@@ -252,21 +301,20 @@ The chart no longer sets annotations for a specific ingress controller or cloud.
 
 ### Security contexts
 
-The chart-wide `securityContext` block is retired. `podSecurityContext` and `containerSecurityContext` each have a `shared` block that applies to every pod or container. Each role block merges over `shared` field by field, and the role wins. Set a field to `null` to remove it. See [decision 0021](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0021-security-contexts-merge-over-shared.md).
+The chart-wide `securityContext` block is retired. `podSecurityContext` and `containerSecurityContext` each have a `shared` block that applies to every pod or container. Each role block merges over `shared` field by field, and the role wins. Set a field to `null` to remove it.
 
-Move your settings as follows:
-
-| 1.x | 2.0 |
+| If your values set | Do this |
 |---|---|
-| `securityContext.fsGroup` | `podSecurityContext.shared.fsGroup` |
-| `securityContext.runAsUser` | `podSecurityContext.shared.runAsUser` |
-| `securityContext.runAsGroup` | `podSecurityContext.shared.runAsGroup` |
+| `securityContext.fsGroup` | Move it to `podSecurityContext.shared.fsGroup`. |
+| `securityContext.runAsUser` | Move it to `podSecurityContext.shared.runAsUser`. |
+| `securityContext.runAsGroup` | Move it to `podSecurityContext.shared.runAsGroup`. |
 | `securityContext.enabled: true` | Remove it. The defaults apply without it. |
-| `securityContext.enabled: false` | `podSecurityContext.shared: null` |
+| `securityContext.enabled: false` | Set `podSecurityContext.shared: null`. |
+| A `podSecurityContext.<role>` block that leaves out a field to remove it | Set that field to `null` in the block. The block now merges over `shared` instead of replacing it, and the render does not detect this. |
 
 `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile are now in `podSecurityContext.shared` too, so you can change or remove them. The container defaults are in `containerSecurityContext.shared`. A `containerSecurityContext.<role>` override from 1.x keeps working, because it now merges over `shared`.
 
-A `podSecurityContext.<role>` block from 1.16 now merges over `shared` instead of replacing it. The render does not detect this. If the block left out a field to remove it, set that field to `null`. `scripts/migrate-values.sh` sets these nulls for you, so each pod keeps its 1.x security context. It does this only when your values file also sets a retired key, because a file without one is valid for 2.0 as it stands. Remove the nulls to take the 2.0 defaults.
+The migration script sets the nulls in `podSecurityContext.<role>` blocks for you, so each pod keeps its 1.x security context. It does this only when your values file also sets a retired key, because a file without one is valid for 2.0 as it stands. Remove the nulls to take the 2.0 defaults.
 
 On OpenShift, the restricted SCC assigns the UID and GID. In 1.x you set `securityContext.enabled: false`, or a `podSecurityContext.<role>` block without the IDs. In 2.0, remove the pinned IDs once for every pod:
 
@@ -282,7 +330,7 @@ The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The
 
 ### Network policy
 
-The NetworkPolicy now renders `networkPolicy.ingress` and `networkPolicy.egress`. In 1.x the chart ignored both. A list you set replaces the chart's rules for that direction and does not merge with them. See [decision 0017](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0017-network-policy-allows-all-egress-by-default.md).
+The NetworkPolicy now renders `networkPolicy.ingress` and `networkPolicy.egress`. In 1.x the chart ignored both. A list you set replaces the chart's rules for that direction and does not merge with them.
 
 If you leave `networkPolicy.egress` empty, the policy now allows all egress. In 1.x it allowed only DNS, the database port, the Redis port and 443. To keep the 1.x rules, set them as your egress list. Change the ports if you changed `database.port` or `redis.port`:
 
@@ -311,37 +359,25 @@ If your values set a non-empty list, check it before you upgrade. Those rules no
 
 ### Persistence
 
+With `persistence.enabled: true` and only `ReadWriteOnce` or `ReadWriteOncePod` access modes, the main Deployment now uses the `Recreate` strategy. The old main pod stops before the new one starts, so each upgrade has a short outage, and the rollout no longer waits on a volume the old pod still holds. To keep rolling updates, set `strategy.type: RollingUpdate`. A `strategy` you set is used as it is.
+
 With `persistence.existingClaim`, remove `persistence.size` and `persistence.storageClassName` from your values. The chart does not create a PVC when you supply one, so those keys did nothing, and the render now fails on them. Keep `persistence.accessModes`, and set it to match your claim.
-
-### Changed defaults
-
-With `networkPolicy.enabled` and no `networkPolicy.egress` set, the NetworkPolicy now allows all egress. See [Network policy](#network-policy).
-
-`queueMode.workerConcurrency` is now empty by default, so workers start without a `--concurrency` flag and use n8n's default of 10.
-
-`taskRunners.enabled` is now `true`. See [Task runners](#task-runners).
-
-`taskRunners.resources.requests.memory` is now `128Mi`, down from `256Mi`. The limit stays `512Mi`.
-
-`enableServiceLinks` is new and `false`, so Kubernetes no longer adds `<SERVICE>_SERVICE_HOST`, `<SERVICE>_PORT` and related variables to n8n's pods for each Service in the namespace. n8n reads none of them. If a container you add reads one of these variables, set `enableServiceLinks: true`. See [decision 0025](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0025-pods-get-only-what-n8n-uses.md).
-
-With `persistence.enabled: true` and only `ReadWriteOnce` or `ReadWriteOncePod` access modes, the main Deployment now uses the `Recreate` strategy. The old main pod stops before the new one starts, so each upgrade has a short outage, and the rollout no longer waits on a volume the old pod still holds. To keep rolling updates, set `strategy.type: RollingUpdate`. A `strategy` you set is used as it is. With `persistence.existingClaim`, set `persistence.accessModes` to match your claim.
 
 If you installed the 1.x release with Helm 4, the first upgrade can fail with `spec.strategy.rollingUpdate: Forbidden: may not be specified when strategy type is 'Recreate'`. Helm 4 applies changes on the server by default, and that leaves the `rollingUpdate` settings Kubernetes added to the 1.x Deployment. Run that upgrade once with `--server-side=false`. Later upgrades do not need it. Releases installed with Helm 3 upgrade without it.
 
-`rbac.create` is now `false`, so the chart no longer creates a Role that reads ConfigMaps and Secrets, or its RoleBinding. n8n does not use them. Helm removes both on upgrade. If something else in your pods uses that Role, set `rbac.create: true`.
+### Pod defaults
 
-`serviceAccount.automountServiceAccountToken` is now `false`, so n8n's pods no longer get a Kubernetes API token at `/var/run/secrets/kubernetes.io/serviceaccount`. n8n does not call the Kubernetes API. If a container you add calls it, set `serviceAccount.automountServiceAccountToken: true`.
+The pods now get only what n8n uses. n8n reads none of the settings below. If a container you add with `extraContainers` or `extraInitContainers` needs one, set it back.
+
+| What changes | To keep the 1.x behaviour, set |
+|---|---|
+| `enableServiceLinks` is new and `false`, so Kubernetes no longer adds `<SERVICE>_SERVICE_HOST`, `<SERVICE>_PORT` and related variables to n8n's pods for each Service in the namespace. | `enableServiceLinks: true` |
+| `rbac.create` is now `false`, so the chart no longer creates a Role that reads ConfigMaps and Secrets, or its RoleBinding. Helm removes both on upgrade. | `rbac.create: true` |
+| `serviceAccount.automountServiceAccountToken` is now `false`, so n8n's pods no longer get a Kubernetes API token at `/var/run/secrets/kubernetes.io/serviceaccount`. | `serviceAccount.automountServiceAccountToken: true` |
 
 ### n8n 3.0
 
-Chart 2.0.0 runs n8n 3.0. Read [n8n's 3.0 breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes/) before you upgrade. Then open the Migration Report in n8n, under **Settings > Migration Report**. It lists what in your instance needs to change. It needs n8n 2.39 or later, and the latest 2.x release has the newest checks.
-
-This section covers the changes you can handle in your chart values, and some that n8n's page does not list.
-
-#### Before you upgrade
-
-Take a full backup of your database. The move to n8n 3.0 is one way. To go back to n8n 2.x, restore that backup.
+Chart 2.0.0 runs n8n 3.0. Step 1 of [Upgrade steps](#upgrade-steps) covers n8n's own breaking changes and the Migration Report. This section covers the changes you can handle in your chart values.
 
 #### Changed defaults in n8n 3.0
 
@@ -366,11 +402,11 @@ SSRF protection is off by default. If you set `N8N_SSRF_PROTECTION_ENABLED: true
 
 #### Encryption key rotation
 
-n8n 3.0 turns on encryption key rotation. On its first start, main creates a data key in the database. If its database user cannot create the key, main exits. See [Before you upgrade](#before-you-upgrade).
+n8n 3.0 turns on encryption key rotation. On its first start, main creates a data key in the database. If its database user cannot create the key, main exits.
 
 #### Removed variables
 
-n8n 3.0 no longer reads these variables. It logs a warning at startup for each one you still set, except where the table says otherwise. The chart does not check for them, so remove them from your `env` maps.
+n8n 3.0 no longer reads these variables. It logs a warning at startup for each one you still set, except where the table says otherwise. The chart does not check for them. The migration script removes or renames them in your values file. Remove any you set elsewhere, such as in a ConfigMap you load with `envFrom`.
 
 | Variable | What to do |
 |---|---|
@@ -391,30 +427,22 @@ If you mount your own `n8n-task-runners.json` through `taskRunners.customConfig`
 
 #### Storage directory
 
-On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values. If both directories exist before that first start, n8n refuses to start and names them. This needs `persistence.enabled: true`, because an emptyDir starts empty in each new pod. The main pod then restarts in a loop, and it is the only pod that mounts the volume. To fix it:
+On its first start, n8n 3.0 renames /home/node/.n8n/binaryData to /home/node/.n8n/storage. The chart mounts the whole of /home/node/.n8n, so the rename needs no change to your values. 
 
-1. Scale the main Deployment to 0, and wait for its pod to be deleted.
-2. Start a temporary pod that mounts the same PVC, running as user 1000. The PVC is `persistence.existingClaim` if you set it, and otherwise the one `kubectl get pvc` lists for the release.
-3. Move the contents of `binaryData` into `storage`, and remove `binaryData`. If a file exists in both, decide which copy to keep first.
-4. Delete the temporary pod, and scale the main Deployment back up.
+If both directories exist (which is unlikely for helm installed n8n), n8n will not start. The n8n Migration Report flags this as "Both storage directories exist" and provides guidance on how to fix it.
 
-For a release named `n8n` with the chart's PVC, the commands below do this. The temporary pod meets the `restricted` Pod Security Standard. If a file exists in both directories, it lists the file and stops without changing anything. Remove the copy you do not want, and run it again.
+### Check the upgrade
 
-```bash
-kubectl scale deployment/n8n-main --replicas=0
-kubectl wait --for=delete pod -l app.kubernetes.io/instance=n8n,app.kubernetes.io/component=main --timeout=300s
-kubectl run fix-storage --rm -i --restart=Never --image=busybox:1.36 --overrides='{
-  "spec": {
-    "securityContext": {"runAsNonRoot": true, "runAsUser": 1000, "runAsGroup": 1000, "seccompProfile": {"type": "RuntimeDefault"}},
-    "volumes": [{"name": "data", "persistentVolumeClaim": {"claimName": "n8n"}}],
-    "containers": [{
-      "name": "fix-storage",
-      "image": "busybox:1.36",
-      "command": ["sh", "-c", "cd /data/binaryData && both=$(find . -type f | while read -r f; do [ ! -e \"/data/storage/$f\" ] || echo \"$f\"; done) && if [ -n \"$both\" ]; then echo \"In both directories:\"; echo \"$both\"; exit 1; fi && cp -a . /data/storage/ && cd / && rm -rf /data/binaryData"],
-      "securityContext": {"allowPrivilegeEscalation": false, "capabilities": {"drop": ["ALL"]}},
-      "volumeMounts": [{"name": "data", "mountPath": "/data"}]
-    }]
-  }
-}'
-kubectl scale deployment/n8n-main --replicas=1
-```
+After `helm upgrade`, check that:
+
+- Every pod is Ready, and `helm test <release>` passes.
+- The webhook URL a Webhook node shows uses your public address, not `localhost`. The same goes for OAuth callback URLs.
+- A workflow with a Code node runs. This checks the task runner and its token.
+
+### Roll back
+
+`helm rollback` restores the 1.x manifests, but not the database. n8n 3.0 changes the database on its first start, and n8n 2.x cannot run against it. To go back to chart 1.x:
+
+1. Scale every n8n Deployment to 0.
+2. Restore the database backup you took in step 2 of [Upgrade steps](#upgrade-steps).
+3. Run `helm rollback <release>`.
