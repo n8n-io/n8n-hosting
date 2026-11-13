@@ -74,9 +74,14 @@ fi
 
 work="$(mktemp)"
 trap 'rm -f "$work"' EXIT
-# yq drops blank lines, so they travel through it as a comment.
+# yq drops blank lines, so they travel through it as a comment. Each takes the
+# indentation of the next line, so a blank line inside a | block stays inside it.
 blank="#__migrate_values_blank_line__"
-sed "s/^[[:space:]]*\$/$blank/" "$input" > "$work"
+awk -v b="$blank" '
+  /^[[:space:]]*$/ { n++; next }
+  { if (n) { match($0, /^[ \t]*/); for (; n > 0; n--) print substr($0, 1, RLENGTH) b } print }
+  END { for (; n > 0; n--) print b }
+' "$input" > "$work"
 "$YQ" -e 'tag == "!!map" or tag == "!!null"' "$work" > /dev/null 2>&1 || die "$input is not a YAML map of values."
 
 # --- Helpers ---
@@ -99,7 +104,7 @@ present() {
 }
 
 # The value at a path, empty when it is absent or null.
-val() { q ".$1 // \"\" | select((tag != \"!!map\") and (tag != \"!!seq\"))"; }
+val() { q ".$1 | select(. != null) | select((tag != \"!!map\") and (tag != \"!!seq\"))"; }
 
 # Truthy as Helm reads it: absent, null, false, 0 and "" are false.
 truthy() {
@@ -366,7 +371,8 @@ done
 
 # Every other variable the 2.0 chart sets: name, the pods it sets it on, where
 # 1.x set it (early, before the extraEnv lists; late, after some of them; or
-# secret, read from a Secret), the condition, and the value that controls it.
+# secret, read from a Secret and set late; secret_early, read from a Secret and
+# set early), the condition, and the value that controls it.
 # Pods: n8n is main, worker and webhookProcessor; runner is the task-runner
 # sidecar; hasRunner is the pods that carry it. Keep it in step with
 # n8n.chartEnv and n8n.secretEnv in templates/_env.tpl.
@@ -385,6 +391,9 @@ DB_POSTGRESDB_SSL_ENABLED n8n early ssl database.ssl.enabled
 DB_POSTGRESDB_SSL_CA n8n early ssl_ca database.ssl.ca
 DB_POSTGRESDB_SSL_CERT n8n early ssl_cert database.ssl.cert
 DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED n8n early ssl_insecure database.ssl.rejectUnauthorized
+DB_POSTGRESDB_SSL_CA n8n secret_early ssl_ca_secret database.ssl.existingSecret
+DB_POSTGRESDB_SSL_CERT n8n secret_early ssl_cert_secret database.ssl.existingSecret
+DB_POSTGRESDB_SSL_KEY n8n secret_early ssl_key_secret database.ssl.existingSecret
 EXECUTIONS_MODE n8n early queue queueMode.enabled
 OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS n8n early queue queueMode.enabled
 QUEUE_BULL_REDIS_CLUSTER_NODES n8n early redis_nodes redis.clusterNodes
@@ -430,8 +439,8 @@ N8N_RUNNERS_TASK_BROKER_URI runner late always taskRunners.broker.port
 N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT runner late always taskRunners.launcher.autoShutdownTimeout
 N8N_RUNNERS_LAUNCHER_LOG_LEVEL runner late always taskRunners.launcher.logLevel
 N8N_ENCRYPTION_KEY n8n secret encryption_key secretRefs.existingSecret
-DB_POSTGRESDB_PASSWORD n8n secret postgres database.passwordSecret
-QUEUE_BULL_REDIS_PASSWORD n8n secret redis_password redis.passwordSecret
+DB_POSTGRESDB_PASSWORD n8n secret_early postgres database.passwordSecret
+QUEUE_BULL_REDIS_PASSWORD n8n secret_early redis_password redis.passwordSecret
 N8N_EXTERNAL_STORAGE_S3_ACCESS_SECRET n8n secret s3_secret s3.auth.secretAccessKeySecret
 AWS_SECRET_ACCESS_KEY n8n secret s3_secret s3.auth.secretAccessKeySecret
 N8N_LICENSE_ACTIVATION_KEY n8n secret license_key license.existingSecret
@@ -440,7 +449,7 @@ N8N_RUNNERS_AUTH_TOKEN hasRunner secret always secretRefs.env.N8N_RUNNERS_AUTH_T
 
 # The value at a path, or the chart's default when the values do not set it.
 dval() {
-  if present "$1"; then val "$1"; else "$YQ" ".$1 // \"\" | select((tag != \"!!map\") and (tag != \"!!seq\"))" "$chart/values.yaml"; fi
+  if present "$1"; then val "$1"; else "$YQ" ".$1 | select(. != null) | select((tag != \"!!map\") and (tag != \"!!seq\"))" "$chart/values.yaml"; fi
 }
 dtruthy() {
   local v
@@ -459,6 +468,9 @@ chart_condition() {
     ssl) chart_condition postgres && dtruthy database.ssl.enabled ;;
     ssl_ca) chart_condition ssl && dtruthy database.ssl.ca ;;
     ssl_cert) chart_condition ssl && dtruthy database.ssl.cert ;;
+    ssl_ca_secret) chart_condition ssl && dtruthy database.ssl.existingSecret.caKey ;;
+    ssl_cert_secret) chart_condition ssl && dtruthy database.ssl.existingSecret.certKey ;;
+    ssl_key_secret) chart_condition ssl && dtruthy database.ssl.existingSecret.keyKey ;;
     ssl_insecure) chart_condition ssl && [[ "$(dval database.ssl.rejectUnauthorized)" == "false" ]] ;;
     queue) dtruthy queueMode.enabled ;;
     redis_nodes) chart_condition queue && dtruthy redis.clusterNodes ;;
@@ -481,6 +493,15 @@ chart_condition() {
     health_check) dtruthy redis.healthCheck.enabled ;;
     execution_timeout) dtruthy executions.timeout && [[ "$(dval executions.timeout)" != "-1" ]] ;;
     license_key) dtruthy license.enabled && { dtruthy license.activationKey || dtruthy license.existingSecret.name; } ;;
+  esac
+}
+
+# The key under database.ssl.existingSecret that names an SSL variable's key.
+ssl_key_field() {
+  case "$1" in
+    DB_POSTGRESDB_SSL_CA) echo caKey ;;
+    DB_POSTGRESDB_SSL_CERT) echo certKey ;;
+    DB_POSTGRESDB_SSL_KEY) echo keyKey ;;
   esac
 }
 
@@ -543,18 +564,32 @@ while read -r name scope group cond from; do
   export N="$name"
   for t in shared main worker webhookProcessor taskRunner; do
     grep -qxF "$t.$name" <<< "$env_set" || continue
+    # Two rows can share a name, such as DB_POSTGRESDB_SSL_CA, so the first may have moved it.
+    [[ "$(q "(.env.$t // {}) | has(strenv(N))")" == "true" ]] || continue
     if [[ "$t" == shared ]]; then pods="$(scope_pods n8n "$rendered")"
     elif [[ "$t" == taskRunner ]]; then pods="${runner_pods:+taskRunner}"
     else pods="$(scope_pods "$t" "$rendered")"; fi
     set_on="$(scope_pods "$scope" "$pods")"
     if [[ -z "$set_on" ]] || ! chart_condition "$cond"; then continue; fi
-    if [[ "$group" == secret ]]; then
+    if [[ "$group" == secret* ]]; then
+      order=late; [[ "$group" == secret_early ]] && order=early
       won=false
-      for c in $set_on; do list_won_in_1x "$c" "$name" "$group" && won=true; done
+      for c in $set_on; do list_won_in_1x "$c" "$name" "$order" && won=true; done
       ref_name="$(q ".env.${t}[strenv(N)].secretKeyRef.name // \"\"")"
       ref_key="$(q ".env.${t}[strenv(N)].secretKeyRef.key // \"\"")"
       if ! $won; then
         remove "env.$t.$name" "The chart reads it from $from, and that value won over yours in 1.x."
+        continue
+      fi
+      # The Secret key the chart reads, for the rows that name one.
+      key_field=""
+      case "$name" in
+        N8N_ENCRYPTION_KEY | N8N_RUNNERS_AUTH_TOKEN) ;;
+        DB_POSTGRESDB_SSL_*) key_field="$(ssl_key_field "$name")" ;;
+        *) key_field=key ;;
+      esac
+      if [[ -n "$key_field" && -n "$ref_name" && "$ref_name" == "$(dval "$from.name")" && "$ref_key" == "$(dval "$from.$key_field")" ]]; then
+        remove "env.$t.$name" "The chart reads it from the same key in the same Secret."
         continue
       fi
       remove "env.$t.$name" "The chart reads it from a Secret."
@@ -564,7 +599,7 @@ while read -r name scope group cond from; do
       case "$name" in
         N8N_ENCRYPTION_KEY) how="Put the same value in a Secret under the key N8N_ENCRYPTION_KEY, and set secretRefs.existingSecret to that Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY to it. With a different key, n8n cannot decrypt the credentials it saved." ;;
         N8N_RUNNERS_AUTH_TOKEN) how="Set $from to choose the value." ;;
-        *) how="Set $from.name and $from.key to the Secret and key that hold the same value." ;;
+        *) how="Set $from.name and $from.$key_field to the Secret and key that hold the same value." ;;
       esac
       check "env.$t.$name was removed, because the chart reads $name from a Secret.$src $how"
       continue

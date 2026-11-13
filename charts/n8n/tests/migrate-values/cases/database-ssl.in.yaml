@@ -1,0 +1,34 @@
+# SSL settings the chart reads from values and from a Secret. The CA ref
+# matches the chart's, and the key ref names a different Secret.
+database:
+  type: postgresdb
+  host: postgres.acme.internal
+  passwordSecret:
+    name: pg
+    key: password
+  ssl:
+    enabled: true
+    rejectUnauthorized: false
+    existingSecret:
+      name: pg-tls
+      caKey: ca.crt
+      certKey: tls.crt
+      keyKey: tls.key
+
+config:
+  extraEnv:
+    - name: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+      value: "false"
+    - name: DB_POSTGRESDB_SSL_CA
+      valueFrom:
+        secretKeyRef:
+          name: pg-tls
+          key: ca.crt
+    - name: DB_POSTGRESDB_SSL_KEY
+      valueFrom:
+        secretKeyRef:
+          name: pg-client
+          key: client.key
+
+taskRunners:
+  enabled: false

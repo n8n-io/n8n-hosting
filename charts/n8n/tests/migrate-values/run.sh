@@ -48,6 +48,12 @@ while read -r path; do
   [[ "$covered" == true ]] || fail "n8n.retiredKeys retires $path, but no case in cases/ migrates it"
 done < <(sed -n '/define "n8n.retiredKeys"/,/end -/s/^- path: //p' "$chart/templates/_helpers.tpl")
 
+# Every variable the chart sets needs handling in the script, or a 1.x file that
+# also sets it in extraEnv migrates to values that fail to render.
+while read -r var; do
+  grep -qw "$var" "$script" || fail "templates/_env.tpl sets $var, but migrate-values.sh does not handle it"
+done < <(grep -o '"[A-Z][A-Z0-9_]*[A-Z0-9]"' "$chart/templates/_env.tpl" | tr -d '"' | sort -u)
+
 for in in "$here"/cases/*.in.yaml; do
   name="$(basename "$in" .in.yaml)"
   out="$here/cases/$name.out.yaml"
@@ -64,13 +70,21 @@ for in in "$here"/cases/*.in.yaml; do
     diff -u "$out" "$tmp/out.yaml" || fail "$name: values differ from $name.out.yaml"
     diff -u "$report" "$tmp/report.txt" || fail "$name: report differs from $name.report.txt"
   fi
-  "$script" "$tmp/out.yaml" > "$tmp/again.yaml" 2> "$tmp/again.txt"
+  if ! "$script" "$tmp/out.yaml" > "$tmp/again.yaml" 2> "$tmp/again.txt"; then
+    fail "$name: a second run exited non-zero"
+    cat "$tmp/again.txt"
+    continue
+  fi
   cmp -s "$tmp/out.yaml" "$tmp/again.yaml" || fail "$name: a second run changed the values"
   [[ "$(cat "$tmp/again.txt")" == "migrate-values: nothing to change." ]] || fail "$name: a second run reported: $(cat "$tmp/again.txt")"
 done
 
 for example in "$chart"/examples/*.yaml; do
-  "$script" "$example" > "$tmp/out.yaml" 2> "$tmp/report.txt"
+  if ! "$script" "$example" > "$tmp/out.yaml" 2> "$tmp/report.txt"; then
+    fail "examples/$(basename "$example"): the script exited non-zero"
+    cat "$tmp/report.txt"
+    continue
+  fi
   cmp -s "$example" "$tmp/out.yaml" || fail "examples/$(basename "$example"): the script changed a values file written for this chart"
   [[ "$(cat "$tmp/report.txt")" == "migrate-values: nothing to change." ]] || fail "examples/$(basename "$example"): the script reported: $(cat "$tmp/report.txt")"
 done

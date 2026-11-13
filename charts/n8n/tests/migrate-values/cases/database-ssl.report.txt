@@ -1,0 +1,8 @@
+Changed:
+  - Moved config.extraEnv to env.shared: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED, DB_POSTGRESDB_SSL_CA, DB_POSTGRESDB_SSL_KEY.
+  - Moved env.shared.DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED to chartEnvOverrides.shared, which keeps your value over the one the chart sets from database.ssl.rejectUnauthorized. To drop the override, set database.ssl.rejectUnauthorized instead.
+  - Removed env.shared.DB_POSTGRESDB_SSL_CA. The chart reads it from the same key in the same Secret.
+  - Removed env.shared.DB_POSTGRESDB_SSL_KEY. The chart reads it from a Secret.
+Check:
+  - env.shared.DB_POSTGRESDB_SSL_KEY was removed, because the chart reads DB_POSTGRESDB_SSL_KEY from a Secret. In 1.x n8n read it from the key client.key in the Secret pg-client. Set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey to the Secret and key that hold the same value.
+Review the output before you upgrade. Then render it with helm template.
