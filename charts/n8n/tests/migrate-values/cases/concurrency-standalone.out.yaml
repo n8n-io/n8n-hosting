@@ -1,0 +1,5 @@
+queueMode:
+  enabled: false
+env:
+  main:
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: 20

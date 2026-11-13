@@ -1,0 +1,4 @@
+# Written for 2.0: the block merges over podSecurityContext.shared.
+podSecurityContext:
+  worker:
+    runAsUser: 2000

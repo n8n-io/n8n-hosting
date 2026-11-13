@@ -1,0 +1,7 @@
+Changed:
+  - Moved taskRunners.authToken.value to secretRefs.env.N8N_RUNNERS_AUTH_TOKEN.
+  - Removed taskRunners.broker.listenAddress. The broker listens on localhost, where the task-runner sidecar reaches it.
+  - Removed taskRunners.nativePythonRunner. The task runner image decides whether Python runs.
+Check:
+  - taskRunners.nativePythonRunner was false. The task runner image now decides whether Python runs, and the default image runs it.
+Review the output before you upgrade. Then render it with helm template.

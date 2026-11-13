@@ -1,0 +1,16 @@
+Changed:
+  - Moved config.extraEnv to env.shared: N8N_DB_PING_TIMEOUT, N8N_RUNNERS_ENABLED, N8N_DEFAULT_BINARY_DATA_MODE, N8N_PRE_EXECUTE_ERROR_CREATES_EXECUTION, N8N_MIGRATE_FS_STORAGE_PATH, N8N_AGENTS_SKILLS_HUB_ENABLED, N8N_ENV_FEAT_CRED_SHARING, N8N_INSTANCE_AI_LOCAL_GATEWAY_DISABLED, N8N_INSTANCE_AI_GATEWAY_API_KEY.
+  - Moved taskRunners.extraEnv to env.taskRunner: N8N_WORKFLOW_TAGS_DISABLED.
+  - Renamed env.shared.N8N_DB_PING_TIMEOUT to DB_PING_TIMEOUT_MS, which n8n 3.0 reads. Both are in milliseconds.
+  - Removed env.shared.N8N_PRE_EXECUTE_ERROR_CREATES_EXECUTION. n8n 3.0 no longer reads it.
+  - Removed env.shared.N8N_RUNNERS_ENABLED. n8n 3.0 no longer reads it.
+  - Removed env.shared.N8N_MIGRATE_FS_STORAGE_PATH. n8n 3.0 no longer reads it.
+  - Removed env.shared.N8N_AGENTS_SKILLS_HUB_ENABLED. n8n 3.0 no longer reads it.
+  - Removed env.shared.N8N_ENV_FEAT_CRED_SHARING. n8n 3.0 no longer reads it.
+  - Removed env.shared.N8N_INSTANCE_AI_LOCAL_GATEWAY_DISABLED. n8n 3.0 no longer reads it.
+  - Removed env.shared.N8N_INSTANCE_AI_GATEWAY_API_KEY. n8n 3.0 no longer reads it.
+  - Removed env.shared.N8N_DEFAULT_BINARY_DATA_MODE. n8n 3.0 has no in-memory mode, and uses filesystem, or database in queue mode.
+  - Removed env.taskRunner.N8N_WORKFLOW_TAGS_DISABLED. n8n 3.0 no longer reads it.
+Check:
+  - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32. Or set taskRunners.authToken.existingSecret to a Secret that holds it under N8N_RUNNERS_AUTH_TOKEN. Or set taskRunners.enabled: false. The render fails until you do one of these.
+Review the output before you upgrade. Then render it with helm template.

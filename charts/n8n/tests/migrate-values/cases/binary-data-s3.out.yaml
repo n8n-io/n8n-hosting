@@ -1,0 +1,4 @@
+license:
+  enabled: true
+s3:
+  enabled: true

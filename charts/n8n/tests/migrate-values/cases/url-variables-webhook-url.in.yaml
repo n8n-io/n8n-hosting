@@ -1,0 +1,11 @@
+# webhook.url alone makes the chart set both URL variables on every container.
+webhook:
+  url: "https://hooks.example.com/"
+executions:
+  extraEnv:
+    - name: N8N_WEBHOOK_URL
+      value: "https://other.example.com/"
+queueMode:
+  workerExtraEnv:
+    - name: N8N_EDITOR_BASE_URL
+      value: "https://n8n.example.com/"

@@ -1,0 +1,10 @@
+Changed:
+  - Moved config.extraEnv to env.shared: N8N_SMTP_SENDER.
+  - Moved taskRunners.extraEnv to env.taskRunner: N8N_RUNNERS_AUTH_TOKEN.
+  - Removed env.taskRunner.N8N_RUNNERS_AUTH_TOKEN. The chart reads it from a Secret.
+  - Removed serviceAccount.awsRoleArn. 1.x did not render it with your values, because it needs serviceAccount.create, s3.enabled and s3.auth.autoDetect.
+Check:
+  - env.taskRunner.N8N_RUNNERS_AUTH_TOKEN was removed, because the chart reads N8N_RUNNERS_AUTH_TOKEN from a Secret. In 1.x n8n read it from the key token in the Secret runner-token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN to choose the value.
+  - serviceAccount.awsRoleArn was removed without adding an annotation. The chart does not render the ServiceAccount, so if the pods need that IAM role, set eks.amazonaws.com/role-arn on the ServiceAccount itself.
+  - s3.storage.mode was not set, so 1.x stored binary data on the filesystem. With s3.enabled, n8n now stores binary data in the bucket. To keep it out of the bucket, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE to database.
+Review the output before you upgrade. Then render it with helm template.

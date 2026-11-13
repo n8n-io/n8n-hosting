@@ -1,0 +1,9 @@
+taskRunners:
+  enabled: true
+  authToken:
+    existingSecret: ""
+  broker:
+    port: 5679
+secretRefs:
+  env:
+    N8N_RUNNERS_AUTH_TOKEN: "token-from-a-test"
