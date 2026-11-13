@@ -4,6 +4,36 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [2.0.0-rc.2](https://github.com/n8n-io/n8n-hosting/compare/v2.0.0-rc.1...v2.0.0-rc.2) (2026-11-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **chart:** retire executions.concurrency.productionLimit and fail every retired 1.x setting through n8n.retiredKeys ([#283](https://github.com/n8n-io/n8n-hosting/issues/283))
+* **chart:** set no ingress controller or cloud annotations in the templates ([#274](https://github.com/n8n-io/n8n-hosting/issues/274))
+* **chart:** probe workers on the health endpoint or a command, and retire probes.worker.*.type ([#271](https://github.com/n8n-io/n8n-hosting/issues/271))
+* **chart:** stop setting N8N_NATIVE_PYTHON_RUNNER and QUEUE_WORKER_MAX_STALLED_COUNT ([#280](https://github.com/n8n-io/n8n-hosting/issues/280))
+* **chart:** set N8N_PROXY_HOPS when the chart routes traffic through an Ingress or HTTPRoute ([#279](https://github.com/n8n-io/n8n-hosting/issues/279))
+* **chart:** reject values keys the schema does not declare ([#270](https://github.com/n8n-io/n8n-hosting/issues/270))
+
+### Features
+
+* **chart:** add a script that migrates a 1.x values file to 2.0 ([#288](https://github.com/n8n-io/n8n-hosting/issues/288)) ([faebb3f](https://github.com/n8n-io/n8n-hosting/commit/faebb3f846b6d6fc2c0f99e9b49ac05157537cc3))
+* **chart:** bump n8n to 2.45.5 ([#275](https://github.com/n8n-io/n8n-hosting/issues/275)) ([2178b3e](https://github.com/n8n-io/n8n-hosting/commit/2178b3e508bd299bc7168e87ed475f1b20e879c1))
+* **chart:** bump n8n to 2.46.4 ([#284](https://github.com/n8n-io/n8n-hosting/issues/284)) ([e006748](https://github.com/n8n-io/n8n-hosting/commit/e00674839f9a92b1d3c9980d685c1872d11177b2))
+* **chart:** bump n8n to 2.47.4 ([#293](https://github.com/n8n-io/n8n-hosting/issues/293)) ([db76df2](https://github.com/n8n-io/n8n-hosting/commit/db76df25b49433fa80909eb1c0fda977f5115dc5))
+* **chart:** probe workers on the health endpoint or a command, and retire probes.worker.*.type ([#271](https://github.com/n8n-io/n8n-hosting/issues/271)) ([f178dc5](https://github.com/n8n-io/n8n-hosting/commit/f178dc5026f6160477a509abd5a22aa4f2a61f70))
+* **chart:** reject values keys the schema does not declare ([#270](https://github.com/n8n-io/n8n-hosting/issues/270)) ([3e5b64c](https://github.com/n8n-io/n8n-hosting/commit/3e5b64cb61e490e5c885937be4ff49d2ed1da0e4))
+* **chart:** retire executions.concurrency.productionLimit and fail every retired 1.x setting through n8n.retiredKeys ([#283](https://github.com/n8n-io/n8n-hosting/issues/283)) ([f8d3c14](https://github.com/n8n-io/n8n-hosting/commit/f8d3c141133247136292398ead022595c617c51b))
+* **chart:** set N8N_PROXY_HOPS when the chart routes traffic through an Ingress or HTTPRoute ([#279](https://github.com/n8n-io/n8n-hosting/issues/279)) ([94a7776](https://github.com/n8n-io/n8n-hosting/commit/94a7776df4cf817f8db92e510a3c02f67670a7ca))
+* **chart:** set no ingress controller or cloud annotations in the templates ([#274](https://github.com/n8n-io/n8n-hosting/issues/274)) ([a89e5ca](https://github.com/n8n-io/n8n-hosting/commit/a89e5ca4007876164ff453013760e3a42ca2b3f7))
+* **chart:** stop setting N8N_NATIVE_PYTHON_RUNNER and QUEUE_WORKER_MAX_STALLED_COUNT ([#280](https://github.com/n8n-io/n8n-hosting/issues/280)) ([8504f3e](https://github.com/n8n-io/n8n-hosting/commit/8504f3e8334328672448cacaaf9394550e00bec4))
+
+
+### Documentation
+
+* **chart:** say where binary data lives on n8n 3.0 for each topology ([#281](https://github.com/n8n-io/n8n-hosting/issues/281)) ([18a264c](https://github.com/n8n-io/n8n-hosting/commit/18a264cdfe5b19cf97fd694565847f4be9b0898d))
+
 ## [2.0.0-rc.1](https://github.com/n8n-io/n8n-hosting/compare/v2.0.0-rc.0...v2.0.0-rc.1) (2026-10-27)
 
 
