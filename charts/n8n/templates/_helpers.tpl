@@ -668,8 +668,8 @@ when it is set, and ignores the --concurrency flag. */ -}}
 
 {{/*
 Task runners on main pods: only in standalone mode.
-In queue mode, manual executions are offloaded to workers (OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS),
-so workers handle code execution and main pods do not need runner sidecars.
+In queue mode, n8n runs every execution on workers and starts no runner on
+main, so main pods do not need runner sidecars.
 */}}
 {{- define "n8n.mainTaskRunnersEnabled" -}}
 {{- if and .Values.taskRunners.enabled (not .Values.queueMode.enabled) -}}true{{- end -}}

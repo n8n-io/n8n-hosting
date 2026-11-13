@@ -104,11 +104,6 @@ rest. It comes from database.ssl.existingSecret in n8n.secretEnv instead. */ -}}
 {{- end -}}
 {{- if $v.queueMode.enabled -}}
 {{- $_ := set $e "EXECUTIONS_MODE" (dict "value" "queue" "from" "queueMode.enabled") -}}
-{{- /* Always "true", and "n8n.mainTaskRunnersEnabled" depends on it: n8n skips
-task runner startup on main when offloading is on, so the chart drops the
-main-pod sidecar. If this ever becomes configurable, that helper must read it
-rather than queueMode.enabled. */ -}}
-{{- $_ := set $e "OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS" (dict "value" "true" "from" "queueMode.enabled") -}}
 {{- if $v.redis.clusterNodes -}}
 {{- $_ := set $e "QUEUE_BULL_REDIS_CLUSTER_NODES" (dict "value" $v.redis.clusterNodes "from" "redis.clusterNodes") -}}
 {{- else -}}
@@ -203,6 +198,10 @@ proxy in front of that one needs an override, as the chart cannot see it. */ -}}
 {{- end -}}
 {{- if include "n8n.hasTaskRunner" (dict "root" .root "component" .component) -}}
 {{- $_ := set $e "N8N_RUNNERS_MODE" (dict "value" $v.taskRunners.mode "from" "taskRunners.mode") -}}
+{{- else if and $v.queueMode.enabled (has .component (list "main" "webhookProcessor")) -}}
+{{- /* In queue mode these pods start no runner, so external mode needs no
+token. Unset, n8n defaults to internal and logs a deprecation at startup. */ -}}
+{{- $_ := set $e "N8N_RUNNERS_MODE" (dict "value" "external" "from" "queueMode.enabled" "overrideOnly" true) -}}
 {{- end -}}
 {{- if and (eq .component "worker") $v.redis.healthCheck.enabled -}}
 {{- $_ := set $e "QUEUE_HEALTH_CHECK_ACTIVE" (dict "value" "true" "from" "redis.healthCheck.enabled") -}}

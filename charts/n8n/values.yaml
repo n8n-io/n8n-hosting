@@ -86,7 +86,7 @@ multiMain:
 taskRunners:
   # Enable task runners for executing user-provided JavaScript and Python code
   # When enabled, a sidecar container (n8nio/runners) is added to:
-  #   - worker pods in queue mode (main offloads manual executions to workers)
+  #   - worker pods in queue mode (n8n runs every execution on workers)
   #   - main pods in standalone mode (queueMode.enabled=false)
   # Requires an auth token; see authToken below.
   # Set to false to run code inside the n8n process instead (internal mode,

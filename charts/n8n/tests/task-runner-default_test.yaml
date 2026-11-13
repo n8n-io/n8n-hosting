@@ -61,6 +61,30 @@ tests:
           path: spec.template.spec.containers
           count: 1
 
+  - it: sets the runner's mode on standalone main
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-main
+    set:
+      queueMode.enabled: false
+    asserts:
+      - equal:
+          path: data.N8N_RUNNERS_MODE
+          value: external
+
+  - it: leaves the runner mode unset on standalone main with taskRunners.enabled false
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n-main
+    set:
+      queueMode.enabled: false
+      taskRunners.enabled: false
+    asserts:
+      - notExists:
+          path: data.N8N_RUNNERS_MODE
+
   - it: adds no sidecar to standalone main with taskRunners.enabled false
     template: templates/deployment-main.yaml
     set:
