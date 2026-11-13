@@ -1205,8 +1205,6 @@ Resources:
               Value: https
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
@@ -1268,9 +1266,9 @@ Resources:
               Value: 60
             - Name: N8N_CONCURRENCY_PRODUCTION_LIMIT
               Value: !Ref ConcurrencyProductionLimit
-            # task runner: external when the Python sidecar is enabled, else internal (JS in-process)
+            # Code nodes run on the workers. external keeps n8n from logging the internal-mode deprecation warning.
             - Name: N8N_RUNNERS_MODE
-              Value: !If [ PythonRunner, external, internal ]
+              Value: external
             - Name: N8N_RUNNERS_AUTH_TOKEN
               Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
             - Name: QUEUE_HEALTH_CHECK_ACTIVE
@@ -1496,8 +1494,6 @@ Resources:
               Value: worker
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
@@ -1964,8 +1960,6 @@ Resources:
               Value: https
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
@@ -2005,6 +1999,11 @@ Resources:
               Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
+            # Code nodes run on the workers. external keeps n8n from logging the internal-mode deprecation warning.
+            - Name: N8N_RUNNERS_MODE
+              Value: external
+            - Name: N8N_RUNNERS_AUTH_TOKEN
+              Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
             - Name: N8N_LOG_LEVEL
               Value: warn
             - Name: QUEUE_HEALTH_CHECK_ACTIVE

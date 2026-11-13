@@ -119,3 +119,15 @@ The templates pin the database engine directly in the resource definitions (it i
   After that, what happens depends on how you run the update. The console, and `--use-previous-value`, keep the stored value, so a newer default in this repository does not move a running stack. A plain `aws cloudformation update-stack` that does not mention `N8nVersion` applies the template default instead, which will move the version if this repository has bumped it since. So if you script stack updates, pass `ParameterKey=N8nVersion,UsePreviousValue=true` unless you actually intend to upgrade n8n, otherwise an unrelated change can carry a version bump and its migrations along with it.
 
 New stacks are unaffected, they start directly on the pinned versions.
+
+### n8n 3.0
+
+The `N8nVersion` default moves to n8n 3.x when 3.0 becomes n8n's stable release.
+
+Before you pass a 3.x version:
+
+- Read the [n8n 3.0 breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes/).
+- Open **Settings > Migration Report** in n8n. It lists what on your instance needs attention.
+- Take an RDS or Aurora snapshot. n8n migrates its database forward when it starts, so the snapshot is your way back to 2.x.
+
+To stay on n8n 2.x, keep the stored `N8nVersion` value, as described above.
