@@ -1,0 +1,31 @@
+# S3 without s3.storage.mode, so 1.x stored binary data on the filesystem.
+license:
+  enabled: true
+s3:
+  enabled: true
+  bucket:
+    name: n8n-binary
+    region: eu-central-1
+  auth:
+    autoDetect: true
+serviceAccount:
+  create: false
+  awsRoleArn: arn:aws:iam::123456789012:role/n8n
+taskRunners:
+  enabled: true
+  extraEnv:
+    - name: N8N_RUNNERS_AUTH_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: runner-token
+          key: token
+secretRefs:
+  env:
+    N8N_RUNNERS_AUTH_TOKEN: replace-with-a-token
+config:
+  extraEnv:
+    - name: N8N_SMTP_SENDER
+      value: |
+        n8n
+
+        alerts

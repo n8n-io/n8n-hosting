@@ -12,8 +12,7 @@ Chart 2.0 runs n8n 3.0, so this upgrade moves both the chart and n8n. Follow the
 
 1. **Fix what n8n 3.0 breaks in your instance.** Open the Migration Report in n8n, under **Settings > Migration Report**, as an instance owner or admin. It lists the workflows and instance settings that n8n 3.0 breaks. Fix the issues marked "Upgrade blocked" and "Executions will fail" first. Some instance issues are environment variables, which you change in your values file in step 3. See n8n's [Migration Report guide](https://docs.n8n.io/changelog/v30-migration-tool) and [3.0 breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes/).
 2. **Back up your database.** The move to n8n 3.0 is one way. To go back to n8n 2.x, you restore this backup. Follow n8n's [Back up and restore](https://docs.n8n.io/deploy/host-n8n/keep-n8n-running/backup-and-restore/) guide. Keep the Secret that holds `N8N_ENCRYPTION_KEY` with the backup, because a restored database cannot be decrypted without it. See [Roll back](#roll-back).
-3. **Migrate your values file.** Some values have changes with the 2.0 release. For your convenience, we've provided a migration script to help migrate existing values files. 
-Pull the chart, and run the [migration script](#the-migration-script) over your values file. It will produce a report and a new values file for you to review.
+3. **Migrate your values file.** Many values keys change in 2.0. Pull the chart, and run the [migration script](#the-migration-script) over your values file. It writes a new values file, and a report of what it changed, for you to review.
 
    ```bash
    helm pull oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> --untar
@@ -28,12 +27,12 @@ Pull the chart, and run the [migration script](#the-migration-script) over your 
 
    The render will fail on any value key that 2.0 retired, and will name the replacement for each one.
 5. **Read the sections that apply to you.** Start with [Changes the render does not catch](#changes-the-render-does-not-catch). A passing render does not mean these are handled.
-6. **Upgrade.** Run `helm upgrade` with the new values file, passed with `-f`. We do not recommend using `--reuse-values`, as it keeps the defaults of the chart version you installed as well as your own values, so the 2.0 render will likely fail on 1.x defaults that 2.0 no longer reads. If you no longer have your values file, `helm get values <release> -o yaml` prints the values you set. `--reset-then-reuse-values`, in Helm 3.14 or later, reuses your values with the new chart's defaults, and also works.
+6. **Upgrade.** Run `helm upgrade` with the new values file, passed with `-f`. Do not use `--reuse-values`. It keeps the defaults of the chart version you installed as well as your own values, so the 2.0 render fails on 1.x defaults that 2.0 no longer reads. If you no longer have your values file, `helm get values <release> -o yaml` prints the values you set. `--reset-then-reuse-values`, in Helm 3.14 or later, reuses your values with the new chart's defaults, and also works.
 7. **Check the upgrade.** See [Check the upgrade](#check-the-upgrade).
 
 ### The migration script
 
-The script needs [yq](https://github.com/mikefarah/yq) v4. It moves or removes every values key that 2.0 retired, turns the `extraEnv` lists into `env` maps, and renames or removes the environment variables that n8n 3.0 no longer reads. It prints a report of what it changed, and of what you need to check yourself. Where it cannot decide for you, it keeps the 1.x behaviour and says so in the report. Keys it does not know pass through unchanged. See [decision 0030](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0030-a-script-migrates-1x-values.md).
+The script needs [yq](https://github.com/mikefarah/yq) v4. It moves or removes every values key that 2.0 retired, turns the `extraEnv` lists into `env` maps, and renames or removes the environment variables that n8n 3.0 no longer reads. It prints a report of what it changed, and of what you need to check yourself. Where it cannot decide for you, it keeps the 1.x behaviour and says so in the report. Keys it does not know pass through unchanged.
 
 The script has these limits:
 
@@ -174,7 +173,7 @@ Check these behaviour changes:
 
 ### Worker concurrency
 
-`executions.concurrency.productionLimit` is removed. Set `N8N_CONCURRENCY_PRODUCTION_LIMIT` in an `env` map instead. See [decision 0029](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/decisions/0029-production-limit-moves-to-env.md).
+`executions.concurrency.productionLimit` is removed. Set `N8N_CONCURRENCY_PRODUCTION_LIMIT` in an `env` map instead.
 
 | If your values set | Do this |
 |---|---|
@@ -427,9 +426,9 @@ If you mount your own `n8n-task-runners.json` through `taskRunners.customConfig`
 
 #### Storage directory
 
-On its first start, n8n 3.0 renames /home/node/.n8n/binaryData to /home/node/.n8n/storage. The chart mounts the whole of /home/node/.n8n, so the rename needs no change to your values. 
+On its first start, n8n 3.0 renames `/home/node/.n8n/binaryData` to `/home/node/.n8n/storage`. The chart mounts the whole of `/home/node/.n8n`, so the rename needs no change to your values.
 
-If both directories exist (which is unlikely for helm installed n8n), n8n will not start. The n8n Migration Report flags this as "Both storage directories exist" and provides guidance on how to fix it.
+If both directories exist, n8n does not start. A chart install does not normally create both. The n8n Migration Report flags this as "Both storage directories exist" and provides guidance on how to fix it.
 
 ### Check the upgrade
 

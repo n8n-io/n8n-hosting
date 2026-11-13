@@ -10,6 +10,7 @@ Changed:
   - Moved config.extraEnvFrom to envFrom.shared.
 Check:
   - envFrom.shared now loads after the chart's ConfigMaps, so a key in it replaces the chart's value. Check that it holds only the keys you mean to set. The script cannot see into it.
+  - s3.storage.mode was not set, so 1.x stored binary data on the filesystem. With s3.enabled, n8n now stores binary data in the bucket. To keep it out of the bucket, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE to database.
   - s3.enabled needs license.enabled: true in 2.0, because n8n stores binary data in S3 only with a Business or Enterprise licence. The render fails until you set it, or set s3.enabled: false.
   - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32. Or set taskRunners.authToken.existingSecret to a Secret that holds it under N8N_RUNNERS_AUTH_TOKEN. Or set taskRunners.enabled: false. The render fails until you do one of these.
 Review the output before you upgrade. Then render it with helm template.

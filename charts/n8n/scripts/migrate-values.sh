@@ -73,7 +73,8 @@ if [[ "$(printf '%s\n%s\n' "$YQ_TESTED_VERSION" "$yq_version" | sort -t. -k1,1n 
 fi
 
 work="$(mktemp)"
-trap 'rm -f "$work"' EXIT
+lists="$(mktemp)"
+trap 'rm -f "$work" "$lists"' EXIT
 # yq drops blank lines, so they travel through it as a comment. Each takes the
 # indentation of the next line, so a blank line inside a | block stays inside it.
 blank="#__migrate_values_blank_line__"
@@ -81,7 +82,10 @@ awk -v b="$blank" '
   /^[[:space:]]*$/ { n++; next }
   { if (n) { match($0, /^[ \t]*/); for (; n > 0; n--) print substr($0, 1, RLENGTH) b } print }
   END { for (; n > 0; n--) print b }
-' "$input" > "$work"
+ ' "$input" > "$work"
+# The extraEnv lists as the input had them, with blank lines marked the same
+# way as in the working copy, so values from both compare equal.
+cp "$work" "$lists"
 "$YQ" -e 'tag == "!!map" or tag == "!!null"' "$work" > /dev/null 2>&1 || die "$input is not a YAML map of values."
 
 # --- Helpers ---
@@ -245,7 +249,7 @@ if [[ "$converted" == true ]]; then
       worker) order="redis.extraEnv s3.storage.extraEnv executions.extraEnv config.extraEnv queueMode.workerExtraEnv" ;;
       webhookProcessor) order="redis.extraEnv webhook.extraEnv s3.storage.extraEnv config.extraEnv webhookProcessor.extraEnv" ;;
     esac
-    effective="$(for src in $order; do applied_in_1x "$src" && list_entries "$input" "$src"; done |
+    effective="$(for src in $order; do applied_in_1x "$src" && list_entries "$lists" "$src"; done |
       awk -F '\t' '{ v[$2] = $0 } END { for (k in v) print v[k] }' | sort -t "$(printf '\t')" -k2,2)"
     pinned=""
     while IFS=$'\t' read -r _ name value; do
@@ -358,9 +362,17 @@ if truthy ingress.enabled || truthy httpRoute.enabled; then
   done
 fi
 
+# The mode to name for keeping binary data out of the bucket. Queue mode
+# rejects filesystem, because the pods do not share a disk.
+if queue_mode; then other_mode="database"; else other_mode="filesystem or database"; fi
+mode_checked=false
 for t in shared main worker webhookProcessor; do
   [[ "$(q "(.env.$t // {}) | has(\"N8N_DEFAULT_BINARY_DATA_MODE\")")" == "true" ]] || continue
-  if truthy s3.enabled; then
+  if truthy s3.enabled && queue_mode && [[ "$(q ".env.$t.N8N_DEFAULT_BINARY_DATA_MODE")" == "filesystem" ]]; then
+    remove "env.$t.N8N_DEFAULT_BINARY_DATA_MODE" "In queue mode, one pod cannot read binary data that another pod wrote to its own disk, so n8n now stores it in the S3 bucket."
+    mode_checked=true
+    check "env.$t.N8N_DEFAULT_BINARY_DATA_MODE was filesystem, which queue mode does not allow. n8n now stores binary data in the S3 bucket. To keep it out of the bucket, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE to database."
+  elif truthy s3.enabled; then
     u ".chartEnvOverrides.$t.N8N_DEFAULT_BINARY_DATA_MODE = .env.$t.N8N_DEFAULT_BINARY_DATA_MODE | del(.env.$t.N8N_DEFAULT_BINARY_DATA_MODE)"
     prune_up "env.$t.N8N_DEFAULT_BINARY_DATA_MODE"
     changed "Moved env.$t.N8N_DEFAULT_BINARY_DATA_MODE to chartEnvOverrides.$t, which keeps your mode. Without it, s3.enabled sets the mode to s3."
@@ -525,7 +537,7 @@ scope_pods() {
     case "$1" in
       n8n) [[ "$c" != taskRunner ]] ;;
       mainWorker) [[ "$c" == main || "$c" == worker ]] ;;
-      hasRunner) [[ " $runner_pods " == *" $c "* ]] ;;
+      hasRunner) [[ " $runner_pods " == *" $c "* || ( "$c" == taskRunner && -n "$runner_pods" ) ]] ;;
       runner) [[ "$c" == taskRunner ]] ;;
       *) [[ "$c" == "$1" ]] ;;
     esac && out+="$c "
@@ -546,7 +558,7 @@ list_won_in_1x() {
     *) order="taskRunners.extraEnv" ;;
   esac
   for s in $order; do
-    if applied_in_1x "$s" && list_entries "$input" "$s" | cut -f2 | grep -qxF "$name"; then src="$s"; fi
+    if applied_in_1x "$s" && list_entries "$lists" "$s" | cut -f2 | grep -qxF "$name"; then src="$s"; fi
   done
   case "$src" in
     webhook.extraEnv) [[ "$pod" != main && "$group" == early ]] ;;
@@ -599,6 +611,13 @@ while read -r name scope group cond from; do
       case "$name" in
         N8N_ENCRYPTION_KEY) how="Put the same value in a Secret under the key N8N_ENCRYPTION_KEY, and set secretRefs.existingSecret to that Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY to it. With a different key, n8n cannot decrypt the credentials it saved." ;;
         N8N_RUNNERS_AUTH_TOKEN) how="Set $from to choose the value." ;;
+        DB_POSTGRESDB_SSL_*)
+          ssl_secret="$(dval database.ssl.existingSecret.name)"
+          if [[ -n "$ssl_secret" && "$ref_name" != "$ssl_secret" ]]; then
+            how="The chart reads the CA, certificate and key from the one Secret in $from.name, $ssl_secret. Copy the value into $ssl_secret, and set $from.$key_field to its key there."
+          else
+            how="Set $from.name and $from.$key_field to the Secret and key that hold the same value."
+          fi ;;
         *) how="Set $from.name and $from.$key_field to the Secret and key that hold the same value." ;;
       esac
       check "env.$t.$name was removed, because the chart reads $name from a Secret.$src $how"
@@ -740,7 +759,11 @@ if present serviceAccount.awsRoleArn; then
     remove serviceAccount.awsRoleArn "It was empty."
   elif [[ "$(q '.serviceAccount.create')" == "false" ]] || ! truthy s3.enabled || ! truthy s3.auth.autoDetect; then
     remove serviceAccount.awsRoleArn "1.x did not render it with your values, because it needs serviceAccount.create, s3.enabled and s3.auth.autoDetect."
-    check "serviceAccount.awsRoleArn was removed without adding an annotation. If the pods need that IAM role, set eks.amazonaws.com/role-arn in serviceAccount.annotations."
+    if [[ "$(q '.serviceAccount.create')" == "false" ]]; then
+      check "serviceAccount.awsRoleArn was removed without adding an annotation. The chart does not render the ServiceAccount, so if the pods need that IAM role, set eks.amazonaws.com/role-arn on the ServiceAccount itself."
+    else
+      check "serviceAccount.awsRoleArn was removed without adding an annotation. If the pods need that IAM role, set eks.amazonaws.com/role-arn in serviceAccount.annotations."
+    fi
   elif [[ "$(q '(.serviceAccount.annotations // {}) | has("eks.amazonaws.com/role-arn")')" == "true" ]]; then
     remove serviceAccount.awsRoleArn "serviceAccount.annotations already sets eks.amazonaws.com/role-arn, which won in 1.x."
   else
@@ -883,16 +906,22 @@ if truthy persistence.existingClaim; then
 fi
 
 # s3.storage.mode: s3.enabled now sets the mode.
+s3_mode_set=false
 if present s3.storage.mode; then
-  if truthy s3.enabled && [[ "$(val s3.storage.mode)" != "s3" ]] &&
+  s3_mode_set=true
+  if truthy s3.enabled && [[ "$(val s3.storage.mode)" != "s3" && "$mode_checked" == false ]] &&
     [[ "$(q '(.chartEnvOverrides.shared // {}) | has("N8N_DEFAULT_BINARY_DATA_MODE")')" != "true" ]]; then
-    check "s3.storage.mode was $(val s3.storage.mode). With s3.enabled, n8n now stores binary data in the bucket. To keep it out of the bucket, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
+    check "s3.storage.mode was $(val s3.storage.mode). With s3.enabled, n8n now stores binary data in the bucket. To keep it out of the bucket, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE to $other_mode."
   fi
   remove s3.storage.mode "s3.enabled sets the binary data mode."
 fi
 
 # --- Checks on 1.x behaviour the script leaves to you ---
 if [[ -n "$changes" ]]; then
+  if truthy s3.enabled && [[ "$s3_mode_set" == false ]] &&
+    [[ "$(q '(.chartEnvOverrides.shared // {}) | has("N8N_DEFAULT_BINARY_DATA_MODE")')" != "true" ]]; then
+    check "s3.storage.mode was not set, so 1.x stored binary data on the filesystem. With s3.enabled, n8n now stores binary data in the bucket. To keep it out of the bucket, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE to $other_mode."
+  fi
   if truthy s3.enabled && ! truthy license.enabled; then
     check "s3.enabled needs license.enabled: true in 2.0, because n8n stores binary data in S3 only with a Business or Enterprise licence. The render fails until you set it, or set s3.enabled: false."
   fi

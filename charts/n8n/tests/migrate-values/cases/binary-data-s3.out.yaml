@@ -2,6 +2,3 @@ license:
   enabled: true
 s3:
   enabled: true
-chartEnvOverrides:
-  shared:
-    N8N_DEFAULT_BINARY_DATA_MODE: "filesystem"

@@ -4,5 +4,5 @@ Changed:
   - Removed env.shared.DB_POSTGRESDB_SSL_CA. The chart reads it from the same key in the same Secret.
   - Removed env.shared.DB_POSTGRESDB_SSL_KEY. The chart reads it from a Secret.
 Check:
-  - env.shared.DB_POSTGRESDB_SSL_KEY was removed, because the chart reads DB_POSTGRESDB_SSL_KEY from a Secret. In 1.x n8n read it from the key client.key in the Secret pg-client. Set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey to the Secret and key that hold the same value.
+  - env.shared.DB_POSTGRESDB_SSL_KEY was removed, because the chart reads DB_POSTGRESDB_SSL_KEY from a Secret. In 1.x n8n read it from the key client.key in the Secret pg-client. The chart reads the CA, certificate and key from the one Secret in database.ssl.existingSecret.name, pg-tls. Copy the value into pg-tls, and set database.ssl.existingSecret.keyKey to its key there.
 Review the output before you upgrade. Then render it with helm template.
