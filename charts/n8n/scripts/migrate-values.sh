@@ -685,6 +685,11 @@ if present executions.concurrency.productionLimit; then
     fi
   fi
 fi
+# The same holds when an extraEnv list set the limit.
+if queue_mode && present queueMode.workerConcurrency &&
+  [[ "$(q '((.env.shared // {}) + (.env.worker // {})) | has("N8N_CONCURRENCY_PRODUCTION_LIMIT")')" == "true" ]]; then
+  remove queueMode.workerConcurrency "n8n ignored it, because N8N_CONCURRENCY_PRODUCTION_LIMIT sets each worker's concurrency."
+fi
 
 if present database.useExternal; then
   remove database.useExternal "database.type chooses the database. Your connection settings stay as they are."
@@ -704,7 +709,9 @@ if present webhook.timeout; then
 fi
 
 # ingress.webhookProcessor: its settings move to ingress.webhook.
+wp_ingress_set=false
 if present ingress.webhookProcessor; then
+  wp_ingress_set=true
   moved=""
   for k in className annotations tls; do
     if ! empty_at "ingress.webhookProcessor.$k"; then
@@ -918,7 +925,7 @@ fi
 
 # --- Checks on 1.x behaviour the script leaves to you ---
 if [[ -n "$changes" ]]; then
-  if truthy s3.enabled && [[ "$s3_mode_set" == false ]] &&
+  if truthy s3.enabled && [[ "$s3_mode_set" == false && "$mode_checked" == false ]] &&
     [[ "$(q '(.chartEnvOverrides.shared // {}) | has("N8N_DEFAULT_BINARY_DATA_MODE")')" != "true" ]]; then
     check "s3.storage.mode was not set, so 1.x stored binary data on the filesystem. With s3.enabled, n8n now stores binary data in the bucket. To keep it out of the bucket, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE to $other_mode."
   fi
@@ -931,6 +938,9 @@ if [[ -n "$changes" ]]; then
   elif [[ "$(q '.taskRunners.enabled')" != "false" ]] && truthy secretRefs.existingSecret &&
     ! truthy taskRunners.authToken.existingSecret && [[ "$checks" != *N8N_RUNNERS_AUTH_TOKEN* ]]; then
     check "Task runners are on by default in 2.0 and need a token. Add N8N_RUNNERS_AUTH_TOKEN to the Secret $(val secretRefs.existingSecret). Or set taskRunners.authToken.existingSecret to another Secret that holds it, or set taskRunners.enabled: false. The chart cannot see into the Secret, so the render passes, but the pods do not start without the key."
+  fi
+  if [[ "$wp_ingress_set" == false ]] && truthy webhookProcessor.enabled && truthy ingress.enabled; then
+    check "The chart now renders the webhook Ingress, which sends production webhooks to the webhook processors. On a controller that gives each Ingress its own load balancer, such as the AWS Load Balancer Controller, add the same group annotation to ingress.annotations and ingress.webhook.annotations."
   fi
   if truthy networkPolicy.enabled && [[ "$(q '.networkPolicy.egress // [] | length')" == "0" ]]; then
     check "networkPolicy.egress is empty, so the NetworkPolicy now allows all egress. UPGRADING.md has the 1.x rules to keep them."

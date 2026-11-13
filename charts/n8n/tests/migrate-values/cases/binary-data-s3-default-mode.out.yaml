@@ -10,6 +10,7 @@ s3:
     autoDetect: true
 serviceAccount:
   create: false
+  name: n8n-irsa
 taskRunners:
   enabled: true
 secretRefs:

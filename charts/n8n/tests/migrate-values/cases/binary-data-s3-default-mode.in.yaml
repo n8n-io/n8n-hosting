@@ -10,6 +10,7 @@ s3:
     autoDetect: true
 serviceAccount:
   create: false
+  name: n8n-irsa
   awsRoleArn: arn:aws:iam::123456789012:role/n8n
 taskRunners:
   enabled: true
