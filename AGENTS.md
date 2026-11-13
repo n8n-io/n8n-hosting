@@ -26,7 +26,7 @@ Each branch runs its own copy of `.github/workflows/`. The exception is `bump-n8
 
 The individual calls made under those principles live one per file in `charts/n8n/decisions/`, numbered and named for the call (`0001-chart-versioning.md`). Take the next free number when work on the change starts, and record it on the ticket, so that two open PRs never claim the same number. Write one when a change settles a question a reviewer could reasonably reopen later, and keep it to context, decision, consequences, the date and a link to the PR. They are public and they version with the chart, so a reviewer asking why the chart version doesn't follow n8n's gets a file to read rather than a Linear thread to reconstruct. `charts/n8n/decisions/README.md` has the shape.
 
-A decision that changes what a customer sees also gets a line in `charts/n8n/UPGRADING.md`, under the heading for its topic, linking back to the decision. Customers need the what and the how, and the reasoning stays here for anyone who goes looking for it.
+A decision that changes what a customer sees also gets a line in `charts/n8n/UPGRADING.md`, under the heading for its topic. That line says what changes and what to do, and does not link to the decision. Customers need the what and the how, and the reasoning stays here for anyone who goes looking for it.
 
 ## Changing the chart
 
