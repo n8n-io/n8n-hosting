@@ -549,8 +549,24 @@ while read -r name scope group cond from; do
     set_on="$(scope_pods "$scope" "$pods")"
     if [[ -z "$set_on" ]] || ! chart_condition "$cond"; then continue; fi
     if [[ "$group" == secret ]]; then
+      won=false
+      for c in $set_on; do list_won_in_1x "$c" "$name" "$group" && won=true; done
+      ref_name="$(q ".env.${t}[strenv(N)].secretKeyRef.name // \"\"")"
+      ref_key="$(q ".env.${t}[strenv(N)].secretKeyRef.key // \"\"")"
+      if ! $won; then
+        remove "env.$t.$name" "The chart reads it from $from, and that value won over yours in 1.x."
+        continue
+      fi
       remove "env.$t.$name" "The chart reads it from a Secret."
-      check "env.$t.$name was removed, because the chart reads $name from a Secret. Set $from to choose the value."
+      # Only the value n8n used in 1.x keeps working, so say where it was.
+      src=""
+      [[ -n "$ref_name" && -n "$ref_key" ]] && src=" In 1.x n8n read it from the key $ref_key in the Secret $ref_name."
+      case "$name" in
+        N8N_ENCRYPTION_KEY) how="Put the same value in a Secret under the key N8N_ENCRYPTION_KEY, and set secretRefs.existingSecret to that Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY to it. With a different key, n8n cannot decrypt the credentials it saved." ;;
+        N8N_RUNNERS_AUTH_TOKEN) how="Set $from to choose the value." ;;
+        *) how="Set $from.name and $from.key to the Secret and key that hold the same value." ;;
+      esac
+      check "env.$t.$name was removed, because the chart reads $name from a Secret.$src $how"
       continue
     fi
     scalar=false

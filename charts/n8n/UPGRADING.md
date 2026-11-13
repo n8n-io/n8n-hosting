@@ -57,7 +57,7 @@ Every install needs [Values validation](#values-validation), [Environment variab
 | Sets `networkPolicy.enabled: true` | [Network policy](#network-policy) |
 | Sets `persistence.enabled: true`, or was installed with Helm 4 | [Persistence](#persistence), and [Storage directory](#storage-directory) under n8n 3.0 |
 | Adds containers with `extraContainers` or `extraInitContainers` | [Pod defaults](#pod-defaults), [Security contexts](#security-contexts) |
-| Mounts its own task runner config, or builds its own n8n im0age | [Image changes](#image-changes) |
+| Mounts its own task runner config, or builds its own n8n image | [Image changes](#image-changes) |
 
 ### Changes the render does not catch
 

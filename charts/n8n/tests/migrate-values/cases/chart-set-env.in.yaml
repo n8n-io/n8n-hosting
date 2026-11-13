@@ -21,12 +21,14 @@ config:
       valueFrom:
         secretKeyRef:
           name: n8n-key
-          key: key
+          key: encryption-key
 
 webhook:
   extraEnv:
     - name: QUEUE_BULL_REDIS_HOST
       value: redis-webhooks.acme.internal
+    - name: DB_POSTGRESDB_PASSWORD
+      value: not-used
 
 redis:
   extraEnv:
