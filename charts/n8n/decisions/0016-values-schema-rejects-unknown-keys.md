@@ -23,7 +23,7 @@ These stay open, because their keys belong to Kubernetes or to the user, and the
 - `strategy` and `dnsConfig`
 - `extraObjects`, `extraContainers`, `extraInitContainers`, `extraVolumes` and `extraVolumeMounts`
 - `secretRefs.env`, and the `env`, `chartEnvOverrides` and `envFrom` maps, whose variable names are the user's
-- `metadata` in KEDA triggers
+- `metadata` in KEDA triggers, and `advanced` for each KEDA component
 
 The root declares `global` as an open object and `enabled` as accepting only `true`, so the chart works as a subchart. The chart reads neither. When a parent sets `enabled: false`, Helm drops the subchart before the schema runs. So the only `false` the schema sees comes from installing the chart directly, where it would do nothing.
 

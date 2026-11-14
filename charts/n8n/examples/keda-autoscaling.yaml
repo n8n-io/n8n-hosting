@@ -30,6 +30,17 @@ keda:
     cooldownPeriod: 300        # Wait time before scaling down (seconds)
     minReplicaCount: 2
     maxReplicaCount: 20
+    # Remove at most one worker a minute, once the queue has stayed short for
+    # 5 minutes, so a burst ending does not drop most workers at once
+    advanced:
+      horizontalPodAutoscalerConfig:
+        behavior:
+          scaleDown:
+            stabilizationWindowSeconds: 300
+            policies:
+              - type: Pods
+                value: 1
+                periodSeconds: 60
     triggers:
       - type: redis
         metadata:

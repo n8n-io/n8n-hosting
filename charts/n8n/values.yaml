@@ -683,6 +683,27 @@ keda:
     cooldownPeriod: 300
     minReplicaCount: 2
     maxReplicaCount: 20
+    # Limit how fast KEDA adds or removes workers, rendered as the ScaledObject's
+    # spec.advanced. Empty leaves the Kubernetes HPA defaults, which can jump
+    # straight to the target count. horizontalPodAutoscalerConfig.behavior applies
+    # between 1 and maxReplicaCount, and KEDA handles scaling between 0 and 1 itself.
+    # See https://keda.sh/docs/latest/reference/scaledobject-spec/#advanced
+    # For example, add at most 2 pods and remove at most 1 pod a minute:
+    # advanced:
+    #   horizontalPodAutoscalerConfig:
+    #     behavior:
+    #       scaleUp:
+    #         policies:
+    #           - type: Pods
+    #             value: 2
+    #             periodSeconds: 60
+    #       scaleDown:
+    #         stabilizationWindowSeconds: 300
+    #         policies:
+    #           - type: Pods
+    #             value: 1
+    #             periodSeconds: 60
+    advanced: {}
     triggers:
       - type: redis
         metadata:
@@ -709,6 +730,8 @@ keda:
     cooldownPeriod: 120
     minReplicaCount: 2
     maxReplicaCount: 50
+    # Limit how fast KEDA adds or removes webhook processors, as keda.worker.advanced.
+    advanced: {}
     triggers: []
 
 # ----- Pod Disruption Budget -----
