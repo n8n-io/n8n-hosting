@@ -67,14 +67,14 @@ s3:
     name: "n8n-enterprise-storage"
     region: "us-east-1"
   auth:
-    autoDetect: true  # Using IRSA
+    autoDetect: true  # AWS SDK credential chain, here IRSA on EKS
 
 # Service account with enterprise IAM role
 serviceAccount:
   create: true
   name: n8n-enterprise
-  awsRoleArn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
   annotations:
+    # IRSA on EKS. Remove it if you use Pod Identity.
     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
 
 # n8n Enterprise License Configuration
@@ -131,11 +131,12 @@ env:
     # Enterprise features
     N8N_ENTERPRISE_LICENSE_ENABLED: true
 
+  worker:
+    # Production executions each worker runs at once.
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: 100
+
 # Advanced execution settings
 executions:
-  concurrency:
-    # In queue mode n8n uses this as each worker's concurrency.
-    productionLimit: 100
   timeout: 7200  # 2 hours
 
 # Core secrets

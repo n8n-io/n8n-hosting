@@ -1,0 +1,4 @@
+probes:
+  worker:
+    readiness:
+      command: ["/usr/local/bin/ready"]

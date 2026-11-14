@@ -1,0 +1,61 @@
+# Every extraEnv list from 1.x, with comments and blank lines around them.
+config:
+  timezone: UTC
+
+  # Shared settings
+  extraEnv:
+    - name: N8N_LOG_LEVEL
+      value: "info"
+    - name: N8N_SMTP_PASS
+      valueFrom:
+        secretKeyRef:
+          name: smtp
+          key: password
+    - name: N8N_EMPTY
+  extraEnvFrom:
+    - configMapRef:
+        name: n8n-extra
+
+redis:
+  host: redis.example.com
+  extraEnv:
+    - name: N8N_LOG_LEVEL
+      value: "debug"
+
+s3:
+  enabled: true
+  storage:
+    extraEnv:
+      - name: AWS_REGION
+        value: eu-west-1
+
+queueMode:
+  enabled: true
+  workerExtraEnv:
+    - name: N8N_LOG_LEVEL
+      value: "warn"
+
+webhook:
+  extraEnv:
+    - name: N8N_PAYLOAD_SIZE_MAX
+      value: "64"
+
+executions:
+  extraEnv:
+    - name: EXECUTIONS_TIMEOUT
+      value: "3600"
+
+webhookProcessor:
+  enabled: true
+  extraEnv:
+    - name: N8N_PAYLOAD_SIZE_MAX
+      value: "128"
+
+taskRunners:
+  extraEnv:
+    - name: N8N_RUNNERS_MAX_CONCURRENCY
+      value: "5"
+
+# A key the script does not know passes through.
+global:
+  team: payments

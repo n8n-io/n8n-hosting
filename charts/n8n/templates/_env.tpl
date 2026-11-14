@@ -142,9 +142,6 @@ rather than queueMode.enabled. */ -}}
 {{- with $v.redis.worker.stalledInterval -}}
 {{- $_ := set $e "QUEUE_WORKER_STALLED_INTERVAL" (dict "value" . "from" "redis.worker.stalledInterval") -}}
 {{- end -}}
-{{- with $v.redis.worker.maxStalledCount -}}
-{{- $_ := set $e "QUEUE_WORKER_MAX_STALLED_COUNT" (dict "value" . "from" "redis.worker.maxStalledCount") -}}
-{{- end -}}
 {{- $_ := set $e "N8N_GRACEFUL_SHUTDOWN_TIMEOUT" (dict "value" $v.redis.worker.timeout "from" "redis.worker.timeout") -}}
 {{- end -}}
 {{- if $v.webhook.enabled -}}
@@ -206,7 +203,6 @@ proxy in front of that one needs an override, as the chart cannot see it. */ -}}
 {{- end -}}
 {{- if include "n8n.hasTaskRunner" (dict "root" .root "component" .component) -}}
 {{- $_ := set $e "N8N_RUNNERS_MODE" (dict "value" $v.taskRunners.mode "from" "taskRunners.mode") -}}
-{{- $_ := set $e "N8N_NATIVE_PYTHON_RUNNER" (dict "value" $v.taskRunners.nativePythonRunner "from" "taskRunners.nativePythonRunner") -}}
 {{- end -}}
 {{- if and (eq .component "worker") $v.redis.healthCheck.enabled -}}
 {{- $_ := set $e "QUEUE_HEALTH_CHECK_ACTIVE" (dict "value" "true" "from" "redis.healthCheck.enabled") -}}
@@ -237,9 +233,6 @@ proxy in front of that one needs an override, as the chart cannot see it. */ -}}
 {{- end -}}
 {{- with $exec.pruning.softDeleteInterval -}}
 {{- $_ := set $e "EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL" (dict "value" . "from" "executions.pruning.softDeleteInterval") -}}
-{{- end -}}
-{{- if and $exec.concurrency.productionLimit (ne ($exec.concurrency.productionLimit | int) -1) -}}
-{{- $_ := set $e "N8N_CONCURRENCY_PRODUCTION_LIMIT" (dict "value" $exec.concurrency.productionLimit "from" "executions.concurrency.productionLimit") -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}

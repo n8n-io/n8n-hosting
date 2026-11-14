@@ -308,7 +308,9 @@
           },
           "additionalProperties": false
         },
-        "nativePythonRunner": { "type": "boolean" },
+        "nativePythonRunner": {
+          "description": "Retired. Remove it; the task runner image decides whether Python runs."
+        },
         "customConfig": {
           "type": "object",
           "properties": {
@@ -431,14 +433,7 @@
         },
         "tls": { "type": "array" },
         "sticky": {
-          "type": "object",
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "cookieName": { "type": "string" },
-            "cookieExpires": { "type": "string" },
-            "cookieMaxAge": { "type": "string" }
-          },
-          "additionalProperties": false
+          "description": "Retired. Set your ingress controller's session affinity annotations in ingress.annotations instead."
         },
         "webhook": {
           "type": "object",
@@ -632,6 +627,9 @@
         "automountServiceAccountToken": {
           "type": "boolean",
           "description": "Mount the ServiceAccount token into n8n pods. n8n does not call the Kubernetes API."
+        },
+        "awsRoleArn": {
+          "description": "Retired. Set the role in serviceAccount.annotations as eks.amazonaws.com/role-arn instead."
         }
       },
       "additionalProperties": false
@@ -773,9 +771,8 @@
               "type": "object",
               "properties": {
                 "enabled": { "type": "boolean" },
-                "type": { 
-                  "type": "string",
-                  "enum": ["", "httpGet", "exec"]
+                "type": {
+                  "description": "Retired. Set probes.worker.readiness.command for an exec probe, or leave command empty to probe the health endpoint."
                 },
                 "path": { "type": "string" },
                 "command": { 
@@ -794,8 +791,7 @@
               "properties": {
                 "enabled": { "type": "boolean" },
                 "type": {
-                  "type": "string",
-                  "enum": ["", "httpGet", "exec"]
+                  "description": "Retired. Set probes.worker.liveness.command for an exec probe, or leave command empty to probe the health endpoint."
                 },
                 "path": { "type": "string" },
                 "command": {
@@ -1005,7 +1001,7 @@
         "concurrency": {
           "type": "object",
           "properties": {
-            "productionLimit": { "type": "integer" }
+            "productionLimit": { "description": "Retired. Set N8N_CONCURRENCY_PRODUCTION_LIMIT in env.worker in queue mode, or in env.main in standalone mode." }
           },
           "additionalProperties": false
         },
@@ -1402,7 +1398,9 @@
             "lockDuration": { "type": "integer", "minimum": 1000 },
             "lockRenewTime": { "type": "integer", "minimum": 1000 },
             "stalledInterval": { "type": "integer", "minimum": 1000 },
-            "maxStalledCount": { "type": "integer", "minimum": 1 }
+            "maxStalledCount": {
+              "description": "Retired. Remove it; n8n 2.0 removed the setting."
+            }
           },
           "additionalProperties": false
         },

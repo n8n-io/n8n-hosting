@@ -1,0 +1,2 @@
+queueMode:
+  workerConcurrency: 10

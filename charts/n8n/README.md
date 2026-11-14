@@ -244,7 +244,7 @@ Some load balancers send traffic straight to the pod IPs, such as the AWS Load B
 
 MCP Server Trigger endpoints (`/mcp/`) are served by the webhook processors, so scaling `webhookProcessor.replicaCount` (or its HPA/KEDA) scales MCP alongside regular webhooks — no dedicated single-replica pod or session affinity is required. This relies on n8n's queue-mode/multi-instance MCP support added in **n8n 2.8.0** ([n8n-io/n8n#25147](https://github.com/n8n-io/n8n/pull/25147)), which recreates MCP sessions from Redis and runs tool calls on workers.
 
-Use `ingress.sticky.enabled=true` for nginx cookie affinity, or `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. Multi-main deployments require sticky sessions at the load-balancing layer.
+Multi-main deployments need sticky sessions at the load-balancing layer. Set your ingress controller's affinity annotations in `ingress.annotations`, or set `service.sessionAffinity.enabled=true` for Kubernetes `ClientIP` affinity. [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) shows cookie affinity for ingress-nginx.
 
 See [https-ingress.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/https-ingress.yaml) for a complete HTTPS example.
 
@@ -301,6 +301,8 @@ See [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/cha
 
 Workers consume jobs from Redis and do not receive inbound HTTP traffic, so the chart intentionally does not create a Kubernetes Service for worker pods. The worker port serves health checks only. Worker readiness fails until the worker has its database, migrations and Redis connection.
 
+To probe a worker with your own check, set `probes.worker.liveness.command` or `probes.worker.readiness.command`. A probe with a command runs as an exec probe. If you set `redis.healthCheck.enabled=false`, give each enabled liveness or readiness probe a command, or disable it. Otherwise the render fails, because the probe would have nothing to check. The chart leaves the startup probe out when the health endpoint is off.
+
 ## Scaling Guidance
 
 Scale execution throughput with `queueMode.workerReplicaCount` and `queueMode.workerConcurrency`. The built-in HPA can scale main, worker, and webhook processor deployments from CPU and optional memory utilization.
@@ -325,6 +327,14 @@ serviceAccount:
   name: "my-external-sa"   # must already exist in the release namespace
 ```
 
+For EKS IRSA, or workload identity on another cloud, set the annotation the platform reads in `serviceAccount.annotations`. The chart adds none of its own. It applies these annotations only to a ServiceAccount it creates. With `create: false`, annotate the existing ServiceAccount directly:
+
+```yaml
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/n8n"
+```
+
 To use the namespace's default ServiceAccount, set `name: ""`. If you set `create: false` without also changing `name` from the chart default `"n8n"`, rendering will fail with a clear error — this prevents pods from being wired to a ServiceAccount that was never created.
 
 ## Binary data
@@ -336,11 +346,15 @@ n8n stores binary data, such as files passed between nodes, in one of several pl
 | `s3.enabled: true` | `s3` | The S3 bucket |
 | Queue mode | `database` | The n8n database |
 | Standalone with `persistence.enabled: true` | `filesystem` | `/home/node/.n8n/storage` on the PVC |
-| Standalone without persistence | `filesystem` | An emptyDir, lost when the pod restarts |
+| Standalone on PostgreSQL without persistence | `filesystem` | An emptyDir, lost when the pod is deleted or rescheduled |
 
-An install that already has `/home/node/.n8n/binaryData` keeps using it on n8n 2.x. n8n 3.0 renames it to `storage` on first start.
+Standalone on SQLite needs `persistence.enabled: true` for its database, so without S3 its binary data is on the PVC.
+
+On n8n 2.x, an install that already has `/home/node/.n8n/binaryData` keeps using it, and a new install uses `storage`. n8n 3.0 renames `binaryData` to `storage` on its first start, and the files in it stay readable. See [UPGRADING.md](UPGRADING.md#n8n-30) for the case where both directories exist.
 
 S3 binary data storage needs an n8n Business or Enterprise licence. Without one, n8n exits at boot and logs that the licence is missing, so the chart requires `license.enabled: true` alongside `s3.enabled: true`.
+
+The bucket must exist before n8n starts. If it does not, n8n exits at boot with `Failed to connect to S3`. That message suggests checking the host, port and protocol, but a missing bucket causes it too.
 
 In `database` mode, n8n rejects files over 512 MiB. `N8N_BINARY_DATA_DATABASE_MAX_FILE_SIZE` in `env.shared` raises the limit, up to 1024 MiB.
 
@@ -417,7 +431,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `taskRunners.image.digest` | Pin the runner image by digest; replaces `taskRunners.image.tag` when set. With task runners enabled, set both digests or neither | `""` |
 | `imagePullSecrets` | Existing pull Secrets for private image registries, as a list of `- name: <secret>` entries | `[]` |
 | `queueMode.workerReplicaCount` | Number of worker pods | `2` |
-| `queueMode.workerConcurrency` | Jobs per worker, passed as `--concurrency`. Empty uses n8n's default of 10. Fails together with `executions.concurrency.productionLimit`, which n8n uses for workers instead | `null` |
+| `queueMode.workerConcurrency` | Jobs per worker, passed as `--concurrency`. Empty uses n8n's default of 10. Fails together with `N8N_CONCURRENCY_PRODUCTION_LIMIT` in `env.shared` or `env.worker`, which n8n uses for workers instead | `null` |
 | `env.<component>` | Environment variables for `shared`, `main`, `worker`, `webhookProcessor` or `taskRunner` | `{}` |
 | `chartEnvOverrides.<component>` | Replacements for variables the chart sets | `{}` |
 | `envFrom.<component>` | ConfigMaps and Secrets loaded whole | `[]` |
@@ -686,7 +700,7 @@ See [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/char
 
 Chart version bumps are automated via Release Please. Check the [CHANGELOG](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/CHANGELOG.md) for breaking changes before upgrading.
 
-Before you move to a new major version, read [UPGRADING.md](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md). It explains how to find the values you must change, and what else each major changes. The guidance for 2.0 is still being written while 2.0 is in development.
+Before you move to a new major version, read [UPGRADING.md](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md). It explains how to find the values you must change, and what else each major changes. For 2.0, `scripts/migrate-values.sh` in the chart converts most of a 1.x values file. Review its output, and read its limits under "The migration script" in UPGRADING.md. The guidance for 2.0 is still being written while 2.0 is in development.
 
 ```bash
 helm upgrade n8n oci://ghcr.io/n8n-io/n8n-helm-chart/n8n --version <new-version> -f my-values.yaml

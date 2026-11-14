@@ -7,7 +7,7 @@ Parameters:
 
   N8nVersion:
     Type: String
-    Default: "2.45.5"
+    Default: "2.47.4"
     Description: "n8n version to deploy. Drives both the n8nio/n8n and n8nio/runners images, which are released together and must match. Never move this below the version a running stack has already migrated to, n8n does not down-migrate the schema. Must be 2.0.0 or later: this template stopped setting N8N_AVAILABLE_BINARY_DATA_MODES, which n8n 1.x still requires to enable S3 binary storage (it fails startup with \"External storage selected but unavailable\" without it). n8n only made N8N_DEFAULT_BINARY_DATA_MODE sufficient on its own starting at the 2.0 release that removed the variable."
     AllowedPattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
     ConstraintDescription: "Must be a concrete n8n version such as 2.38.5, not a floating tag like stable or latest."
@@ -1132,8 +1132,6 @@ Resources:
               Value: https
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
@@ -1195,9 +1193,9 @@ Resources:
               Value: 60
             - Name: N8N_CONCURRENCY_PRODUCTION_LIMIT
               Value: !Ref ConcurrencyProductionLimit
-            # task runner: external when the Python sidecar is enabled, else internal (JS in-process)
+            # Code nodes run on the workers. external keeps n8n from logging the internal-mode deprecation warning.
             - Name: N8N_RUNNERS_MODE
-              Value: !If [ PythonRunner, external, internal ]
+              Value: external
             - Name: N8N_RUNNERS_AUTH_TOKEN
               Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
             - Name: QUEUE_HEALTH_CHECK_ACTIVE
@@ -1423,8 +1421,6 @@ Resources:
               Value: worker
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
@@ -1891,8 +1887,6 @@ Resources:
               Value: https
             - Name: N8N_DEFAULT_BINARY_DATA_MODE
               Value: s3
-            - Name: N8N_RUNNERS_ENABLED
-              Value: true
             - Name: N8N_METRICS
               Value: true
             - Name: N8N_METRICS_INCLUDE_QUEUE_METRICS
@@ -1932,6 +1926,11 @@ Resources:
               Value: 30000
             - Name: EXECUTIONS_MODE
               Value: queue
+            # Code nodes run on the workers. external keeps n8n from logging the internal-mode deprecation warning.
+            - Name: N8N_RUNNERS_MODE
+              Value: external
+            - Name: N8N_RUNNERS_AUTH_TOKEN
+              Value: !Join [ "-", [ "runner", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ]
             - Name: N8N_LOG_LEVEL
               Value: warn
             - Name: QUEUE_HEALTH_CHECK_ACTIVE

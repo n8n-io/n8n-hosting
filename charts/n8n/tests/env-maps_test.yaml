@@ -241,6 +241,18 @@ tests:
       - notExists:
           path: data.N8N_RUNNERS_BROKER_LISTEN_ADDRESS
 
+  # n8n reads neither variable. The runner image's launcher config decides
+  # whether Python runs.
+  - it: does not render QUEUE_WORKER_MAX_STALLED_COUNT or N8N_NATIVE_PYTHON_RUNNER
+    template: templates/configmap.yaml
+    set:
+      taskRunners.enabled: true
+    asserts:
+      - notExists:
+          path: data.QUEUE_WORKER_MAX_STALLED_COUNT
+      - notExists:
+          path: data.N8N_NATIVE_PYTHON_RUNNER
+
   - it: renders a broker listen address set in a worker env map
     template: templates/configmap.yaml
     set:

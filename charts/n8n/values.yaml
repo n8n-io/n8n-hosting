@@ -55,9 +55,8 @@ queueMode:
   enabled: true
   workerReplicaCount: 2
   # Jobs each worker runs at once, passed as --concurrency. Leave empty to use
-  # n8n's default of 10. n8n also takes this from
-  # executions.concurrency.productionLimit, which wins over the flag, so set
-  # one or the other; the render fails when both are set.
+  # n8n's default of 10. n8n ignores the flag when N8N_CONCURRENCY_PRODUCTION_LIMIT
+  # is set, so the render fails when env.shared or env.worker also sets it.
   workerConcurrency: null
 
 # ----- Webhook processors (optional scaling layer) -----
@@ -136,9 +135,6 @@ taskRunners:
     # The launcher will automatically start the runner again when there are new tasks
     # Set to 0 to disable automatic shutdown
     autoShutdownTimeout: 15
-
-  # Enable native Python runner (required for Python support, currently in beta)
-  nativePythonRunner: true
 
   # Custom launcher configuration file
   # You can mount a custom n8n-task-runners.json to allowlist additional packages
@@ -219,8 +215,11 @@ ingress:
   enabled: false
   # IngressClass to use for the main n8n ingress. Examples: nginx, alb, traefik.
   className: ""
-  # Controller-specific annotations. For cert-manager, set:
+  # Controller-specific annotations. The chart sets none of its own. For
+  # cert-manager, set:
   # cert-manager.io/cluster-issuer: letsencrypt-prod
+  # Multi-main needs session affinity: set your controller's affinity
+  # annotations here. examples/https-ingress.yaml shows them for ingress-nginx.
   annotations: {}
   # TLS configuration for the main n8n ingress.
   # Example:
@@ -229,11 +228,6 @@ ingress:
   #     hosts:
   #       - n8n.example.com
   tls: []
-  sticky:
-    enabled: false
-    cookieName: n8n_affinity
-    cookieExpires: "172800"  # 2 days in seconds
-    cookieMaxAge: "172800"   # 2 days in seconds
   hosts:
     - host: n8n.example.com   # <-- Change to your actual domain
       paths:
@@ -302,6 +296,9 @@ httpRoute:
     annotations: {}
 
 # ----- Persistence -----
+# A PVC for /home/node/.n8n on the main pod. In standalone mode it also holds
+# binary data, unless s3.enabled. Without it, that data is on an emptyDir and
+# is lost when the pod is deleted or rescheduled.
 persistence:
   enabled: false
   # Shape of the chart's PVC. Leave size and storageClassName unset with
@@ -543,10 +540,9 @@ serviceAccount:
   # never created and fail to start. The chart will refuse to render in that
   # case (see n8n.validate in templates/_helpers.tpl).
   name: n8n
-  # AWS IAM Role ARN for IRSA (IAM Roles for Service Accounts)
-  # Required when s3.auth.autoDetect=true for AWS S3 access
-  awsRoleArn: ""
-  # Additional annotations for the service account
+  # Annotations for the service account the chart creates. With create: false,
+  # annotate the existing service account directly. For EKS IRSA, set:
+  # eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/n8n
   annotations: {}
   # Whether the ServiceAccount token is mounted into n8n pods at
   # /var/run/secrets/kubernetes.io/serviceaccount. n8n never calls the
@@ -585,8 +581,9 @@ probes:
   # Worker probes. Workers serve /healthz and /healthz/readiness on
   # redis.healthCheck.port when redis.healthCheck.enabled is true.
   # /healthz/readiness answers 503 until the worker has its database,
-  # migrations and Redis connection. With the health endpoint off and no
-  # command, liveness and readiness fall back to a process check.
+  # migrations and Redis connection. Set a probe's command to run it as an
+  # exec probe instead. With the health endpoint off, each enabled liveness
+  # or readiness probe needs a command.
   worker:
     # Holds off liveness until the health endpoint answers. The worker
     # starts it only after database migrations, so this budget also
@@ -599,18 +596,16 @@ probes:
       failureThreshold: 30
     readiness:
       enabled: true
-      type: ""                               # <-- httpGet or exec; empty picks exec if command is set, else httpGet
       path: /healthz/readiness
-      command: []
+      command: []                            # <-- Runs as an exec probe when set
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 3
       failureThreshold: 6
     liveness:
       enabled: true
-      type: ""                               # <-- httpGet or exec; empty picks exec if command is set, else httpGet
       path: /healthz
-      command: []
+      command: []                            # <-- Runs as an exec probe when set
       initialDelaySeconds: 60
       periodSeconds: 30
       timeoutSeconds: 5
@@ -789,11 +784,6 @@ executions:
     hardDeleteBuffer: 1                         # <-- Buffer hours before hard delete
     hardDeleteInterval: 15                      # <-- Hard delete interval in minutes
     softDeleteInterval: 60                      # <-- Soft delete interval in minutes
-  # Concurrency settings
-  concurrency:
-    # Max concurrent production executions (-1 = disabled). In queue mode n8n
-    # applies it to each worker instead of queueMode.workerConcurrency.
-    productionLimit: -1
 
 # ----- Environment variables -----
 # Variables for each component, as flat maps of NAME: value. The chart renders
@@ -942,17 +932,18 @@ redis:
     lockDuration: 60000                            # <-- Worker lease duration (ms)
     lockRenewTime: 10000                           # <-- Lock renewal frequency (ms)
     stalledInterval: 30000                         # <-- Stalled job check interval (ms)
-    maxStalledCount: 1                             # <-- Max stalled job retries
   # Worker health endpoint, probed by probes.worker
   healthCheck:
     enabled: true                                  # <-- Serve /healthz and /healthz/readiness on workers
     port: 5678                                     # <-- Port the worker health endpoint listens on
 
-# ----- S3 External Storage (required for queue mode with binary data) -----
+# ----- S3 External Storage -----
 s3:
   # With S3 enabled, n8n stores binary data in the bucket. This needs an n8n
   # Business or Enterprise licence and license.enabled=true. To store binary
   # data elsewhere, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE.
+  # With S3 disabled, the chart sets no mode. n8n stores binary data in the
+  # database in queue mode, and under /home/node/.n8n/storage otherwise.
   enabled: false
   # S3 bucket configuration
   bucket:
@@ -961,7 +952,7 @@ s3:
     host: ""                                   # <-- S3 endpoint (optional for AWS S3)
   # Authentication
   auth:
-    autoDetect: false                          # <-- Use AWS credential provider chain (requires serviceAccount.awsRoleArn)
+    autoDetect: false                          # <-- Use the AWS SDK credential chain, such as EKS IRSA or Pod Identity
     accessKeyId: ""                            # <-- S3 access key ID (not needed if autoDetect=true)
     secretAccessKeySecret:                     # <-- Secret containing S3 secret access key (not needed if autoDetect=true)
       name: ""                                 # <-- K8s Secret name

@@ -1,0 +1,7 @@
+persistence:
+  enabled: true
+  existingClaim: n8n-data
+  size: 8Gi
+  storageClassName: gp3
+  accessModes:
+    - ReadWriteOnce

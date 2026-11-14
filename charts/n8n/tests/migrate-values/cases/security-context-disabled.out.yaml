@@ -1,0 +1,2 @@
+podSecurityContext:
+  shared: null

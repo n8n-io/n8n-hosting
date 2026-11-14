@@ -1,0 +1,5 @@
+queueMode:
+  enabled: false
+executions:
+  concurrency:
+    productionLimit: 20

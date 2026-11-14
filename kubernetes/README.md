@@ -23,6 +23,18 @@ n8n recommends self-hosting for expert users. Mistakes can lead to data loss, se
 
 ## Upgrade Considerations
 
+### n8n 3.0
+
+`n8n-deployment.yaml` pins the n8n image these manifests are tested with. The pin moves to n8n 3.x when 3.0 becomes n8n's stable release.
+
+Before you upgrade:
+
+* Read the [n8n 3.0 breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes/).
+* Open **Settings > Migration Report** in n8n. It lists what on your instance needs attention.
+* Back up the database. Step 1 of the PostgreSQL 18 dump and restore below exports it. Keep the `n8n-claim0` claim too, as it holds the encryption key. n8n migrates its database forward when it starts, so the backup is your way back to 2.x.
+
+To stay on n8n 2.x, keep the `n8nio/n8n` image in `n8n-deployment.yaml` at your current 2.x version when you take a newer copy of these manifests.
+
 ### PostgreSQL 18
 
 `postgres-deployment.yaml` runs `postgres:18`.

@@ -1,0 +1,20 @@
+# Variables the chart sets, in the extraEnv lists. config.extraEnv came after
+# the chart's entries in 1.x, and webhook.extraEnv came before them on main.
+queueMode:
+  enabled: true
+
+webhookProcessor:
+  enabled: true
+
+taskRunners:
+  enabled: false
+env:
+  webhookProcessor:
+    EXECUTIONS_TIMEOUT_MAX: "7200"
+    EXECUTIONS_DATA_SAVE_ON_SUCCESS: none
+chartEnvOverrides:
+  shared:
+    TZ: Europe/Berlin
+    EXECUTIONS_TIMEOUT_MAX: "7200"
+  webhookProcessor:
+    QUEUE_BULL_REDIS_HOST: redis-webhooks.acme.internal

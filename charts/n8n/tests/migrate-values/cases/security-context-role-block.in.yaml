@@ -1,0 +1,16 @@
+# OpenShift on 1.x: the restricted SCC assigns the UID and GID.
+podSecurityContext:
+  main:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  worker:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  webhookProcessor:
+    runAsNonRoot: true
+    fsGroup: 3000
+taskRunners:
+  authToken:
+    value: example-token

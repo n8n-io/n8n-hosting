@@ -305,26 +305,66 @@ contains a dot cannot be listed. Each key also gets a note in UPGRADING.md.
 The retiredKeysTest entries are fixtures for tests/without-schema/retired-keys_test.yaml.
 */}}
 {{- define "n8n.retiredKeys" -}}
+- path: config.extraEnv
+  replacement: "Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret."
+- path: config.extraEnvFrom
+  replacement: "Move its entries to envFrom.shared."
 - path: database.ssl.key
   replacement: "Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey."
 - path: database.useExternal
   replacement: "Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim."
+- path: executions.concurrency.productionLimit
+  replacement: "Set N8N_CONCURRENCY_PRODUCTION_LIMIT in env.worker in queue mode, or in env.main in standalone mode."
+- path: executions.extraEnv
+  replacement: "Set its variables in env.main and env.worker as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret."
+- path: ingress.sticky
+  replacement: "Set your ingress controller's session affinity annotations in ingress.annotations. examples/https-ingress.yaml shows them for ingress-nginx."
 - path: ingress.webhookProcessor
   replacement: "Move className, annotations and tls to ingress.webhook, and remove enabled. The webhook Ingress renders whenever webhookProcessor.enabled is true."
+- path: probes.worker.liveness.type
+  replacement: "Remove it. Set probes.worker.liveness.command for an exec probe, or leave command empty to probe the health endpoint."
+- path: probes.worker.readiness.type
+  replacement: "Remove it. Set probes.worker.readiness.command for an exec probe, or leave command empty to probe the health endpoint."
+- path: queueMode.workerExtraEnv
+  replacement: "Set its variables in env.worker as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret."
+- path: redis.extraEnv
+  replacement: "Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret."
 - path: redis.useExternal
   replacement: "Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host."
+- path: redis.worker.maxStalledCount
+  replacement: "Remove it. n8n 2.0 removed the setting, and n8n ignores QUEUE_WORKER_MAX_STALLED_COUNT."
 - path: retiredKeysTest.first
   replacement: "Set retiredKeysTest.replacement: true instead."
 - path: retiredKeysTest.nested.second
   replacement: "Remove it; nothing replaces it."
+- path: s3.storage.extraEnv
+  replacement: "Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret."
 - path: s3.storage.mode
   replacement: "Remove it. s3.enabled sets the binary data mode. To store binary data outside S3, set chartEnvOverrides.shared.N8N_DEFAULT_BINARY_DATA_MODE."
+- path: secretRefs.env.N8N_HOST
+  replacement: "Remove it from secretRefs.env. n8n builds its public URLs from editor.url and webhook.url. If you still need the variable, set it in env.shared."
+- path: secretRefs.env.N8N_PORT
+  replacement: "Remove it from secretRefs.env. The chart sets N8N_PORT from service.port."
+- path: secretRefs.env.N8N_PROTOCOL
+  replacement: "Remove it from secretRefs.env. n8n builds its public URLs from editor.url and webhook.url. If you still need the variable, set it in env.shared."
 - path: securityContext
   replacement: "Move fsGroup, runAsUser and runAsGroup to podSecurityContext.shared, and remove enabled. If enabled was false, set podSecurityContext.shared: null instead."
+- path: serviceAccount.awsRoleArn
+  replacement: "Set the role in serviceAccount.annotations as eks.amazonaws.com/role-arn instead."
 - path: taskRunners.authToken.value
   replacement: "Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN instead, or with secretRefs.existingSecret, add the token to that Secret under the key N8N_RUNNERS_AUTH_TOKEN."
 - path: taskRunners.broker.listenAddress
   replacement: "Remove it. The broker listens on localhost, where the task-runner sidecar reaches it. For a runner outside the pod, set N8N_RUNNERS_BROKER_LISTEN_ADDRESS in env.worker, or in env.main in standalone mode."
+- path: taskRunners.extraEnv
+  replacement: "Set its variables in env.taskRunner as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret."
+- path: taskRunners.nativePythonRunner
+  replacement: "Remove it. The task runner image decides whether Python runs, and the default image runs it."
+- path: webhook.extraEnv
+  replacement: "Set its variables in env.main and env.webhookProcessor as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret."
+- path: webhook.timeout
+  replacement: "Remove it; nothing replaces it. n8n has no setting for a webhook timeout."
+- path: webhookProcessor.extraEnv
+  replacement: "Set its variables in env.webhookProcessor as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret."
 {{- end -}}
 
 {{/*
@@ -375,8 +415,8 @@ per mistake.
 {{- if and .Values.queueMode.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) -}}
 {{- range $name := list "liveness" "readiness" -}}
 {{- $probe := index $.Values.probes.worker $name -}}
-{{- if and $probe.enabled (eq $probe.type "httpGet") (not $.Values.redis.healthCheck.enabled) -}}
-{{- $errs = append $errs (printf "probes.worker.%s.type=httpGet requires redis.healthCheck.enabled=true, which starts the worker health endpoint. Set redis.healthCheck.enabled=true, or remove probes.worker.%s.type to let the chart choose." $name $name) -}}
+{{- if and $probe.enabled (not $probe.command) (not $.Values.redis.healthCheck.enabled) -}}
+{{- $errs = append $errs (printf "probes.worker.%s has nothing to check. redis.healthCheck.enabled=false turns off the worker health endpoint, and probes.worker.%s.command is empty. Set redis.healthCheck.enabled=true, set probes.worker.%s.command, or set probes.worker.%s.enabled=false." $name $name $name $name) -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -532,9 +572,6 @@ runner and n8n drift onto different versions. */ -}}
 {{- if and (not .Values.s3.auth.autoDetect) (not .Values.s3.auth.accessKeyId) -}}
 {{- $errs = append $errs "s3.auth.accessKeyId is required when s3.enabled=true and s3.auth.autoDetect=false" -}}
 {{- end -}}
-{{- if and .Values.s3.auth.autoDetect (not .Values.serviceAccount.awsRoleArn) -}}
-{{- $errs = append $errs "serviceAccount.awsRoleArn is required when s3.auth.autoDetect=true (for IRSA)" -}}
-{{- end -}}
 {{- if not .Values.license.enabled -}}
 {{- $errs = append $errs "s3.enabled=true requires license.enabled=true. n8n stores binary data in S3 only with a Business or Enterprise licence, and exits at boot without one. Set license.activationKey or license.existingSecret.name, or set license.enabled=true alone if the licence reaches n8n another way." -}}
 {{- end -}}
@@ -576,38 +613,6 @@ existing Secret of the same name. */ -}}
 {{- $errs = append $errs "secretRefs.env.N8N_ENCRYPTION_KEY must be changed from the default placeholder value, provide secretRefs.existingSecret with your own Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY_FILE" -}}
 {{- end -}}
 
-{{/* --- Settings the chart no longer reads --- */}}
-{{- range $k := list "N8N_HOST" "N8N_PROTOCOL" -}}
-{{- if hasKey $.Values.secretRefs.env $k -}}
-{{- $errs = append $errs (printf "secretRefs.env.%s is no longer read. n8n builds its public URLs from editor.url and webhook.url. Remove it from secretRefs.env, and set it in env.shared if you still need it." $k) -}}
-{{- end -}}
-{{- end -}}
-{{- if hasKey .Values.secretRefs.env "N8N_PORT" -}}
-{{- $errs = append $errs "secretRefs.env.N8N_PORT is no longer read. The chart sets N8N_PORT from service.port. Remove it from secretRefs.env." -}}
-{{- end -}}
-{{- $lists := list
-  (dict "path" "config.extraEnv" "value" .Values.config.extraEnv "to" "env.shared")
-  (dict "path" "config.extraEnvFrom" "value" .Values.config.extraEnvFrom "to" "envFrom.shared")
-  (dict "path" "queueMode.workerExtraEnv" "value" .Values.queueMode.workerExtraEnv "to" "env.worker")
-  (dict "path" "webhookProcessor.extraEnv" "value" .Values.webhookProcessor.extraEnv "to" "env.webhookProcessor")
-  (dict "path" "webhook.extraEnv" "value" .Values.webhook.extraEnv "to" "env.main and env.webhookProcessor")
-  (dict "path" "redis.extraEnv" "value" .Values.redis.extraEnv "to" "env.shared")
-  (dict "path" "executions.extraEnv" "value" .Values.executions.extraEnv "to" "env.main and env.worker")
-  (dict "path" "s3.storage.extraEnv" "value" .Values.s3.storage.extraEnv "to" "env.shared")
-  (dict "path" "taskRunners.extraEnv" "value" .Values.taskRunners.extraEnv "to" "env.taskRunner") -}}
-{{- range $lists -}}
-{{- if .value -}}
-{{- if eq .path "config.extraEnvFrom" -}}
-{{- $errs = append $errs (printf "%s is no longer read. Move its entries to %s." .path .to) -}}
-{{- else -}}
-{{- $errs = append $errs (printf "%s is no longer read. Set these variables in %s as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret." .path .to) -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- if hasKey .Values.webhook "timeout" -}}
-{{- $errs = append $errs "webhook.timeout has no effect: n8n has no setting for a webhook timeout. Remove it from your values." -}}
-{{- end -}}
-
 {{/* --- Environment --- */}}
 {{- range include "n8n.validateEnv" . | fromJsonArray -}}
 {{- $errs = append $errs . -}}
@@ -615,10 +620,6 @@ existing Secret of the same name. */ -}}
 {{- /* n8n takes a worker's concurrency from N8N_CONCURRENCY_PRODUCTION_LIMIT
 when it is set, and ignores the --concurrency flag. */ -}}
 {{- if and .Values.queueMode.enabled .Values.queueMode.workerConcurrency -}}
-{{- $limit := .Values.executions.concurrency.productionLimit -}}
-{{- if and $limit (ne ($limit | int) -1) -}}
-{{- $errs = append $errs "queueMode.workerConcurrency and executions.concurrency.productionLimit both set each worker's concurrency, and n8n uses productionLimit. Remove one of them." -}}
-{{- end -}}
 {{- range include "n8n.userEnv" (dict "root" . "component" "worker") | fromJsonArray -}}
 {{- if and (eq .name "N8N_CONCURRENCY_PRODUCTION_LIMIT") (not (hasPrefix "chartEnvOverrides." .source)) -}}
 {{- $errs = append $errs (printf "queueMode.workerConcurrency and N8N_CONCURRENCY_PRODUCTION_LIMIT in %s both set each worker's concurrency, and n8n uses the variable. Remove one of them." .source) -}}
@@ -811,40 +812,21 @@ Main pod replica count: multiMain.replicas under multi-main, otherwise replicaCo
 {{- end -}}
 
 {{/*
-Probe type for a worker liveness or readiness probe. An explicit type wins.
-Otherwise a command means exec, and the health endpoint means httpGet, so
-partial overrides keep rendering the probe they asked for.
-
-Call with (dict "probe" .Values.probes.worker.liveness "root" .)
-*/}}
-{{- define "n8n.workerProbeType" -}}
-{{- if .probe.type -}}
-{{- .probe.type -}}
-{{- else if .probe.command -}}
-exec
-{{- else if .root.Values.redis.healthCheck.enabled -}}
-httpGet
-{{- else -}}
-exec
-{{- end -}}
-{{- end -}}
-
-{{/*
-Handler for a worker liveness or readiness probe. With the health endpoint
-off and no command, it falls back to a process check. pgrep matches its own
-shell, so that check passes whenever the container can run a shell; the
-health endpoint is the real check.
+Handler for a worker liveness or readiness probe. A command runs as an exec
+probe; without one, the worker is probed on its health endpoint.
+n8n.validate fails the render when the endpoint is off and there is no
+command.
 
 Call with (dict "probe" .Values.probes.worker.liveness "root" .)
 */}}
 {{- define "n8n.workerProbeHandler" -}}
-{{- if eq (include "n8n.workerProbeType" .) "httpGet" -}}
+{{- if .probe.command -}}
+exec:
+  command:
+    {{- toYaml .probe.command | nindent 4 }}
+{{- else -}}
 httpGet:
   path: {{ .probe.path }}
   port: {{ .root.Values.redis.healthCheck.port }}
-{{- else -}}
-exec:
-  command:
-    {{- toYaml (.probe.command | default (list "/bin/sh" "-c" "pgrep -f 'n8n worker' > /dev/null")) | nindent 4 }}
 {{- end -}}
 {{- end -}}
