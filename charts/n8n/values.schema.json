@@ -852,6 +852,11 @@
             },
             "minReplicaCount": { "type": "integer", "minimum": 0 },
             "maxReplicaCount": { "type": "integer", "minimum": 1 },
+            "advanced": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "KEDA's ScaledObject spec.advanced for workers, rendered as written. Empty renders nothing, leaving the HPA defaults."
+            },
             "triggers": {
               "type": "array",
               "items": {
@@ -897,6 +902,11 @@
             },
             "minReplicaCount": { "type": "integer", "minimum": 0 },
             "maxReplicaCount": { "type": "integer", "minimum": 1 },
+            "advanced": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "KEDA's ScaledObject spec.advanced for webhook processors, rendered as written. Empty renders nothing, leaving the HPA defaults."
+            },
             "triggers": {
               "type": "array",
               "items": {

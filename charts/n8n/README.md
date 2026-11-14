@@ -440,9 +440,11 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
 | `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
 | `keda.worker.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
+| `keda.worker.advanced` | KEDA `spec.advanced` for workers, such as `horizontalPodAutoscalerConfig.behavior` to limit the scaling rate | `{}` |
 | `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods | `false` |
 | `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
 | `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
+| `keda.webhookProcessor.advanced` | KEDA `spec.advanced` for webhook processors | `{}` |
 | `networkPolicy.enabled` | Network policies | `false` |
 | `networkPolicy.ingress` | Ingress rules that replace the chart's. Empty allows the release's own pods and any source on `service.port` | `[]` |
 | `networkPolicy.egress` | Egress rules that replace the chart's. Empty allows all egress | `[]` |
@@ -653,9 +655,9 @@ Either component merges these annotations with anything you set in `commonAnnota
 
 The `listName` is the Bull waiting-list key, `<prefix>:jobs:wait`, where the prefix defaults to `bull`. If you set `redis.prefix`, update `listName` to match (e.g. `myprefix:jobs:wait`), otherwise the scaler polls a key n8n never writes to and queue-depth autoscaling won't fire.
 
-### Incremental scaling
+### Limiting the scaling rate
 
-By default, the HPA behind KEDA can scale directly to the computed replica count (e.g. 3→20). Set `keda.worker.advanced.horizontalPodAutoscalerConfig.behavior` to cap how many pods are added or removed per interval:
+KEDA hands scaling between 1 and `maxReplicaCount` to an HPA, and the HPA's default can jump straight to the target count, for example from 3 workers to 20 or back. Set `keda.worker.advanced.horizontalPodAutoscalerConfig.behavior` to cap how many pods it adds or removes in each period. `keda.webhookProcessor.advanced` does the same for webhook processors.
 
 ```yaml
 keda:
@@ -675,6 +677,8 @@ keda:
                 value: 1
                 periodSeconds: 60
 ```
+
+`behavior` does not apply to scaling between 0 and 1. KEDA handles that step itself, with the trigger's activation threshold on the way up and `cooldownPeriod` on the way down. The chart renders `advanced` as written into the ScaledObject's `spec.advanced`, so any field KEDA supports there works, such as `restoreToOriginalReplicaCount`.
 
 See [keda-autoscaling.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/keda-autoscaling.yaml) for a complete example.
 
