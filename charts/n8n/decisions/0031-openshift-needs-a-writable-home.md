@@ -1,7 +1,7 @@
 # 0031. OpenShift gets a writable home in the example, not a chart default
 
 Date: 2026-11-16
-PR:
+PR: https://github.com/n8n-io/n8n-hosting/pull/297
 
 ## Context
 
