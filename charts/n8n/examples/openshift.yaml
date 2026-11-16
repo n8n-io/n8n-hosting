@@ -7,8 +7,10 @@
 # to create /.n8n and exits. N8N_USER_FOLDER moves that directory under
 # /home/node. The image owns /home/node as uid 1000, so the assigned UID cannot
 # create /home/node/.cache, or /home/node/.n8n on a worker. An emptyDir at
-# /home/node is writable by the assigned UID. Main still mounts its data
-# volume at /home/node/.n8n, and that mount covers the nested path.
+# /home/node is writable by the assigned UID. The emptyDir is removed when
+# the pod is deleted. Main still mounts its data volume at /home/node/.n8n.
+# The runtime mounts the parent first, then that nested path, so workflow
+# data stays on the data volume.
 
 queueMode:
   enabled: true
