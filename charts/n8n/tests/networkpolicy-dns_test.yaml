@@ -1,0 +1,27 @@
+# The fixed egress allows DNS on the Service port and on the port OpenShift
+# DNS pods listen on. The policy is applied after the Service translates 53
+# to the pod port, so 53 alone does not match there.
+suite: 'network policy dns'
+templates:
+  - templates/networkpolicy.yaml
+set:
+  networkPolicy.enabled: true
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: allows DNS on the Service port and on the OpenShift pod port
+    template: templates/networkpolicy.yaml
+    asserts:
+      - equal:
+          path: spec.egress[0].ports
+          value:
+            - protocol: UDP
+              port: 53
+            - protocol: TCP
+              port: 53
+            - protocol: UDP
+              port: 5353
+            - protocol: TCP
+              port: 5353
+      - equal:
+          path: spec.egress[0].to
+          value: []

@@ -32,13 +32,19 @@ spec:
         - protocol: TCP
           port: {{ .Values.service.port }}
   egress:
-    # Allow DNS resolution
+    # Allow DNS resolution. 53 is the Service port. 5353 is the port the
+    # OpenShift DNS pods listen on. The policy is checked after the Service
+    # translates 53, so 53 alone does not match there.
     - to: []
       ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
     {{- if .Values.database.useExternal }}
     # Allow PostgreSQL
     - to: []
