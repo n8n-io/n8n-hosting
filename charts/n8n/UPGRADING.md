@@ -323,9 +323,18 @@ podSecurityContext:
     fsGroup: null
     runAsUser: null
     runAsGroup: null
+env:
+  shared:
+    N8N_USER_FOLDER: /home/node
+extraVolumes:
+  - name: n8n-home
+    emptyDir: {}
+extraVolumeMounts:
+  - name: n8n-home
+    mountPath: /home/node
 ```
 
-The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The chart's containers keep `allowPrivilegeEscalation: false` and drop all capabilities. Together these meet the `restricted` Pod Security Standard. Containers you add with `extraContainers` or `extraInitContainers` do not get the container defaults, so set their `securityContext` yourself.
+The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The assigned UID has no `/etc/passwd` entry, so without `N8N_USER_FOLDER` n8n tries to create `/.n8n` and exits. The image owns `/home/node` as uid 1000, so mount a writable directory there as well. [`examples/openshift.yaml`](examples/openshift.yaml) is a full example. The chart's containers keep `allowPrivilegeEscalation: false` and drop all capabilities. Together these meet the `restricted` Pod Security Standard. Containers you add with `extraContainers` or `extraInitContainers` do not get the container defaults, so set their `securityContext` yourself.
 
 ### Network policy
 

@@ -1,0 +1,64 @@
+# The OpenShift example has to give every n8n container a directory it can
+# write. The image owns /home/node as uid 1000, and an SCC-assigned uid has
+# no entry in /etc/passwd, so HOME is / and n8n tries to create /.n8n.
+suite: 'openshift example'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+values:
+  - ../examples/openshift.yaml
+tests:
+  - it: leaves the uid and gid for the restricted SCC to assign
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.securityContext.runAsUser
+      - notExists:
+          path: spec.template.spec.securityContext.runAsGroup
+      - notExists:
+          path: spec.template.spec.securityContext.fsGroup
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+
+  - it: points n8n at a home directory inside the writable mount
+    template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
+    asserts:
+      - equal:
+          path: data.N8N_USER_FOLDER
+          value: /home/node
+
+  - it: mounts a writable home on every n8n container
+    templates:
+      - templates/deployment-main.yaml
+      - templates/deployment-worker.yaml
+      - templates/deployment-webhook-processor.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: n8n-home
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: n8n-home
+            mountPath: /home/node
+
+  - it: keeps main's data volume on top of that home
+    template: templates/deployment-main.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /home/node/.n8n

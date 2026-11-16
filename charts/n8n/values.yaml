@@ -469,12 +469,23 @@ nodePlacement: {}
 # merges over it field by field, so set only the fields you want to change.
 # The role wins over shared. Set a field to null to remove it. Set shared to
 # null to drop every default.
-# Example for OpenShift, where the restricted SCC assigns the UID and GID:
+# Example for OpenShift, where the restricted SCC assigns the UID and GID.
+# The assigned UID cannot write the image's /home/node, so also set
+# N8N_USER_FOLDER and mount an emptyDir there. See examples/openshift.yaml.
 #   podSecurityContext:
 #     shared:
 #       fsGroup: null
 #       runAsUser: null
 #       runAsGroup: null
+#   env:
+#     shared:
+#       N8N_USER_FOLDER: /home/node
+#   extraVolumes:
+#     - name: n8n-home
+#       emptyDir: {}
+#   extraVolumeMounts:
+#     - name: n8n-home
+#       mountPath: /home/node
 podSecurityContext:
   shared:
     fsGroup: 1000

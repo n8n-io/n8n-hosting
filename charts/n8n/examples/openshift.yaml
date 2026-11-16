@@ -1,0 +1,57 @@
+# OpenShift with the restricted SCC.
+#
+# The SCC assigns the UID and GID. Remove the chart's pinned IDs so the pod
+# is admitted. runAsNonRoot and the RuntimeDefault seccomp profile stay.
+#
+# An assigned UID has no entry in /etc/passwd, so HOME is /. n8n then tries
+# to create /.n8n and exits. N8N_USER_FOLDER moves that directory under
+# /home/node. The image owns /home/node as uid 1000, so the assigned UID cannot
+# create /home/node/.cache, or /home/node/.n8n on a worker. An emptyDir at
+# /home/node is writable by the assigned UID. Main still mounts its data
+# volume at /home/node/.n8n, and that mount covers the nested path.
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 2
+  workerConcurrency: 10
+
+webhookProcessor:
+  enabled: true
+  replicaCount: 1
+
+database:
+  type: postgresdb
+  host: postgres.example.com
+  port: 5432
+  database: n8n
+  user: n8n
+  passwordSecret:
+    name: n8n-db-secret
+    key: password
+
+redis:
+  enabled: true
+  host: redis.example.com
+  port: 6379
+
+# The core Secret holds N8N_ENCRYPTION_KEY and N8N_RUNNERS_AUTH_TOKEN.
+secretRefs:
+  existingSecret: n8n-core-secrets
+
+podSecurityContext:
+  shared:
+    fsGroup: null
+    runAsUser: null
+    runAsGroup: null
+
+env:
+  shared:
+    N8N_USER_FOLDER: /home/node
+
+extraVolumes:
+  - name: n8n-home
+    emptyDir: {}
+
+extraVolumeMounts:
+  - name: n8n-home
+    mountPath: /home/node
