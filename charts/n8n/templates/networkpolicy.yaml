@@ -32,15 +32,21 @@ spec:
         - protocol: TCP
           port: {{ .Values.service.port }}
   egress:
-    # Allow DNS resolution. 53 is the Service port. 5353 is the port the
-    # OpenShift DNS pods listen on. The policy is checked after the Service
-    # translates 53, so 53 alone does not match there.
+    # Allow DNS resolution on the Service port.
     - to: []
       ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
+    # OpenShift DNS pods listen on 5353. The policy is checked after the
+    # Service translates 53, so 53 alone does not match there. Limit 5353
+    # to that namespace. Port 53 stays as it was.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
         - protocol: UDP
           port: 5353
         - protocol: TCP

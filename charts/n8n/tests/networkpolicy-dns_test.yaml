@@ -1,6 +1,6 @@
-# The fixed egress allows DNS on the Service port and on the port OpenShift
-# DNS pods listen on. The policy is applied after the Service translates 53
-# to the pod port, so 53 alone does not match there.
+# The fixed egress allows DNS on the Service port. OpenShift DNS pods listen
+# on 5353, and the policy is applied after the Service translates 53, so 53
+# alone does not match there. 5353 is limited to the openshift-dns namespace.
 suite: 'network policy dns'
 templates:
   - templates/networkpolicy.yaml
@@ -8,7 +8,7 @@ set:
   networkPolicy.enabled: true
   secretRefs.existingSecret: n8n-core-secrets
 tests:
-  - it: allows DNS on the Service port and on the OpenShift pod port
+  - it: allows DNS on port 53 to any destination
     template: templates/networkpolicy.yaml
     asserts:
       - equal:
@@ -18,10 +18,23 @@ tests:
               port: 53
             - protocol: TCP
               port: 53
+      - equal:
+          path: spec.egress[0].to
+          value: []
+
+  - it: allows port 5353 only to the OpenShift DNS namespace
+    template: templates/networkpolicy.yaml
+    asserts:
+      - equal:
+          path: spec.egress[1].to
+          value:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: openshift-dns
+      - equal:
+          path: spec.egress[1].ports
+          value:
             - protocol: UDP
               port: 5353
             - protocol: TCP
               port: 5353
-      - equal:
-          path: spec.egress[0].to
-          value: []
