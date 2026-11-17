@@ -1,0 +1,83 @@
+# keda.<component>.advanced renders as the ScaledObject's spec.advanced, and
+# only when set, so an install without it keeps the HPA defaults.
+suite: 'keda: advanced'
+templates:
+  - templates/scaledobject-worker.yaml
+  - templates/scaledobject-webhook-processor.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  keda.enabled: true
+  webhookProcessor.enabled: true
+  keda.webhookProcessor.enabled: true
+  keda.webhookProcessor.triggers:
+    - type: redis
+      metadata:
+        listName: "bull:jobs:wait"
+        listLength: "5"
+tests:
+  - it: renders no spec.advanced by default
+    asserts:
+      - notExists:
+          path: spec.advanced
+
+  - it: renders keda.worker.advanced on the worker ScaledObject
+    template: templates/scaledobject-worker.yaml
+    set:
+      keda.worker.advanced:
+        restoreToOriginalReplicaCount: true
+        horizontalPodAutoscalerConfig:
+          behavior:
+            scaleDown:
+              stabilizationWindowSeconds: 300
+              policies:
+                - type: Pods
+                  value: 1
+                  periodSeconds: 60
+    asserts:
+      - equal:
+          path: spec.advanced
+          value:
+            restoreToOriginalReplicaCount: true
+            horizontalPodAutoscalerConfig:
+              behavior:
+                scaleDown:
+                  stabilizationWindowSeconds: 300
+                  policies:
+                    - type: Pods
+                      value: 1
+                      periodSeconds: 60
+
+  - it: keeps the worker setting off the webhook-processor ScaledObject
+    template: templates/scaledobject-webhook-processor.yaml
+    set:
+      keda.worker.advanced.restoreToOriginalReplicaCount: true
+    asserts:
+      - notExists:
+          path: spec.advanced
+
+  - it: renders keda.webhookProcessor.advanced on the webhook-processor ScaledObject
+    template: templates/scaledobject-webhook-processor.yaml
+    set:
+      keda.webhookProcessor.advanced:
+        horizontalPodAutoscalerConfig:
+          behavior:
+            scaleUp:
+              policies:
+                - type: Pods
+                  value: 2
+                  periodSeconds: 60
+    asserts:
+      - equal:
+          path: spec.advanced.horizontalPodAutoscalerConfig.behavior.scaleUp.policies[0].value
+          value: 2
+
+  # The schema leaves advanced open, so a field the chart does not list
+  # still reaches KEDA (decisions/0016).
+  - it: passes a field the chart does not list through to KEDA
+    template: templates/scaledobject-worker.yaml
+    set:
+      keda.worker.advanced.horizontalPodAutoscalerConfig.name: n8n-worker-hpa
+    asserts:
+      - equal:
+          path: spec.advanced.horizontalPodAutoscalerConfig.name
+          value: n8n-worker-hpa

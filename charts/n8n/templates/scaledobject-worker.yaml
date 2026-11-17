@@ -18,6 +18,10 @@ spec:
   cooldownPeriod: {{ .Values.keda.worker.cooldownPeriod }}
   minReplicaCount: {{ .Values.keda.worker.minReplicaCount }}
   maxReplicaCount: {{ .Values.keda.worker.maxReplicaCount }}
+  {{- if .Values.keda.worker.advanced }}
+  advanced:
+    {{- toYaml .Values.keda.worker.advanced | nindent 4 }}
+  {{- end }}
   triggers:
     {{- range .Values.keda.worker.triggers }}
     - type: {{ .type }}
