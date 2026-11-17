@@ -1,63 +1,72 @@
-{{- if and .Values.webhookProcessor.enabled ((.Values.ingress).webhookProcessor).enabled }}
+{{- $hooks := .Values.ingress.webhook | default dict }}
+{{- if and .Values.ingress.enabled (or .Values.webhookProcessor.enabled $hooks.hosts) }}
+{{- $fullname := include "n8n.fullname" . }}
+{{- $backend := ternary (printf "%s-webhook-processor" $fullname) (printf "%s-main" $fullname) (and .Values.webhookProcessor.enabled true) }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "n8n.fullname" . }}-webhook-processor
+  {{- /* The name stays the same in every layout. ingress-nginx refuses an
+  Ingress for paths another Ingress holds, so a new name fails the upgrade. */}}
+  name: {{ $fullname }}-webhook-processor
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     app.kubernetes.io/component: webhook-processor
-  {{- $merged := merge (deepCopy ((.Values.ingress.webhookProcessor).annotations | default dict)) (.Values.commonAnnotations | default dict) }}
-  {{- with $merged }}
+  {{- with merge (deepCopy ($hooks.annotations | default dict)) (.Values.commonAnnotations | default dict) }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- with (.Values.ingress.webhookProcessor).className }}
+  {{- with $hooks.className | default .Values.ingress.className }}
   ingressClassName: {{ . }}
   {{- end }}
   rules:
+  {{- if $hooks.hosts }}
+  {{- /* Webhook hosts carry the webhook paths only, so the editor is not
+  reachable there. n8n builds test URLs from the webhook URL too, and only
+  main serves them. */}}
+  {{- range $hooks.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+        {{- range include "n8n.webhookPaths" $ | fromYamlArray }}
+          - path: {{ . }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $backend }}
+                port:
+                  number: {{ $.Values.service.port }}
+        {{- end }}
+        {{- range include "n8n.webhookTestPaths" $ | fromYamlArray }}
+          - path: {{ . }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-main
+                port:
+                  number: {{ $.Values.service.port }}
+        {{- end }}
+  {{- end }}
+  {{- else }}
+  {{- /* Webhooks share the editor hosts. The main Ingress sends the rest of
+  each host to main. */}}
   {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
-          - path: /webhook/
+        {{- range include "n8n.webhookPaths" $ | fromYamlArray }}
+          - path: {{ . }}
             pathType: Prefix
             backend:
               service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
+                name: {{ $backend }}
                 port:
                   number: {{ $.Values.service.port }}
-          - path: /webhook-waiting/
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
-                port:
-                  number: {{ $.Values.service.port }}
-          - path: /form/
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
-                port:
-                  number: {{ $.Values.service.port }}
-          - path: /form-waiting/
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
-                port:
-                  number: {{ $.Values.service.port }}
-          - path: /mcp/
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "n8n.fullname" $ }}-webhook-processor
-                port:
-                  number: {{ $.Values.service.port }}
+        {{- end }}
   {{- end }}
-  {{- with (.Values.ingress.webhookProcessor).tls }}
+  {{- end }}
+  {{- with $hooks.tls }}
   tls:
     {{- toYaml . | nindent 4 }}
   {{- end }}

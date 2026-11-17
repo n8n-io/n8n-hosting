@@ -1,0 +1,24 @@
+# S3 without s3.storage.mode, so 1.x stored binary data on the filesystem.
+license:
+  enabled: true
+s3:
+  enabled: true
+  bucket:
+    name: n8n-binary
+    region: eu-central-1
+  auth:
+    autoDetect: true
+serviceAccount:
+  create: false
+  name: n8n-irsa
+taskRunners:
+  enabled: true
+secretRefs:
+  env:
+    N8N_RUNNERS_AUTH_TOKEN: replace-with-a-token
+env:
+  shared:
+    N8N_SMTP_SENDER: |
+      n8n
+
+      alerts

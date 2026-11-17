@@ -1,0 +1,6 @@
+# 1.x applied redis.extraEnv only in queue mode, and s3.storage.extraEnv only
+# with s3.enabled.
+queueMode:
+  enabled: false
+s3:
+  enabled: false

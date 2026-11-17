@@ -30,6 +30,17 @@ keda:
     cooldownPeriod: 300        # Wait time before scaling down (seconds)
     minReplicaCount: 2
     maxReplicaCount: 20
+    # Remove at most one worker a minute, once the queue has stayed short for
+    # 5 minutes, so a burst ending does not drop most workers at once
+    advanced:
+      horizontalPodAutoscalerConfig:
+        behavior:
+          scaleDown:
+            stabilizationWindowSeconds: 300
+            policies:
+              - type: Pods
+                value: 1
+                periodSeconds: 60
     triggers:
       - type: redis
         metadata:
@@ -54,7 +65,6 @@ keda:
 # External database
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host.com"
   port: 5432
   database: n8n
@@ -67,10 +77,10 @@ database:
 # External Redis
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host.com"
   port: 6379
 
 # Core secrets
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"

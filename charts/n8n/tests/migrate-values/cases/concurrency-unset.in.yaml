@@ -1,0 +1,5 @@
+queueMode:
+  workerConcurrency: 10
+executions:
+  concurrency:
+    productionLimit: -1

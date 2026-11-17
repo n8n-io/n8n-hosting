@@ -1,0 +1,14 @@
+# 1.x applied redis.extraEnv only in queue mode, and s3.storage.extraEnv only
+# with s3.enabled.
+queueMode:
+  enabled: false
+redis:
+  extraEnv:
+    - name: QUEUE_HEALTH_CHECK_ACTIVE
+      value: "true"
+s3:
+  enabled: false
+  storage:
+    extraEnv:
+      - name: AWS_REGION
+        value: eu-west-1

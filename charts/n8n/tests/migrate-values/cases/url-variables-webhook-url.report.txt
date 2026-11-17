@@ -1,0 +1,11 @@
+Changed:
+  - Moved executions.extraEnv to env.main and env.worker: N8N_WEBHOOK_URL.
+  - Moved queueMode.workerExtraEnv to env.worker: N8N_EDITOR_BASE_URL.
+  - Moved env.main.N8N_WEBHOOK_URL to chartEnvOverrides.main, which keeps your value over the one the chart sets from webhook.url.
+  - Moved env.worker.N8N_WEBHOOK_URL to chartEnvOverrides.worker, which keeps your value over the one the chart sets from webhook.url.
+  - Moved env.worker.N8N_EDITOR_BASE_URL to editor.url, which the chart sets the variable from.
+Check:
+  - env.main.N8N_WEBHOOK_URL differs from webhook.url. The script kept your value on main pods. Remove chartEnvOverrides.main.N8N_WEBHOOK_URL if webhook.url is the address you want.
+  - env.worker.N8N_WEBHOOK_URL differs from webhook.url. The script kept your value on worker pods. Remove chartEnvOverrides.worker.N8N_WEBHOOK_URL if webhook.url is the address you want.
+  - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32. Or set taskRunners.authToken.existingSecret to a Secret that holds it under N8N_RUNNERS_AUTH_TOKEN. Or set taskRunners.enabled: false. The render fails until you do one of these.
+Review the output before you upgrade. Then render it with helm template.

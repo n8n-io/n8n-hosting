@@ -1,0 +1,150 @@
+# Settings the chart no longer reads fail the render and name what to do
+# instead, so an upgraded values file never carries a setting that does
+# nothing.
+suite: 'validate: settings the chart no longer reads'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+tests:
+  - it: refuses secretRefs.env.N8N_HOST
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_HOST: n8n.example.com
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_HOST is no longer a chart value. Remove it from secretRefs.env. n8n builds its public URLs from editor.url and webhook.url. If you still need the variable, set it in env.shared. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses secretRefs.env.N8N_PROTOCOL
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_PROTOCOL: http
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_PROTOCOL is no longer a chart value. Remove it from secretRefs.env. n8n builds its public URLs from editor.url and webhook.url. If you still need the variable, set it in env.shared. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses secretRefs.env.N8N_PORT
+    template: templates/deployment-main.yaml
+    set:
+      secretRefs.env.N8N_PORT: "5678"
+    asserts:
+      - failedTemplate:
+          errorMessage: 'secretRefs.env.N8N_PORT is no longer a chart value. Remove it from secretRefs.env. The chart sets N8N_PORT from service.port. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: accepts N8N_HOST and N8N_PROTOCOL in env.shared
+    template: templates/deployment-main.yaml
+    set:
+      env.shared.N8N_HOST: n8n.example.com
+      env.shared.N8N_PROTOCOL: https
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: refuses webhook.timeout
+    template: templates/deployment-main.yaml
+    set:
+      webhook.timeout: 120000
+    asserts:
+      - failedTemplate:
+          errorMessage: 'webhook.timeout is no longer a chart value. Remove it; nothing replaces it. n8n has no setting for a webhook timeout. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses config.extraEnv and names its map
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnv:
+        - name: N8N_LOG_LEVEL
+          value: debug
+    asserts:
+      - failedTemplate:
+          errorMessage: 'config.extraEnv is no longer a chart value. Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses webhook.extraEnv and names both maps
+    template: templates/deployment-main.yaml
+    set:
+      webhook.extraEnv:
+        - name: N8N_LOG_LEVEL
+          value: debug
+    asserts:
+      - failedTemplate:
+          errorMessage: 'webhook.extraEnv is no longer a chart value. Set its variables in env.main and env.webhookProcessor as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses config.extraEnvFrom and names envFrom.shared
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnvFrom:
+        - secretRef:
+            name: legacy
+    asserts:
+      - failedTemplate:
+          errorMessage: 'config.extraEnvFrom is no longer a chart value. Move its entries to envFrom.shared. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  # helm-unittest drops the "2 problems in your values:" header line, so only
+  # the list is compared.
+  - it: refuses the empty lists a 1.x values file carries
+    template: templates/deployment-main.yaml
+    set:
+      config.extraEnv: []
+      config.extraEnvFrom: []
+    asserts:
+      - failedTemplate:
+          errorMessage: |-
+            - config.extraEnv is no longer a chart value. Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - config.extraEnvFrom is no longer a chart value. Move its entries to envFrom.shared. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+
+  - it: refuses the other extraEnv lists and names each map
+    template: templates/deployment-main.yaml
+    set:
+      executions.extraEnv: []
+      queueMode.workerExtraEnv: []
+      redis.extraEnv: []
+      s3.storage.extraEnv: []
+      taskRunners.extraEnv: []
+      webhook.extraEnv: []
+      webhookProcessor.extraEnv: []
+    asserts:
+      - failedTemplate:
+          errorMessage: |-
+            - executions.extraEnv is no longer a chart value. Set its variables in env.main and env.worker as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - queueMode.workerExtraEnv is no longer a chart value. Set its variables in env.worker as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - redis.extraEnv is no longer a chart value. Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - s3.storage.extraEnv is no longer a chart value. Set its variables in env.shared as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - taskRunners.extraEnv is no longer a chart value. Set its variables in env.taskRunner as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - webhook.extraEnv is no longer a chart value. Set its variables in env.main and env.webhookProcessor as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+            - webhookProcessor.extraEnv is no longer a chart value. Set its variables in env.webhookProcessor as NAME: value, or NAME: {secretKeyRef: {name: ..., key: ...}} for a value from a Secret. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md
+
+  - it: refuses executions.concurrency.productionLimit and names the variable
+    template: templates/deployment-main.yaml
+    set:
+      executions.concurrency.productionLimit: 100
+    asserts:
+      - failedTemplate:
+          errorMessage: 'executions.concurrency.productionLimit is no longer a chart value. Set N8N_CONCURRENCY_PRODUCTION_LIMIT in env.worker in queue mode, or in env.main in standalone mode. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses database.useExternal and names database.type
+    template: templates/deployment-main.yaml
+    set:
+      database.useExternal: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.useExternal is no longer a chart value. Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses database.useExternal set to false
+    template: templates/deployment-main.yaml
+    set:
+      database.type: sqlite
+      database.useExternal: false
+      queueMode.enabled: false
+      redis.enabled: false
+      persistence.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.useExternal is no longer a chart value. Set database.type instead: postgresdb for PostgreSQL, sqlite for SQLite on a PersistentVolumeClaim. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'
+
+  - it: refuses redis.useExternal
+    template: templates/deployment-main.yaml
+    set:
+      redis.useExternal: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'redis.useExternal is no longer a chart value. Remove it; nothing replaces it. Queue mode connects to the Redis at redis.host. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'

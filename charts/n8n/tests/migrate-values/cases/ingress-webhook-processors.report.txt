@@ -1,0 +1,5 @@
+Changed:
+  - Removed webhook.timeout. n8n never read the variable it set.
+Check:
+  - The chart now renders the webhook Ingress, which sends production webhooks to the webhook processors. On a controller that gives each Ingress its own load balancer, such as the AWS Load Balancer Controller, add the same group annotation to ingress.annotations and ingress.webhook.annotations.
+Review the output before you upgrade. Then render it with helm template.

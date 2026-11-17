@@ -1,0 +1,18 @@
+Changed:
+  - Moved redis.extraEnv to env.shared: EXECUTIONS_DATA_SAVE_ON_SUCCESS.
+  - Moved config.extraEnv to env.shared: EXECUTIONS_TIMEOUT_MAX, TZ, DB_POSTGRESDB_HOST, N8N_ENCRYPTION_KEY.
+  - Moved webhook.extraEnv to env.main and env.webhookProcessor: QUEUE_BULL_REDIS_HOST, DB_POSTGRESDB_PASSWORD.
+  - Moved env.shared.TZ to chartEnvOverrides.shared, which keeps your value over the one the chart sets from config.timezone. To drop the override, set config.timezone instead.
+  - Removed env.shared.DB_POSTGRESDB_HOST. The chart sets it from database.host.
+  - Removed env.main.QUEUE_BULL_REDIS_HOST. The chart sets it from redis.host, and its value won over yours in 1.x.
+  - Moved env.webhookProcessor.QUEUE_BULL_REDIS_HOST to chartEnvOverrides.webhookProcessor, which keeps your value over the one the chart sets from redis.host. To drop the override, set redis.host instead.
+  - Moved env.shared.EXECUTIONS_TIMEOUT_MAX to chartEnvOverrides.shared and env.webhookProcessor, which keeps your value over the one the chart sets from executions.timeoutMax. To drop the override, set executions.timeoutMax instead.
+  - Moved env.shared.EXECUTIONS_DATA_SAVE_ON_SUCCESS to env.webhookProcessor, the pods the chart does not set it on. The chart sets it from executions.data.saveOnSuccess. On main and worker pods the chart's value won in 1.x, and still does.
+  - Removed env.shared.N8N_ENCRYPTION_KEY. The chart reads it from a Secret.
+  - Removed env.main.DB_POSTGRESDB_PASSWORD. The chart reads it from database.passwordSecret, and that value won over yours in 1.x.
+  - Removed env.webhookProcessor.DB_POSTGRESDB_PASSWORD. The chart reads it from a Secret.
+Check:
+  - env.shared.DB_POSTGRESDB_HOST was a reference, and chartEnvOverrides takes only literal values. The script removed it, so the chart sets DB_POSTGRESDB_HOST from database.host. Set database.host to choose the value.
+  - env.shared.N8N_ENCRYPTION_KEY was removed, because the chart reads N8N_ENCRYPTION_KEY from a Secret. In 1.x n8n read it from the key encryption-key in the Secret n8n-key. Put the same value in a Secret under the key N8N_ENCRYPTION_KEY, and set secretRefs.existingSecret to that Secret, or set secretRefs.env.N8N_ENCRYPTION_KEY to it. With a different key, n8n cannot decrypt the credentials it saved.
+  - env.webhookProcessor.DB_POSTGRESDB_PASSWORD was removed, because the chart reads DB_POSTGRESDB_PASSWORD from a Secret. Set database.passwordSecret.name and database.passwordSecret.key to the Secret and key that hold the same value.
+Review the output before you upgrade. Then render it with helm template.

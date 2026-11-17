@@ -1,0 +1,12 @@
+# Overlay for installing examples/https-ingress.yaml on kind. It replaces the
+# placeholders with the fixtures in ../fixtures/ and scales the example down
+# to fit a hosted runner. The hostname and the letsencrypt-prod issuer stay as
+# they are; https-ingress.pre.sh provides a self-signed issuer by that name.
+queueMode:
+  workerReplicaCount: 1
+webhookProcessor:
+  replicaCount: 1
+database:
+  host: postgres
+redis:
+  host: redis

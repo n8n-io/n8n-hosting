@@ -1,0 +1,7 @@
+database:
+  type: postgresdb
+  ssl:
+    enabled: true
+redis:
+  worker:
+    timeout: 30

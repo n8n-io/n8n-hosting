@@ -16,29 +16,27 @@ queueMode:
   workerReplicaCount: 3
   workerConcurrency: 10
 
-# Enable task runner sidecars on worker pods (queue mode offloads execution from main)
+# Task runner sidecars are on by default; enabled is set here to show the key.
+# In queue mode they run on worker pods, because main offloads executions to
+# workers.
 taskRunners:
   enabled: true
 
-  # Auth token for runner ↔ broker communication
-  # Create the secret first:
-  #   kubectl create secret generic n8n-runner-token --from-literal=auth-token=$(openssl rand -base64 32)
-  authToken:
-    existingSecret: "n8n-runner-token"
-    existingSecretKey: "auth-token"
+  # The runner and broker authenticate with N8N_RUNNERS_AUTH_TOKEN from the
+  # core Secret (secretRefs.existingSecret below). To keep the token in a
+  # Secret of its own instead:
+  # authToken:
+  #   existingSecret: "n8n-runner-token"
+  #   existingSecretKey: "auth-token"
 
   # Broker runs inside the n8n container
   broker:
-    listenAddress: "0.0.0.0"
     port: 5679
 
   # Launcher settings
   launcher:
     logLevel: info
     autoShutdownTimeout: 15
-
-  # Enable Python runner support
-  nativePythonRunner: true
 
   # Resource limits for runner sidecar (tune based on workflow complexity)
   resources:
@@ -58,7 +56,6 @@ taskRunners:
 # External database
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host.com"
   port: 5432
   database: n8n
@@ -71,11 +68,11 @@ database:
 # External Redis
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host.com"
   port: 6379
 
 # Core secrets
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 

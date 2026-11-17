@@ -15,11 +15,11 @@
 # - External PostgreSQL and Redis services for queue mode.
 # Remove any entry whose CRDs your cluster does not have.
 
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 
 database:
-  useExternal: true
   host: "postgres.example.internal"
   passwordSecret:
     name: "n8n-db-secret"
@@ -27,7 +27,6 @@ database:
 
 redis:
   enabled: true
-  useExternal: true
   host: "redis.example.internal"
   passwordSecret:
     name: "n8n-redis-secret"
@@ -38,7 +37,7 @@ queueMode:
   workerReplicaCount: 2
   workerConcurrency: 10
 
-webhook:
+editor:
   url: "https://n8n.example.com"
 
 # The IngressRoute replaces the chart's Ingress.

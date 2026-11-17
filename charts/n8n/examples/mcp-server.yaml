@@ -13,11 +13,11 @@
 # - An ingress controller installed in the cluster.
 # - External PostgreSQL and Redis services for queue mode.
 
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 
 database:
-  useExternal: true
   host: "postgres.example.internal"
   passwordSecret:
     name: "n8n-db-secret"
@@ -25,7 +25,6 @@ database:
 
 redis:
   enabled: true
-  useExternal: true
   host: "redis.example.internal"
   passwordSecret:
     name: "n8n-redis-secret"
@@ -42,9 +41,6 @@ webhookProcessor:
   replicaCount: 3
   disableProductionWebhooksOnMainProcess: true
 
-webhook:
-  url: "https://n8n.example.com"
-
 ingress:
   enabled: true
   className: nginx
@@ -53,11 +49,9 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-  # Dedicated ingress routes /webhook, /webhook-waiting, /form, /form-waiting,
+  # A second Ingress routes /webhook, /webhook-waiting, /form, /form-waiting,
   # and /mcp to the webhook-processor pods.
-  webhookProcessor:
-    enabled: true
-    className: nginx
+  webhook:
     # MCP uses long-lived SSE / streamable-HTTP connections. On nginx, disable
     # response buffering and raise the proxy timeouts so streamed events flow.
     annotations:

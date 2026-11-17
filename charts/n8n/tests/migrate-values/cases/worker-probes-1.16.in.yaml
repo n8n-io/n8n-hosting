@@ -1,0 +1,12 @@
+redis:
+  healthCheck:
+    enabled: false
+    port: 5680
+probes:
+  worker:
+    liveness:
+      type: exec
+      command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]
+    readiness:
+      type: exec
+      command: ["/bin/sh", "-c", "pgrep -f 'n8n worker' > /dev/null"]

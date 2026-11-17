@@ -1,0 +1,5 @@
+ingress:
+  enabled: true
+  className: traefik
+  sticky:
+    enabled: true

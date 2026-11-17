@@ -1,0 +1,7 @@
+queueMode:
+  enabled: true
+  workerConcurrency: 10
+executions:
+  timeout: 3600
+  concurrency:
+    productionLimit: 50

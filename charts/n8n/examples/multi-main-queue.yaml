@@ -10,7 +10,6 @@ multiMain:
 queueMode:
   enabled: true
   workerReplicaCount: 10
-  workerConcurrency: 20
 
 webhookProcessor:
   enabled: true
@@ -37,7 +36,6 @@ hpa:
 # External database (production PostgreSQL)
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host.com"
   port: 5432
   database: n8n_enterprise
@@ -59,7 +57,6 @@ database:
 # External Redis (production Redis)
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host.com"
   port: 6379
 
@@ -70,16 +67,14 @@ s3:
     name: "n8n-enterprise-storage"
     region: "us-east-1"
   auth:
-    autoDetect: true  # Using IRSA
-  storage:
-    mode: "s3"
+    autoDetect: true  # AWS SDK credential chain, here IRSA on EKS
 
 # Service account with enterprise IAM role
 serviceAccount:
   create: true
   name: n8n-enterprise
-  awsRoleArn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
   annotations:
+    # IRSA on EKS. Remove it if you use Pod Identity.
     eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/n8n-enterprise-role"
 
 # n8n Enterprise License Configuration
@@ -123,87 +118,56 @@ resources:
 # Enterprise configuration
 config:
   timezone: UTC
-  extraEnv:
+
+env:
+  shared:
     # Security settings
-    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
-      value: "true"
-    
+    N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+
     # Enterprise logging
-    - name: N8N_LOG_LEVEL
-      value: "info"
-    - name: N8N_LOG_OUTPUT
-      value: "json"  # Structured logging for enterprise
-    
-    # Performance settings
-    - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
-      value: "100"
-    
+    N8N_LOG_LEVEL: info
+    N8N_LOG_OUTPUT: json  # Structured logging for enterprise
+
     # Enterprise features
-    - name: N8N_ENTERPRISE_LICENSE_ENABLED
-      value: "true"
-    
-    # Advanced webhook settings
-    - name: N8N_WEBHOOK_TIMEOUT
-      value: "300000"  # 5 minutes
+    N8N_ENTERPRISE_LICENSE_ENABLED: true
+
+  worker:
+    # Production executions each worker runs at once.
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: 100
 
 # Advanced execution settings
 executions:
-  concurrency:
-    productionLimit: 100
   timeout: 7200  # 2 hours
-  dataRetention:
-    saveOnError: true
-    saveOnSuccess: true
-    saveOnProgress: false
-    saveManualExecutions: true
-    prune: true
-    maxAge: 2160  # 90 days
-    maxCount: 100000
-    hardDeleteBuffer: 24  # 24 hours
-    pruneHardDeleteInterval: "0 2 * * *"  # Daily at 2 AM
-    pruneSoftDeleteInterval: "0 3 * * *"  # Daily at 3 AM
-
-# Webhook configuration
-webhook:
-  timeout: 300000  # 5 minutes for enterprise workloads
 
 # Core secrets
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-enterprise-secrets"
 
-# Enterprise security settings
-securityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
-  seccompProfile:
-    type: RuntimeDefault
-
 # Pod disruption budget for high availability
-podDisruptionBudget:
+pdb:
   enabled: true
   minAvailable: 2
 
-# Network policies for enterprise security
+# Network policies for enterprise security. These ingress rules replace the
+# chart's, so only the ingress controller's namespace and the release's own
+# pods, such as the helm test pod, reach n8n. The pod rule matches a release
+# named n8n. Egress is left empty, which allows all egress.
 networkPolicy:
   enabled: true
   ingress:
     - from:
         - namespaceSelector:
             matchLabels:
-              name: ingress-system
+              kubernetes.io/metadata.name: ingress-system
       ports:
         - protocol: TCP
           port: 5678
-  egress:
-    - to: []  # Allow all egress (customize as needed)
-
-# Monitoring and observability (if using Prometheus)
-monitoring:
-  enabled: true
-  serviceMonitor:
-    enabled: true
-    interval: 30s
-    scrapeTimeout: 10s
-  prometheusRule:
-    enabled: true
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: n8n
+              app.kubernetes.io/instance: n8n
+      ports:
+        - protocol: TCP
+          port: 5678

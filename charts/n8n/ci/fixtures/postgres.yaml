@@ -1,0 +1,55 @@
+# Throwaway Postgres for the kind install test. Not a recommendation for
+# running Postgres in production. The password comes from n8n-db-secret, the
+# same Secret the chart reads, which the workflow creates first.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18.4-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: n8n
+            - name: POSTGRES_DB
+              value: n8n
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-db-secret
+                  key: password
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "n8n", "-d", "n8n"]
+            periodSeconds: 2
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

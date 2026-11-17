@@ -11,7 +11,6 @@ multiMain:
 queueMode:
   enabled: true
   workerReplicaCount: 5
-  workerConcurrency: 15
 
 # Load balancer must route /webhook/*, /form/*, and /form-waiting/* to webhook processor service
 webhookProcessor:
@@ -43,7 +42,6 @@ hpa:
 
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host.com"  # Replace with your PostgreSQL endpoint
   port: 5432
   database: n8n
@@ -64,7 +62,6 @@ database:
 
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host.com"  # Replace with your Redis endpoint
   port: 6379
 
@@ -74,8 +71,10 @@ s3:
     name: "your-s3-bucket-name"  # Replace with your S3 bucket name
     region: "us-east-1"          # Replace with your S3 bucket region
   auth:
-    # Option 1: IRSA (IAM Roles for Service Accounts) - Recommended for AWS EKS
-    autoDetect: true  # Only works with AWS S3, requires serviceAccount.awsRoleArn
+    # Option 1: the AWS SDK credential chain. On EKS, give the pod a role with
+    # IRSA (the serviceAccount annotation below) or with Pod Identity, which
+    # needs no annotation.
+    autoDetect: true
     
     # Option 2: Access Keys - Alternative authentication method
     # autoDetect: false
@@ -83,18 +82,13 @@ s3:
     # secretAccessKeySecret:
     #   name: "s3-credentials"
     #   key: "secret-access-key"
-  
-  storage:
-    mode: "s3"
 
 # Service Account with AWS IAM Role
 serviceAccount:
   create: true
   name: n8n-prod
-  # AWS IAM Role ARN (only needed if using S3 with autoDetect: true)
-  awsRoleArn: "arn:aws:iam::your-account-id:role/your-n8n-s3-role"
   annotations:
-    # EKS annotation for IRSA (only needed for AWS EKS)
+    # IRSA on EKS. Remove it if you use Pod Identity or Option 2 above.
     eks.amazonaws.com/role-arn: "arn:aws:iam::your-account-id:role/your-n8n-s3-role"
 
 # Service configuration with session affinity for WebSocket stability
@@ -132,22 +126,19 @@ resources:
 # Production configuration
 config:
   timezone: Europe/Berlin
-  extraEnv:
+
+env:
+  shared:
     # Security settings
-    - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
-      value: "true"
-    
-    - name: N8N_LOG_LEVEL
-      value: "info"
-    - name: N8N_LOG_OUTPUT
-      value: "console"
-    
-    - name: N8N_CONCURRENCY_PRODUCTION_LIMIT
-      value: "50"
+    N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+    N8N_LOG_LEVEL: info
+    N8N_LOG_OUTPUT: console
+
+  worker:
+    # Production executions each worker runs at once.
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: 50
 
 executions:
-  concurrency:
-    productionLimit: 50
   timeout: 3600  # 1 hour
   data:
     saveOnError: "all"       # "all" or "none"
@@ -162,10 +153,8 @@ executions:
     hardDeleteInterval: 15   # minutes between hard delete runs
     softDeleteInterval: 60   # minutes between soft delete runs
 
-webhook:
-  timeout: 300000  # 5 minutes
-
 # Core secrets reference
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 
@@ -184,14 +173,8 @@ probes:
     timeoutSeconds: 5
     failureThreshold: 3
 
-# Security context
-securityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
-
 # Pod disruption budget for high availability
-podDisruptionBudget:
+pdb:
   enabled: true
   minAvailable: 1
 

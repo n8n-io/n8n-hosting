@@ -1,0 +1,8 @@
+Changed:
+  - Moved config.extraEnv to env.shared: N8N_WEBHOOK_URL, N8N_EDITOR_BASE_URL, N8N_PROXY_HOPS.
+  - Moved env.shared.N8N_WEBHOOK_URL to webhook.url, which the chart sets the variable from.
+  - Moved env.shared.N8N_EDITOR_BASE_URL to editor.url, which the chart sets the variable from.
+  - Moved env.shared.N8N_PROXY_HOPS to chartEnvOverrides.shared, which keeps your value. Without it, the chart sets 1 behind an Ingress or HTTPRoute.
+Check:
+  - Task runners are on by default in 2.0 and need a token. Set secretRefs.env.N8N_RUNNERS_AUTH_TOKEN, for example from openssl rand -base64 32. Or set taskRunners.authToken.existingSecret to a Secret that holds it under N8N_RUNNERS_AUTH_TOKEN. Or set taskRunners.enabled: false. The render fails until you do one of these.
+Review the output before you upgrade. Then render it with helm template.

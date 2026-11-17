@@ -1,0 +1,71 @@
+# Overlay for installing examples/multi-main-queue.yaml on kind. It replaces
+# the placeholders with the fixtures in ../fixtures/ and the Secrets CI
+# creates, reads the licence from the n8n-license Secret, and scales the
+# example down to fit a hosted runner. The fixture Postgres has no TLS, so
+# database.ssl is off. env.shared merges with the example's map. S3 points
+# at the plain-HTTP mock that multi-main-queue.pre.sh starts on port 9090,
+# so the mains reach it through the example's NetworkPolicy.
+multiMain:
+  replicas: 2
+queueMode:
+  workerReplicaCount: 1
+webhookProcessor:
+  replicaCount: 1
+hpa:
+  main:
+    minReplicas: 2
+    maxReplicas: 2
+  worker:
+    minReplicas: 1
+    maxReplicas: 1
+  webhookProcessor:
+    minReplicas: 1
+    maxReplicas: 1
+license:
+  activationKey: null
+  existingSecret:
+    name: n8n-license
+    key: license-key
+secretRefs:
+  existingSecret: n8n-core-secrets
+database:
+  host: postgres
+  ssl:
+    enabled: false
+  database: n8n
+  passwordSecret:
+    name: n8n-db-secret
+redis:
+  host: redis
+s3:
+  bucket:
+    name: n8n-ci
+    host: s3mock:9090
+  auth:
+    autoDetect: false
+    accessKeyId: ci
+    secretAccessKeySecret:
+      name: n8n-s3-secret
+      key: secret-access-key
+  storage:
+    forcePathStyle: true
+resources:
+  main:
+    requests:
+      memory: 512Mi
+      cpu: 200m
+  worker:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+  webhookProcessor:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+env:
+  shared:
+    N8N_EXTERNAL_STORAGE_S3_PROTOCOL: http
+    N8N_LICENSE_TENANT_ID:
+      secretKeyRef:
+        name: n8n-license
+        key: tenant-id

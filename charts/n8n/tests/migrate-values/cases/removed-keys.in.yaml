@@ -1,0 +1,13 @@
+database:
+  type: postgresdb
+  useExternal: true
+  ssl:
+    enabled: true
+    key: "inline-key-from-a-test"
+redis:
+  useExternal: true
+  worker:
+    timeout: 30
+    maxStalledCount: 1
+webhook:
+  timeout: 120000

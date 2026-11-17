@@ -16,11 +16,12 @@ services:
     ports:
       - 5678:5678
     environment:
+      - N8N_DEPLOYMENT_ARTIFACT=docker-caddy
       - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
       - NODE_ENV=production
-      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
+      - N8N_WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
       - N8N_RUNNERS_MODE=external
       - N8N_RUNNERS_AUTH_TOKEN=${RUNNERS_AUTH_TOKEN}

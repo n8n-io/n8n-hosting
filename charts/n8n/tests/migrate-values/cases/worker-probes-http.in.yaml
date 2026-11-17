@@ -1,0 +1,8 @@
+probes:
+  worker:
+    liveness:
+      type: httpGet
+      command: ["/bin/true"]
+    readiness:
+      type: exec
+      command: ["/usr/local/bin/ready"]

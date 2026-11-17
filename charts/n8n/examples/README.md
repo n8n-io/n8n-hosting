@@ -6,7 +6,7 @@ This directory contains common configuration examples for different deployment s
 
 ### Community Examples (No License Required)
 - **[standalone.yaml](./standalone.yaml)** - Single pod with SQLite, no external dependencies
-- **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis; includes `commonLabels` and `commonAnnotations` example
+- **[minimal.yaml](./minimal.yaml)** - Single main pod with external PostgreSQL and Redis
 - **[minimal-with-docker.yaml](./minimal-with-docker.yaml)** - Quick testing with Docker containers
 
 ### Community Examples (Task Runners)
@@ -16,8 +16,12 @@ This directory contains common configuration examples for different deployment s
 - **[keda-autoscaling.yaml](./keda-autoscaling.yaml)** - Redis queue-length worker scaling with KEDA
 
 ### Community Examples (Ingress)
-- **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress with TLS, sticky sessions, and webhook processor routing
+- **[https-ingress.yaml](./https-ingress.yaml)** - HTTPS ingress on ingress-nginx with TLS, cookie affinity, and webhook processor routing
 - **[mcp-server.yaml](./mcp-server.yaml)** - Scale the MCP Server Trigger (`/mcp`) across multiple webhook processors (requires n8n ≥ 2.8.0)
+
+### Community Examples (Gateway API)
+- **[gateway-httproute.yaml](./gateway-httproute.yaml)** - Gateway API HTTPRoute with webhook processor routing
+- **[gateway-webhook-host.yaml](./gateway-webhook-host.yaml)** - Editor on an internal Gateway, webhooks on a public host
 
 ### Community Examples (Node Placement)
 - **[node-placement.yaml](./node-placement.yaml)** - Pin `main` and webhook-processor to a stable node pool; run workers on an autoscaling pool
@@ -142,8 +146,8 @@ s3:
     name: "your-bucket"
     region: "your-region"
   auth:
-    # Option 1: IRSA (recommended for AWS EKS)
-    autoDetect: true  # Only works with AWS S3
+    # Option 1: the AWS SDK credential chain, such as EKS IRSA or Pod Identity
+    autoDetect: true
     
     # Option 2: Access Keys
     # autoDetect: false
@@ -152,9 +156,10 @@ s3:
     #   name: "s3-credentials"
     #   key: "secret-access-key"
 
-# Service account (required for IRSA authentication)
+# Service account annotation for EKS IRSA. Pod Identity needs none.
 serviceAccount:
-  awsRoleArn: "arn:aws:iam::ACCOUNT:role/n8n-s3-role"  # Only for autoDetect: true
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT:role/n8n-s3-role"
 ```
 
 ## Troubleshooting
@@ -167,12 +172,12 @@ serviceAccount:
 
 **Connection issues:**
 - Enable session affinity: `service.sessionAffinity.enabled: true`
-- For nginx Ingress, enable cookie affinity: `ingress.sticky.enabled: true`
+- For ingress-nginx, set the cookie affinity annotations from [https-ingress.yaml](./https-ingress.yaml) in `ingress.annotations`
 - Check database SSL settings if using cloud databases
 
 **Storage issues:**
 - Verify S3 bucket permissions and region
-- For IRSA, ensure the service account has the correct role ARN
+- For IRSA, check that `serviceAccount.annotations` sets `eks.amazonaws.com/role-arn` to the correct role
 
 **Performance issues:**
 - Increase worker replicas: `queueMode.workerReplicaCount`
@@ -210,7 +215,7 @@ When `disableProductionWebhooksOnMainProcess: true`, configure your load balance
 - `/form-test/*` → main service (test form triggers)
 - `/*` → main service (UI, API, everything else)
 
-The chart can create this split routing with `ingress.webhookProcessor.enabled=true`; see [https-ingress.yaml](./https-ingress.yaml).
+With `ingress.enabled=true`, the chart creates this split routing; see [https-ingress.yaml](./https-ingress.yaml). With a Gateway API implementation, `httpRoute.enabled=true` creates the same split when `webhookProcessor.enabled=true`; see [gateway-httproute.yaml](./gateway-httproute.yaml).
 
 ### Testing
 ```bash

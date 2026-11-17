@@ -24,7 +24,6 @@ webhookProcessor:
 # Required external services (replace with your own)
 database:
   type: postgresdb
-  useExternal: true
   host: "your-postgres-host"
   port: 5432
   database: n8n
@@ -35,10 +34,10 @@ database:
 
 redis:
   enabled: true
-  useExternal: true
   host: "your-redis-host"
   port: 6379
 
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 

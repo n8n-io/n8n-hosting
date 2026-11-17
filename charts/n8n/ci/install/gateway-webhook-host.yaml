@@ -1,0 +1,12 @@
+# Overlay for installing examples/gateway-webhook-host.yaml on kind. It
+# replaces the placeholders with the fixtures in ../fixtures/ and scales the
+# example down to fit a hosted runner. The parentRefs and hostnames stay as
+# they are; gateway-webhook-host.pre.sh creates Gateways by those names.
+queueMode:
+  workerReplicaCount: 1
+webhookProcessor:
+  replicaCount: 1
+database:
+  host: postgres
+redis:
+  host: redis

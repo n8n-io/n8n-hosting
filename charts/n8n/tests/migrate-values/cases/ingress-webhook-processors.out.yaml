@@ -1,0 +1,17 @@
+# Webhook processors behind an Ingress, without ingress.webhookProcessor.
+queueMode:
+  enabled: true
+
+webhookProcessor:
+  enabled: true
+
+ingress:
+  enabled: true
+  hosts:
+    - host: n8n.acme.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+taskRunners:
+  enabled: false

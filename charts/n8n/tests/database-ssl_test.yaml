@@ -10,13 +10,15 @@ templates:
 set:
   secretRefs.existingSecret: n8n-core-secrets
   database.type: postgresdb
-  database.useExternal: true
   database.host: postgres.example.com
   queueMode.enabled: true
   webhookProcessor.enabled: true
 tests:
   - it: sets DB_POSTGRESDB_SSL_ENABLED in the ConfigMap when SSL is enabled
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     set:
       database.ssl.enabled: true
     asserts:
@@ -35,13 +37,10 @@ tests:
       database.ssl.enabled: true
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: DB_POSTGRESDB_SSL_ENABLED
-            valueFrom:
-              configMapKeyRef:
-                name: RELEASE-NAME-n8n
-                key: DB_POSTGRESDB_SSL_ENABLED
+            configMapRef:
+              name: RELEASE-NAME-n8n
       - notContains:
           path: spec.template.spec.containers[0].env
           content:
@@ -50,6 +49,9 @@ tests:
 
   - it: sets no SSL flag in the ConfigMap when SSL is disabled
     template: templates/configmap.yaml
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-n8n
     asserts:
       - notExists:
           path: data.DB_POSTGRESDB_SSL_ENABLED
@@ -67,3 +69,12 @@ tests:
           content:
             name: DB_POSTGRESDB_SSL_ENABLED
           any: true
+
+  - it: names the replacement for the retired database.ssl.key
+    template: templates/deployment-main.yaml
+    set:
+      database.ssl.enabled: true
+      database.ssl.key: "-----BEGIN PRIVATE KEY-----"
+    asserts:
+      - failedTemplate:
+          errorMessage: 'database.ssl.key is no longer a chart value. Put the client key in a Secret, and set database.ssl.existingSecret.name and database.ssl.existingSecret.keyKey. See https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/UPGRADING.md'

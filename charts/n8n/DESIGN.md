@@ -20,7 +20,7 @@ Postgres, Redis and object storage are entities the chart connects to. The contr
 
 **Portable primitives with portable defaults.**
 
-The chart ships every Kubernetes primitive n8n needs to run well (Ingress, HPA, PDB, NetworkPolicy, Services, ServiceAccount, PVC), and none of them assumes a vendor. No default annotations only one ingress controller reads, no default storage class, no default cloud IAM wiring. Vendor specifics arrive through passthroughs (`annotations`, `className`, `extraObjects`) and live in the examples.
+The chart ships every Kubernetes primitive n8n needs to run well (Ingress, HTTPRoute, HPA, PDB, NetworkPolicy, Services, ServiceAccount, PVC), and none of them assumes a vendor. No default annotations only one ingress controller reads, no default storage class, no default cloud IAM wiring. Vendor specifics arrive through passthroughs (`annotations`, `className`, `extraObjects`) and live in the examples.
 *How we check it:* the default render is valid on kind, EKS, AKS and GKE with no values changes, and nothing in `templates/` names a specific controller or cloud.
 
 **One place to set anything, and a defined winner.**

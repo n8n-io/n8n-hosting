@@ -1,0 +1,5 @@
+# Queue mode with S3, filesystem set in extraEnv and no s3.storage.mode.
+license:
+  enabled: true
+s3:
+  enabled: true

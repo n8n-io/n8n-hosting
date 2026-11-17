@@ -1,0 +1,3 @@
+Changed:
+  - Removed webhook.timeout. n8n never read the variable it set.
+Review the output before you upgrade. Then render it with helm template.

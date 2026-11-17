@@ -1,0 +1,17 @@
+# A blank line inside a | block stays in the block.
+webhook:
+  timeout: 30
+
+extraContainers:
+  - name: side
+    image: busybox
+    command:
+      - sh
+      - -c
+      - |
+        echo start
+
+        echo end
+
+taskRunners:
+  enabled: false

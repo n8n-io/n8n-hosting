@@ -1,0 +1,10 @@
+license:
+  enabled: true
+s3:
+  enabled: true
+  storage:
+    mode: "filesystem"
+config:
+  extraEnv:
+    - name: N8N_DEFAULT_BINARY_DATA_MODE
+      value: "filesystem"

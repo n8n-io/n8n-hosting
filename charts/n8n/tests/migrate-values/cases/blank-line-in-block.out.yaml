@@ -1,0 +1,15 @@
+# A blank line inside a | block stays in the block.
+
+extraContainers:
+  - name: side
+    image: busybox
+    command:
+      - sh
+      - -c
+      - |
+        echo start
+
+        echo end
+
+taskRunners:
+  enabled: false

@@ -1,0 +1,14 @@
+ingress:
+  enabled: true
+  hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+webhook:
+  url: "https://hooks.example.com/"
+editor:
+  url: "https://n8n.example.com/"
+chartEnvOverrides:
+  shared:
+    N8N_PROXY_HOPS: "2"

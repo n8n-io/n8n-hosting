@@ -1,0 +1,46 @@
+# Example: Gateway API HTTPRoute with webhook processor routing.
+#
+# Prerequisites:
+# - A Gateway API implementation, such as Envoy Gateway, Istio or Cilium,
+#   with its CRDs installed.
+# - A Gateway named shared-gateway in the gateway-system namespace, with a
+#   listener that accepts routes from the release namespace. The chart attaches
+#   to it and never creates it. TLS is configured on the Gateway's listener.
+# - External PostgreSQL and Redis services for queue mode.
+
+secretRefs:
+  existingSecret: "n8n-core-secrets"
+
+database:
+  host: "postgres.example.internal"
+  passwordSecret:
+    name: "n8n-db-secret"
+    key: "password"
+
+redis:
+  enabled: true
+  host: "redis.example.internal"
+  passwordSecret:
+    name: "n8n-redis-secret"
+    key: "password"
+
+queueMode:
+  enabled: true
+  workerReplicaCount: 2
+  workerConcurrency: 10
+
+webhookProcessor:
+  enabled: true
+  replicaCount: 2
+  disableProductionWebhooksOnMainProcess: true
+
+# The route sends production webhook, form and MCP paths to the webhook
+# processors, and everything else to main. The first hostname sets the
+# public address, https://n8n.example.com, for the editor and for webhooks.
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: shared-gateway
+      namespace: gateway-system
+  hostnames:
+    - n8n.example.com

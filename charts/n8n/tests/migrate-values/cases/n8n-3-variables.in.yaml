@@ -1,0 +1,27 @@
+config:
+  extraEnv:
+    - name: N8N_DB_PING_TIMEOUT
+      value: "5000"
+    - name: N8N_RUNNERS_ENABLED
+      value: "true"
+    - name: N8N_DEFAULT_BINARY_DATA_MODE
+      value: "default"
+    - name: N8N_PRE_EXECUTE_ERROR_CREATES_EXECUTION
+      value: "true"
+    - name: N8N_MIGRATE_FS_STORAGE_PATH
+      value: "true"
+    - name: N8N_AGENTS_SKILLS_HUB_ENABLED
+      value: "true"
+    - name: N8N_ENV_FEAT_CRED_SHARING
+      value: "true"
+    - name: N8N_INSTANCE_AI_LOCAL_GATEWAY_DISABLED
+      value: "true"
+    - name: N8N_INSTANCE_AI_GATEWAY_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: ai-gateway
+          key: api-key
+taskRunners:
+  extraEnv:
+    - name: N8N_WORKFLOW_TAGS_DISABLED
+      value: "false"

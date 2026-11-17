@@ -1,0 +1,23 @@
+webhookProcessor:
+  enabled: true
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  sticky:
+    enabled: true
+    cookieName: route
+  hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  webhookProcessor:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls:
+      - secretName: n8n-tls
+        hosts:
+          - n8n.example.com

@@ -1,0 +1,8 @@
+# Overlay for installing examples/minimal.yaml on kind. It replaces only the
+# placeholders with the fixtures in ../fixtures/ and the Secrets CI creates.
+database:
+  host: postgres
+redis:
+  host: redis
+secretRefs:
+  existingSecret: n8n-core-secrets

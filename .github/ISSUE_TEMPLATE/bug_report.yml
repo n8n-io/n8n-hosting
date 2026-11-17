@@ -104,7 +104,6 @@ body:
         # Your values.yaml configuration here
         database:
           type: postgresdb
-          useExternal: true
           # ... rest of config
     validations:
       required: true

@@ -1,0 +1,86 @@
+{{- if .Values.httpRoute.enabled }}
+{{- $fullname := include "n8n.fullname" . }}
+{{- $hooks := .Values.httpRoute.webhook | default dict }}
+{{- $backend := ternary (printf "%s-webhook-processor" $fullname) (printf "%s-main" $fullname) (and .Values.webhookProcessor.enabled true) }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+  {{- with merge (deepCopy (.Values.httpRoute.annotations | default dict)) (.Values.commonAnnotations | default dict) }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.httpRoute.parentRefs | nindent 4 }}
+  {{- with .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- /* The longest matching prefix wins, so these paths beat / whatever
+    the rule order. With webhook hostnames, webhooks have a route of their
+    own and the editor hostnames send every path to main. */}}
+    {{- if and .Values.webhookProcessor.enabled (not $hooks.hostnames) }}
+    - matches:
+        {{- range include "n8n.webhookPaths" . | fromYamlArray }}
+        - path:
+            type: PathPrefix
+            value: {{ . }}
+        {{- end }}
+      backendRefs:
+        - name: {{ $backend }}
+          port: {{ .Values.service.port }}
+    {{- end }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ $fullname }}-main
+          port: {{ .Values.service.port }}
+{{- if $hooks.hostnames }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $fullname }}-webhook
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webhook
+  {{- with merge (deepCopy ($hooks.annotations | default dict)) (.Values.commonAnnotations | default dict) }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml ($hooks.parentRefs | default .Values.httpRoute.parentRefs) | nindent 4 }}
+  hostnames:
+    {{- toYaml $hooks.hostnames | nindent 4 }}
+  rules:
+    {{- /* The webhook paths only, so the editor is not reachable here. n8n
+    builds test URLs from the webhook URL too, and only main serves them. */}}
+    - matches:
+        {{- range include "n8n.webhookPaths" . | fromYamlArray }}
+        - path:
+            type: PathPrefix
+            value: {{ . }}
+        {{- end }}
+      backendRefs:
+        - name: {{ $backend }}
+          port: {{ .Values.service.port }}
+    - matches:
+        {{- range include "n8n.webhookTestPaths" . | fromYamlArray }}
+        - path:
+            type: PathPrefix
+            value: {{ . }}
+        {{- end }}
+      backendRefs:
+        - name: {{ $fullname }}-main
+          port: {{ .Values.service.port }}
+{{- end }}
+{{- end }}

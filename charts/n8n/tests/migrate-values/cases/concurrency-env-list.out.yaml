@@ -1,0 +1,10 @@
+# The production limit set through an extraEnv list, with the 1.x default
+# workerConcurrency copied from values.yaml.
+queueMode:
+  enabled: true
+
+taskRunners:
+  enabled: false
+env:
+  shared:
+    N8N_CONCURRENCY_PRODUCTION_LIMIT: "20"

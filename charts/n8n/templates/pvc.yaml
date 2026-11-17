@@ -6,15 +6,16 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
-  {{- with .Values.commonAnnotations }}
+  {{- $merged := merge (deepCopy (.Values.persistence.annotations | default dict)) (.Values.commonAnnotations | default dict) }}
+  {{- with $merged }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  accessModes: {{ toYaml .Values.persistence.accessModes | nindent 2 }}
+  accessModes: {{ toYaml (.Values.persistence.accessModes | default (list "ReadWriteOnce")) | nindent 2 }}
   resources:
     requests:
-      storage: {{ .Values.persistence.size }}
+      storage: {{ .Values.persistence.size | default "10Gi" }}
   {{- if .Values.persistence.storageClassName }}
   storageClassName: {{ .Values.persistence.storageClassName }}
   {{- end }}

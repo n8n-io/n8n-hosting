@@ -1,0 +1,6 @@
+queueMode:
+  enabled: true
+config:
+  extraEnv:
+    - name: N8N_DEFAULT_BINARY_DATA_MODE
+      value: "filesystem"

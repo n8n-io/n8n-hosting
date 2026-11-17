@@ -1,0 +1,20 @@
+# config.extraEnv won over webhook.extraEnv and executions.extraEnv in 1.x.
+config:
+  extraEnv:
+    - name: N8N_LOG_LEVEL
+      value: "info"
+webhook:
+  extraEnv:
+    - name: N8N_LOG_LEVEL
+      value: "debug"
+executions:
+  extraEnv:
+    - name: N8N_LOG_LEVEL
+      value: "warn"
+env:
+  taskRunner:
+    N8N_RUNNERS_MAX_CONCURRENCY: "5"
+taskRunners:
+  extraEnv:
+    - name: N8N_RUNNERS_MAX_CONCURRENCY
+      value: "10"

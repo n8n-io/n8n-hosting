@@ -20,7 +20,6 @@ queueMode:
 # External PostgreSQL (Docker container)
 database:
   type: postgresdb
-  useExternal: true
   host: "host.docker.internal"  # For Docker Desktop, use "localhost" for direct connection
   port: 5432
   database: n8n
@@ -33,11 +32,11 @@ database:
 # External Redis (Docker container)
 redis:
   enabled: true
-  useExternal: true
   host: "host.docker.internal"  # For Docker Desktop, use "localhost" for direct connection  
   port: 6379
 
 # Core secrets (you must create this secret)
+# The core Secret also holds N8N_RUNNERS_AUTH_TOKEN, the task-runner auth token.
 secretRefs:
   existingSecret: "n8n-core-secrets"
 
@@ -49,33 +48,35 @@ service:
     enabled: true
 
 # Minimal resources
+# n8n runs out of JavaScript heap below a 1Gi limit, because Node sizes its
+# heap from the container's memory.
 resources:
   main:
     requests:
-      memory: "256Mi"
+      memory: "512Mi"
       cpu: "200m"
     limits:
-      memory: "512Mi"
+      memory: "1Gi"
       cpu: "500m"
   worker:
     requests:
-      memory: "128Mi"
+      memory: "256Mi"
       cpu: "100m"
     limits:
-      memory: "256Mi"
+      memory: "1Gi"
       cpu: "300m"
 
 # Basic configuration  
 config:
   timezone: UTC
-  extraEnv:
+
+editor:
+  url: "http://localhost:8080"
+
+env:
+  shared:
     # Local development settings
-    - name: N8N_LOG_LEVEL
-      value: "debug"
-    - name: N8N_WEBHOOK_URL
-      value: "http://localhost:8080"
-    - name: N8N_EDITOR_BASE_URL
-      value: "http://localhost:8080"
+    N8N_LOG_LEVEL: debug
 
 # Service account
 serviceAccount:

@@ -1,0 +1,33 @@
+# The worker probe and health check blocks from the chart 1.16 values.yaml,
+# the last 1.x release with the process check. A values file copied whole
+# from 1.16 or earlier carries exactly these.
+probes:
+  worker:
+    readiness:
+      enabled: true
+      # Custom readiness probe that checks if worker is ready
+      type: "exec"                           # <-- Use exec probe instead of HTTP
+      command:
+        - "/bin/sh"
+        - "-c"
+        - "pgrep -f 'n8n worker' > /dev/null"
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+    liveness:
+      enabled: true
+      # Check if n8n worker process is still running
+      type: "exec"
+      command:
+        - "/bin/sh"
+        - "-c"
+        - "pgrep -f 'n8n worker' > /dev/null"
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+redis:
+  healthCheck:
+    enabled: false
+    port: 5678

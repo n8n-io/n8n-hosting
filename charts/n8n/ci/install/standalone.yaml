@@ -1,0 +1,4 @@
+# Overlay for installing examples/standalone.yaml on kind. It replaces only
+# the Secret name with the one CI creates.
+secretRefs:
+  existingSecret: n8n-core-secrets

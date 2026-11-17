@@ -1,0 +1,4 @@
+Changed:
+  - Moved config.extraEnv to env.shared: N8N_CONCURRENCY_PRODUCTION_LIMIT.
+  - Removed queueMode.workerConcurrency. n8n ignored it, because N8N_CONCURRENCY_PRODUCTION_LIMIT sets each worker's concurrency.
+Review the output before you upgrade. Then render it with helm template.
