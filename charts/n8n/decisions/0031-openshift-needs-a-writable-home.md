@@ -13,4 +13,4 @@ The chart does not add a volume or `N8N_USER_FOLDER` when the UID is null. Null 
 
 ## Consequences
 
-A default install is unchanged. An OpenShift install that only nulls the IDs still fails until it adds the home directory. The example and the three copies of the recipe name both parts. The emptyDir is removed when the pod is deleted or rescheduled. Workflow data on main stays on the data volume only when `persistence.enabled` or `existingClaim` is set. A later image that makes `/home/node` writable by the root group can drop the emptyDir. `N8N_USER_FOLDER` stays, because `HOME` is still `/`.
+A default install is unchanged. An OpenShift install that only nulls the IDs still fails until it adds the home directory. The example and the three copies of the recipe name both parts. The emptyDir is removed when the pod is deleted or rescheduled. Workflow data on main stays on the data volume only when `persistence.enabled` or `persistence.existingClaim` is set. A later image that makes `/home/node` writable by the root group can drop the emptyDir. `N8N_USER_FOLDER` stays, because `HOME` is still `/`.

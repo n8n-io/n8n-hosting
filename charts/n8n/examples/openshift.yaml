@@ -8,9 +8,10 @@
 # /home/node. The image owns /home/node as uid 1000, so the assigned UID cannot
 # create /home/node/.cache, or /home/node/.n8n on a worker. An emptyDir at
 # /home/node is writable by the assigned UID. The emptyDir is removed when
-# the pod is deleted. Main still mounts its data volume at /home/node/.n8n.
-# The runtime mounts the parent first, then that nested path, so workflow
-# data stays on the data volume.
+# the pod is deleted or rescheduled. Main still mounts its data volume at
+# /home/node/.n8n. The runtime mounts the parent first, then that nested
+# path. That data volume lasts only when persistence.enabled or
+# persistence.existingClaim is set. This example sets neither.
 
 queueMode:
   enabled: true

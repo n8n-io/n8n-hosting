@@ -584,7 +584,7 @@ extraVolumeMounts:
     mountPath: /home/node
 ```
 
-That UID has no `/etc/passwd` entry, so `HOME` is `/` and n8n tries to create `/.n8n`. The image owns `/home/node` as uid 1000, so the assigned UID cannot create `/home/node/.cache` there. The emptyDir gives it a writable home. That directory is removed when the pod is deleted. Main keeps workflow data on its data volume at `/home/node/.n8n`. [openshift.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/openshift.yaml) is a full example.
+That UID has no `/etc/passwd` entry, so `HOME` is `/` and n8n tries to create `/.n8n`. The image owns `/home/node` as uid 1000, so the assigned UID cannot create `/home/node/.cache` there. The emptyDir gives it a writable home. That directory is removed when the pod is deleted or rescheduled. Main keeps workflow data on its data volume at `/home/node/.n8n`. That volume lasts only when `persistence.enabled` or `persistence.existingClaim` is set. [openshift.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/openshift.yaml) is a full example.
 
 The n8n containers and the task-runner sidecar set `allowPrivilegeEscalation: false` and drop all capabilities. Containers added with `extraContainers` or `extraInitContainers` get none of them. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
 

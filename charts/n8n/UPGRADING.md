@@ -334,7 +334,7 @@ extraVolumeMounts:
     mountPath: /home/node
 ```
 
-The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The assigned UID has no `/etc/passwd` entry, so without `N8N_USER_FOLDER` n8n tries to create `/.n8n` and exits. The image owns `/home/node` as uid 1000, so mount a writable directory there as well. The emptyDir is removed when the pod is deleted. Keep workflow data on the data volume. [`examples/openshift.yaml`](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/openshift.yaml) is a full example. The chart's containers keep `allowPrivilegeEscalation: false` and drop all capabilities. Together these meet the `restricted` Pod Security Standard. Containers you add with `extraContainers` or `extraInitContainers` do not get the container defaults, so set their `securityContext` yourself.
+The pods keep `runAsNonRoot: true` and the `RuntimeDefault` seccomp profile. The assigned UID has no `/etc/passwd` entry, so without `N8N_USER_FOLDER` n8n tries to create `/.n8n` and exits. The image owns `/home/node` as uid 1000, so mount a writable directory there as well. The emptyDir is removed when the pod is deleted or rescheduled. The data volume at `/home/node/.n8n` lasts only when `persistence.enabled` or `persistence.existingClaim` is set. [`examples/openshift.yaml`](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/openshift.yaml) is a full example. The chart's containers keep `allowPrivilegeEscalation: false` and drop all capabilities. Together these meet the `restricted` Pod Security Standard. Containers you add with `extraContainers` or `extraInitContainers` do not get the container defaults, so set their `securityContext` yourself.
 
 ### Network policy
 

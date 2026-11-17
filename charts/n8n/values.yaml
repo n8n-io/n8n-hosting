@@ -471,7 +471,10 @@ nodePlacement: {}
 # null to drop every default.
 # Example for OpenShift, where the restricted SCC assigns the UID and GID.
 # The assigned UID cannot write the image's /home/node, so also set
-# N8N_USER_FOLDER and mount an emptyDir there. See examples/openshift.yaml.
+# N8N_USER_FOLDER and mount an emptyDir there. That emptyDir is removed
+# when the pod is deleted or rescheduled. The data volume at
+# /home/node/.n8n lasts only when persistence.enabled or
+# persistence.existingClaim is set. See examples/openshift.yaml.
 #   podSecurityContext:
 #     shared:
 #       fsGroup: null
