@@ -4,6 +4,14 @@ All notable changes to the n8n Helm chart will be documented in this file.
 
 This file is automatically managed by [Release Please](https://github.com/googleapis/release-please).
 
+## [1.20.0](https://github.com/n8n-io/n8n-hosting/compare/v1.19.0...v1.20.0) (2026-11-18)
+
+
+### Features
+
+* **chart:** bump n8n to 2.48.5 ([#301](https://github.com/n8n-io/n8n-hosting/issues/301)) ([9736b04](https://github.com/n8n-io/n8n-hosting/commit/9736b04f9c036e003ed19b92091adcd85c7f2ba7))
+* **chart:** let KEDA ScaledObjects for workers and webhook processors take advanced HPA behaviour ([#282](https://github.com/n8n-io/n8n-hosting/issues/282)) ([#300](https://github.com/n8n-io/n8n-hosting/issues/300)) ([a4c93c2](https://github.com/n8n-io/n8n-hosting/commit/a4c93c23500d01e58e59d5d3fde2e0fca0536326))
+
 ## [1.19.0](https://github.com/n8n-io/n8n-hosting/compare/v1.18.0...v1.19.0) (2026-11-11)
 
 
