@@ -89,6 +89,7 @@ All three use the same n8n container image, differentiated by command/args.
 | [gateway-httproute.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-httproute.yaml) | Gateway API HTTPRoute with webhook processor routing |
 | [gateway-webhook-host.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/gateway-webhook-host.yaml) | Gateway API with the editor on an internal Gateway and webhooks on a public host |
 | [extra-objects.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/extra-objects.yaml) | Extra objects beside the chart: a Traefik IngressRoute, a PrometheusRule and a string entry |
+| [openshift.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/openshift.yaml) | Restricted SCC: no pinned UID, and a writable home directory |
 
 ## Secret Management
 
@@ -574,7 +575,18 @@ podSecurityContext:
     fsGroup: null
     runAsUser: null
     runAsGroup: null
+env:
+  shared:
+    N8N_USER_FOLDER: /home/node
+extraVolumes:
+  - name: n8n-home
+    emptyDir: {}
+extraVolumeMounts:
+  - name: n8n-home
+    mountPath: /home/node
 ```
+
+That UID has no `/etc/passwd` entry, so `HOME` is `/` and n8n tries to create `/.n8n`. The image owns `/home/node` as uid 1000, so the assigned UID cannot create `/home/node/.cache` there. The emptyDir gives it a writable home. That directory is removed when the pod is deleted or rescheduled. Main keeps workflow data on its data volume at `/home/node/.n8n`. That volume lasts only when `persistence.enabled` or `persistence.existingClaim` is set. [openshift.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/openshift.yaml) is a full example.
 
 The n8n containers and the task-runner sidecar set `allowPrivilegeEscalation: false` and drop all capabilities. Containers added with `extraContainers` or `extraInitContainers` get none of them. `taskRunner` applies to the task-runner sidecar on both main and worker pods.
 
