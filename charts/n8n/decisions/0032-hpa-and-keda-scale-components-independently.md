@@ -1,7 +1,7 @@
 # 0032. The HPA and KEDA scale each component independently
 
 Date: 2026-11-26
-PR: https://github.com/n8n-io/n8n-hosting/pull/000
+PR: https://github.com/n8n-io/n8n-hosting/pull/307
 
 ## Context
 
