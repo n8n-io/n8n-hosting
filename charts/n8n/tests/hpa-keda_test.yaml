@@ -30,6 +30,9 @@ tests:
       - hasDocuments:
           count: 0
         template: templates/scaledobject-worker.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/scaledobject-webhook-processor.yaml
       - notExists:
           path: spec.replicas
         template: templates/deployment-worker.yaml
@@ -118,6 +121,12 @@ tests:
       - hasDocuments:
           count: 0
         template: templates/hpa-webhook-processor.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment-worker.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment-webhook-processor.yaml
 
   - it: keeps the fixed replica count when neither autoscaler is on
     set:

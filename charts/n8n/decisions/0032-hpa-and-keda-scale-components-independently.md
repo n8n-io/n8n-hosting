@@ -11,7 +11,7 @@ The chart can scale workers and webhook processors with its built-in CPU HPA (`h
 
 An HPA renders for a component unless KEDA scales that component. "KEDA scales it" means a `ScaledObject` renders for it, which needs `keda.enabled`, queue mode and at least one trigger for the component. The Deployment leaves `replicas` off whenever either autoscaler owns the count. This sits under "Fail loudly, never silently": `hpa.<component>.enabled` now does what it says for every component KEDA leaves alone.
 
-Where `hpa.<component>.enabled` and KEDA are both set for one component, KEDA scales it and no HPA renders. The chart does not fail on that combination, although the same principle points that way. The combination renders on 1.x, and this change reaches 1.x as a fix, where a new failure would break working installs.
+Where `hpa.<component>.enabled` and KEDA are both set for one component, KEDA scales it and no HPA renders. This departs from "One place to set anything, and a defined winner", under which two user inputs that set the same thing stop the render. The combination renders on 1.x, and this change reaches 1.x as a fix, where a new failure would break working installs.
 
 ## Consequences
 
