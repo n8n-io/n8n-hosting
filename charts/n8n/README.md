@@ -166,9 +166,9 @@ Workers consume jobs from Redis and do not receive inbound HTTP traffic, so the 
 
 Scale execution throughput with `queueMode.workerReplicaCount` and `queueMode.workerConcurrency`. The built-in HPA can scale main, worker, and webhook processor deployments from CPU and optional memory utilization.
 
-For queue-based scaling, enable `keda.enabled=true` and configure Redis triggers for workers. KEDA creates `ScaledObject` resources for workers, and optionally webhook processors, instead of the built-in worker/webhook HPAs.
+For queue-based scaling, enable `keda.enabled=true` and configure Redis triggers for workers. KEDA creates `ScaledObject` resources for workers, and optionally webhook processors. A component KEDA scales gets no built-in HPA. A component it does not scale keeps its `hpa.<component>` settings, so KEDA can scale workers on queue depth while the built-in HPA scales webhook processors on CPU.
 
-Once something will actually scale a worker or webhook-processor Deployment, the chart stops setting that Deployment's `replicas` and leaves the count to the HPA or the `ScaledObject`. That means KEDA with triggers configured for the component, or the built-in HPA with `keda.enabled` off, since `keda.enabled` replaces the worker and webhook HPAs. Kubernetes defaults the field to 1 on first create and the autoscaler takes over from there, so later upgrades neither reset the count nor show as drift on a GitOps sync.
+Once something will actually scale a worker or webhook-processor Deployment, the chart stops setting that Deployment's `replicas` and leaves the count to the HPA or the `ScaledObject`. That means KEDA with triggers configured for the component, or the built-in HPA for a component KEDA does not scale. Where both are set for one component, KEDA scales it and the chart renders no HPA for it. Kubernetes defaults the field to 1 on first create and the autoscaler takes over from there, so later upgrades neither reset the count nor show as drift on a GitOps sync.
 
 On the first upgrade from a chart version that set `replicas`, Helm removes the field it used to manage, so an autoscaled Deployment drops to 1 replica once before the autoscaler scales it back up.
 
@@ -386,7 +386,7 @@ See [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n
 
 The built-in HPA scales workers based on CPU utilization. For queue-based workloads, [KEDA](https://keda.sh) can scale workers based on Redis queue length, which is more responsive to actual demand.
 
-When `keda.enabled` is true, the chart creates KEDA `ScaledObject` resources instead of built-in HPAs for workers (and optionally webhook processors). KEDA must be installed in the cluster.
+When `keda.enabled` is true, the chart creates KEDA `ScaledObject` resources for workers, and optionally webhook processors. Each one replaces the built-in HPA for its component. KEDA must be installed in the cluster.
 
 ```bash
 # Install KEDA

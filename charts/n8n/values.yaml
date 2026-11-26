@@ -604,7 +604,9 @@ hpa:
     targetCPUUtilizationPercentage: 60
 
 # ----- KEDA (Kubernetes Event-Driven Autoscaler) -----
-# When enabled, creates KEDA ScaledObjects instead of built-in HPAs for workers/webhooks.
+# When enabled, creates KEDA ScaledObjects for workers and, optionally, webhook processors.
+# A component KEDA scales gets no built-in HPA. A component it does not scale
+# keeps its hpa.<component> settings.
 # This allows scaling based on Redis queue length rather than CPU utilization.
 # Requires KEDA to be installed in the cluster: https://keda.sh
 keda:

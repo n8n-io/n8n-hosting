@@ -6,7 +6,7 @@
 #   - KEDA installed in the cluster: helm install keda kedacore/keda --namespace keda-system --create-namespace
 #   - External PostgreSQL and Redis (queue mode)
 #
-# When keda.enabled is true, the built-in worker/webhook HPAs are automatically disabled.
+# KEDA replaces the built-in HPA for each component it scales. Here that is workers only.
 
 queueMode:
   enabled: true

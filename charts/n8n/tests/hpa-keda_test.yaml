@@ -1,0 +1,143 @@
+# The built-in HPA and KEDA each scale a component on their own. An HPA renders
+# for a component unless KEDA scales that component, so KEDA can scale workers
+# on queue depth while the HPA scales webhook processors on CPU. Where both are
+# set for one component, KEDA takes it. The Deployment leaves spec.replicas off
+# whenever either of them owns the count.
+suite: 'autoscaling: HPA alongside KEDA'
+templates:
+  - templates/hpa-worker.yaml
+  - templates/hpa-webhook-processor.yaml
+  - templates/scaledobject-worker.yaml
+  - templates/scaledobject-webhook-processor.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  webhookProcessor.enabled: true
+  hpa.worker.enabled: true
+  hpa.webhookProcessor.enabled: true
+tests:
+  - it: renders both HPAs with KEDA off
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/hpa-worker.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/hpa-webhook-processor.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/scaledobject-worker.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment-worker.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment-webhook-processor.yaml
+
+  - it: renders the webhook-processor HPA when KEDA scales only workers
+    set:
+      keda.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/scaledobject-worker.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/hpa-worker.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/scaledobject-webhook-processor.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/hpa-webhook-processor.yaml
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-n8n-webhook-processor
+        template: templates/hpa-webhook-processor.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment-worker.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment-webhook-processor.yaml
+
+  - it: renders the worker HPA when KEDA scales only webhook processors
+    set:
+      keda.enabled: true
+      keda.worker.triggers: []
+      keda.webhookProcessor.enabled: true
+      keda.webhookProcessor.triggers:
+        - type: cpu
+          metadata:
+            value: "60"
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/scaledobject-worker.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/hpa-worker.yaml
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-n8n-worker
+        template: templates/hpa-worker.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/scaledobject-webhook-processor.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/hpa-webhook-processor.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment-worker.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment-webhook-processor.yaml
+
+  - it: renders no HPA for a component KEDA scales
+    set:
+      keda.enabled: true
+      keda.webhookProcessor.enabled: true
+      keda.webhookProcessor.triggers:
+        - type: cpu
+          metadata:
+            value: "60"
+    asserts:
+      - hasDocuments:
+          count: 1
+        template: templates/scaledobject-worker.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/scaledobject-webhook-processor.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/hpa-worker.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/hpa-webhook-processor.yaml
+
+  - it: keeps the fixed replica count when neither autoscaler is on
+    set:
+      keda.enabled: true
+      keda.worker.triggers: []
+      hpa.worker.enabled: false
+      hpa.webhookProcessor.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/hpa-worker.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/scaledobject-worker.yaml
+      - equal:
+          path: spec.replicas
+          value: 2
+        template: templates/deployment-worker.yaml
+      - equal:
+          path: spec.replicas
+          value: 2
+        template: templates/deployment-webhook-processor.yaml
