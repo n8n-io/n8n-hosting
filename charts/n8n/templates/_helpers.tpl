@@ -767,8 +767,7 @@ Call with the root context and the component name, e.g.
 Whether an autoscaler owns a component's replica count, and so whether the
 chart leaves spec.replicas off its Deployment and lets Kubernetes default it
 to 1 on first create. KEDA owns the count wherever a ScaledObject renders,
-and the built-in HPA owns it only whilst KEDA is off, since keda.enabled
-replaces the worker and webhook HPAs.
+and the built-in HPA owns it wherever KEDA does not scale the component.
 
 Call with the root context and the component name, e.g.
   (dict "root" . "component" "worker")
@@ -776,7 +775,7 @@ Call with the root context and the component name, e.g.
 {{- define "n8n.autoscalerOwnsReplicas" -}}
 {{- $root := .root -}}
 {{- $hpaEnabled := ternary $root.Values.hpa.worker.enabled $root.Values.hpa.webhookProcessor.enabled (eq .component "worker") -}}
-{{- if or (include "n8n.kedaScalerEnabled" .) (and $hpaEnabled (not $root.Values.keda.enabled)) -}}true{{- end -}}
+{{- if or $hpaEnabled (include "n8n.kedaScalerEnabled" .) -}}true{{- end -}}
 {{- end -}}
 
 {{/*
