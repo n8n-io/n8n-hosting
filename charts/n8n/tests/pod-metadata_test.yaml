@@ -86,6 +86,26 @@ tests:
           path: spec.template.metadata.annotations["example.com/owner"]
           value: worker
 
+  - it: keeps an empty component annotation over lower layers
+    template: templates/deployment-worker.yaml
+    set:
+      commonAnnotations:
+        example.com/common: common
+      podAnnotations:
+        example.com/owner: pod
+        example.com/common: ""
+      podMetadata:
+        worker:
+          annotations:
+            example.com/owner: ""
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["example.com/owner"]
+          value: ""
+      - equal:
+          path: spec.template.metadata.annotations["example.com/common"]
+          value: ""
+
   - it: keeps the chart's checksum annotations
     template: templates/deployment-worker.yaml
     set:
