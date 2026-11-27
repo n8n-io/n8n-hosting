@@ -1,0 +1,133 @@
+# podMetadata adds labels and annotations to one component's pod template, so
+# an admission webhook such as a mesh sidecar injector can act on some
+# components only.
+suite: 'pod metadata per component'
+templates:
+  - templates/deployment-main.yaml
+  - templates/deployment-worker.yaml
+  - templates/deployment-webhook-processor.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  webhookProcessor.enabled: true
+  podMetadata:
+    main:
+      labels:
+        sidecar.istio.io/inject: "true"
+      annotations:
+        sidecar.istio.io/proxyCPU: 100m
+    webhookProcessor:
+      labels:
+        sidecar.istio.io/inject: "true"
+tests:
+  - it: labels the main pod
+    template: templates/deployment-main.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["sidecar.istio.io/inject"]
+          value: "true"
+      - equal:
+          path: spec.template.metadata.annotations["sidecar.istio.io/proxyCPU"]
+          value: 100m
+
+  - it: labels the webhook processor pod
+    template: templates/deployment-webhook-processor.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["sidecar.istio.io/inject"]
+          value: "true"
+      - notExists:
+          path: spec.template.metadata.annotations["sidecar.istio.io/proxyCPU"]
+
+  - it: leaves the worker pod alone
+    template: templates/deployment-worker.yaml
+    asserts:
+      - notExists:
+          path: spec.template.metadata.labels["sidecar.istio.io/inject"]
+      - notExists:
+          path: spec.template.metadata.annotations["sidecar.istio.io/proxyCPU"]
+
+  - it: keeps pod metadata off the Deployment and its selector
+    template: templates/deployment-main.yaml
+    asserts:
+      - notExists:
+          path: metadata.labels["sidecar.istio.io/inject"]
+      - notExists:
+          path: spec.selector.matchLabels["sidecar.istio.io/inject"]
+
+  - it: lets a component label win over podLabels
+    template: templates/deployment-worker.yaml
+    set:
+      podLabels:
+        sidecar.istio.io/inject: "true"
+      podMetadata:
+        worker:
+          labels:
+            sidecar.istio.io/inject: "false"
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["sidecar.istio.io/inject"]
+          value: "false"
+
+  - it: lets a component annotation win over podAnnotations and commonAnnotations
+    template: templates/deployment-worker.yaml
+    set:
+      commonAnnotations:
+        example.com/owner: common
+      podAnnotations:
+        example.com/owner: pod
+      podMetadata:
+        worker:
+          annotations:
+            example.com/owner: worker
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["example.com/owner"]
+          value: worker
+
+  - it: keeps the chart's checksum annotations
+    template: templates/deployment-worker.yaml
+    set:
+      podMetadata:
+        worker:
+          annotations:
+            checksum/config: pinned
+    asserts:
+      - notEqual:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: pinned
+
+  - it: rejects a chart-managed label
+    template: templates/deployment-main.yaml
+    set:
+      podMetadata:
+        worker:
+          labels:
+            app.kubernetes.io/component: main
+    asserts:
+      - failedTemplate:
+          errorMessage: 'podMetadata.worker.labels."app.kubernetes.io/component" is a chart-managed selector/identity label and cannot be overridden. Reserved keys: app.kubernetes.io/name, app.kubernetes.io/instance, app.kubernetes.io/component, app.kubernetes.io/version, app.kubernetes.io/managed-by, helm.sh/chart'
+
+  - it: rejects an unknown component
+    template: templates/deployment-main.yaml
+    set:
+      podMetadata:
+        webhook:
+          labels:
+            team: automation
+    asserts:
+      - failedTemplate:
+          errorPattern: "additional properties 'webhook' not allowed"
+
+  - it: rejects a non-string label value
+    template: templates/deployment-main.yaml
+    set:
+      podMetadata:
+        main:
+          labels:
+            enabled: true
+    asserts:
+      # The schema catches this first; without-schema/ covers the fail.
+      - failedTemplate:
+          errorPattern: "at '/podMetadata/main/labels/enabled': got boolean, want string"

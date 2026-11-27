@@ -64,6 +64,17 @@ tests:
       - failedTemplate:
           errorMessage: 'podLabels."enabled" must be a string (got bool). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. "enabled": "true".'
 
+  - it: rejects a non-string component pod label value
+    template: templates/deployment-main.yaml
+    set:
+      podMetadata:
+        worker:
+          labels:
+            enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'podMetadata.worker.labels."enabled" must be a string (got bool). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. "enabled": "true".'
+
   - it: rejects an extraObjects entry that is neither a map nor a string
     template: templates/deployment-main.yaml
     set:
