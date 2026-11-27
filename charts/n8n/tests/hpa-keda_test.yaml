@@ -1,8 +1,7 @@
-# The built-in HPA and KEDA each scale a component on their own. An HPA renders
-# for a component unless KEDA scales that component, so KEDA can scale workers
-# on queue depth while the HPA scales webhook processors on CPU. Where both are
-# set for one component, KEDA takes it. The Deployment leaves spec.replicas off
-# whenever either of them owns the count.
+# The built-in HPA and KEDA each scale a component on their own, so KEDA can
+# scale workers on queue depth while the HPA scales webhook processors on CPU.
+# The Deployment leaves spec.replicas off whenever either of them owns the
+# count. Both on one component fails the render, in validate-autoscaling.
 suite: 'autoscaling: HPA alongside KEDA'
 templates:
   - templates/hpa-worker.yaml
@@ -70,7 +69,7 @@ tests:
   - it: renders the worker HPA when KEDA scales only webhook processors
     set:
       keda.enabled: true
-      keda.worker.triggers: []
+      keda.worker.enabled: false
       keda.webhookProcessor.enabled: true
       keda.webhookProcessor.triggers:
         - type: cpu
@@ -100,9 +99,11 @@ tests:
           path: spec.replicas
         template: templates/deployment-webhook-processor.yaml
 
-  - it: renders no HPA for a component KEDA scales
+  - it: renders a ScaledObject and no HPA for each component KEDA scales
     set:
       keda.enabled: true
+      hpa.worker.enabled: false
+      hpa.webhookProcessor.enabled: false
       keda.webhookProcessor.enabled: true
       keda.webhookProcessor.triggers:
         - type: cpu
@@ -131,7 +132,7 @@ tests:
   - it: keeps the fixed replica count when neither autoscaler is on
     set:
       keda.enabled: true
-      keda.worker.triggers: []
+      keda.worker.enabled: false
       hpa.worker.enabled: false
       hpa.webhookProcessor.enabled: false
     asserts:
