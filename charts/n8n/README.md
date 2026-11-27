@@ -452,11 +452,11 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
-| `keda.worker.enabled` | KEDA autoscaling for worker pods, with `keda.enabled`. Not allowed with `hpa.worker.enabled` | `true` |
+| `keda.worker.enabled` | KEDA autoscaling for worker pods, with `keda.enabled`. With `keda.enabled` on, not allowed with `hpa.worker.enabled` | `true` |
 | `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
 | `keda.worker.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `keda.worker.advanced` | KEDA `spec.advanced` for workers, such as `horizontalPodAutoscalerConfig.behavior` to limit the scaling rate | `{}` |
-| `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods, with `keda.enabled`. Not allowed with `hpa.webhookProcessor.enabled` | `false` |
+| `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods, with `keda.enabled`. With `keda.enabled` on, not allowed with `hpa.webhookProcessor.enabled` | `false` |
 | `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
 | `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `keda.webhookProcessor.advanced` | KEDA `spec.advanced` for webhook processors | `{}` |
