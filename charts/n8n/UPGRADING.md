@@ -47,6 +47,7 @@ Every install needs [Values validation](#values-validation), [Environment variab
 | If your install | Read |
 |---|---|
 | Runs in queue mode | [Worker concurrency](#worker-concurrency), [Worker probes](#worker-probes) |
+| Sets `keda.enabled: true` | [Autoscaling](#autoscaling) |
 | Sets `secretRefs.existingSecret` | [Secrets and host settings](#secrets-and-host-settings) |
 | Sets `database.useExternal`, `redis.useExternal` or `database.type: sqlite` | [Database](#database) |
 | Sets `s3.enabled: true` | [Binary data and S3](#binary-data-and-s3) |
@@ -72,6 +73,7 @@ The render fails on every retired key, but these changes pass the render and may
 - A `podSecurityContext.<role>` block now merges over `shared` instead of replacing it. See [Security contexts](#security-contexts).
 - With `networkPolicy.enabled`, the policy now allows all egress by default, and the `ingress` and `egress` lists you set now take effect. See [Network policy](#network-policy).
 - A worker probe that runs `pgrep` always passes. See [Worker probes](#worker-probes).
+- With `keda.enabled`, an `hpa.<component>.enabled` for a component KEDA does not scale now renders its HPA. See [Autoscaling](#autoscaling).
 - A main pod with a `ReadWriteOnce` volume now uses the `Recreate` strategy, so each upgrade has a short outage. See [Persistence](#persistence).
 - The pods no longer get service links, a Kubernetes API token or a Role. See [Pod defaults](#pod-defaults).
 - n8n 3.0 changes several defaults, such as the Code node timeout and the Content-Security-Policy. See [n8n 3.0](#n8n-30).
@@ -208,6 +210,17 @@ A worker probe is now HTTP against the worker health endpoint, or an exec probe 
 | `redis.healthCheck.enabled: false` | Remove it to probe the health endpoint, which is the default. To keep it, set `command` on each enabled liveness or readiness probe, or set `enabled: false` on that probe. The startup probe needs nothing, because the chart leaves it out when the health endpoint is off. The render fails until you do. |
 
 A values file copied whole from chart 1.16 or earlier sets all three. Remove all three, and the workers use the health endpoint.
+
+### Autoscaling
+
+Each worker or webhook processor Deployment now scales with KEDA or with the built-in HPA, not both. `keda.worker.enabled` is new and `true`, so `keda.enabled` alone still scales workers with KEDA. The migration script makes the changes below for you.
+
+| If your values set | Do this |
+|---|---|
+| `keda.enabled: true` and `hpa.worker.enabled: true`, with worker triggers | Set `hpa.worker.enabled: false`. KEDA scaled the workers in 1.x, and the chart rendered no worker HPA. The render fails until you do. |
+| `keda.webhookProcessor.enabled: true` and `hpa.webhookProcessor.enabled: true` | Set `hpa.webhookProcessor.enabled: false`. KEDA scaled the webhook processors in 1.x. The render fails until you do. |
+| `keda.enabled: true` and `keda.worker.triggers: []` | Set `keda.worker.enabled: false`. An empty trigger list no longer switches KEDA off for workers. The render fails until you do. |
+| `keda.enabled: true` and `hpa.<component>.enabled: true` for a component KEDA does not scale | Nothing. The chart now renders that HPA, where 1.x rendered none. The Deployment runs one replica until the HPA scales it to `minReplicas`. |
 
 ### Task runners
 

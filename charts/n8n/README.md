@@ -307,9 +307,9 @@ To probe a worker with your own check, set `probes.worker.liveness.command` or `
 
 Scale execution throughput with `queueMode.workerReplicaCount` and `queueMode.workerConcurrency`. The built-in HPA can scale main, worker, and webhook processor deployments from CPU and optional memory utilization.
 
-For queue-based scaling, enable `keda.enabled=true` and configure Redis triggers for workers. KEDA creates `ScaledObject` resources for workers, and optionally webhook processors. A component KEDA scales gets no built-in HPA. A component it does not scale keeps its `hpa.<component>` settings, so KEDA can scale workers on queue depth while the built-in HPA scales webhook processors on CPU.
+For queue-based scaling, enable `keda.enabled=true` and configure Redis triggers for workers. KEDA creates `ScaledObject` resources for workers, and optionally webhook processors. Each component scales with KEDA or with its `hpa.<component>` settings, and the render fails if both are on for one component. So KEDA can scale workers on queue depth while the built-in HPA scales webhook processors on CPU.
 
-Once something will actually scale a worker or webhook-processor Deployment, the chart stops setting that Deployment's `replicas` and leaves the count to the HPA or the `ScaledObject`. That means KEDA with triggers configured for the component, or the built-in HPA for a component KEDA does not scale. Where both are set for one component, KEDA scales it and the chart renders no HPA for it. Kubernetes defaults the field to 1 on first create and the autoscaler takes over from there, so later upgrades neither reset the count nor show as drift on a GitOps sync.
+Once something will actually scale a worker or webhook-processor Deployment, the chart stops setting that Deployment's `replicas` and leaves the count to the HPA or the `ScaledObject`. That means KEDA switched on for the component, or its built-in HPA. Kubernetes defaults the field to 1 on first create and the autoscaler takes over from there, so later upgrades neither reset the count nor show as drift on a GitOps sync.
 
 On the first upgrade from a chart version that set `replicas`, Helm removes the field it used to manage, so an autoscaled Deployment drops to 1 replica once before the autoscaler scales it back up.
 
@@ -452,10 +452,11 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
+| `keda.worker.enabled` | KEDA autoscaling for worker pods, with `keda.enabled`. Not allowed with `hpa.worker.enabled` | `true` |
 | `keda.worker.pause` | Pause worker autoscaling, freezing workers at their current replica count | `false` |
 | `keda.worker.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `keda.worker.advanced` | KEDA `spec.advanced` for workers, such as `horizontalPodAutoscalerConfig.behavior` to limit the scaling rate | `{}` |
-| `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods | `false` |
+| `keda.webhookProcessor.enabled` | KEDA autoscaling for webhook processor pods, with `keda.enabled`. Not allowed with `hpa.webhookProcessor.enabled` | `false` |
 | `keda.webhookProcessor.pause` | Pause webhook processor autoscaling, freezing them at their current replica count | `false` |
 | `keda.webhookProcessor.pausedReplicaCount` | Optional replica count to hold whilst paused; only applied when `pause=true` | `null` |
 | `keda.webhookProcessor.advanced` | KEDA `spec.advanced` for webhook processors | `{}` |
@@ -620,7 +621,7 @@ See [task-runners.yaml](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n
 
 The built-in HPA scales workers based on CPU utilization. For queue-based workloads, [KEDA](https://keda.sh) can scale workers based on Redis queue length, which is more responsive to actual demand.
 
-When `keda.enabled` is true, the chart creates KEDA `ScaledObject` resources for workers, and optionally webhook processors. Each one replaces the built-in HPA for its component. KEDA must be installed in the cluster.
+When `keda.enabled` is true, the chart creates a KEDA `ScaledObject` for each component switched on: workers through `keda.worker.enabled`, which is on by default, and webhook processors through `keda.webhookProcessor.enabled`. A component scales with KEDA or with the built-in HPA, not both, so turn off `hpa.<component>.enabled` for each component KEDA scales. KEDA must be installed in the cluster.
 
 ```bash
 # Install KEDA
@@ -631,6 +632,7 @@ helm install keda kedacore/keda --namespace keda-system --create-namespace
 keda:
   enabled: true
   worker:
+    enabled: true
     pause: false
     minReplicaCount: 2
     maxReplicaCount: 20
@@ -663,7 +665,7 @@ keda:
     pausedReplicaCount: 0
 ```
 
-Webhook processors only autoscale in queue mode, with `keda.enabled`, `webhookProcessor.enabled` and `keda.webhookProcessor.enabled` all set, and at least one trigger of their own. `keda.webhookProcessor.triggers` is empty by default, and the chart fails the install rather than leave you with webhook processors that look autoscaled and are not. To run KEDA for workers alone, leave `keda.webhookProcessor.enabled` off, which is the default. To run it for webhook processors alone, empty `keda.worker.triggers`, since workers have no enabled flag of their own.
+KEDA only scales in queue mode. Webhook processors also need `webhookProcessor.enabled`. A component switched on needs at least one trigger of its own. `keda.webhookProcessor.triggers` is empty by default, and the chart fails the install rather than leave you with a component that looks autoscaled and is not. To run KEDA for workers alone, leave `keda.webhookProcessor.enabled` off, which is the default. To run it for webhook processors alone, set `keda.worker.enabled: false`.
 
 Either component merges these annotations with anything you set in `commonAnnotations`. The chart-managed keys win on a collision, so you cannot end up with the same annotation twice.
 

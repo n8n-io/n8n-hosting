@@ -6,14 +6,14 @@
 #   - KEDA installed in the cluster: helm install keda kedacore/keda --namespace keda-system --create-namespace
 #   - External PostgreSQL and Redis (queue mode)
 #
-# KEDA replaces the built-in HPA for each component it scales. Here that is workers only.
+# A component scales with KEDA or with the built-in HPA, not both. Here KEDA scales workers only.
 
 queueMode:
   enabled: true
   workerReplicaCount: 2
   workerConcurrency: 10
 
-# Disable built-in HPA (KEDA takes over scaling)
+# The render fails if the built-in HPA and KEDA both scale workers
 hpa:
   worker:
     enabled: false
@@ -22,6 +22,7 @@ hpa:
 keda:
   enabled: true
   worker:
+    enabled: true
     # Pause autoscaling, holding workers at their current replica count
     pause: false
     # Uncomment to pause at a specific count instead; 0 scales workers down entirely
