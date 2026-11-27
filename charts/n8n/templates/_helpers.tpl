@@ -469,10 +469,10 @@ so the editor route would also answer on the webhook hosts. */}}
 
 {{/* --- KEDA --- */}}
 {{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.worker.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) (not .Values.keda.worker.triggers) -}}
-{{- $errs = append $errs "keda.worker.triggers is required when keda.worker.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale workers. Add a trigger, or set keda.worker.enabled=false to hold them at queueMode.workerReplicaCount." -}}
+{{- $errs = append $errs "keda.worker.triggers is required when keda.worker.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale workers. Add a trigger, or set keda.worker.enabled=false to take workers off KEDA." -}}
 {{- end -}}
 {{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled (not .Values.keda.webhookProcessor.triggers) -}}
-{{- $errs = append $errs "keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to hold them at webhookProcessor.replicaCount." -}}
+{{- $errs = append $errs "keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to take webhook processors off KEDA." -}}
 {{- end -}}
 {{- /* Each component has one autoscaler, so the HPA and KEDA never both own its replica count. */}}
 {{- if and .Values.hpa.worker.enabled (include "n8n.kedaScalerEnabled" (dict "root" . "component" "worker")) -}}

@@ -10,6 +10,7 @@ templates:
   - templates/scaledobject-webhook-processor.yaml
   - templates/deployment-worker.yaml
   - templates/deployment-webhook-processor.yaml
+  - templates/deployment-main.yaml
   - templates/configmap.yaml
   - templates/secrets.yaml
 set:
@@ -42,6 +43,7 @@ tests:
   - it: renders the webhook-processor HPA when KEDA scales only workers
     set:
       keda.enabled: true
+      hpa.worker.enabled: false
     asserts:
       - hasDocuments:
           count: 1
@@ -70,6 +72,7 @@ tests:
     set:
       keda.enabled: true
       keda.worker.enabled: false
+      hpa.webhookProcessor.enabled: false
       keda.webhookProcessor.enabled: true
       keda.webhookProcessor.triggers:
         - type: cpu

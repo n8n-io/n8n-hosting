@@ -65,7 +65,7 @@ tests:
       keda.worker.triggers: []
     asserts:
       - failedTemplate:
-          errorMessage: 'keda.worker.triggers is required when keda.worker.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale workers. Add a trigger, or set keda.worker.enabled=false to hold them at queueMode.workerReplicaCount.'
+          errorMessage: 'keda.worker.triggers is required when keda.worker.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale workers. Add a trigger, or set keda.worker.enabled=false to take workers off KEDA.'
 
   - it: accepts no worker triggers with KEDA off for workers
     template: templates/deployment-main.yaml

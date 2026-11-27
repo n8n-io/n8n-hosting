@@ -1,0 +1,7 @@
+queueMode:
+  enabled: true
+keda:
+  enabled: true
+  worker:
+    enabled: false
+    triggers: []

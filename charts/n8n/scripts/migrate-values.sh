@@ -930,7 +930,7 @@ fi
 if truthy keda.enabled && queue_mode && [[ "$(q '.keda.worker.enabled')" != "false" ]] &&
   [[ "$(q '(.queueMode.workerReplicaCount // 2) > 0')" == "true" ]]; then
   if present keda.worker.triggers && empty_at keda.worker.triggers; then
-    u '.keda.worker = {"enabled": false} + .keda.worker'
+    u '.keda.worker = {"enabled": false} + (.keda.worker | del(.enabled))'
     changed "Set keda.worker.enabled to false. keda.worker.triggers is empty, which 1.x read as KEDA off for workers."
   elif truthy hpa.worker.enabled; then
     u '.hpa.worker.enabled = false'
