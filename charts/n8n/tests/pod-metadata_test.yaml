@@ -20,6 +20,8 @@ set:
     webhookProcessor:
       labels:
         sidecar.istio.io/inject: "true"
+      annotations:
+        example.com/role: webhook-processor
 tests:
   - it: labels the main pod
     template: templates/deployment-main.yaml
@@ -37,6 +39,9 @@ tests:
       - equal:
           path: spec.template.metadata.labels["sidecar.istio.io/inject"]
           value: "true"
+      - equal:
+          path: spec.template.metadata.annotations["example.com/role"]
+          value: webhook-processor
       - notExists:
           path: spec.template.metadata.annotations["sidecar.istio.io/proxyCPU"]
 
@@ -45,6 +50,8 @@ tests:
     asserts:
       - notExists:
           path: spec.template.metadata.labels["sidecar.istio.io/inject"]
+      - notExists:
+          path: spec.template.metadata.annotations["example.com/role"]
       - notExists:
           path: spec.template.metadata.annotations["sidecar.istio.io/proxyCPU"]
 
@@ -114,9 +121,9 @@ tests:
           annotations:
             checksum/config: pinned
     asserts:
-      - notEqual:
+      - matchRegex:
           path: spec.template.metadata.annotations["checksum/config"]
-          value: pinned
+          pattern: "^[0-9a-f]{64}$"
 
   - it: rejects a chart-managed label
     template: templates/deployment-main.yaml
