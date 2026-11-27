@@ -1,0 +1,17 @@
+queueMode:
+  enabled: true
+webhookProcessor:
+  enabled: true
+hpa:
+  webhookProcessor:
+    enabled: true
+keda:
+  enabled: true
+  worker:
+    triggers: []
+  webhookProcessor:
+    enabled: true
+    triggers:
+      - type: cpu
+        metadata:
+          value: "60"

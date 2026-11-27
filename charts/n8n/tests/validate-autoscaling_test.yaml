@@ -1,0 +1,77 @@
+# Each component has one autoscaler at most. The HPA and KEDA both scaling a
+# component fails the render, and so does KEDA switched on for a component
+# with no triggers, since KEDA rejects a ScaledObject without them.
+suite: 'validate: autoscaling'
+templates:
+  - templates/deployment-main.yaml
+  - templates/configmap.yaml
+  - templates/secrets.yaml
+set:
+  secretRefs.existingSecret: n8n-core-secrets
+  webhookProcessor.enabled: true
+tests:
+  - it: fails when the HPA and KEDA both scale workers
+    template: templates/deployment-main.yaml
+    set:
+      keda.enabled: true
+      hpa.worker.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'hpa.worker.enabled and keda.worker.enabled are both true, so the HPA and KEDA would both scale workers. Set hpa.worker.enabled=false to scale them with KEDA, or keda.worker.enabled=false to scale them with the HPA.'
+
+  - it: fails when the HPA and KEDA both scale webhook processors
+    template: templates/deployment-main.yaml
+    set:
+      keda.enabled: true
+      keda.worker.enabled: false
+      keda.webhookProcessor.enabled: true
+      keda.webhookProcessor.triggers:
+        - type: cpu
+          metadata:
+            value: "60"
+      hpa.webhookProcessor.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: 'hpa.webhookProcessor.enabled and keda.webhookProcessor.enabled are both true, so the HPA and KEDA would both scale webhook processors. Set hpa.webhookProcessor.enabled=false to scale them with KEDA, or keda.webhookProcessor.enabled=false to scale them with the HPA.'
+
+  - it: accepts KEDA for workers and the HPA for webhook processors
+    template: templates/deployment-main.yaml
+    set:
+      keda.enabled: true
+      hpa.webhookProcessor.enabled: true
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: accepts the HPA for workers with KEDA off for them
+    template: templates/deployment-main.yaml
+    set:
+      keda.enabled: true
+      keda.worker.enabled: false
+      hpa.worker.enabled: true
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: accepts the worker HPA when keda.enabled is off
+    template: templates/deployment-main.yaml
+    set:
+      hpa.worker.enabled: true
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: requires a KEDA trigger for workers
+    template: templates/deployment-main.yaml
+    set:
+      keda.enabled: true
+      keda.worker.triggers: []
+    asserts:
+      - failedTemplate:
+          errorMessage: 'keda.worker.triggers is required when keda.worker.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale workers. Add a trigger, or set keda.worker.enabled=false to take workers off KEDA.'
+
+  - it: accepts no worker triggers with KEDA off for workers
+    template: templates/deployment-main.yaml
+    set:
+      keda.enabled: true
+      keda.worker.enabled: false
+      keda.worker.triggers: []
+    asserts:
+      - notFailedTemplate: {}

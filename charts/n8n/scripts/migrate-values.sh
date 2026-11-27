@@ -923,6 +923,26 @@ if present s3.storage.mode; then
   remove s3.storage.mode "s3.enabled sets the binary data mode."
 fi
 
+# --- Autoscaling ---
+# 2.0 fails the render where the HPA and KEDA both scale a component, and where
+# KEDA is on for workers with no triggers. 1.x let KEDA win, and read an empty
+# keda.worker.triggers as KEDA off for workers, so these keep the 1.x behaviour.
+if truthy keda.enabled && queue_mode && [[ "$(q '.keda.worker.enabled')" != "false" ]] &&
+  [[ "$(q '(.queueMode.workerReplicaCount // 2) > 0')" == "true" ]]; then
+  if present keda.worker.triggers && empty_at keda.worker.triggers; then
+    u '.keda.worker = {"enabled": false} + (.keda.worker | del(.enabled))'
+    changed "Set keda.worker.enabled to false. keda.worker.triggers is empty, which 1.x read as KEDA off for workers."
+  elif truthy hpa.worker.enabled; then
+    u '.hpa.worker.enabled = false'
+    changed "Set hpa.worker.enabled to false. KEDA scaled workers in 1.x, and the chart rendered no worker HPA."
+  fi
+fi
+if truthy keda.enabled && queue_mode && truthy webhookProcessor.enabled && truthy keda.webhookProcessor.enabled &&
+  ! empty_at keda.webhookProcessor.triggers && truthy hpa.webhookProcessor.enabled; then
+  u '.hpa.webhookProcessor.enabled = false'
+  changed "Set hpa.webhookProcessor.enabled to false. KEDA scaled webhook processors in 1.x, and the chart rendered no webhook processor HPA."
+fi
+
 # --- Checks on 1.x behaviour the script leaves to you ---
 if [[ -n "$changes" ]]; then
   if truthy s3.enabled && [[ "$s3_mode_set" == false && "$mode_checked" == false ]] &&

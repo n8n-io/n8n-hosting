@@ -1,0 +1,9 @@
+queueMode:
+  enabled: true
+webhookProcessor:
+  enabled: true
+hpa:
+  webhookProcessor:
+    enabled: true
+keda:
+  enabled: true

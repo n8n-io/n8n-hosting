@@ -1,0 +1,8 @@
+queueMode:
+  enabled: true
+hpa:
+  worker:
+    enabled: false
+    maxReplicas: 10
+keda:
+  enabled: true

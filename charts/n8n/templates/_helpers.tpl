@@ -468,8 +468,18 @@ so the editor route would also answer on the webhook hosts. */}}
 {{- end -}}
 
 {{/* --- KEDA --- */}}
+{{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.worker.enabled (gt (int .Values.queueMode.workerReplicaCount) 0) (not .Values.keda.worker.triggers) -}}
+{{- $errs = append $errs "keda.worker.triggers is required when keda.worker.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale workers. Add a trigger, or set keda.worker.enabled=false to take workers off KEDA." -}}
+{{- end -}}
 {{- if and .Values.keda.enabled .Values.queueMode.enabled .Values.keda.webhookProcessor.enabled .Values.webhookProcessor.enabled (not .Values.keda.webhookProcessor.triggers) -}}
-{{- $errs = append $errs "keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to hold them at webhookProcessor.replicaCount." -}}
+{{- $errs = append $errs "keda.webhookProcessor.triggers is required when keda.webhookProcessor.enabled=true. KEDA rejects a ScaledObject with no triggers, so nothing would autoscale webhook processors. Add a trigger, or set keda.webhookProcessor.enabled=false to take webhook processors off KEDA." -}}
+{{- end -}}
+{{- /* Each component has one autoscaler, so the HPA and KEDA never both own its replica count. */}}
+{{- if and .Values.hpa.worker.enabled (include "n8n.kedaScalerEnabled" (dict "root" . "component" "worker")) -}}
+{{- $errs = append $errs "hpa.worker.enabled and keda.worker.enabled are both true, so the HPA and KEDA would both scale workers. Set hpa.worker.enabled=false to scale them with KEDA, or keda.worker.enabled=false to scale them with the HPA." -}}
+{{- end -}}
+{{- if and .Values.hpa.webhookProcessor.enabled (include "n8n.kedaScalerEnabled" (dict "root" . "component" "webhook-processor")) -}}
+{{- $errs = append $errs "hpa.webhookProcessor.enabled and keda.webhookProcessor.enabled are both true, so the HPA and KEDA would both scale webhook processors. Set hpa.webhookProcessor.enabled=false to scale them with KEDA, or keda.webhookProcessor.enabled=false to scale them with the HPA." -}}
 {{- end -}}
 
 {{/* --- Multi-main --- */}}
@@ -744,10 +754,9 @@ https://{{ include "n8n.webhookHost" . }}
 
 {{/*
 Whether KEDA will actually scale a component, and so whether a ScaledObject
-renders for it. Empty triggers mean no scaler: KEDA requires spec.triggers and
-rejects an object without them, so the chart renders none and the component
-keeps the replica count it was given. That makes an empty trigger list the way
-to run KEDA for one component and not the other.
+renders for it. KEDA requires spec.triggers and rejects an object without
+them, so a component with none renders no ScaledObject. n8n.validate fails
+that case where the component's enabled flag is on.
 
 Call with the root context and the component name, e.g.
   (dict "root" . "component" "worker")
@@ -756,7 +765,7 @@ Call with the root context and the component name, e.g.
 {{- $root := .root -}}
 {{- if and $root.Values.keda.enabled $root.Values.queueMode.enabled -}}
 {{- if eq .component "worker" -}}
-{{- if and $root.Values.keda.worker.triggers (gt (int $root.Values.queueMode.workerReplicaCount) 0) -}}true{{- end -}}
+{{- if and $root.Values.keda.worker.enabled $root.Values.keda.worker.triggers (gt (int $root.Values.queueMode.workerReplicaCount) 0) -}}true{{- end -}}
 {{- else if eq .component "webhook-processor" -}}
 {{- if and $root.Values.keda.webhookProcessor.enabled $root.Values.webhookProcessor.enabled $root.Values.keda.webhookProcessor.triggers -}}true{{- end -}}
 {{- end -}}
@@ -767,8 +776,7 @@ Call with the root context and the component name, e.g.
 Whether an autoscaler owns a component's replica count, and so whether the
 chart leaves spec.replicas off its Deployment and lets Kubernetes default it
 to 1 on first create. KEDA owns the count wherever a ScaledObject renders,
-and the built-in HPA owns it only whilst KEDA is off, since keda.enabled
-replaces the worker and webhook HPAs.
+and the built-in HPA owns it wherever KEDA does not scale the component.
 
 Call with the root context and the component name, e.g.
   (dict "root" . "component" "worker")
@@ -776,7 +784,7 @@ Call with the root context and the component name, e.g.
 {{- define "n8n.autoscalerOwnsReplicas" -}}
 {{- $root := .root -}}
 {{- $hpaEnabled := ternary $root.Values.hpa.worker.enabled $root.Values.hpa.webhookProcessor.enabled (eq .component "worker") -}}
-{{- if or (include "n8n.kedaScalerEnabled" .) (and $hpaEnabled (not $root.Values.keda.enabled)) -}}true{{- end -}}
+{{- if or $hpaEnabled (include "n8n.kedaScalerEnabled" .) -}}true{{- end -}}
 {{- end -}}
 
 {{/*

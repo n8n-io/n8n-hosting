@@ -827,6 +827,7 @@
         "worker": {
           "type": "object",
           "properties": {
+            "enabled": { "type": "boolean" },
             "pause": {
               "type": "boolean",
               "description": "Pause KEDA autoscaling, freezing workers at their current replica count (autoscaling.keda.sh/paused)."
