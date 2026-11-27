@@ -38,13 +38,14 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{/*
-Pod template labels. podLabels intentionally wins over commonLabels for
-user-defined keys on pods only; chart-managed selector/identity labels are
-always set by the chart.
+Pod template labels. For user-defined keys on pods, podLabels wins over
+commonLabels, and podMetadata.<component>.labels wins over both. Chart-managed
+selector/identity labels are always set by the chart.
 */}}
 {{- define "n8n.podLabels" -}}
 {{- $root := .root -}}
 {{- $component := .component -}}
+{{- $componentKey := ternary "webhookProcessor" $component (eq $component "webhook-processor") -}}
 {{- $labels := dict -}}
 {{- range $k, $v := ($root.Values.commonLabels | default dict) -}}
 {{- $_ := set $labels $k $v -}}
@@ -60,7 +61,30 @@ always set by the chart.
 {{- range $k, $v := ($root.Values.podLabels | default dict) -}}
 {{- $_ := set $labels $k $v -}}
 {{- end -}}
+{{- range $k, $v := (dig $componentKey "labels" dict ($root.Values.podMetadata | default dict)) -}}
+{{- $_ := set $labels $k $v -}}
+{{- end -}}
 {{- toYaml $labels -}}
+{{- end -}}
+
+{{/*
+Pod template annotations. The chart's checksums win, then
+podMetadata.<component>.annotations, then podAnnotations, then
+commonAnnotations. Takes the values key of the component, such as
+webhookProcessor.
+*/}}
+{{- define "n8n.podAnnotations" -}}
+{{- $root := .root -}}
+{{- $component := .component -}}
+{{- $checksums := dict "checksum/config" (include "n8n.envChecksum" (dict "root" $root "component" $component)) "checksum/secret" (include (print $root.Template.BasePath "/secrets.yaml") $root | sha256sum) -}}
+{{- $annotations := dict -}}
+{{- /* set in rising precedence; merge would let a lower layer fill an empty string. */ -}}
+{{- range $layer := list ($root.Values.commonAnnotations | default dict) ($root.Values.podAnnotations | default dict) (dig $component "annotations" dict ($root.Values.podMetadata | default dict)) $checksums -}}
+{{- range $k, $v := $layer -}}
+{{- $_ := set $annotations $k $v -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml $annotations -}}
 {{- end -}}
 
 {{/*
@@ -634,12 +658,18 @@ when it is set, and ignores the --concurrency flag. */ -}}
 
 {{/* --- Pod labels --- */}}
 {{- $reservedPodLabels := list "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" "app.kubernetes.io/version" "app.kubernetes.io/managed-by" "helm.sh/chart" -}}
-{{- range $k, $v := (.Values.podLabels | default dict) -}}
+{{- $podLabelSources := list (dict "path" "podLabels" "labels" (.Values.podLabels | default dict)) -}}
+{{- range $c := list "main" "worker" "webhookProcessor" -}}
+{{- $podLabelSources = append $podLabelSources (dict "path" (printf "podMetadata.%s.labels" $c) "labels" (dig $c "labels" dict ($.Values.podMetadata | default dict))) -}}
+{{- end -}}
+{{- range $src := $podLabelSources -}}
+{{- range $k, $v := $src.labels -}}
 {{- if has $k $reservedPodLabels -}}
-{{- $errs = append $errs (printf "podLabels.%q is a chart-managed selector/identity label and cannot be overridden. Reserved keys: %s" $k (join ", " $reservedPodLabels)) -}}
+{{- $errs = append $errs (printf "%s.%q is a chart-managed selector/identity label and cannot be overridden. Reserved keys: %s" $src.path $k (join ", " $reservedPodLabels)) -}}
 {{- end -}}
 {{- if not (kindIs "string" $v) -}}
-{{- $errs = append $errs (printf "podLabels.%q must be a string (got %s). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. %q: \"true\"." $k (kindOf $v) $k) -}}
+{{- $errs = append $errs (printf "%s.%q must be a string (got %s). Kubernetes labels are map[string]string; quote numeric or boolean values, e.g. %q: \"true\"." $src.path $k (kindOf $v) $k) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 

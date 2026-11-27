@@ -449,6 +449,7 @@ Keys in an `envFrom` ConfigMap or Secret win over the chart's ConfigMaps. The ch
 | `strategy` | Update strategy for the main Deployment. Empty uses `Recreate` when `persistence.enabled` is true and every `persistence.accessModes` entry is `ReadWriteOnce` or `ReadWriteOncePod` (unset means `ReadWriteOnce`), and the Kubernetes default otherwise | `{}` |
 | `enableServiceLinks` | Inject `<SERVICE>_SERVICE_HOST`, `<SERVICE>_PORT` and related variables for every Service in the namespace into n8n pods | `false` |
 | `podLabels` | Extra pod-template labels; overrides `commonLabels` on pods only | `{}` |
+| `podMetadata` | Pod-template labels and annotations for one component (`main`, `worker`, `webhookProcessor`); override `podLabels` and `podAnnotations` for that component | `{}` |
 | `hpa.main.enabled` | HPA for main pods. `maxReplicas` above 1 requires `multiMain.enabled` | `false` |
 | `hpa.worker.enabled` | HPA for worker pods | `false` |
 | `keda.enabled` | KEDA queue-based autoscaling | `false` |
@@ -560,6 +561,24 @@ nodePlacement:
 > **Note:** When `multiMain.enabled=true`, the chart emits an automatic pod-anti-affinity rule to spread main replicas across nodes. Setting `nodePlacement.main.affinity` replaces that auto rule — include your own pod-anti-affinity term if you still want main replicas spread.
 
 See [`examples/node-placement.yaml`](https://github.com/n8n-io/n8n-hosting/blob/main/charts/n8n/examples/node-placement.yaml) for a complete configuration that pins `main` to a stable node pool and lets workers run on an autoscaling pool.
+
+## Pod Metadata per Component
+
+`podLabels` and `podAnnotations` apply to the main, worker and webhook processor pods alike. To label or annotate one component only, set `podMetadata.main`, `podMetadata.worker` or `podMetadata.webhookProcessor`. A key set there wins over `podLabels` or `podAnnotations` for that component. Chart-managed labels and the chart's checksum annotations cannot be overridden.
+
+This lets an admission webhook act on some components only. For example, a service mesh sidecar is useful on main and webhook processors, which take inbound traffic, but not on workers:
+
+```yaml
+podMetadata:
+  main:
+    labels:
+      sidecar.istio.io/inject: "true"
+  webhookProcessor:
+    labels:
+      sidecar.istio.io/inject: "true"
+```
+
+For Linkerd, set the annotation `linkerd.io/inject: enabled` under `annotations` instead.
 
 ## Security Context
 
