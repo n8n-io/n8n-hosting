@@ -35,6 +35,20 @@
       "required": ["name"],
       "additionalProperties": false
     },
+    "podMetadata": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
     "podSecurityContext": {
       "type": ["object", "null"],
       "description": "A Kubernetes PodSecurityContext. Every field accepts null, which removes the default.",
@@ -589,6 +603,17 @@
     "podLabels": {
       "type": "object",
       "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "podMetadata": {
+      "type": "object",
+      "description": "Pod template labels and annotations per component. A key set here wins over podLabels or podAnnotations for that component.",
+      "properties": {
+        "main": { "$ref": "#/definitions/podMetadata" },
+        "worker": { "$ref": "#/definitions/podMetadata" },
+        "webhookProcessor": { "$ref": "#/definitions/podMetadata" }
+      },
+      "additionalProperties": false,
       "default": {}
     },
     "securityContext": {
