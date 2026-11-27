@@ -190,6 +190,27 @@ strategy: {}
 #   sidecar.istio.io/inject: "true"
 podLabels: {}
 
+# ----- Per-component pod metadata -----
+# Labels and annotations for the pod template of one component only. A key set
+# here wins over podLabels or podAnnotations for that component. Chart-managed
+# labels and the chart's checksum annotations cannot be overridden here.
+# Useful when an admission webhook should act on some components only, for
+# example a service mesh sidecar on main and webhook processors but not on
+# workers, which take no inbound traffic:
+# podMetadata:
+#   main:
+#     labels:
+#       sidecar.istio.io/inject: "true"
+#   webhookProcessor:
+#     labels:
+#       sidecar.istio.io/inject: "true"
+#     annotations:
+#       sidecar.istio.io/proxyCPU: 100m
+#   worker:
+#     labels:
+#       sidecar.istio.io/inject: "false"
+podMetadata: {}
+
 # ----- Main replicas (when multi-main is disabled) -----
 # Keep this at 1. To run several mains, enable multiMain and set multiMain.replicas.
 replicaCount: 1

@@ -25,9 +25,8 @@ spec:
       app.kubernetes.io/component: main
   template:
     metadata:
-      {{- $podAnns := merge (dict "checksum/config" (include (print $.Template.BasePath "/configmap.yaml") . | sha256sum) "checksum/secret" (include (print $.Template.BasePath "/secrets.yaml") . | sha256sum)) (.Values.podAnnotations | default dict) (.Values.commonAnnotations | default dict) }}
       annotations:
-        {{- toYaml $podAnns | nindent 8 }}
+        {{- include "n8n.podAnnotations" (dict "root" . "component" "main") | nindent 8 }}
       labels:
         {{- include "n8n.podLabels" (dict "root" . "component" "main") | nindent 8 }}
     spec:

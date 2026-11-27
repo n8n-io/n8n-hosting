@@ -366,6 +366,38 @@
       "additionalProperties": { "type": "string" },
       "default": {}
     },
+    "podMetadata": {
+      "type": "object",
+      "description": "Pod template labels and annotations per component. A key set here wins over podLabels or podAnnotations for that component.",
+      "properties": {
+        "main": {
+          "type": "object",
+          "properties": {
+            "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+            "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+            "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "webhookProcessor": {
+          "type": "object",
+          "properties": {
+            "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+            "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
     "securityContext": {
       "type": "object",
       "properties": {
