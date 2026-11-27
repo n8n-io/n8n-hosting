@@ -76,8 +76,14 @@ webhookProcessor.
 {{- define "n8n.podAnnotations" -}}
 {{- $root := .root -}}
 {{- $checksums := dict "checksum/config" (include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum) "checksum/secret" (include (print $root.Template.BasePath "/secrets.yaml") $root | sha256sum) -}}
-{{- $componentAnns := dig .component "annotations" dict ($root.Values.podMetadata | default dict) -}}
-{{- toYaml (merge $checksums $componentAnns ($root.Values.podAnnotations | default dict) ($root.Values.commonAnnotations | default dict)) -}}
+{{- $annotations := dict -}}
+{{- /* set in rising precedence; merge would let a lower layer fill an empty string. */ -}}
+{{- range $layer := list ($root.Values.commonAnnotations | default dict) ($root.Values.podAnnotations | default dict) (dig .component "annotations" dict ($root.Values.podMetadata | default dict)) $checksums -}}
+{{- range $k, $v := $layer -}}
+{{- $_ := set $annotations $k $v -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml $annotations -}}
 {{- end -}}
 
 {{/*
