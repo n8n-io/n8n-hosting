@@ -50,6 +50,8 @@ Versions released before signing was introduced have no signature, so the comman
    ./examples/create-secrets.sh
    ```
 
+   The script uses the namespace of your current kubectl context. Add `--namespace <namespace>` to choose another, and install the chart into the same namespace.
+
 3. **Choose a values file** from the [examples](https://github.com/n8n-io/n8n-hosting/tree/main/charts/n8n/examples) directory and customize it
 
 4. **Deploy:**
